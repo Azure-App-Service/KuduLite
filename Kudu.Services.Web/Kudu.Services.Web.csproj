@@ -2,6 +2,9 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
+  <PropertyGroup>
+    <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.5" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.0.0" />
@@ -35,7 +38,7 @@
   <!-- Run updateNodeModules to install kuduscript -->
   <Target Name="PutNodeModulesInBinDir" AfterTargets="Build">
     <Exec Command="&quot;$(ProjectDir)\updateNodeModules.cmd&quot; &quot;$(TargetDir)&quot;" Condition=" '$(OS)' == 'Windows_NT'" />
-    <Exec Command="&quot;$(ProjectDir)\updateNodeModules.sh&quot; &quot;$(TargetDir)&quot;" Condition=" '$(OS)' != 'Windows_NT'" />
+    <Exec Command="sh $(ProjectDir)/updateNodeModules.sh &quot;$(TargetDir)&quot;" Condition=" '$(OS)' != 'Windows_NT'" />
   </Target>
 
   <Target Name="CopyNodeModulesToPublishDir" AfterTargets="Publish">
