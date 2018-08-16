@@ -1,0 +1,44 @@
+﻿img.tile-icon {
+    height: 32px;
+    width: 32px;
+    float:left;
+}
+
+img.modal-icon {
+    height: 64px;
+    width: 64px;
+    float:left;
+}
+
+.button-bottom-left {
+    margin-left: 5px;
+    float: left;
+    bottom: 25px;
+}
+
+.button-top-right {
+    float: right;
+}
+
+.button-bottom-right {
+    float: right;
+    bottom: 25px;
+}
+
+.text-4line {
+    height: 5.6em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.text-1line {
+    height: 1.4em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.text-6line {
+    height: 8.5em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

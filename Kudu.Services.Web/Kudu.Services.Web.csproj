@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.5" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.0.0" />
+    <PackageReference Include="Serilog.Sinks.Stackify" Version="2.0.2" />
+    <PackageReference Include="StackifyMiddleware" Version="2.1.2" />
+    <PackageReference Include="XmlSettings" Version="0.1.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="2.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Kudu.Core\Kudu.Core.csproj" />
+    <ProjectReference Include="..\Kudu.Services\Kudu.Services.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <!-- Odds and ends for the Scripts\ directory -->
+    <ContentWithTargetPath Include="$(NuGetPackageRoot)KuduSync.NET\**\tools\*" TargetPath="Scripts\%(FileName)%(Extension)" CopyToOutputDirectory="Always" />
+    <ContentWithTargetPath Include="$(NuGetPackageRoot)KuduHandles\**\KuduHandles.exe" TargetPath="Scripts\KuduHandles.exe" CopyToOutputDirectory="Always" />
+	<!-- TODO this relative path may change -->
+    <ContentWithTargetPath Include="..\..\Build\nuget.exe" TargetPath="Scripts\nuget.exe" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="wwwroot\Content\Styles\" />
+    <Folder Include="wwwroot\Content\Scripts\" />
+  </ItemGroup>
+  
+  <!-- CORE TODO this used to have a "BuildOutputsUpdated" condition that used compile timestamps. Not sure if they're still available. -->
+  <!-- CORE TODO I think the best way to make this work right with publish is to restore to the source folder and then add a dynamic ContentWithTargetPath -->
+  <!-- Run updateNodeModules to install kuduscript -->
+  <Target Name="PutNodeModulesInBinDir" AfterTargets="Build">
+    <Exec Command="&quot;$(ProjectDir)\updateNodeModules.cmd&quot; &quot;$(TargetDir)&quot;" />
+  </Target>
+
+  <Target Name="CopyNodeModulesToPublishDir" AfterTargets="Publish">
+    <ItemGroup>
+      <NodeModules Include="$(TargetDir)node_modules\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(NodeModules)" DestinationFolder="$(PublishDir)node_modules\%(RecursiveDir)" />
+  </Target>
+</Project>

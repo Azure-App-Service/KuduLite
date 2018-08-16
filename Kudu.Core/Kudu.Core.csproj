@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="SiteExtensions\**" />
+    <EmbeddedResource Remove="SiteExtensions\**" />
+    <None Remove="SiteExtensions\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Scripts\deploy_webjobs.cmd" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Scripts\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LibGit2Sharp" Version="0.21.0.176" />
+    <PackageReference Include="Mercurial.Net" Version="1.1.1.607" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.0.1" />
+    <PackageReference Include="Microsoft.Azure.WebSites.DataProtection" Version="0.1.78-alpha" />
+    <PackageReference Include="ncrontab" Version="3.3.0" />
+    <PackageReference Include="NuGet.Protocol" Version="4.4.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.4.0" />
+    <PackageReference Include="System.IO.Abstractions" Version="2.1.0.174" />
+    <PackageReference Include="XmlSettings" Version="0.1.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kudu.Contracts\Kudu.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,158 @@
+﻿@page
+@using System.Reflection
+@using Microsoft.AspNetCore.Hosting
+@inject IHostingEnvironment hostingEnvironment
+@model IndexModel
+
+@{
+
+    // If Kudu home page gets requested with the api-version, we are likely dealing with a call
+    // on the 'ARM bridge' to list 'extensions'. e.g.
+    // /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Web/sites/{site}/extensions?api-version=2015-08-01
+    // Since we can't actually return a list of extensions, return [], which is enough to avoid ARM faliures
+
+    //if (Request.QueryString["api-version"] != null)
+    //{
+    //    Response.Write("[]");
+    //    Response.ContentType = "application/json";
+    //    Response.End();
+    //}
+
+    ViewData["Title"] = "Kudu Services";
+
+    string appServiceVersion = GetAppServiceVersion();
+    Console.WriteLine("\n\n\n\n\nCheck Point 1 inside Razor\n\n\n\n\n");
+    DateTime now = DateTime.Now;
+    Console.WriteLine(now);
+}
+
+@functions {
+    string GetAppServiceVersion()
+    {
+        Console.WriteLine("Getting App Service Version: "+DateTime.Now.ToString("hh.mm.ss.ffffff"));
+        Assembly assembly;
+        try
+        {
+            assembly = Assembly.Load("Microsoft.Web.Hosting, Version=7.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35");
+            var fileVersionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location);
+            return fileVersionInfo.ProductVersion;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+}
+
+@section PageHead {
+    <style type="text/css">
+        .row > div {
+            padding-bottom: 10px;
+        }
+    </style>
+}
+
+<div class="container">
+    @{
+        //string commitFile = Server.MapPath("~/commit.txt");
+        string commitFile = System.IO.Path.Combine(hostingEnvironment.WebRootPath, "commit.txt");
+        string sha = System.IO.File.Exists(commitFile) ? System.IO.File.ReadAllText(commitFile).Trim() : null;
+        //var version = typeof(Kudu.Services.Web.Tracing.TraceModule).Assembly.GetName().Version;
+        var version = new Version(1, 2, 3);
+    }
+    <h3>Environment</h3>
+    <div class="row">
+        <div class="col-xs-2">
+            <strong>Build</strong>
+        </div>
+        <div>
+            @version
+            @if (!String.IsNullOrEmpty(sha))
+            {
+                <text>
+                (<a id="sha" href="https://github.com/projectkudu/kudu/commit/@sha">@sha.Substring(0, 10)</a>)
+                </text>
+            }
+        </div>
+    </div>
+    @if (appServiceVersion != null)
+    {
+        <div class="row">
+            <div class="col-xs-2">
+                <strong>Azure App Service</strong>
+            </div>
+            <div>
+                @GetAppServiceVersion()
+            </div>
+        </div>
+    }
+    <div class="row">
+        <div class="col-xs-2">
+            <strong>Site up time</strong>
+        </div>
+        <div>
+            @*@Kudu.Services.Web.Tracing.TraceModule.UpTime.ToString(@"dd\.hh\:mm\:ss")*@
+            12345
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-2">
+            <strong>Site folder</strong>
+        </div>
+        <div>
+            @*@Kudu.Services.Web.PathResolver.ResolveRootPath()*@
+            site
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-2">
+            <strong>Temp folder</strong>
+        </div>
+        <div>
+            @System.IO.Path.GetTempPath()
+        </div>
+    </div>
+    <h3>REST API <small>(works best when using a JSON viewer extension)</small></h3>
+    <ul>
+        <li>
+            <a href="api/settings">App Settings</a>
+        </li>
+        <li>
+            <a href="api/deployments">Deployments</a>
+        </li>
+        <li>
+            <a href="api/scm/info">Source control info</a>
+        </li>
+        <li>
+            <a href="api/vfs">Files</a>
+        </li>
+        @if (Kudu.Core.Helpers.OSDetector.IsOnWindows())
+        {
+            <li>
+                <a href="api/processes">Processes and mini-dumps</a>
+            </li>
+            <li>
+                <a href="api/diagnostics/runtime">Runtime versions</a>
+            </li>
+            <li>
+                Site Extensions: <a href="api/siteextensions">installed</a> | <a href="api/extensionfeed">feed</a>
+            </li>
+            <li>
+                <a href="api/hooks">Web hooks</a>
+            </li>
+            <li>
+                WebJobs: <a href="api/webjobs">all</a> | <a href="api/triggeredwebjobs">triggered</a> | <a href="api/continuouswebjobs">continuous</a>
+            </li>
+            <li>
+                Functions: <a href="api/functions">list</a> | <a href="api/functions/config">host config</a>
+            </li>
+        }
+        else
+        {
+            <li>
+                <a href="api/logs/docker">Current Docker logs</a> (<a href="api/logs/docker/zip">Download as zip</a>)
+            </li>
+        }
+    </ul>
+    <h3>More information about Kudu can be found on the <a href="https://github.com/projectkudu/kudu/wiki">wiki</a>.</h3>
+</div>
