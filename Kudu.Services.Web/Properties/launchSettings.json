@@ -13,7 +13,8 @@
       "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Production"
-      }
+      },
+      "applicationUrl": "http://localhost:1601"
     },
     "Kudu.Services.Web": {
       "commandName": "Project",
