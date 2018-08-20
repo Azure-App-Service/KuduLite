@@ -16,7 +16,7 @@ namespace Kudu.Services.Web
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
                 .UseStartup<Startup>()
-                .UseUrls("http://localhost:1601)
+                .UseUrls("http://localhost:1601")
                 .Build();
     }
 }
