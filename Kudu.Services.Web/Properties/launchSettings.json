@@ -14,7 +14,8 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Production"
       },
-      "applicationUrl": "http://localhost:1601"
+      "applicationUrl": "http://localhost:1601",
+
     },
     "Kudu.Services.Web": {
       "commandName": "Project",
