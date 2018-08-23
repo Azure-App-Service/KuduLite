@@ -677,7 +677,6 @@ namespace Kudu.Services.Web
             {
                 await context.Response.WriteAsync("Krestel Running"); // returns a 200
             });
-    }
         }
 
         private static string GetSettingsPath(IEnvironment environment)
