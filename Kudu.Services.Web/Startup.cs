@@ -396,6 +396,8 @@ namespace Kudu.Services.Web
             Console.WriteLine("Done");
             Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
+            app.UseStaticFiles();
+
             if (hostingEnvironment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
