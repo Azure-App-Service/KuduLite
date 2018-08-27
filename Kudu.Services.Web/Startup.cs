@@ -672,11 +672,15 @@ namespace Kudu.Services.Web
                 Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
                 Console.WriteLine("\n\n\n\n\n");
             });
+
             // CORE TODO Remove This
-            app.Run(async context =>
+           app.Run(async context =>
             {
                 await context.Response.WriteAsync("Krestel Running"); // returns a 200
             });
+            Console.WriteLine("\n\n\n\n\nExiting Configure");
+            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
+            Console.WriteLine("\n\n\n\n\n");
         }
 
         private static string GetSettingsPath(IEnvironment environment)
