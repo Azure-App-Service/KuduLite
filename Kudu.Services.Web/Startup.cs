@@ -396,6 +396,29 @@ namespace Kudu.Services.Web
             Console.WriteLine("Done");
             Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
+            app.UseStaticFiles();
+
+            app.MapWhen(IsWebSSHPath, builder => builder.RunProxy(new ProxyOptions
+            {
+                Scheme = "http",
+                Host = "localhost",
+                Port = "3000"
+            }));
+
+            app.MapWhen(IsTunnelServerPath, builder => builder.RunProxy(new ProxyOptions
+            {
+                Scheme = "ws",
+                Host = "localhost",
+                Port = "5000"
+            }));
+
+            app.MapWhen(IsJavaDebugPath, builder => builder.RunProxy(new ProxyOptions
+            {
+                Scheme = "ws",
+                Host = "localhost",
+                Port = "5000"
+            }));
+
             if (hostingEnvironment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -861,6 +884,18 @@ namespace Kudu.Services.Web
         private static void EnsureSiteBitnessEnvironmentVariable()
         {
             SetEnvironmentVariableIfNotYetSet("SITE_BITNESS", System.Environment.Is64BitProcess ? Constants.X64Bit : Constants.X86Bit);
+        }
+        private static bool IsTunnelServerPath(HttpContext httpContext)
+        {
+            return httpContext.Request.Path.Value.StartsWith(@"/AppServiceTunnel/Tunnel.ashx", StringComparison.OrdinalIgnoreCase);
+        }
+        private static bool IsWebSSHPath(HttpContext httpContext)
+        {
+            return httpContext.Request.Path.Value.StartsWith(@"/webssh/", StringComparison.OrdinalIgnoreCase);
+        }
+        private static bool IsJavaDebugPath(HttpContext httpContext)
+        {
+            return httpContext.Request.Path.Value.StartsWith(@"/DebugSiteExtension/JavaDebugSiteExtension.ashx", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
