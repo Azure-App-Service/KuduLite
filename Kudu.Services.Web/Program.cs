@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using System.Net;
 
 namespace Kudu.Services.Web
 {
@@ -8,16 +9,15 @@ namespace Kudu.Services.Web
     {
         public static void Main(string[] args)
         {
-            BuildWebHost(args).Run();
+            CreateWebHostBuilder(args).Build().Run();
         }
 
-        //
-        //
-        //
-        public static IWebHost BuildWebHost(string[] args) =>
+        public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-                .UseStartup<Startup>()
-                .UseUrls("http://localhost:1601")
-                .Build();
+                .UseKestrel(options =>
+                {
+                    options.Listen(IPAddress.Parse("0.0.0.0"), 8181);
+                })
+                .UseStartup<Startup>();
     }
 }
