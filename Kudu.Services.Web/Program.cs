@@ -16,7 +16,7 @@ namespace Kudu.Services.Web
             WebHost.CreateDefaultBuilder(args)
                 .UseKestrel(options =>
                 {
-                    options.Listen(IPAddress.Loopback, 8181);
+                    options.Listen(IPAddress.Parse("0.0.0.0"), 8181);
                 })
                 .UseStartup<Startup>();
     }

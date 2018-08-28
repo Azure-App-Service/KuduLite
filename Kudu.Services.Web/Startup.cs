@@ -406,14 +406,14 @@ namespace Kudu.Services.Web
 
             app.MapWhen(IsTunnelServerPath, builder => builder.RunProxy(new ProxyOptions
             {
-                Scheme = "ws",
+                Scheme = "http",
                 Host = "localhost",
                 Port = "5000"
             }));
 
             app.MapWhen(IsJavaDebugPath, builder => builder.RunProxy(new ProxyOptions
             {
-                Scheme = "ws",
+                Scheme = "http",
                 Host = "localhost",
                 Port = "5000"
             }));
