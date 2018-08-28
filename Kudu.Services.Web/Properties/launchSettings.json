@@ -3,7 +3,7 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "http://localhost:15331/",
+      "applicationUrl": "http://0.0.0.0:8181/",
       "sslPort": 0
     }
   },
@@ -14,8 +14,7 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Production"
       },
-      "applicationUrl": "http://localhost:1601",
-
+      "applicationUrl": "http://0.0.0.0:8181/"
     },
     "Kudu.Services.Web": {
       "commandName": "Project",
@@ -23,7 +22,7 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "http://localhost:18246/"
+      "applicationUrl": "http://0.0.0.0:8181/"
     }
   }
 }
