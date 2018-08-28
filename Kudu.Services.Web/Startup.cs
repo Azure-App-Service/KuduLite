@@ -236,7 +236,6 @@ namespace Kudu.Services.Web
             // service locator, why does it need "delayed binding"?)
             //kernel.Bind<CustomGitRepositoryHandler>().ToMethod(context => new CustomGitRepositoryHandler(t => context.Kernel.Get(t)))
             //                                         .InRequestScope();
-
             Console.WriteLine("\n\n\n\n\nDeployment Service");
             Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
             Console.WriteLine("\n\n\n\n\n");
@@ -784,7 +783,7 @@ namespace Kudu.Services.Web
         private static ITracer GetTracerWithoutContext(IEnvironment environment, IDeploymentSettingsManager settings)
         {
             // when file system has issue, this can throw (environment.TracePath calls EnsureDirectory).
-            // prefer no-op tracer over outage.
+            // prefer no-op tracer over outage.  
             return OperationManager.SafeExecute(() =>
             {
                 TraceLevel level = settings.GetTraceLevel();
