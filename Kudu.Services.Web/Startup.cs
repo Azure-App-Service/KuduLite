@@ -484,6 +484,12 @@ namespace Kudu.Services.Web
             // Custom GIT repositories, which can be served from any directory that has a git repo
             //routes.MapHandler<CustomGitRepositoryHandler>(kernel, "git-custom-repository", "git/{*path}", deprecated: false);
 
+            // Custom GIT repositories, which can be served from any directory that has a git repo
+            foreach (var url in new[] { "git-custom-repository", "git/{*path}" })
+            {
+                app.Map(url, appBranch => appBranch.RunCustomGitRepositoryHandler());
+            };
+
             //app.UseStaticFiles();
 
             app.UseMvc(routes =>
@@ -868,6 +874,7 @@ namespace Kudu.Services.Web
                 System.Environment.SetEnvironmentVariable(name, value);
             }
         }
+
         private static string GetRequestTraceFile(IServiceProvider serviceProvider)
         {
             TraceLevel level = serviceProvider.GetRequiredService<IDeploymentSettingsManager>().GetTraceLevel();
