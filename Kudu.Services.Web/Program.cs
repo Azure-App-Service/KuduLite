@@ -14,10 +14,6 @@ namespace Kudu.Services.Web
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-                .UseKestrel(options =>
-                {
-                    options.Listen(IPAddress.Parse("0.0.0.0"), 8181);
-                })
                 .UseStartup<Startup>();
     }
 }

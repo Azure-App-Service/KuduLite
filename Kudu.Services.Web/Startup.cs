@@ -54,10 +54,7 @@ namespace Kudu.Services.Web
         public Startup(IConfiguration configuration, IHostingEnvironment hostingEnvironment)
         {
 
-            Console.WriteLine("\n\n\n\n\nStartup");
-            DateTime now = DateTime.Now;
-            Console.WriteLine(now);
-            Console.WriteLine("\n\n\n\n\n");
+            Console.WriteLine("\nStartup : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
             Configuration = configuration;
             this.hostingEnvironment = hostingEnvironment;
         }
@@ -73,10 +70,7 @@ namespace Kudu.Services.Web
         public void ConfigureServices(IServiceCollection services)
         {
 
-            Console.WriteLine("\n\n\n\n\nConfigure Services");
-            DateTime now = DateTime.Now;
-            Console.WriteLine(now);
-            Console.WriteLine("\n\n\n\n\n");
+            Console.WriteLine("\nConfigure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
             services.AddMvc()
                 .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
 
@@ -145,10 +139,6 @@ namespace Kudu.Services.Web
             services.AddSingleton<ITraceFactory>(traceFactory);
 
             TraceServices.SetTraceFactory(createTracerThunk);
-            Console.WriteLine("\n\n\n\n\nSetting up deployment locks");
-            now = DateTime.Now;
-            Console.WriteLine(now);
-            Console.WriteLine("\n\n\n\n\n");
             // Setup the deployment lock
             string lockPath = Path.Combine(environment.SiteRootPath, Constants.LockPath);
             string deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
@@ -158,10 +148,6 @@ namespace Kudu.Services.Web
 
             _deploymentLock = new DeploymentLockFile(deploymentLockPath, traceFactory);
             _deploymentLock.InitializeAsyncLocks();
-
-            Console.WriteLine("\n\n\n\n\nDeployment locks set");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-            Console.WriteLine("\n\n\n\n\n");
 
             var statusLock = new LockFile(statusLockPath, traceFactory);
             var sshKeyLock = new LockFile(sshKeyLockPath, traceFactory);
@@ -184,9 +170,6 @@ namespace Kudu.Services.Web
             //var shutdownDetector = new ShutdownDetector();
             //shutdownDetector.Initialize();
 
-            Console.WriteLine("\n\n\n\n\nDeployment settings manager");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-            Console.WriteLine("\n\n\n\n\n");
             IDeploymentSettingsManager noContextDeploymentsSettingsManager =
                 new DeploymentSettingsManager(new XmlSettings.Settings(GetSettingsPath(environment)));
 
@@ -236,9 +219,6 @@ namespace Kudu.Services.Web
             // service locator, why does it need "delayed binding"?)
             //kernel.Bind<CustomGitRepositoryHandler>().ToMethod(context => new CustomGitRepositoryHandler(t => context.Kernel.Get(t)))
             //                                         .InRequestScope();
-            Console.WriteLine("\n\n\n\n\nDeployment Service");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-            Console.WriteLine("\n\n\n\n\n");
 
             // Deployment Service
             services.AddScoped<ISettings>(sp => new XmlSettings.Settings(GetSettingsPath(environment)));
@@ -250,10 +230,6 @@ namespace Kudu.Services.Web
             services.AddScoped<ISiteBuilderFactory, SiteBuilderFactory>();
 
             services.AddScoped<IWebHooksManager, WebHooksManager>();
-
-            Console.WriteLine("\n\n\n\n\nDeployment Service Setup");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-            Console.WriteLine("\n\n\n\n\n");
 
             // CORE TODO Webjobs dependencies
             //ITriggeredJobsManager triggeredJobsManager = new TriggeredJobsManager(
@@ -302,10 +278,6 @@ namespace Kudu.Services.Web
             // Git server
             services.AddTransient<IDeploymentEnvironment, DeploymentEnvironment>();
 
-            Console.WriteLine("\n\n\n\n\nDGit Server");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-            Console.WriteLine("\n\n\n\n\n");
-
 
             services.AddScoped<IGitServer>(sp =>
                 new GitExeServer(
@@ -331,9 +303,6 @@ namespace Kudu.Services.Web
             services.AddScoped<IServiceHookHandler, VSOHandler>();
             services.AddScoped<IServiceHookHandler, OneDriveHandler>();
 
-            Console.WriteLine("\n\n\n\n\nDGit Server Done");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-            Console.WriteLine("\n\n\n\n\n");
             // CORE TODO
             // SiteExtensions
             //kernel.Bind<ISiteExtensionManager>().To<SiteExtensionManager>().InRequestScope();
@@ -388,12 +357,7 @@ namespace Kudu.Services.Web
 
         public void Configure(IApplicationBuilder app)
         {
-            Console.WriteLine("Trace Middle Ware Setup");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
             app.UseMiddleware<StackifyMiddleware.RequestTracerMiddleware>();
-            //app.UseMiddleware<SerilogRequestLogger>();
-            Console.WriteLine("Done");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             app.UseStaticFiles();
 
@@ -408,14 +372,14 @@ namespace Kudu.Services.Web
             {
                 Scheme = "http",
                 Host = "localhost",
-                Port = "5000"
+                Port = "6000"
             }));
 
             app.MapWhen(IsJavaDebugPath, builder => builder.RunProxy(new ProxyOptions
             {
                 Scheme = "http",
                 Host = "localhost",
-                Port = "5000"
+                Port = "6000"
             }));
 
             if (hostingEnvironment.IsDevelopment())
@@ -431,11 +395,7 @@ namespace Kudu.Services.Web
 
             //app.UseTraceMiddleware();
 
-            Console.WriteLine("Setting up Configuration");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
-            Console.WriteLine("Done");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             // CORE TODO any equivalent for this? Needed?
             //var configuration = kernel.Get<IServerConfiguration>();
@@ -450,42 +410,29 @@ namespace Kudu.Services.Web
 
             // CORE TODO concept of "deprecation" in routes for traces
 
-            Console.WriteLine("Setting up Push Url");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
             // Push url
             foreach (var url in new[] { "/git-receive-pack", $"/{configuration.GitServerRoot}/git-receive-pack" })
             {
                 app.Map(url, appBranch => appBranch.RunReceivePackHandler());
             };
-            Console.WriteLine("Done");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
-            Console.WriteLine("Setting up fetch hook");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
             // Fetch hook
             app.Map("/deploy", appBranch => appBranch.RunFetchHandler());
-            Console.WriteLine("Done");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             // Log streaming
             // app.Map("/api/logstream", appBranch => appBranch.RunLogStreamHandler());
 
-            Console.WriteLine("Setting up clone url");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
             // Clone url
             foreach (var url in new[] { "/git-upload-pack", $"/{configuration.GitServerRoot}/git-upload-pack" })
             {
                 app.Map(url, appBranch => appBranch.RunUploadPackHandler());
             };
-            Console.WriteLine("Done");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             // CORE TODO
             // Custom GIT repositories, which can be served from any directory that has a git repo
             //routes.MapHandler<CustomGitRepositoryHandler>(kernel, "git-custom-repository", "git/{*path}", deprecated: false);
 
             // Custom GIT repositories, which can be served from any directory that has a git repo
-            foreach (var url in new[] { "git-custom-repository", "git/{*path}" })
+            foreach (var url in new[] { "/git-custom-repository", "/git/{*path}" })
             {
                 app.Map(url, appBranch => appBranch.RunCustomGitRepositoryHandler());
             };
@@ -494,65 +441,37 @@ namespace Kudu.Services.Web
 
             app.UseMvc(routes =>
             {
-                Console.WriteLine("\n\n\n\n\nSetting Up Routes");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-                Console.WriteLine("\n\n\n\n\n");
+                Console.WriteLine("\nSetting Up Routes : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
                 // CORE TODO Default route needed?
                 routes.MapRoute(
                     name: "default",
                     template: "{controller}/{action=Index}/{id?}");
 
-                Console.WriteLine("\n\n\n\n\nSetting Up Git Service Route");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
                 // Git Service
                 routes.MapRoute("git-info-refs-root", "info/refs", new { controller = "InfoRefs", action = "Execute" });
                 routes.MapRoute("git-info-refs", configuration.GitServerRoot + "/info/refs", new { controller = "InfoRefs", action = "Execute" });
 
-                Console.WriteLine("Done");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
-
-                Console.WriteLine("\n\n\n\n\nSetting UpSCM Deployment Route");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
                 // Scm (deployment repository)
                 routes.MapHttpRouteDual("scm-info", "scm/info", new { controller = "LiveScm", action = "GetRepositoryInfo" });
                 routes.MapHttpRouteDual("scm-clean", "scm/clean", new { controller = "LiveScm", action = "Clean" });
                 routes.MapHttpRouteDual("scm-delete", "scm", new { controller = "LiveScm", action = "Delete" }, new { verb = new HttpMethodRouteConstraint("DELETE") });
-                Console.WriteLine("Done");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
 
-                Console.WriteLine("\n\n\n\n\nSetting Up SCM Files editor Route");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
                 // Scm files editor
                 routes.MapHttpRouteDual("scm-get-files", "scmvfs/{*path}", new { controller = "LiveScmEditor", action = "GetItem" }, new { verb = new HttpMethodRouteConstraint("GET", "HEAD") });
                 routes.MapHttpRouteDual("scm-put-files", "scmvfs/{*path}", new { controller = "LiveScmEditor", action = "PutItem" }, new { verb = new HttpMethodRouteConstraint("PUT") });
                 routes.MapHttpRouteDual("scm-delete-files", "scmvfs/{*path}", new { controller = "LiveScmEditor", action = "DeleteItem" }, new { verb = new HttpMethodRouteConstraint("DELETE") });
-                Console.WriteLine("Done");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
-
-                Console.WriteLine("\n\n\n\n\nSetting Up Live Files editor Route");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
                 // Live files editor
                 routes.MapHttpRouteDual("vfs-get-files", "vfs/{*path}", new { controller = "Vfs", action = "GetItem" }, new { verb = new HttpMethodRouteConstraint("GET", "HEAD") });
                 routes.MapHttpRouteDual("vfs-put-files", "vfs/{*path}", new { controller = "Vfs", action = "PutItem" }, new { verb = new HttpMethodRouteConstraint("PUT") });
                 routes.MapHttpRouteDual("vfs-delete-files", "vfs/{*path}", new { controller = "Vfs", action = "DeleteItem" }, new { verb = new HttpMethodRouteConstraint("DELETE") });
-                Console.WriteLine("Done");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
-                Console.WriteLine("\n\n\n\n\nSetting Up Zip File handler Route");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
+                
                 // Zip file handler
                 routes.MapHttpRouteDual("zip-get-files", "zip/{*path}", new { controller = "Zip", action = "GetItem" }, new { verb = new HttpMethodRouteConstraint("GET", "HEAD") });
                 routes.MapHttpRouteDual("zip-put-files", "zip/{*path}", new { controller = "Zip", action = "PutItem" }, new { verb = new HttpMethodRouteConstraint("PUT") });
-                Console.WriteLine("Done");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
-                Console.WriteLine("\n\n\n\n\nSetting Up Zip push deployment Route");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
+                
                 // Zip push deployment
                 routes.MapRoute("zip-push-deploy", "api/zipdeploy", new { controller = "PushDeployment", action = "ZipPushDeploy" }, new { verb = new HttpMethodRouteConstraint("POST") });
                 Console.WriteLine("Done");
@@ -561,8 +480,6 @@ namespace Kudu.Services.Web
                 // Live Command Line
                 routes.MapHttpRouteDual("execute-command", "command", new { controller = "Command", action = "ExecuteCommand" }, new { verb = new HttpMethodRouteConstraint("POST") });
 
-                Console.WriteLine("\n\n\n\n\nSetting UpDeployemnts Route");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
                 // Deployments
                 routes.MapHttpRouteDual("all-deployments", "deployments", new { controller = "Deployment", action = "GetDeployResults" }, new { verb = new HttpMethodRouteConstraint("GET") });
                 routes.MapHttpRouteDual("one-deployment-get", "deployments/{id}", new { controller = "Deployment", action = "GetResult" }, new { verb = new HttpMethodRouteConstraint("GET") });
@@ -570,16 +487,9 @@ namespace Kudu.Services.Web
                 routes.MapHttpRouteDual("one-deployment-delete", "deployments/{id}", new { controller = "Deployment", action = "Delete" }, new { verb = new HttpMethodRouteConstraint("DELETE")});
                 routes.MapHttpRouteDual("one-deployment-log", "deployments/{id}/log", new { controller = "Deployment", action = "GetLogEntry" });
                 routes.MapHttpRouteDual("one-deployment-log-details", "deployments/{id}/log/{logId}", new { controller = "Deployment", action = "GetLogEntryDetails" });
-                Console.WriteLine("Done");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
-
-                Console.WriteLine("\n\n\n\n\nSetting UpDeployemnts Script route");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
                 // Deployment script
                 routes.MapRoute("get-deployment-script", "api/deploymentscript", new { controller = "Deployment", action = "GetDeploymentScript" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                Console.WriteLine("Done");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
                 // CORE TODO
                 // SSHKey
@@ -696,9 +606,6 @@ namespace Kudu.Services.Web
                 // this is to work arounf the issue in TraceModule where we see double OnBeginRequest call
                 // for the same request (404 and then 200 statusCode).
                 routes.MapRoute("error-404", "{*path}", new { controller = "Error404", action = "Handle" });
-                Console.WriteLine("\n\n\n\n\nRoutes Set");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-                Console.WriteLine("\n\n\n\n\n");
             });
 
             // CORE TODO Remove This
@@ -706,9 +613,7 @@ namespace Kudu.Services.Web
             {
                 await context.Response.WriteAsync("Krestel Running"); // returns a 200
             });
-            Console.WriteLine("\n\n\n\n\nExiting Configure");
-            Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
-            Console.WriteLine("\n\n\n\n\n");
+            Console.WriteLine("\nExiting Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
         }
 
         private static string GetSettingsPath(IEnvironment environment)
