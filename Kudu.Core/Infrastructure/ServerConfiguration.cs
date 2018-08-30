@@ -33,7 +33,7 @@ namespace Kudu.Core.Infrastructure
         public static string GetApplicationName()
         {
             var applicationName = System.Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME");
-            if(!string.IsNullOrEmpty(applicationName))
+            if (!string.IsNullOrEmpty(applicationName))
             {
                 // Yank everything after the first underscore to work around
                 // a slot issue where WEBSITE_SITE_NAME gets set incorrectly
