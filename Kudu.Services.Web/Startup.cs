@@ -70,12 +70,20 @@ namespace Kudu.Services.Web
         public void ConfigureServices(IServiceCollection services)
         {
 
+            //CORE TODO Remove this
             Console.WriteLine("\nConfigure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+            /*
+            services.AddMvc(opts=>
+            {
+                opts.Filters.Add(new AutoLogAttribute());
+            })
+            .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
+            */
+
+            
             services.AddMvc()
-                .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
-
+           .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
             var serverConfiguration = new ServerConfiguration();
-
             // CORE TODO This is new. See if over time we can refactor away the need for this?
             // It's kind of a quick hack/compatibility shim. Ideally you want to get the request context only from where
             // it's specifically provided to you (Request.HttpContext in a controller, or as an Invoke() parameter in
@@ -355,11 +363,31 @@ namespace Kudu.Services.Web
 
         // CORE TODO See signalr stuff in NinjectServices
 
+        private static Uri GetAbsoluteUri(HttpContext httpContext)
+        {
+            var request = httpContext.Request;
+            UriBuilder uriBuilder = new UriBuilder();
+            uriBuilder.Scheme = request.Scheme;
+            uriBuilder.Host = request.Host.Host;
+            uriBuilder.Path = request.Path.ToString();
+            uriBuilder.Query = request.QueryString.ToString();
+            return uriBuilder.Uri;
+        }
+
         public void Configure(IApplicationBuilder app)
         {
+            Console.WriteLine("\nConfigure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
             app.UseMiddleware<StackifyMiddleware.RequestTracerMiddleware>();
 
             app.UseStaticFiles();
+
+            app.MapWhen(LogPathOnConsole, builder => builder.RunProxy(new ProxyOptions
+            {
+                Scheme = "http",
+                Host = "localhost",
+                Port = "1234"
+            }));
 
             app.MapWhen(IsWebSSHPath, builder => builder.RunProxy(new ProxyOptions
             {
@@ -807,6 +835,11 @@ namespace Kudu.Services.Web
         private static bool IsJavaDebugPath(HttpContext httpContext)
         {
             return httpContext.Request.Path.Value.StartsWith(@"/DebugSiteExtension/JavaDebugSiteExtension.ashx", StringComparison.OrdinalIgnoreCase);
+        }
+        private static bool LogPathOnConsole(HttpContext context)
+        {
+            Console.WriteLine($"path: {context.Request.Path}");
+            return false;
         }
     }
 }

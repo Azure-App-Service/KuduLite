@@ -20,21 +20,11 @@
 
 #endregion
 
-using System;
-using Kudu.Contracts.Infrastructure;
-using Kudu.Contracts.SourceControl;
 using Kudu.Contracts.Tracing;
-using Kudu.Core;
-using Kudu.Core.Deployment;
-using Kudu.Core.Helpers;
-using Kudu.Core.SourceControl;
 using Kudu.Core.SourceControl.Git;
 using Kudu.Core.Tracing;
-using Kudu.Services.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Builder;
-using System.Text;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Kudu.Services.GitServer

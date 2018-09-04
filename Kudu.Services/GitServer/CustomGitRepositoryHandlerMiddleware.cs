@@ -68,15 +68,18 @@ namespace Kudu.Services.GitServer
                             if (RepositoryExists(context))
                             {
                                 var gitServer = GetInstance<IGitServer>();
-                                GitServerHttpHandlerMiddleware.UpdateNoCacheForResponse(context.Response);
                                 context.Response.ContentType = "application/x-git-upload-pack-advertisement";
                                 context.Response.StatusCode = (int)HttpStatusCode.OK;
+                                // Helpers.PktWrite(context.Response,"# service==git-upload-pack\n");
+                                // memoryStream.PktFlush();
                                 using (var sw = new StreamWriter(context.Response.Body))
                                 {
                                     sw.Write("# service=git-upload-pack\n");
+                                    //sw.Flush();
                                 }
                                 // context.Response.OutputStream.PktWrite("# service=git-upload-pack\n");
                                 // context.Response.OutputStream.PktFlush();
+                                Helpers.WriteNoCache(context.Response);
                                 gitServer.AdvertiseUploadPack(context.Response.Body);
                             }
                         }

@@ -38,6 +38,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Kudu.Services.GitServer
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public class InfoRefsController : Controller
     {
         private readonly ITracer _tracer;
@@ -56,6 +59,14 @@ namespace Kudu.Services.GitServer
             _tracer = GetInstance<ITracer>();
         }
 
+        /// <summary>
+        /// Returns the result of Execute action of info/refs controller
+        /// Responds to the relative URL : ?svc=git&q=/info/refs/execute&service=git-recieve-pack
+        /// </summary>
+        /// <param name="service">
+        /// The query string variable "service" having values such as 
+        /// git-recieve-pack/git-upload-pack
+        /// </param>
         [HttpGet]
         public IActionResult Execute(string service = null)
         {
@@ -83,6 +94,14 @@ namespace Kudu.Services.GitServer
             }
         }
 
+        /// <summary>
+        /// Returns the result of SmartInfoRefs action of info/refs controller
+        /// Responds to the relative URL : ?svc=git&q=/info/refs/SmartInfoRefs&service=git-recieve-pack
+        /// </summary>
+        /// <param name="service">
+        /// The query string variable "service" having values such as 
+        /// git-recieve-pack/git-upload-pack
+        /// </param>
         private IActionResult SmartInfoRefs(string service)
         {
             using (_tracer.Step("InfoRefsService.SmartInfoRefs"))
@@ -123,7 +142,13 @@ namespace Kudu.Services.GitServer
                 return new FileStreamResult(memoryStream, contentType);
             }
         }
-
+        /// <summary>
+        /// Checks for null string and removes the prefix "git-" to get the 
+        /// type of Git Http Service i.e upload-pack/recieve-pack.  
+        /// </summary>
+        /// <param name="service">
+        /// The query string value for variable "service"
+        /// </param>
         protected static string GetServiceType(string service)
         {
             if (String.IsNullOrWhiteSpace(service))
@@ -139,6 +164,9 @@ namespace Kudu.Services.GitServer
             return (T)_getInstance(typeof(T));
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public void InitialCommitIfNecessary()
         {
             var settings = GetInstance<IDeploymentSettingsManager>();
@@ -155,29 +183,29 @@ namespace Kudu.Services.GitServer
             {
                 IRepository repository = _repositoryFactory.GetRepository();
 
-            // if repository exists, no needs to do anything
-            if (repository != null)
+                // if repository exists, no need to do anything
+                if (repository != null)
                 {
                     return;
                 }
 
                 var repositoryPath = settings.GetValue(SettingsKeys.RepositoryPath);
 
-            // if repository settings is defined, it's already been taken care.
-            if (!String.IsNullOrEmpty(repositoryPath))
+                // if repository settings is defined, it's already been taken care.
+                if (!String.IsNullOrEmpty(repositoryPath))
                 {
                     return;
                 }
 
                 var env = GetInstance<IEnvironment>();
-            // it is default webroot content, do nothing
-            if (DeploymentHelper.IsDefaultWebRootContent(env.WebRootPath))
+                // it is default webroot content, do nothing
+                if (DeploymentHelper.IsDefaultWebRootContent(env.WebRootPath))
                 {
                     return;
                 }
 
-            // Set repo path to WebRoot
-            var previous = env.RepositoryPath;
+                // Set repo path to WebRoot
+                var previous = env.RepositoryPath;
                 env.RepositoryPath = Path.Combine(env.SiteRootPath, Constants.WebRoot);
 
                 repository = _repositoryFactory.GetRepository();
@@ -187,11 +215,11 @@ namespace Kudu.Services.GitServer
                     return;
                 }
 
-            // do initial commit
-            repository = _repositoryFactory.EnsureRepository(RepositoryType.Git);
+                // do initial commit
+                repository = _repositoryFactory.EnsureRepository(RepositoryType.Git);
 
-            // Once repo is init, persist the new repo path
-            settings.SetValue(SettingsKeys.RepositoryPath, Constants.WebRoot);
+                // Once repo is init, persist the new repo path
+                settings.SetValue(SettingsKeys.RepositoryPath, Constants.WebRoot);
 
                 repository.Commit("Initial Commit", authorName: null, emailAddress: null);
 
