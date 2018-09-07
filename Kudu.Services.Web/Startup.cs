@@ -36,6 +36,7 @@ using Kudu.Services.Web.Tracing;
 using Kudu.Core.SSHKey;
 using Kudu.Services.Diagnostics;
 using Kudu.Services.Performance;
+using Microsoft.Extensions.FileProviders;
 
 namespace Kudu.Services.Web
 {
@@ -80,9 +81,16 @@ namespace Kudu.Services.Web
             .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
             */
 
-            
-            services.AddMvc()
-           .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
+
+            services.AddMvcCore()
+                .AddRazorPages()
+                .AddAuthorization()
+                .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
+            //services.AddMemoryCache();
+            //services.AddRazorViewEngine();
+            services.AddDirectoryBrowser();
+
+            //           .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
             var serverConfiguration = new ServerConfiguration();
             // CORE TODO This is new. See if over time we can refactor away the need for this?
             // It's kind of a quick hack/compatibility shim. Ideally you want to get the request context only from where
@@ -104,15 +112,20 @@ namespace Kudu.Services.Web
             // Add various folders that never change to the process path. All child processes will inherit
             PrependFoldersToPath(environment);
 
-            // Per request environment
-            services.AddScoped<IEnvironment>(sp => GetEnvironment(hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>(),
-                sp.GetRequiredService<IHttpContextAccessor>().HttpContext));
-
             // General
             services.AddSingleton<IServerConfiguration>(serverConfiguration);
 
             // CORE TODO Looks like this doesn't ever actually do anything, can refactor out?
             services.AddSingleton<IBuildPropertyProvider>(new BuildPropertyProvider());
+
+
+            IDeploymentSettingsManager noContextDeploymentsSettingsManager =
+                new DeploymentSettingsManager(new XmlSettings.Settings(GetSettingsPath(environment)));
+            TraceServices.TraceLevel = noContextDeploymentsSettingsManager.GetTraceLevel();
+
+            // Per request environment
+            services.AddScoped<IEnvironment>(sp => GetEnvironment(hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>(),
+                sp.GetRequiredService<IHttpContextAccessor>().HttpContext));
 
             /*
              * CORE TODO all this business around ITracerFactory/ITracer/GetTracer()/
@@ -176,12 +189,7 @@ namespace Kudu.Services.Web
 
             // CORE TODO ShutdownDetector, used by LogStreamManager.
             //var shutdownDetector = new ShutdownDetector();
-            //shutdownDetector.Initialize();
-
-            IDeploymentSettingsManager noContextDeploymentsSettingsManager =
-                new DeploymentSettingsManager(new XmlSettings.Settings(GetSettingsPath(environment)));
-
-            TraceServices.TraceLevel = noContextDeploymentsSettingsManager.GetTraceLevel();
+            //shutdownDetector.Initialize()
 
             var noContextTraceFactory = new TracerFactory(() => GetTracerWithoutContext(environment, noContextDeploymentsSettingsManager));
             var etwTraceFactory = new TracerFactory(() => new ETWTracer(string.Empty, string.Empty));
@@ -189,7 +197,7 @@ namespace Kudu.Services.Web
             services.AddTransient<IAnalytics>(sp => new Analytics(sp.GetRequiredService<IDeploymentSettingsManager>(),
                                                                   sp.GetRequiredService<IServerConfiguration>(),
                                                                   noContextTraceFactory));
-
+            
             // CORE TODO Trace unhandled exceptions
             //AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
             //{
@@ -378,9 +386,16 @@ namespace Kudu.Services.Web
         {
             Console.WriteLine("\nConfigure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
-            app.UseMiddleware<StackifyMiddleware.RequestTracerMiddleware>();
-
             app.UseStaticFiles();
+
+            app.UseMvc();
+
+            app.UseDirectoryBrowser(new DirectoryBrowserOptions
+            {
+                FileProvider = new PhysicalFileProvider(
+                Path.Combine("/home/site/", "wwwroot")),
+                RequestPath = "/wwwroot"
+            });
 
             app.MapWhen(LogPathOnConsole, builder => builder.RunProxy(new ProxyOptions
             {
@@ -747,7 +762,6 @@ namespace Kudu.Services.Web
                 string textPath = Path.Combine(environment.DeploymentTracePath, requestTraceFile);
                 return new TextLogger(textPath);
             }
-
             return NullLogger.Instance;
         }
 
@@ -838,7 +852,7 @@ namespace Kudu.Services.Web
         }
         private static bool LogPathOnConsole(HttpContext context)
         {
-            Console.WriteLine($"path: {context.Request.Path}");
+            Console.WriteLine($"path("+DateTime.Now+"): {context.Request.Path} "+context.Request.Path);
             return false;
         }
     }
