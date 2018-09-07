@@ -652,12 +652,10 @@ namespace Kudu.Services.Web
             });
 
             // CORE TODO Remove This
-/*
            app.Run(async context =>
             {
                 await context.Response.WriteAsync("Krestel Running"); // returns a 200
             });
-            */
             Console.WriteLine("\nExiting Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
         }
 
