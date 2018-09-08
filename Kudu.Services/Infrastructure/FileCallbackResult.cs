@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -39,7 +40,7 @@ namespace Kudu.Services.Infrastructure
 
             public Task ExecuteAsync(ActionContext context, FileCallbackResult result)
             {
-                SetHeadersAndLog(context, result, null);
+                //FileResultExecutorBase.SetHeadersAndLog(context, result, null);
                 return result._callback(context.HttpContext.Response.Body, context);
             }
         }

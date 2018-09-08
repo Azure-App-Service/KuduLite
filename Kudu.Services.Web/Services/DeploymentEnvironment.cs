@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using Kudu.Core;
 using Kudu.Core.Deployment;
-using Microsoft.Extensions.PlatformAbstractions;
 
 namespace Kudu.Services.Web.Services
 {
@@ -35,7 +34,7 @@ namespace Kudu.Services.Web.Services
             get
             {
                 // CORE TODO What is this?
-                return Path.Combine(PlatformServices.Default.Application.ApplicationBasePath, "msbuild");
+                return Path.Combine(System.AppContext.BaseDirectory, "msbuild");
             }
         }
     }
