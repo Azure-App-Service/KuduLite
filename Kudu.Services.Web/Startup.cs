@@ -47,7 +47,7 @@ namespace Kudu.Services.Web
         // Note that the paths are relative to the ApplicationBasePath (Kudu.Services.Web bin directory)
         public const string KuduConsoleFilename = "kudu.dll";
         public const string KuduConsoleRelativePath = "KuduConsole";
-        public const string KuduConsoleDevRelativePath = @"..\..\..\..\Kudu.Console\bin\Debug\netcoreapp2.0";
+        public const string KuduConsoleDevRelativePath = @"..\..\..\..\Kudu.Console\bin\Debug\netcoreapp2.1";
         private const string Format = "hh.mm.ss.ffffff";
         private readonly IHostingEnvironment hostingEnvironment;
 
