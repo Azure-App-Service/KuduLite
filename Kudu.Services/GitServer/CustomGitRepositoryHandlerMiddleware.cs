@@ -15,8 +15,8 @@ using Microsoft.AspNetCore.Builder;
 namespace Kudu.Services.GitServer
 {
     /// <summary>
-    /// This is a middleware class that processes 
-    /// custom git repository requests
+    /// This is a middleware class that processes custom git 
+    /// repository requests
     /// </summary>
     /// <remarks>
     /// </remarks>
@@ -75,7 +75,7 @@ namespace Kudu.Services.GitServer
                                 using (var sw = new StreamWriter(context.Response.Body))
                                 {
                                     sw.Write("# service=git-upload-pack\n");
-                                    //sw.Flush();
+                                    sw.Flush();
                                 }
                                 // context.Response.OutputStream.PktWrite("# service=git-upload-pack\n");
                                 // context.Response.OutputStream.PktFlush();

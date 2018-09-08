@@ -26,7 +26,6 @@ using Kudu.Core.Hooks;
 using Kudu.Contracts.SourceControl;
 using Kudu.Core.SourceControl;
 using Kudu.Services.ServiceHookHandlers;
-using Microsoft.Extensions.PlatformAbstractions;
 using Kudu.Core.SourceControl.Git;
 using Kudu.Services.Web.Services;
 using Kudu.Services.GitServer;
@@ -428,7 +427,7 @@ namespace Kudu.Services.Web
             if (hostingEnvironment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                app.UseBrowserLink();
+                //app.UseBrowserLink();
             }
             else
             {
@@ -670,7 +669,7 @@ namespace Kudu.Services.Web
             string siteRoot = Path.Combine(root, Constants.SiteFolder);
             string repositoryPath = Path.Combine(siteRoot, settings == null ? Constants.RepositoryPath : settings.GetRepositoryPath());
             // CORE TODO see if we can refactor out PlatformServices as high up as we can?
-            string binPath = PlatformServices.Default.Application.ApplicationBasePath;
+            string binPath = System.AppContext.BaseDirectory;
             string requestId = httpContext?.Request.GetRequestId();
             string siteRetrictedJwt = httpContext?.Request.GetSiteRetrictedJwt();
 
@@ -679,11 +678,11 @@ namespace Kudu.Services.Web
             // CORE TODO Clean this up
             if (hostingEnvironment.IsDevelopment())
             {
-                kuduConsoleFullPath = Path.Combine(PlatformServices.Default.Application.ApplicationBasePath, KuduConsoleDevRelativePath, KuduConsoleFilename);
+                kuduConsoleFullPath = Path.Combine(System.AppContext.BaseDirectory, KuduConsoleDevRelativePath, KuduConsoleFilename);
             }
             else
             {
-                kuduConsoleFullPath = Path.Combine(PlatformServices.Default.Application.ApplicationBasePath, KuduConsoleRelativePath, KuduConsoleFilename);
+                kuduConsoleFullPath = Path.Combine(System.AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
             }
 
             // CORE TODO Environment now requires an HttpContextAccessor, which I have set to null here
