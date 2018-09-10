@@ -84,6 +84,7 @@ namespace Kudu.Services.Web
             services.AddMvcCore()
                 .AddRazorPages()
                 .AddAuthorization()
+                .AddJsonFormatters()
                 .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
             //services.AddMemoryCache();
             //services.AddRazorViewEngine();
