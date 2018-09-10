@@ -397,31 +397,24 @@ namespace Kudu.Services.Web
                 RequestPath = "/wwwroot"
             });
 
-            app.MapWhen(LogPathOnConsole, builder => builder.RunProxy(new ProxyOptions
-            {
-                Scheme = "http",
-                Host = "localhost",
-                Port = "1234"
-            }));
-
             app.MapWhen(IsWebSSHPath, builder => builder.RunProxy(new ProxyOptions
             {
                 Scheme = "http",
-                Host = "localhost",
+                Host = "127.0.0.1",
                 Port = "3000"
             }));
 
             app.MapWhen(IsTunnelServerPath, builder => builder.RunProxy(new ProxyOptions
             {
                 Scheme = "http",
-                Host = "localhost",
+                Host = "127.0.0.1",
                 Port = "6000"
             }));
 
             app.MapWhen(IsJavaDebugPath, builder => builder.RunProxy(new ProxyOptions
             {
                 Scheme = "http",
-                Host = "localhost",
+                Host = "127.0.0.1",
                 Port = "6000"
             }));
 
