@@ -13,7 +13,6 @@ using Kudu.Contracts.Tracing;
 using Kudu.Core;
 using Kudu.Core.Deployment;
 using Kudu.Core.Deployment.Generator;
-using Kudu.Core.Functions;
 using Kudu.Core.Helpers;
 using Kudu.Core.Hooks;
 using Kudu.Core.Infrastructure;
@@ -21,9 +20,8 @@ using Kudu.Core.Settings;
 using Kudu.Core.SourceControl;
 using Kudu.Core.SourceControl.Git;
 using Kudu.Core.Tracing;
-using XmlSettings;
-using Microsoft.AspNetCore.Http;
 using System.Reflection;
+using XmlSettings;
 
 namespace Kudu.Console
 {

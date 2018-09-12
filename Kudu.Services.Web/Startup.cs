@@ -659,6 +659,7 @@ namespace Kudu.Services.Web
             Console.WriteLine("\nExiting Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
         }
 
+
         private static string GetSettingsPath(IEnvironment environment)
         {
             return Path.Combine(environment.DeploymentsPath, Constants.DeploySettingsPath);
