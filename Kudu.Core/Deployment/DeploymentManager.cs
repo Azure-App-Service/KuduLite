@@ -171,6 +171,7 @@ namespace Kudu.Core.Deployment
             bool needFileUpdate = true,
             bool fullBuildByDefault = true)
         {
+            Console.WriteLine("Deploy Async");
             using (var deploymentAnalytics = new DeploymentAnalytics(_analytics, _settings))
             {
                 Exception exception = null;

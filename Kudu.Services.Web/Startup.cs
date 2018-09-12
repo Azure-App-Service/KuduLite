@@ -79,14 +79,13 @@ namespace Kudu.Services.Web
             })
             .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
             */
-            
+
             services.AddMvcCore()
                 .AddRazorPages()
                 .AddAuthorization()
                 .AddJsonFormatters()
                 .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
-            
-            //services.AddMvc().AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
+
             //services.AddMemoryCache();
             //services.AddRazorViewEngine();
             services.AddDirectoryBrowser();
@@ -161,7 +160,7 @@ namespace Kudu.Services.Web
             services.AddSingleton<ITraceFactory>(traceFactory);
 
             TraceServices.SetTraceFactory(createTracerThunk);
-            
+
             // Setup the deployment lock
             var lockPath = Path.Combine(environment.SiteRootPath, Constants.LockPath);
             var deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
@@ -461,7 +460,7 @@ namespace Kudu.Services.Web
             {
                 app.Map(url, appBranch => appBranch.RunReceivePackHandler());
             };
-            
+
             // Fetch hook
             app.Map("/deploy", appBranch => appBranch.RunFetchHandler());
 
@@ -652,6 +651,11 @@ namespace Kudu.Services.Web
                 //routes.MapRoute("error-404", "{*path}", new { controller = "Error404", action = "Handle" });
             });
 
+            // CORE TODO Remove This
+           app.Run(async context =>
+            {
+                await context.Response.WriteAsync("Krestel Running"); // returns a 200
+            });
             Console.WriteLine("\nExiting Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
         }
 
@@ -670,11 +674,13 @@ namespace Kudu.Services.Web
             var requestId = httpContext?.Request.GetRequestId();
             var siteRetrictedJwt = httpContext?.Request.GetSiteRetrictedJwt();
 
+
             string kuduConsoleFullPath;
 
             // CORE TODO Clean this up
             kuduConsoleFullPath = Path.Combine(System.AppContext.BaseDirectory, hostingEnvironment.IsDevelopment() ? KuduConsoleDevRelativePath : KuduConsoleRelativePath, KuduConsoleFilename);
             //kuduConsoleFullPath = Path.Combine(System.AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
+
 
             // CORE TODO Environment now requires an HttpContextAccessor, which I have set to null here
             return new Core.Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId, siteRetrictedJwt, kuduConsoleFullPath, null);
