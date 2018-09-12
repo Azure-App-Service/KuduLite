@@ -12,7 +12,7 @@ namespace Kudu.Core.SourceControl.Git
 {
     public class LibGit2SharpRepository : IGitRepository
     {
-        private const string _remoteAlias = GitExeRepository.RemoteAlias;
+        private const string RemoteAlias = GitExeRepository.RemoteAlias;
         private readonly ITraceFactory _tracerFactory;
         private readonly IDeploymentSettingsManager _settings;
         private readonly GitExeRepository _legacyGitExeRepository;
@@ -40,13 +40,7 @@ namespace Kudu.Core.SourceControl.Git
 
         public string RepositoryPath { get; private set; }
 
-        public RepositoryType RepositoryType
-        {
-            get
-            {
-                return RepositoryType.Git;
-            }
-        }
+        public RepositoryType RepositoryType => RepositoryType.Git;
 
         public void Initialize()
         {
@@ -111,7 +105,7 @@ fi" + "\n";
                 {
                     FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(PostReceiveHookPath));
 
-                    string content = @"#!/bin/sh
+                    var content = @"#!/bin/sh
 read i
 echo $i > pushinfo
 " + KnownEnvironment.KUDUCOMMAND + "\r\n";
@@ -124,13 +118,7 @@ echo $i > pushinfo
             }
         }
 
-        private string GitCredentialHookPath
-        {
-            get
-            {
-                return Path.Combine(RepositoryPath, ".git", "hooks", "git-credential-invalid.sh");
-            }
-        }
+        private string GitCredentialHookPath => Path.Combine(RepositoryPath, ".git", "hooks", "git-credential-invalid.sh");
 
         public ChangeSet GetChangeSet(string id)
         {
@@ -138,12 +126,7 @@ echo $i > pushinfo
             {
                 LibGit2Sharp.Commit commit = repo.Lookup<LibGit2Sharp.Commit>(id);
 
-                if (commit == null)
-                {
-                    return null;
-                }
-
-                return new ChangeSet(commit.Sha, commit.Author.Name, commit.Author.Email, commit.Message, commit.Author.When);
+                return commit == null ? null : new ChangeSet(commit.Sha, commit.Author.Name, commit.Author.Email, commit.Message, commit.Author.When);
             }
         }
 
@@ -151,7 +134,7 @@ echo $i > pushinfo
         {
             using (var repo = new LibGit2Sharp.Repository(RepositoryPath))
             {
-                repo.Stage(path);
+                repo.Index.Add(path);
             }
         }
 
@@ -172,15 +155,25 @@ echo $i > pushinfo
                     return false;
                 }
 
-                repo.Stage(changes);
+                foreach(var change in changes)
+                {
+                    repo.Index.Add(change);                    
+                }
+                
                 if (string.IsNullOrWhiteSpace(authorName) ||
                     string.IsNullOrWhiteSpace(emailAddress))
                 {
-                    repo.Commit(message);
+                    var author = repo.Config.BuildSignature(DateTimeOffset.Now);
+                    //var author = new Signature(authorName, emailAddress, DateTimeOffset.UtcNow);
+                    var committer = author;
+                    repo.Commit(message, author, committer);
                 }
                 else
                 {
-                    repo.Commit(message, new Signature(authorName, emailAddress, DateTimeOffset.UtcNow));
+                    var author = new Signature(authorName, emailAddress, DateTimeOffset.UtcNow);
+                    var committer = author;
+                    
+                    repo.Commit(message, author, committer);
                 }
                 return true;
             }
@@ -190,7 +183,7 @@ echo $i > pushinfo
         {
             using (var repo = new LibGit2Sharp.Repository(RepositoryPath))
             {
-                repo.Checkout(id, new CheckoutOptions { CheckoutModifiers = CheckoutModifiers.Force });
+                LibGit2Sharp.Commands.Checkout(repo, id, new CheckoutOptions { CheckoutModifiers = CheckoutModifiers.Force });
             }
         }
 
@@ -215,15 +208,14 @@ echo $i > pushinfo
             {
                 using (var repo = new LibGit2Sharp.Repository(RepositoryPath))
                 {
-                    var trackedBranchName = string.Format("{0}/{1}", _remoteAlias, branchName);
+                    var trackedBranchName = string.Format("{0}/{1}", RemoteAlias, branchName);
                     var refSpec = string.Format("+refs/heads/{0}:refs/remotes/{1}", branchName, trackedBranchName);
 
-                    LibGit2Sharp.Remote remote = null;
                     using (tracer.Step("LibGit2SharpRepository Add Remote"))
                     {
                         // only add if matching remote does not exist
                         // to address strange LibGit2SharpRepository remove and add remote issue (remote already exists!)
-                        remote = repo.Network.Remotes[_remoteAlias];
+                        var remote = repo.Network.Remotes[RemoteAlias];
                         if (remote != null &&
                             string.Equals(remote.Url, remoteUrl, StringComparison.OrdinalIgnoreCase) &&
                             remote.FetchRefSpecs.Any(rf => string.Equals(rf.Specification, refSpec, StringComparison.OrdinalIgnoreCase)))
@@ -233,10 +225,10 @@ echo $i > pushinfo
                         else
                         {
                             // Remove it if it already exists (does not throw if it doesn't)
-                            repo.Network.Remotes.Remove(_remoteAlias);
+                            repo.Network.Remotes.Remove(RemoteAlias);
 
                             // Configure the remote
-                            remote = repo.Network.Remotes.Add(_remoteAlias, remoteUrl, refSpec);
+                            remote = repo.Network.Remotes.Add(RemoteAlias, remoteUrl, refSpec);
 
                             tracer.Trace("Git remote added");
                         }
@@ -245,7 +237,13 @@ echo $i > pushinfo
                     using (tracer.Step("LibGit2SharpRepository Fetch"))
                     {
                         // This will only retrieve the "master"
-                        repo.Network.Fetch(remote);
+                        // OLD VERSION: repo.Network.Fetch(remote);
+                        const string logMessage = "";
+                        foreach (Remote currRemote in repo.Network.Remotes)
+                        {
+                            IEnumerable<string> refSpecs = currRemote.FetchRefSpecs.Select(x => x.Specification);
+                            LibGit2Sharp.Commands.Fetch(repo, currRemote.Name, refSpecs, null, logMessage);
+                        }
                     }
                     
                     using (tracer.Step("LibGit2SharpRepository Update"))
@@ -320,7 +318,7 @@ echo $i > pushinfo
                 if (string.IsNullOrWhiteSpace(startPoint))
                 {
                     var branch = repo.GetOrCreateBranch(branchName);
-                    repo.Checkout(branch);
+                    LibGit2Sharp.Commands.Checkout(repo,branch);
                 }
                 else
                 {
@@ -330,7 +328,7 @@ echo $i > pushinfo
                         throw new LibGit2Sharp.NotFoundException(string.Format("Start point \"{0}\" for reset was not found.", startPoint));
                     }
                     var branch = repo.GetOrCreateBranch(branchName);
-                    repo.Checkout(branch);
+                    LibGit2Sharp.Commands.Checkout(repo,branch);
                     repo.Reset(ResetMode.Hard, commit);
                 }
             }
@@ -374,10 +372,19 @@ echo $i > pushinfo
 
             using (var repo = new LibGit2Sharp.Repository(RepositoryPath))
             {
+                var files = repo.Diff.Compare<TreeChanges>(
+                        repo.Head.Tip.Tree, 
+                        null, 
+                        lookupList, 
+                        new CompareOptions() { IncludeUnmodified = true, Similarity = SimilarityOptions.None })
+                    .Select(d => Path.Combine(repo.Info.WorkingDirectory, d.Path))
+                    .Where(p => p.StartsWith(path, StringComparison.OrdinalIgnoreCase));
+                
+                /*
                 var files = repo.Diff.Compare<TreeChanges>(null, DiffTargets.Index, lookupList, compareOptions: new CompareOptions() { IncludeUnmodified = true, Similarity = SimilarityOptions.None })
                                       .Select(d => Path.Combine(repo.Info.WorkingDirectory, d.Path))
                                       .Where(p => p.StartsWith(path, StringComparison.OrdinalIgnoreCase));
-
+                */
                 switch (searchOption)
                 {
                     case SearchOption.TopDirectoryOnly:
@@ -395,13 +402,7 @@ echo $i > pushinfo
             }
         }
 
-        private string PostReceiveHookPath
-        {
-            get
-            {
-                return Path.Combine(RepositoryPath, ".git", "hooks", "post-receive");
-            }
-        }
+        private string PostReceiveHookPath => Path.Combine(RepositoryPath, ".git", "hooks", "post-receive");
 
         public bool SkipPostReceiveHookCheck
         {

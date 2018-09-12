@@ -1,4 +1,10 @@
-﻿using Kudu.Contracts.Settings;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
 using Kudu.Core.Deployment;
 using Kudu.Core.Tracing;
@@ -8,18 +14,18 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace Kudu.Services
 {
-    public class FetchHandlerMiddleware
+    /// <summary>
+    /// Terminal middleware to handle fetch requests for custom Git/BitBucket
+    /// deployment. Webhooks send
+    /// </summary>
+    /// <exception cref="System.OverflowException">Thrown when one parameter is max 
+    /// and the other is greater than 0.</exception>
+    public class FetchHandlerMiddlewareV2
     {
-        public FetchHandlerMiddleware(
+        public FetchHandlerMiddlewareV2(
             RequestDelegate next)
         {
             // next is never used, this middleware is always terminal
@@ -30,7 +36,8 @@ namespace Kudu.Services
             ITracer tracer,
             IDeploymentSettingsManager settings,
             IFetchDeploymentManager manager,
-            IEnumerable<IServiceHookHandler> serviceHookHandlers)
+            IEnumerable<IServiceHookHandler> serviceHookHandlers
+            )
         {
             using (tracer.Step("FetchHandler"))
             {
@@ -52,12 +59,13 @@ namespace Kudu.Services
 
                 DeploymentInfoBase deployInfo = null;
 
-                // We are going to assume that the branch details are already set by the time it gets here. This is particularly important in the mercurial case,
-                // since Settings hardcodes the default value for Branch to be "master". Consequently, Kudu will NoOp requests for Mercurial commits.
+                // We are going to assume that the branch details are already set by the time it gets here. This is
+                // particularly important in the mercurial case,since Settings hardcodes the default value for Branch
+                // to be "master". Consequently, Kudu will NoOp requests for Mercurial commits.
                 var targetBranch = settings.GetBranch();
                 try
                 {
-                    JObject payload = GetPayload(context.Request, tracer);
+                    var payload = GetPayload(context.Request, tracer);
                     DeployAction action = GetRepositoryInfo(context.Request, payload, targetBranch, serviceHookHandlers, tracer, out deployInfo);
                     if (action == DeployAction.NoOp)
                     {
@@ -74,7 +82,7 @@ namespace Kudu.Services
                 }
 
                 // CORE TODO make sure .Query has the same semantics as the old .QueryString (null, empty, etc.)
-                bool asyncRequested = String.Equals(context.Request.Query["isAsync"], "true", StringComparison.OrdinalIgnoreCase);
+                var asyncRequested = string.Equals(context.Request.Query["isAsync"], "true", StringComparison.OrdinalIgnoreCase);
 
                 var response = await manager.FetchDeploy(deployInfo, asyncRequested, UriHelper.GetRequestUri(context.Request), targetBranch);
 
@@ -106,7 +114,6 @@ namespace Kudu.Services
                         context.Response.StatusCode = StatusCodes.Status409Conflict;
                         await context.Response.WriteAsync(Resources.Error_DeploymentInProgress);
                         break;
-                    case FetchDeploymentRequestResult.RanSynchronously:
                     default:
                         context.Response.StatusCode = StatusCodes.Status200OK;
                         break;
@@ -115,8 +122,8 @@ namespace Kudu.Services
         }
 
         private DeployAction GetRepositoryInfo(
-            HttpRequest request,
-            JObject payload,
+            HttpRequest request, 
+            JObject payload, 
             string targetBranch,
             IEnumerable<IServiceHookHandler> serviceHookHandlers,
             ITracer tracer,
@@ -125,50 +132,48 @@ namespace Kudu.Services
             foreach (var handler in serviceHookHandlers)
             {
                 DeployAction result = handler.TryParseDeploymentInfo(request, payload, targetBranch, out info);
-                if (result != DeployAction.UnknownPayload)
+                if (result == DeployAction.UnknownPayload) continue;
+                if (tracer.TraceLevel >= TraceLevel.Verbose)
                 {
-                    if (tracer.TraceLevel >= System.Diagnostics.TraceLevel.Verbose)
+                    var attribs = new Dictionary<string, string>
                     {
-                        var attribs = new Dictionary<string, string>
-                        {
-                            { "type", handler.GetType().FullName }
-                        };
-
-                        tracer.Trace("handler", attribs);
-                    }
-
-                    if (result == DeployAction.ProcessDeployment)
-                    {
-                        // Although a payload may be intended for a handler, it might not need to fetch.
-                        // For instance, if a different branch was pushed than the one the repository is deploying, we can no-op it.
-                        Debug.Assert(info != null);
-                        info.Fetch = handler.Fetch;
-                    }
-
-                    return result;
+                        { "type", handler.GetType().FullName }
+                    };
+                    tracer.Trace("handler", attribs);
                 }
+
+                if (result == DeployAction.ProcessDeployment)
+                {
+                    // Although a payload may be intended for a handler, it might not need to fetch.
+                    // For instance, if a different branch was pushed than the one the repository is deploying,
+                    // we can no-op it.
+                    Debug.Assert(info != null);
+                    info.Fetch = handler.Fetch;
+                }
+
+                return result;
             }
 
             throw new FormatException(Resources.Error_UnsupportedFormat);
         }
-
-        private JObject GetPayload(HttpRequest request, ITracer tracer)
+        
+        
+        private JObject GetPayload(HttpRequest contextRequest, ITracer tracer)
         {
             JObject payload;
 
-            // CORE TODO try this out with an actual form request
-            if (request.HasFormContentType && request.Form.Count > 0)
+            if (contextRequest.HasFormContentType && contextRequest.Form.Count > 0)
             {
-                string json = request.Form["payload"];
-                if (String.IsNullOrEmpty(json))
+                string json = contextRequest.Form["payload"];
+                if (string.IsNullOrEmpty(json))
                 {
-                    json = request.Form.First().Value;
+                    json = contextRequest.Form.First().Value;
                 }
                 payload = JsonConvert.DeserializeObject<JObject>(json);
             }
             else
             {
-                using (JsonTextReader reader = new JsonTextReader(new StreamReader(request.Body)))
+                using (var reader = new JsonTextReader(new StreamReader(contextRequest.Body)))
                 {
                     payload = JObject.Load(reader);
                 }
@@ -188,14 +193,13 @@ namespace Kudu.Services
 
                 tracer.Trace("payload", attribs);
             }
-
             return payload;
         }
     }
-
-    public static class FetchHandlerExtensions
+    
+    public static class FetchHandlerV2Extensions
     {
-        public static IApplicationBuilder RunFetchHandlerOld(this IApplicationBuilder builder)
+        public static IApplicationBuilder RunFetchHandler(this IApplicationBuilder builder)
         {
             return builder.UseMiddleware<FetchHandlerMiddleware>();
         }

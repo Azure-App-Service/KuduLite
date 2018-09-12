@@ -45,9 +45,9 @@ namespace Kudu.Services.Web
         // The idea is that we want Kudu.Services.Web to run kudu.dll from the directory it was built to when we are locally
         // debugging, but in release, we will put the published app into a dedicated directory.
         // Note that the paths are relative to the ApplicationBasePath (Kudu.Services.Web bin directory)
-        public const string KuduConsoleFilename = "kudu.dll";
-        public const string KuduConsoleRelativePath = "KuduConsole";
-        public const string KuduConsoleDevRelativePath = @"..\..\..\..\Kudu.Console\bin\Debug\netcoreapp2.1";
+        private const string KuduConsoleFilename = "kudu.dll";
+        private const string KuduConsoleRelativePath = "KuduConsole";
+        private const string KuduConsoleDevRelativePath =  @"..\..\..\..\Kudu.Console\bin\Debug\netcoreapp2.1";
         private const string Format = "hh.mm.ss.ffffff";
         private readonly IHostingEnvironment hostingEnvironment;
 
@@ -59,7 +59,7 @@ namespace Kudu.Services.Web
             this.hostingEnvironment = hostingEnvironment;
         }
 
-        public IConfiguration Configuration { get; }
+        private IConfiguration Configuration { get; }
 
         // CORE TODO Is this still true?
         // Due to a bug in Ninject we can't use Dispose to clean up LockFile so we shut it down manually
@@ -79,13 +79,14 @@ namespace Kudu.Services.Web
             })
             .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
             */
-
-
+            
             services.AddMvcCore()
                 .AddRazorPages()
                 .AddAuthorization()
                 .AddJsonFormatters()
                 .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
+            
+            //services.AddMvc().AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
             //services.AddMemoryCache();
             //services.AddRazorViewEngine();
             services.AddDirectoryBrowser();
@@ -160,12 +161,13 @@ namespace Kudu.Services.Web
             services.AddSingleton<ITraceFactory>(traceFactory);
 
             TraceServices.SetTraceFactory(createTracerThunk);
+            
             // Setup the deployment lock
-            string lockPath = Path.Combine(environment.SiteRootPath, Constants.LockPath);
-            string deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
-            string statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
-            string sshKeyLockPath = Path.Combine(lockPath, Constants.SSHKeyLockFile);
-            string hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
+            var lockPath = Path.Combine(environment.SiteRootPath, Constants.LockPath);
+            var deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
+            var statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
+            var sshKeyLockPath = Path.Combine(lockPath, Constants.SSHKeyLockFile);
+            var hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
 
             _deploymentLock = new DeploymentLockFile(deploymentLockPath, traceFactory);
             _deploymentLock.InitializeAsyncLocks();
@@ -305,6 +307,8 @@ namespace Kudu.Services.Web
                     sp.GetRequiredService<IDeploymentSettingsManager>(),
                     sp.GetRequiredService<ITraceFactory>()));
 
+            //services.ConfigureGitServiceHookParsers();
+            
             // Git Servicehook Parsers
             services.AddScoped<IServiceHookHandler, GenericHandler>();
             services.AddScoped<IServiceHookHandler, GitHubHandler>();
@@ -388,7 +392,7 @@ namespace Kudu.Services.Web
 
             app.UseStaticFiles();
 
-            app.UseMvc();
+            //app.UseMvc();
 
             app.UseDirectoryBrowser(new DirectoryBrowserOptions
             {
@@ -397,25 +401,31 @@ namespace Kudu.Services.Web
                 RequestPath = "/wwwroot"
             });
 
-            app.MapWhen(IsWebSSHPath, builder => builder.RunProxy(new ProxyOptions
+            try
             {
-                Scheme = "http",
-                Host = "127.0.0.1",
-                Port = "3000"
-            }));
+                app.MapWhen(IsWebSSHPath, builder => builder.RunProxy(new ProxyOptions
+                {
+                    Scheme = "http",
+                    Host = "127.0.0.1",
+                    Port = "3000"
+                }));
+            } catch
+            {
+
+            }
 
             app.MapWhen(IsTunnelServerPath, builder => builder.RunProxy(new ProxyOptions
             {
                 Scheme = "http",
                 Host = "127.0.0.1",
-                Port = "6000"
+                Port = "5000"
             }));
 
             app.MapWhen(IsJavaDebugPath, builder => builder.RunProxy(new ProxyOptions
             {
                 Scheme = "http",
                 Host = "127.0.0.1",
-                Port = "6000"
+                Port = "5000"
             }));
 
             if (hostingEnvironment.IsDevelopment())
@@ -451,6 +461,7 @@ namespace Kudu.Services.Web
             {
                 app.Map(url, appBranch => appBranch.RunReceivePackHandler());
             };
+            
             // Fetch hook
             app.Map("/deploy", appBranch => appBranch.RunFetchHandler());
 
@@ -474,7 +485,6 @@ namespace Kudu.Services.Web
             };
 
             //app.UseStaticFiles();
-
             app.UseMvc(routes =>
             {
                 Console.WriteLine("\nSetting Up Routes : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
@@ -510,8 +520,6 @@ namespace Kudu.Services.Web
                 
                 // Zip push deployment
                 routes.MapRoute("zip-push-deploy", "api/zipdeploy", new { controller = "PushDeployment", action = "ZipPushDeploy" }, new { verb = new HttpMethodRouteConstraint("POST") });
-                Console.WriteLine("Done");
-                Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
                 // Live Command Line
                 routes.MapHttpRouteDual("execute-command", "command", new { controller = "Command", action = "ExecuteCommand" }, new { verb = new HttpMethodRouteConstraint("POST") });
@@ -641,14 +649,9 @@ namespace Kudu.Services.Web
                 // catch all unregistered url to properly handle not found
                 // this is to work arounf the issue in TraceModule where we see double OnBeginRequest call
                 // for the same request (404 and then 200 statusCode).
-                routes.MapRoute("error-404", "{*path}", new { controller = "Error404", action = "Handle" });
+                //routes.MapRoute("error-404", "{*path}", new { controller = "Error404", action = "Handle" });
             });
 
-            // CORE TODO Remove This
-           app.Run(async context =>
-            {
-                await context.Response.WriteAsync("Krestel Running"); // returns a 200
-            });
             Console.WriteLine("\nExiting Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
         }
 
@@ -659,25 +662,19 @@ namespace Kudu.Services.Web
 
         private static IEnvironment GetEnvironment(IHostingEnvironment hostingEnvironment, IDeploymentSettingsManager settings = null, HttpContext httpContext = null)
         {
-            string root = PathResolver.ResolveRootPath();
-            string siteRoot = Path.Combine(root, Constants.SiteFolder);
-            string repositoryPath = Path.Combine(siteRoot, settings == null ? Constants.RepositoryPath : settings.GetRepositoryPath());
+            var root = PathResolver.ResolveRootPath();
+            var siteRoot = Path.Combine(root, Constants.SiteFolder);
+            var repositoryPath = Path.Combine(siteRoot, settings == null ? Constants.RepositoryPath : settings.GetRepositoryPath());
             // CORE TODO see if we can refactor out PlatformServices as high up as we can?
-            string binPath = System.AppContext.BaseDirectory;
-            string requestId = httpContext?.Request.GetRequestId();
-            string siteRetrictedJwt = httpContext?.Request.GetSiteRetrictedJwt();
+            var binPath = System.AppContext.BaseDirectory;
+            var requestId = httpContext?.Request.GetRequestId();
+            var siteRetrictedJwt = httpContext?.Request.GetSiteRetrictedJwt();
 
             string kuduConsoleFullPath;
 
             // CORE TODO Clean this up
-            if (hostingEnvironment.IsDevelopment())
-            {
-                kuduConsoleFullPath = Path.Combine(System.AppContext.BaseDirectory, KuduConsoleDevRelativePath, KuduConsoleFilename);
-            }
-            else
-            {
-                kuduConsoleFullPath = Path.Combine(System.AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
-            }
+            kuduConsoleFullPath = Path.Combine(System.AppContext.BaseDirectory, hostingEnvironment.IsDevelopment() ? KuduConsoleDevRelativePath : KuduConsoleRelativePath, KuduConsoleFilename);
+            //kuduConsoleFullPath = Path.Combine(System.AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
 
             // CORE TODO Environment now requires an HttpContextAccessor, which I have set to null here
             return new Core.Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId, siteRetrictedJwt, kuduConsoleFullPath, null);
@@ -687,17 +684,8 @@ namespace Kudu.Services.Web
         {
             // CORE TODO Hard-coding this for now while exploring. Have a look at what
             // PlatformServices.Default and the injected IHostingEnvironment have at runtime.
-            if (!Directory.Exists(System.Environment.ExpandEnvironmentVariables(@"%HOME%")))
-            {
-                if (OSDetector.IsOnWindows())
-                {
-                    System.Environment.SetEnvironmentVariable("HOME", @"G:\kudu-debug");
-                }
-                else
-                {
-                    System.Environment.SetEnvironmentVariable("HOME", "/home");
-                }
-            }
+            if (Directory.Exists(System.Environment.ExpandEnvironmentVariables(@"%HOME%"))) return;
+            System.Environment.SetEnvironmentVariable("HOME", OSDetector.IsOnWindows() ? @"G:\kudu-debug" : "/home");
 
             /*
             // If MapPath("/_app") returns a valid folder, set %HOME% to that, regardless of
@@ -713,18 +701,15 @@ namespace Kudu.Services.Web
 
         private static ITracer GetTracer(IServiceProvider serviceProvider)
         {
-            IEnvironment environment = serviceProvider.GetRequiredService<IEnvironment>();
-            TraceLevel level = serviceProvider.GetRequiredService<IDeploymentSettingsManager>().GetTraceLevel();
+            var environment = serviceProvider.GetRequiredService<IEnvironment>();
+            var level = serviceProvider.GetRequiredService<IDeploymentSettingsManager>().GetTraceLevel();
             var contextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
             var httpContext = contextAccessor.HttpContext;
             var requestTraceFile = TraceServices.GetRequestTraceFile(httpContext);
-            if (level > TraceLevel.Off && requestTraceFile != null)
-            {
-                string textPath = Path.Combine(environment.TracePath, requestTraceFile);
-                return new CascadeTracer(new XmlTracer(environment.TracePath, level), new TextTracer(textPath, level), new ETWTracer(environment.RequestId, TraceServices.GetHttpMethod(httpContext)));
-            }
+            if (level <= TraceLevel.Off || requestTraceFile == null) return NullTracer.Instance;
+            var textPath = Path.Combine(environment.TracePath, requestTraceFile);
+            return new CascadeTracer(new XmlTracer(environment.TracePath, level), new TextTracer(textPath, level), new ETWTracer(environment.RequestId, TraceServices.GetHttpMethod(httpContext)));
 
-            return NullTracer.Instance;
         }
 
         private static ITracer GetTracerWithoutContext(IEnvironment environment, IDeploymentSettingsManager settings)
@@ -733,53 +718,43 @@ namespace Kudu.Services.Web
             // prefer no-op tracer over outage.  
             return OperationManager.SafeExecute(() =>
             {
-                TraceLevel level = settings.GetTraceLevel();
-                if (level > TraceLevel.Off)
-                {
-                    return new XmlTracer(environment.TracePath, level);
-                }
-
-                return NullTracer.Instance;
+                var traceLevel = settings.GetTraceLevel();
+                return traceLevel > TraceLevel.Off ? new XmlTracer(environment.TracePath, traceLevel) : NullTracer.Instance;
             }) ?? NullTracer.Instance;
         }
 
         private static ILogger GetLogger(IServiceProvider serviceProvider)
         {
-            IEnvironment environment = serviceProvider.GetRequiredService<IEnvironment>();
-            TraceLevel level = serviceProvider.GetRequiredService<IDeploymentSettingsManager>().GetTraceLevel();
+            var environment = serviceProvider.GetRequiredService<IEnvironment>();
+            var level = serviceProvider.GetRequiredService<IDeploymentSettingsManager>().GetTraceLevel();
             var contextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
             var httpContext = contextAccessor.HttpContext;
             var requestTraceFile = TraceServices.GetRequestTraceFile(httpContext);
-            if (level > TraceLevel.Off && requestTraceFile != null)
-            {
-                string textPath = Path.Combine(environment.DeploymentTracePath, requestTraceFile);
-                return new TextLogger(textPath);
-            }
-            return NullLogger.Instance;
+            if (level <= TraceLevel.Off || requestTraceFile == null) return NullLogger.Instance;
+            var textPath = Path.Combine(environment.DeploymentTracePath, requestTraceFile);
+            return new TextLogger(textPath);
         }
 
         private static void PrependFoldersToPath(IEnvironment environment)
         {
-            List<string> folders = PathUtilityFactory.Instance.GetPathFolders(environment);
+            var folders = PathUtilityFactory.Instance.GetPathFolders(environment);
 
-            string path = System.Environment.GetEnvironmentVariable("PATH");
-            string additionalPaths = String.Join(Path.PathSeparator.ToString(), folders);
+            var path = System.Environment.GetEnvironmentVariable("PATH");
+            var additionalPaths = String.Join(Path.PathSeparator.ToString(), folders);
 
             // Make sure we haven't already added them. This can happen if the Kudu appdomain restart (since it's still same process)
-            if (!path.Contains(additionalPaths))
+            if (path.Contains(additionalPaths)) return;
+            path = additionalPaths + Path.PathSeparator + path;
+
+            // PHP 7 was mistakenly added to the path unconditionally on Azure. To work around, if we detect
+            // some PHP v5.x anywhere on the path, we yank the unwanted PHP 7
+            // TODO: remove once the issue is fixed on Azure
+            if (path.Contains(@"PHP\v5"))
             {
-                path = additionalPaths + Path.PathSeparator + path;
-
-                // PHP 7 was mistakenly added to the path unconditionally on Azure. To work around, if we detect
-                // some PHP v5.x anywhere on the path, we yank the unwanted PHP 7
-                // TODO: remove once the issue is fixed on Azure
-                if (path.Contains(@"PHP\v5"))
-                {
-                    path = path.Replace(@"D:\Program Files (x86)\PHP\v7.0" + Path.PathSeparator, String.Empty);
-                }
-
-                System.Environment.SetEnvironmentVariable("PATH", path);
+                path = path.Replace(@"D:\Program Files (x86)\PHP\v7.0" + Path.PathSeparator, String.Empty);
             }
+
+            System.Environment.SetEnvironmentVariable("PATH", path);
         }
 
         private static void EnsureDotNetCoreEnvironmentVariable(IEnvironment environment)
@@ -817,7 +792,7 @@ namespace Kudu.Services.Web
 
         private static string GetRequestTraceFile(IServiceProvider serviceProvider)
         {
-            TraceLevel level = serviceProvider.GetRequiredService<IDeploymentSettingsManager>().GetTraceLevel();
+            var traceLevel = serviceProvider.GetRequiredService<IDeploymentSettingsManager>().GetTraceLevel();
             // CORE TODO Need TraceServices implementation
             //if (level > TraceLevel.Off)
             //{

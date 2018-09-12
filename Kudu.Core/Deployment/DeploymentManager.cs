@@ -38,7 +38,7 @@ namespace Kudu.Core.Deployment
         private const string XmlLogFile = "log.xml";
         public const string TextLogFile = "log.log";
         private const string TemporaryDeploymentIdPrefix = "temp-";
-        public const int MaxSuccessDeploymentResults = 10;
+        private const int MaxSuccessDeploymentResults = 10;
 
         public DeploymentManager(ISiteBuilderFactory builderFactory,
                                  IEnvironment environment,
@@ -171,7 +171,6 @@ namespace Kudu.Core.Deployment
             bool needFileUpdate = true,
             bool fullBuildByDefault = true)
         {
-            Console.WriteLine("Deploy Async");
             using (var deploymentAnalytics = new DeploymentAnalytics(_analytics, _settings))
             {
                 Exception exception = null;
