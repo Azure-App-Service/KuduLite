@@ -25,8 +25,6 @@ using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Hooks;
 using Kudu.Contracts.SourceControl;
 using Kudu.Core.SourceControl;
-using Kudu.Services.ServiceHookHandlers;
-using Kudu.Core.SourceControl.Git;
 using Kudu.Services.Web.Services;
 using Kudu.Services.GitServer;
 using Kudu.Core.Commands;
@@ -36,6 +34,7 @@ using Kudu.Core.SSHKey;
 using Kudu.Services.Diagnostics;
 using Kudu.Services.Performance;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.ResponseCompression;
 
 namespace Kudu.Services.Web
 {
@@ -50,10 +49,11 @@ namespace Kudu.Services.Web
         private const string KuduConsoleDevRelativePath =  @"..\..\..\..\Kudu.Console\bin\Debug\netcoreapp2.1";
         private const string Format = "hh.mm.ss.ffffff";
         private readonly IHostingEnvironment hostingEnvironment;
+        private static readonly IHttpContextAccessor _httpContextAccessor;
+        private static Dictionary<string, IOperationLock> NamedLocks;
 
         public Startup(IConfiguration configuration, IHostingEnvironment hostingEnvironment)
         {
-
             Console.WriteLine("\nStartup : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
             Configuration = configuration;
             this.hostingEnvironment = hostingEnvironment;
@@ -65,20 +65,20 @@ namespace Kudu.Services.Web
         // Due to a bug in Ninject we can't use Dispose to clean up LockFile so we shut it down manually
         private static DeploymentLockFile _deploymentLock;
 
-        // This method gets called by the runtime. Use this method to add services to the container.
-        // CORE TODO trace exceptions here, see the catch in NinjectServices.Start()
+        /// <summary>
+        /// This method gets called by the runtime. It is used to add services 
+        /// to the container. It uses the Extension Pateern.
+        /// </summary>
+        /// <param name="services">
+        /// 
+        /// </param>
+        /// <todo>
+        ///   CORE TODO trace exceptions here, see the catch in NinjectServices.Start()
+        /// </todo>
         public void ConfigureServices(IServiceCollection services)
         {
 
-            //CORE TODO Remove this
             Console.WriteLine("\nConfigure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-            /*
-            services.AddMvc(opts=>
-            {
-                opts.Filters.Add(new AutoLogAttribute());
-            })
-            .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
-            */
 
             services.AddMvcCore()
                 .AddRazorPages()
@@ -86,12 +86,14 @@ namespace Kudu.Services.Web
                 .AddJsonFormatters()
                 .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
 
-            //services.AddMemoryCache();
-            //services.AddRazorViewEngine();
+
+            services.Configure<GzipCompressionProviderOptions>(options => options.Level = System.IO.Compression.CompressionLevel.Optimal);
+            services.AddResponseCompression();
+
             services.AddDirectoryBrowser();
 
-            //           .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
             var serverConfiguration = new ServerConfiguration();
+            
             // CORE TODO This is new. See if over time we can refactor away the need for this?
             // It's kind of a quick hack/compatibility shim. Ideally you want to get the request context only from where
             // it's specifically provided to you (Request.HttpContext in a controller, or as an Invoke() parameter in
@@ -140,7 +142,7 @@ namespace Kudu.Services.Web
              * HttpContext.Current
              */
             
-            Func<IServiceProvider, ITracer> resolveTracer = sp => GetTracer(sp);
+            Func<IServiceProvider, ITracer> resolveTracer = sp => Util.GetTracer(sp);
             Func<ITracer> createTracerThunk = () => resolveTracer(services.BuildServiceProvider());
 
             // First try to use the current request profiler if any, otherwise create a new one
@@ -162,37 +164,14 @@ namespace Kudu.Services.Web
             TraceServices.SetTraceFactory(createTracerThunk);
 
             // Setup the deployment lock
-            var lockPath = Path.Combine(environment.SiteRootPath, Constants.LockPath);
-            var deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
-            var statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
-            var sshKeyLockPath = Path.Combine(lockPath, Constants.SSHKeyLockFile);
-            var hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
-
-            _deploymentLock = new DeploymentLockFile(deploymentLockPath, traceFactory);
-            _deploymentLock.InitializeAsyncLocks();
-
-            var statusLock = new LockFile(statusLockPath, traceFactory);
-            var sshKeyLock = new LockFile(sshKeyLockPath, traceFactory);
-            var hooksLock = new LockFile(hooksLockPath, traceFactory);
-
-            // CORE TODO This originally used Ninject's "WhenInjectedInto" for specific instances. IServiceCollection
-            // doesn't support this concept, or anything similar like named instances. There are a few possibilities, but the hack
-            // solution for now is just injecting a dictionary of locks and letting each dependent resolve the one it needs.
-            var namedLocks = new Dictionary<string, IOperationLock>
-            {
-                { "status", statusLock }, // DeploymentStatusManager
-                { "ssh", sshKeyLock }, // SSHKeyController
-                { "hooks", hooksLock }, // WebHooksManager
-                { "deployment", _deploymentLock } // DeploymentController, DeploymentManager, SettingsController, FetchDeploymentManager, LiveScmController, ReceivePackHandlerMiddleware
-            };
-
-            services.AddSingleton<IDictionary<string, IOperationLock>>(namedLocks);
+            SetupLocks(traceFactory, environment);
+            services.AddSingleton<IDictionary<string, IOperationLock>>(NamedLocks);
 
             // CORE TODO ShutdownDetector, used by LogStreamManager.
             //var shutdownDetector = new ShutdownDetector();
             //shutdownDetector.Initialize()
 
-            var noContextTraceFactory = new TracerFactory(() => GetTracerWithoutContext(environment, noContextDeploymentsSettingsManager));
+            var noContextTraceFactory = new TracerFactory(() => Util.GetTracerWithoutContext(environment, noContextDeploymentsSettingsManager));
             var etwTraceFactory = new TracerFactory(() => new ETWTracer(string.Empty, string.Empty));
 
             services.AddTransient<IAnalytics>(sp => new Analytics(sp.GetRequiredService<IDeploymentSettingsManager>(),
@@ -218,7 +197,7 @@ namespace Kudu.Services.Web
             // CORE TODO
             // LogStream service
             // The hooks and log stream start endpoint are low traffic end-points. Re-using it to avoid creating another lock
-            var logStreamManagerLock = hooksLock;
+            var logStreamManagerLock = NamedLocks["hooks"];
             //kernel.Bind<LogStreamManager>().ToMethod(context => new LogStreamManager(Path.Combine(environment.RootPath, Constants.LogFilesPath),
             //                                                                         context.Kernel.Get<IEnvironment>(),
             //                                                                         context.Kernel.Get<IDeploymentSettingsManager>(),
@@ -279,7 +258,7 @@ namespace Kudu.Services.Web
             //kernel.Bind<IContinuousJobsManager>().ToConstant(continuousJobManager)
             //                     .InTransientScope();
 
-            services.AddScoped<ILogger>(sp => GetLogger(sp));
+            services.AddScoped<ILogger>(sp => Util.GetLogger(sp));
 
             services.AddScoped<IDeploymentManager, DeploymentManager>();
             services.AddScoped<IFetchDeploymentManager, FetchDeploymentManager>();
@@ -293,34 +272,10 @@ namespace Kudu.Services.Web
             services.AddScoped<IApplicationLogsReader, ApplicationLogsReader>();
 
             // Git server
-            services.AddTransient<IDeploymentEnvironment, DeploymentEnvironment>();
+            services.AddGitServer();
 
-
-            services.AddScoped<IGitServer>(sp =>
-                new GitExeServer(
-                    sp.GetRequiredService<IEnvironment>(),
-                    _deploymentLock,
-                    GetRequestTraceFile(sp),
-                    sp.GetRequiredService<IRepositoryFactory>(),
-                    sp.GetRequiredService<IDeploymentEnvironment>(),
-                    sp.GetRequiredService<IDeploymentSettingsManager>(),
-                    sp.GetRequiredService<ITraceFactory>()));
-
-            //services.ConfigureGitServiceHookParsers();
-            
             // Git Servicehook Parsers
-            services.AddScoped<IServiceHookHandler, GenericHandler>();
-            services.AddScoped<IServiceHookHandler, GitHubHandler>();
-            services.AddScoped<IServiceHookHandler, BitbucketHandler>();
-            services.AddScoped<IServiceHookHandler, BitbucketHandlerV2>();
-            services.AddScoped<IServiceHookHandler, DropboxHandler>();
-            services.AddScoped<IServiceHookHandler, CodePlexHandler>();
-            services.AddScoped<IServiceHookHandler, CodebaseHqHandler>();
-            services.AddScoped<IServiceHookHandler, GitlabHqHandler>();
-            services.AddScoped<IServiceHookHandler, GitHubCompatHandler>();
-            services.AddScoped<IServiceHookHandler, KilnHgHandler>();
-            services.AddScoped<IServiceHookHandler, VSOHandler>();
-            services.AddScoped<IServiceHookHandler, OneDriveHandler>();
+            services.AddGitServiceHookParsers();
 
             // CORE TODO
             // SiteExtensions
@@ -391,41 +346,20 @@ namespace Kudu.Services.Web
 
             app.UseStaticFiles();
 
-            //app.UseMvc();
+            app.UseResponseCompression();
 
             app.UseDirectoryBrowser(new DirectoryBrowserOptions
             {
                 FileProvider = new PhysicalFileProvider(
-                Path.Combine("/home/site/", "wwwroot")),
-                RequestPath = "/wwwroot"
+                    Path.Combine("/home/site/", "wwwroot")),
+                    RequestPath = "/wwwroot"
             });
 
-            try
-            {
-                app.MapWhen(IsWebSSHPath, builder => builder.RunProxy(new ProxyOptions
-                {
-                    Scheme = "http",
-                    Host = "127.0.0.1",
-                    Port = "3000"
-                }));
-            } catch
-            {
+            ProxyRequestsIfRelativeUrlMatch(@"/webssh/", "http", "127.0.0.1", "6000", app);
 
-            }
+            ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
 
-            app.MapWhen(IsTunnelServerPath, builder => builder.RunProxy(new ProxyOptions
-            {
-                Scheme = "http",
-                Host = "127.0.0.1",
-                Port = "5000"
-            }));
-
-            app.MapWhen(IsJavaDebugPath, builder => builder.RunProxy(new ProxyOptions
-            {
-                Scheme = "http",
-                Host = "127.0.0.1",
-                Port = "5000"
-            }));
+            ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
 
             if (hostingEnvironment.IsDevelopment())
             {
@@ -640,10 +574,10 @@ namespace Kudu.Services.Web
                 //routes.MapHttpRoute("download-functions", "api/functions/admin/download", new { controller = "Function", action = "DownloadFunctions" }, new { verb = new HttpMethodConstraint("GET") });
 
                 // Docker Hook Endpoint
-                //if (!OSDetector.IsOnWindows())
-                //{
-                //    routes.MapHttpRoute("docker", "docker/hook", new { controller = "Docker", action = "ReceiveHook" }, new { verb = new HttpMethodConstraint("POST") });
-                //}
+                if (!OSDetector.IsOnWindows())
+                {
+                    routes.MapHttpRouteDual("docker", "docker/hook", new { controller = "Docker", action = "ReceiveHook" }, new { verb = new HttpMethodRouteConstraint("POST") });
+                }
 
                 // catch all unregistered url to properly handle not found
                 // this is to work arounf the issue in TraceModule where we see double OnBeginRequest call
@@ -706,42 +640,6 @@ namespace Kudu.Services.Web
             */
         }
 
-        private static ITracer GetTracer(IServiceProvider serviceProvider)
-        {
-            var environment = serviceProvider.GetRequiredService<IEnvironment>();
-            var level = serviceProvider.GetRequiredService<IDeploymentSettingsManager>().GetTraceLevel();
-            var contextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
-            var httpContext = contextAccessor.HttpContext;
-            var requestTraceFile = TraceServices.GetRequestTraceFile(httpContext);
-            if (level <= TraceLevel.Off || requestTraceFile == null) return NullTracer.Instance;
-            var textPath = Path.Combine(environment.TracePath, requestTraceFile);
-            return new CascadeTracer(new XmlTracer(environment.TracePath, level), new TextTracer(textPath, level), new ETWTracer(environment.RequestId, TraceServices.GetHttpMethod(httpContext)));
-
-        }
-
-        private static ITracer GetTracerWithoutContext(IEnvironment environment, IDeploymentSettingsManager settings)
-        {
-            // when file system has issue, this can throw (environment.TracePath calls EnsureDirectory).
-            // prefer no-op tracer over outage.  
-            return OperationManager.SafeExecute(() =>
-            {
-                var traceLevel = settings.GetTraceLevel();
-                return traceLevel > TraceLevel.Off ? new XmlTracer(environment.TracePath, traceLevel) : NullTracer.Instance;
-            }) ?? NullTracer.Instance;
-        }
-
-        private static ILogger GetLogger(IServiceProvider serviceProvider)
-        {
-            var environment = serviceProvider.GetRequiredService<IEnvironment>();
-            var level = serviceProvider.GetRequiredService<IDeploymentSettingsManager>().GetTraceLevel();
-            var contextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
-            var httpContext = contextAccessor.HttpContext;
-            var requestTraceFile = TraceServices.GetRequestTraceFile(httpContext);
-            if (level <= TraceLevel.Off || requestTraceFile == null) return NullLogger.Instance;
-            var textPath = Path.Combine(environment.DeploymentTracePath, requestTraceFile);
-            return new TextLogger(textPath);
-        }
-
         private static void PrependFoldersToPath(IEnvironment environment)
         {
             var folders = PathUtilityFactory.Instance.GetPathFolders(environment);
@@ -797,34 +695,111 @@ namespace Kudu.Services.Web
             }
         }
 
-        private static string GetRequestTraceFile(IServiceProvider serviceProvider)
+        // <summary>
+        // This method initializes status,ssh,hooks & deployment locks used by Kudu to ensure
+        // synchronized operations. This method creates a dictionary of locks which is injected
+        // into various controllers to resolve the locks they need.
+        // <list type="bullet">  
+        //     <listheader>  
+        //         <term>Locks used by Kudu:</term>  
+        //     </listheader>  
+        //     <item>  
+        //         <term>Status Lock</term>  
+        //         <description>Used by DeploymentStatusManager</description>  
+        //     </item> 
+        //     <item>  
+        //         <term>SSH Lock</term>  
+        //         <description>Used by SSHKeyController</description>  
+        //     </item> 
+        //     <item>  
+        //         <term>Hooks Lock</term>  
+        //         <description>Used by WebHooksManager</description>  
+        //     </item> 
+        //     <item>  
+        //         <term>Deployment Lock</term>  
+        //         <description>
+        //             Used by DeploymentController, DeploymentManager, SettingsController, 
+        //             FetchDeploymentManager, LiveScmController, ReceivePackHandlerMiddleware
+        //         </description>  
+        //     </item> 
+        // </list>  
+        // </summary>
+        // <remarks>
+        //     Uses File watcher.
+        //     This originally used Ninject's "WhenInjectedInto" in .Net project for specific instances. IServiceCollection
+        //     doesn't support this concept, or anything similar like named instances. There are a few possibilities, 
+        //     but the hack solution for now is just injecting a dictionary of locks and letting each dependent resolve 
+        //     the one it needs.
+        // </remarks>
+        private static void SetupLocks(ITraceFactory traceFactory, IEnvironment environment)
         {
-            var traceLevel = serviceProvider.GetRequiredService<IDeploymentSettingsManager>().GetTraceLevel();
-            // CORE TODO Need TraceServices implementation
-            //if (level > TraceLevel.Off)
-            //{
-            //    return TraceServices.CurrentRequestTraceFile;
-            //}
+            var lockPath = Path.Combine(environment.SiteRootPath, Constants.LockPath);
+            var deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
+            var statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
+            var sshKeyLockPath = Path.Combine(lockPath, Constants.SSHKeyLockFile);
+            var hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
 
-            return null;
+            _deploymentLock = new DeploymentLockFile(deploymentLockPath, traceFactory);
+            _deploymentLock.InitializeAsyncLocks();
+
+            var statusLock = new LockFile(statusLockPath, traceFactory);
+            var sshKeyLock = new LockFile(sshKeyLockPath, traceFactory);
+            var hooksLock = new LockFile(hooksLockPath, traceFactory);
+
+            NamedLocks = new Dictionary<string, IOperationLock>
+            {
+                { "status", statusLock }, 
+                { "ssh", sshKeyLock }, 
+                { "hooks", hooksLock }, 
+                { "deployment", _deploymentLock }
+            };
         }
 
+        // <summary>
+        // 
+        // </summary>
         private static void EnsureSiteBitnessEnvironmentVariable()
         {
             SetEnvironmentVariableIfNotYetSet("SITE_BITNESS", System.Environment.Is64BitProcess ? Constants.X64Bit : Constants.X86Bit);
         }
-        private static bool IsTunnelServerPath(HttpContext httpContext)
+
+        // <summary>
+        // 
+        // </summary>
+        // <param name="app"></param>
+        // <param name="httpContext"></param>
+        // <param name="relativeUrl"></param>
+        // <param name="scheme"></param>
+        // <param name="host"></param>
+        // <param name="port"></param>
+        private static void ProxyRequestsIfRelativeUrlMatch(string relativeUrl,
+            string scheme,
+            string host,
+            string port,
+            IApplicationBuilder app)
         {
-            return httpContext.Request.Path.Value.StartsWith(@"/AppServiceTunnel/Tunnel.ashx", StringComparison.OrdinalIgnoreCase);
+            try
+            {
+                app.MapWhen(ContainsRelativeUrl(relativeUrl, _httpContextAccessor.HttpContext), builder => builder.RunProxy(new ProxyOptions
+                {
+                    Scheme = scheme,
+                    Host = host,
+                    Port = port
+                }));
+            }
+            catch
+            {
+                //Handles 500 errors
+
+
+            }
         }
-        private static bool IsWebSSHPath(HttpContext httpContext)
+
+        private static Func<HttpContext, bool> ContainsRelativeUrl(string relativeUrl, HttpContext httpContext)
         {
-            return httpContext.Request.Path.Value.StartsWith(@"/webssh/", StringComparison.OrdinalIgnoreCase);
+            return x => httpContext.Request.Path.Value.StartsWith(relativeUrl, StringComparison.OrdinalIgnoreCase);
         }
-        private static bool IsJavaDebugPath(HttpContext httpContext)
-        {
-            return httpContext.Request.Path.Value.StartsWith(@"/DebugSiteExtension/JavaDebugSiteExtension.ashx", StringComparison.OrdinalIgnoreCase);
-        }
+
         private static bool LogPathOnConsole(HttpContext context)
         {
             Console.WriteLine($"path("+DateTime.Now+"): {context.Request.Path} "+context.Request.Path);
