@@ -299,6 +299,7 @@ namespace Kudu.Services.Web
             });
             */
             app.UseResponseCompression();
+            
             /*
             app.UseDirectoryBrowser(new DirectoryBrowserOptions
             {
@@ -334,7 +335,7 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
             
-            app.UseTraceMiddleware();
+            //app.UseTraceMiddleware();
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 
@@ -378,6 +379,8 @@ namespace Kudu.Services.Web
             {
                 app.Map(url, appBranch => appBranch.RunCustomGitRepositoryHandler());
             };
+
+         
 
             //app.UseStaticFiles();
             app.UseMvc(routes =>
@@ -432,9 +435,9 @@ namespace Kudu.Services.Web
 
                 // CORE TODO
                 // SSHKey
-                //routes.MapHttpRouteDual("get-sshkey", "sshkey", new { controller = "SSHKey", action = "GetPublicKey" }, new { verb = new HttpMethodConstraint("GET") });
-                //routes.MapHttpRouteDual("put-sshkey", "sshkey", new { controller = "SSHKey", action = "SetPrivateKey" }, new { verb = new HttpMethodConstraint("PUT") });
-                //routes.MapHttpRouteDual("delete-sshkey", "sshkey", new { controller = "SSHKey", action = "DeleteKeyPair" }, new { verb = new HttpMethodConstraint("DELETE") });
+                routes.MapHttpRouteDual("get-sshkey", "api/sshkey", new { controller = "SSHKey", action = "GetPublicKey" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapHttpRouteDual("put-sshkey", "api/sshkey", new { controller = "SSHKey", action = "SetPrivateKey" }, new { verb = new HttpMethodRouteConstraint("PUT") });
+                routes.MapHttpRouteDual("delete-sshkey", "api/sshkey", new { controller = "SSHKey", action = "DeleteKeyPair" }, new { verb = new HttpMethodRouteConstraint("DELETE") });
 
                 // Environment
                 routes.MapHttpRouteDual("get-env", "environment", new { controller = "Environment", action = "Get" }, new { verb = new HttpMethodRouteConstraint("GET") });
@@ -540,7 +543,7 @@ namespace Kudu.Services.Web
                 {
                     routes.MapHttpRouteDual("docker", "docker/hook", new { controller = "Docker", action = "ReceiveHook" }, new { verb = new HttpMethodRouteConstraint("POST") });
                 }
-
+                
                 // catch all unregistered url to properly handle not found
                 // this is to work arounf the issue in TraceModule where we see double OnBeginRequest call
                 // for the same request (404 and then 200 statusCode).
@@ -549,10 +552,19 @@ namespace Kudu.Services.Web
 
             // CORE TODO Remove This
          
+            var containsRelativePath = new Func<HttpContext, bool>(i =>
+                i.Request.Path.Value.StartsWith("/Default", StringComparison.OrdinalIgnoreCase));
+            
+            app.MapWhen(containsRelativePath, application => application.Run(async context =>
+            {
+                await context.Response.WriteAsync("Kestrel Running");
+            }));
+            /*
            app.Run(async context =>
             {
                 await context.Response.WriteAsync("Krestel Running"); // returns a 200
             });
+            */
             Console.WriteLine("\nExiting Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
         }
 

@@ -88,6 +88,9 @@ namespace Kudu.Core.SSHKey
             }
         }
 
+        /// <summary>
+        /// Deletes a pair of public and private Keys
+        /// </summary>
         public void DeleteKeyPair()
         {
             ITracer tracer = _traceFactory.GetTracer();
