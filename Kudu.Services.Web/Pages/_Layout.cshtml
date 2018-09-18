@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor httpContextAccessor
+<!DOCTYPE html>
 <html>
 <head>
     <!-- This forces IE to not use compatibility mode, which Kudu is broken for -->
@@ -88,8 +90,8 @@
                     }
                 </ul>
                 @{
-                    var email = Context.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].ToString();
-                    var displayName = Context.Request.Headers["X-MS-CLIENT-DISPLAY-NAME"].ToString() ?? email;
+                    var email = httpContextAccessor.HttpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].ToString();
+                    var displayName = httpContextAccessor.HttpContext.Request.Headers["X-MS-CLIENT-DISPLAY-NAME"].ToString() ?? email;
                     if (email != null && email.Contains("@"))
                     {
                         using (var md5 = System.Security.Cryptography.MD5.Create())

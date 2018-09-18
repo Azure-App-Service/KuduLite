@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -8,21 +9,17 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Constraints;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Settings;
-using XmlSettings;
 using Kudu.Core;
 using System.IO;
+using System.Net;
 using Microsoft.AspNetCore.Http;
-using Kudu.Services.Infrastructure;
 using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Core.Tracing;
 using Kudu.Contracts.Tracing;
 using Kudu.Services.Web.Infrastructure;
-using System.Diagnostics;
 using Kudu.Core.Deployment;
-using Kudu.Core.Deployment.Generator;
-using Kudu.Core.Hooks;
 using Kudu.Contracts.SourceControl;
 using Kudu.Core.SourceControl;
 using Kudu.Services.Web.Services;
@@ -34,85 +31,72 @@ using Kudu.Core.SSHKey;
 using Kudu.Services.Diagnostics;
 using Kudu.Services.Performance;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.AspNetCore.ResponseCompression;
 
 namespace Kudu.Services.Web
 {
     public class Startup
     {
-        // CORE TODO this is a hack, esp. considering the hardcoded path separator, hardcoded "Debug\netcoreapp2.0", etc.
-        // The idea is that we want Kudu.Services.Web to run kudu.dll from the directory it was built to when we are locally
-        // debugging, but in release, we will put the published app into a dedicated directory.
-        // Note that the paths are relative to the ApplicationBasePath (Kudu.Services.Web bin directory)
-        private const string KuduConsoleFilename = "kudu.dll";
-        private const string KuduConsoleRelativePath = "KuduConsole";
-        private const string KuduConsoleDevRelativePath =  @"..\..\..\..\Kudu.Console\bin\Debug\netcoreapp2.1";
-        private const string Format = "hh.mm.ss.ffffff";
-        private readonly IHostingEnvironment hostingEnvironment;
-        private static readonly IHttpContextAccessor _httpContextAccessor;
-        private static Dictionary<string, IOperationLock> NamedLocks;
+        private static string Format = "hh.mm.ss.ffffff";
+        private readonly IHostingEnvironment _hostingEnvironment;
+        private IHttpContextAccessor _httpContextAccessor;
+        private static readonly ServerConfiguration serverConfiguration = new ServerConfiguration();
 
         public Startup(IConfiguration configuration, IHostingEnvironment hostingEnvironment)
         {
             Console.WriteLine("\nStartup : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
             Configuration = configuration;
-            this.hostingEnvironment = hostingEnvironment;
+            this._hostingEnvironment = hostingEnvironment;
         }
 
         private IConfiguration Configuration { get; }
 
-        // CORE TODO Is this still true?
-        // Due to a bug in Ninject we can't use Dispose to clean up LockFile so we shut it down manually
-        private static DeploymentLockFile _deploymentLock;
 
         /// <summary>
         /// This method gets called by the runtime. It is used to add services 
         /// to the container. It uses the Extension Pateern.
         /// </summary>
-        /// <param name="services">
-        /// 
-        /// </param>
         /// <todo>
         ///   CORE TODO trace exceptions here, see the catch in NinjectServices.Start()
+        ///   CORE TODO Remove initializing contextAccessor : This is new. See if over time we can refactor away the need for this?
+        ///   It's kind of a quick hack/compatibility shim. Ideally you want to get the request context only from where
+        ///   it's specifically provided to you (Request.HttpContext in a controller, or as an Invoke() parameter in
+        ///   a middleware) and pass it wherever its needed.
         /// </todo>
         public void ConfigureServices(IServiceCollection services)
         {
 
             Console.WriteLine("\nConfigure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
-            services.AddMvcCore()
+            services.AddMvcCore(
+                    config => {
+                        config.Filters.Add(typeof(KuduWebExceptionFilter));
+                    }
+                )
                 .AddRazorPages()
                 .AddAuthorization()
                 .AddJsonFormatters()
                 .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
 
-
-            services.Configure<GzipCompressionProviderOptions>(options => options.Level = System.IO.Compression.CompressionLevel.Optimal);
-            services.AddResponseCompression();
+            services.AddGZipCompression();
 
             services.AddDirectoryBrowser();
 
-            var serverConfiguration = new ServerConfiguration();
-            
-            // CORE TODO This is new. See if over time we can refactor away the need for this?
-            // It's kind of a quick hack/compatibility shim. Ideally you want to get the request context only from where
-            // it's specifically provided to you (Request.HttpContext in a controller, or as an Invoke() parameter in
-            // a middleware) and pass it wherever its needed.
+            services.AddDataProtection();
+
             var contextAccessor = new HttpContextAccessor();
+            this._httpContextAccessor = contextAccessor;
             services.AddSingleton<IHttpContextAccessor>(contextAccessor);
 
-            // Make sure %HOME% is correctly set
-            EnsureHomeEnvironmentVariable();
+            KuduWebUtil.EnsureHomeEnvironmentVariable();
 
-            // CORE TODO check on this
-            EnsureSiteBitnessEnvironmentVariable();
+            KuduWebUtil.EnsureSiteBitnessEnvironmentVariable();
 
-            IEnvironment environment = GetEnvironment(hostingEnvironment);
+            IEnvironment environment = KuduWebUtil.GetEnvironment(_hostingEnvironment);
 
-            EnsureDotNetCoreEnvironmentVariable(environment);
+            KuduWebUtil.EnsureDotNetCoreEnvironmentVariable(environment);
 
-            // Add various folders that never change to the process path. All child processes will inherit
-            PrependFoldersToPath(environment);
+            // Add various folders that never change to the process path. All child processes will inherit this
+            KuduWebUtil.PrependFoldersToPath(environment);
 
             // General
             services.AddSingleton<IServerConfiguration>(serverConfiguration);
@@ -122,13 +106,14 @@ namespace Kudu.Services.Web
 
 
             IDeploymentSettingsManager noContextDeploymentsSettingsManager =
-                new DeploymentSettingsManager(new XmlSettings.Settings(GetSettingsPath(environment)));
+                new DeploymentSettingsManager(new XmlSettings.Settings(KuduWebUtil.GetSettingsPath(environment)));
             TraceServices.TraceLevel = noContextDeploymentsSettingsManager.GetTraceLevel();
 
             // Per request environment
-            services.AddScoped<IEnvironment>(sp => GetEnvironment(hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>(),
+            services.AddScoped<IEnvironment>(sp => KuduWebUtil.GetEnvironment(_hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>(),
                 sp.GetRequiredService<IHttpContextAccessor>().HttpContext));
 
+            services.AddDeployementServices(environment);
             /*
              * CORE TODO all this business around ITracerFactory/ITracer/GetTracer()/
              * ILogger needs serious refactoring:
@@ -141,15 +126,13 @@ namespace Kudu.Services.Web
              * TraceServices only serves to confuse stuff now that we're avoiding
              * HttpContext.Current
              */
-            
-            Func<IServiceProvider, ITracer> resolveTracer = sp => Util.GetTracer(sp);
-            Func<ITracer> createTracerThunk = () => resolveTracer(services.BuildServiceProvider());
+            Func<IServiceProvider, ITracer> resolveTracer = sp => KuduWebUtil.GetTracer(sp);
+            ITracer CreateTracerThunk() => resolveTracer(services.BuildServiceProvider());
 
             // First try to use the current request profiler if any, otherwise create a new one
             var traceFactory = new TracerFactory(() => {
                 var sp = services.BuildServiceProvider();
                 var context = sp.GetRequiredService<IHttpContextAccessor>().HttpContext;
-
                 return TraceServices.GetRequestTracer(context) ?? resolveTracer(sp);
             });
 
@@ -161,17 +144,15 @@ namespace Kudu.Services.Web
 
             services.AddSingleton<ITraceFactory>(traceFactory);
 
-            TraceServices.SetTraceFactory(createTracerThunk);
+            TraceServices.SetTraceFactory(CreateTracerThunk);
 
-            // Setup the deployment lock
-            SetupLocks(traceFactory, environment);
-            services.AddSingleton<IDictionary<string, IOperationLock>>(NamedLocks);
+            services.AddSingleton<IDictionary<string, IOperationLock>>(KuduWebUtil.GetNamedLocks(traceFactory,environment));
 
             // CORE TODO ShutdownDetector, used by LogStreamManager.
             //var shutdownDetector = new ShutdownDetector();
             //shutdownDetector.Initialize()
 
-            var noContextTraceFactory = new TracerFactory(() => Util.GetTracerWithoutContext(environment, noContextDeploymentsSettingsManager));
+            var noContextTraceFactory = new TracerFactory(() => KuduWebUtil.GetTracerWithoutContext(environment, noContextDeploymentsSettingsManager));
             var etwTraceFactory = new TracerFactory(() => new ETWTracer(string.Empty, string.Empty));
 
             services.AddTransient<IAnalytics>(sp => new Analytics(sp.GetRequiredService<IDeploymentSettingsManager>(),
@@ -197,7 +178,7 @@ namespace Kudu.Services.Web
             // CORE TODO
             // LogStream service
             // The hooks and log stream start endpoint are low traffic end-points. Re-using it to avoid creating another lock
-            var logStreamManagerLock = NamedLocks["hooks"];
+            var logStreamManagerLock = KuduWebUtil.GetNamedLocks(traceFactory, environment)["hooks"];
             //kernel.Bind<LogStreamManager>().ToMethod(context => new LogStreamManager(Path.Combine(environment.RootPath, Constants.LogFilesPath),
             //                                                                         context.Kernel.Get<IEnvironment>(),
             //                                                                         context.Kernel.Get<IDeploymentSettingsManager>(),
@@ -217,54 +198,17 @@ namespace Kudu.Services.Web
             //                                         .InRequestScope();
 
             // Deployment Service
-            services.AddScoped<ISettings>(sp => new XmlSettings.Settings(GetSettingsPath(environment)));
+            
 
-            services.AddScoped<IDeploymentSettingsManager, DeploymentSettingsManager>();
+            services.AddWebJobsDependencies();
 
-            services.AddScoped<IDeploymentStatusManager, DeploymentStatusManager>();
-
-            services.AddScoped<ISiteBuilderFactory, SiteBuilderFactory>();
-
-            services.AddScoped<IWebHooksManager, WebHooksManager>();
-
-            // CORE TODO Webjobs dependencies
-            //ITriggeredJobsManager triggeredJobsManager = new TriggeredJobsManager(
-            //    etwTraceFactory,
-            //    kernel.Get<IEnvironment>(),
-            //    kernel.Get<IDeploymentSettingsManager>(),
-            //    kernel.Get<IAnalytics>(),
-            //    kernel.Get<IWebHooksManager>());
-            //kernel.Bind<ITriggeredJobsManager>().ToConstant(triggeredJobsManager)
-            //                                 .InTransientScope();
-
-            //TriggeredJobsScheduler triggeredJobsScheduler = new TriggeredJobsScheduler(
-            //    triggeredJobsManager,
-            //    etwTraceFactory,
-            //    environment,
-            //    kernel.Get<IDeploymentSettingsManager>(),
-            //    kernel.Get<IAnalytics>());
-            //kernel.Bind<TriggeredJobsScheduler>().ToConstant(triggeredJobsScheduler)
-            //                                 .InTransientScope();
-
-            //IContinuousJobsManager continuousJobManager = new ContinuousJobsManager(
-            //    etwTraceFactory,
-            //    kernel.Get<IEnvironment>(),
-            //    kernel.Get<IDeploymentSettingsManager>(),
-            //    kernel.Get<IAnalytics>());
-
-            //OperationManager.SafeExecute(triggeredJobsManager.CleanupDeletedJobs);
-            //OperationManager.SafeExecute(continuousJobManager.CleanupDeletedJobs);
-
-            //kernel.Bind<IContinuousJobsManager>().ToConstant(continuousJobManager)
-            //                     .InTransientScope();
-
-            services.AddScoped<ILogger>(sp => Util.GetLogger(sp));
+            services.AddScoped<ILogger>(sp => KuduWebUtil.GetLogger(sp));
 
             services.AddScoped<IDeploymentManager, DeploymentManager>();
             services.AddScoped<IFetchDeploymentManager, FetchDeploymentManager>();
             services.AddScoped<ISSHKeyManager, SSHKeyManager>();
 
-            services.AddScoped<IRepositoryFactory>(sp => _deploymentLock.RepositoryFactory = new RepositoryFactory(
+            services.AddScoped<IRepositoryFactory>(sp => KuduWebUtil.GetDeploymentLock(traceFactory,environment).RepositoryFactory = new RepositoryFactory(
                 sp.GetRequiredService<IEnvironment>(), sp.GetRequiredService<IDeploymentSettingsManager>(), sp.GetRequiredService<ITraceFactory>()));
 
             // CORE NOTE This was previously wired up in Ninject with .InSingletonScope. I'm not sure how that worked,
@@ -300,19 +244,19 @@ namespace Kudu.Services.Web
             //// Skip SSL Certificate Validate
             //if (Kudu.Core.Environment.SkipSslValidation)
             //{
-            //    ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+            //     ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
             //}
 
             //// Make sure webpages:Enabled is true. Even though we set it in web.config, it could be overwritten by
             //// an Azure AppSetting that's supposed to be for the site only but incidently affects Kudu as well.
-            //ConfigurationManager.AppSettings["webpages:Enabled"] = "true";
+            ConfigurationManager.AppSettings["webpages:Enabled"] = "true";
 
             //// Kudu does not rely owin:appStartup.  This is to avoid Azure AppSetting if set.
-            //if (ConfigurationManager.AppSettings["owin:appStartup"] != null)
-            //{
-            //    // Set the appSetting to null since we cannot use AppSettings.Remove(key) (ReadOnly exception!)
-            //    ConfigurationManager.AppSettings["owin:appStartup"] = null;
-            //}
+            if (ConfigurationManager.AppSettings?["owin:appStartup"] != null)
+            {
+                // Set the appSetting to null since we cannot use AppSettings.Remove(key) (ReadOnly exception!)
+                ConfigurationManager.AppSettings["owin:appStartup"] = null;
+            }
 
             //RegisterRoutes(kernel, RouteTable.Routes);
 
@@ -346,22 +290,40 @@ namespace Kudu.Services.Web
 
             app.UseStaticFiles();
 
+            /*
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(
+                    Path.Combine(_hostingEnvironment.WebRootPath, "")),
+                RequestPath = "/wwwroot"
+            });
+            */
             app.UseResponseCompression();
-
+            /*
             app.UseDirectoryBrowser(new DirectoryBrowserOptions
             {
                 FileProvider = new PhysicalFileProvider(
-                    Path.Combine("/home/site/", "wwwroot")),
+                    Path.Combine(_hostingEnvironment.WebRootPath, "")),
                     RequestPath = "/wwwroot"
             });
-
-            ProxyRequestsIfRelativeUrlMatch(@"/webssh/", "http", "127.0.0.1", "6000", app);
+            */
+            /*
+            app.UseFileServer(new FileServerOptions
+            {
+                FileProvider = new PhysicalFileProvider(
+                Path.Combine("/home/site", "wwwroot")),
+                RequestPath = "/wwwroot",
+                EnableDirectoryBrowsing = true
+            });
+            */
+            ProxyRequestsIfRelativeUrlMatch(@"/webssh", "http", "127.0.0.1", "6000", app);
 
             ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
 
             ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
 
-            if (hostingEnvironment.IsDevelopment())
+            
+            if (_hostingEnvironment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
                 //app.UseBrowserLink();
@@ -371,8 +333,8 @@ namespace Kudu.Services.Web
                 // CORE TODO
                 app.UseExceptionHandler("/Error");
             }
-
-            //app.UseTraceMiddleware();
+            
+            app.UseTraceMiddleware();
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 
@@ -586,181 +548,12 @@ namespace Kudu.Services.Web
             });
 
             // CORE TODO Remove This
+         
            app.Run(async context =>
             {
                 await context.Response.WriteAsync("Krestel Running"); // returns a 200
             });
             Console.WriteLine("\nExiting Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-        }
-
-
-        private static string GetSettingsPath(IEnvironment environment)
-        {
-            return Path.Combine(environment.DeploymentsPath, Constants.DeploySettingsPath);
-        }
-
-        private static IEnvironment GetEnvironment(IHostingEnvironment hostingEnvironment, IDeploymentSettingsManager settings = null, HttpContext httpContext = null)
-        {
-            var root = PathResolver.ResolveRootPath();
-            var siteRoot = Path.Combine(root, Constants.SiteFolder);
-            var repositoryPath = Path.Combine(siteRoot, settings == null ? Constants.RepositoryPath : settings.GetRepositoryPath());
-            // CORE TODO see if we can refactor out PlatformServices as high up as we can?
-            var binPath = System.AppContext.BaseDirectory;
-            var requestId = httpContext?.Request.GetRequestId();
-            var siteRetrictedJwt = httpContext?.Request.GetSiteRetrictedJwt();
-
-
-            string kuduConsoleFullPath;
-
-            // CORE TODO Clean this up
-            kuduConsoleFullPath = Path.Combine(System.AppContext.BaseDirectory, hostingEnvironment.IsDevelopment() ? KuduConsoleDevRelativePath : KuduConsoleRelativePath, KuduConsoleFilename);
-            //kuduConsoleFullPath = Path.Combine(System.AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
-
-
-            // CORE TODO Environment now requires an HttpContextAccessor, which I have set to null here
-            return new Core.Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId, siteRetrictedJwt, kuduConsoleFullPath, null);
-        }
-
-        private static void EnsureHomeEnvironmentVariable()
-        {
-            // CORE TODO Hard-coding this for now while exploring. Have a look at what
-            // PlatformServices.Default and the injected IHostingEnvironment have at runtime.
-            if (Directory.Exists(System.Environment.ExpandEnvironmentVariables(@"%HOME%"))) return;
-            System.Environment.SetEnvironmentVariable("HOME", OSDetector.IsOnWindows() ? @"G:\kudu-debug" : "/home");
-
-            /*
-            // If MapPath("/_app") returns a valid folder, set %HOME% to that, regardless of
-            // it current value. This is the non-Azure code path.
-            string path = HostingEnvironment.MapPath(Constants.MappedSite);
-            if (Directory.Exists(path))
-            {
-                path = Path.GetFullPath(path);
-                System.Environment.SetEnvironmentVariable("HOME", path);
-            }
-            */
-        }
-
-        private static void PrependFoldersToPath(IEnvironment environment)
-        {
-            var folders = PathUtilityFactory.Instance.GetPathFolders(environment);
-
-            var path = System.Environment.GetEnvironmentVariable("PATH");
-            var additionalPaths = String.Join(Path.PathSeparator.ToString(), folders);
-
-            // Make sure we haven't already added them. This can happen if the Kudu appdomain restart (since it's still same process)
-            if (path.Contains(additionalPaths)) return;
-            path = additionalPaths + Path.PathSeparator + path;
-
-            // PHP 7 was mistakenly added to the path unconditionally on Azure. To work around, if we detect
-            // some PHP v5.x anywhere on the path, we yank the unwanted PHP 7
-            // TODO: remove once the issue is fixed on Azure
-            if (path.Contains(@"PHP\v5"))
-            {
-                path = path.Replace(@"D:\Program Files (x86)\PHP\v7.0" + Path.PathSeparator, String.Empty);
-            }
-
-            System.Environment.SetEnvironmentVariable("PATH", path);
-        }
-
-        private static void EnsureDotNetCoreEnvironmentVariable(IEnvironment environment)
-        {
-            // Skip this as it causes huge files to be downloaded to the temp folder
-            SetEnvironmentVariableIfNotYetSet("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "true");
-
-            // Don't download xml comments, as they're large and provide no benefits outside of a dev machine
-            SetEnvironmentVariableIfNotYetSet("NUGET_XMLDOC_MODE", "skip");
-        
-            if (Core.Environment.IsAzureEnvironment())
-            {
-                // On Azure, restore nuget packages to d:\home\.nuget so they're persistent. It also helps
-                // work around https://github.com/projectkudu/kudu/issues/2056.
-                // Note that this only applies to project.json scenarios (not packages.config)
-                SetEnvironmentVariableIfNotYetSet("NUGET_PACKAGES", Path.Combine(environment.RootPath, ".nuget"));
-
-                // Set the telemetry environment variable
-                SetEnvironmentVariableIfNotYetSet("DOTNET_CLI_TELEMETRY_PROFILE", "AzureKudu");
-            }
-            else
-            {
-                // Set it slightly differently if outside of Azure to differentiate
-                SetEnvironmentVariableIfNotYetSet("DOTNET_CLI_TELEMETRY_PROFILE", "Kudu");
-            }
-        }
-
-        private static void SetEnvironmentVariableIfNotYetSet(string name, string value)
-        {
-            if (System.Environment.GetEnvironmentVariable(name) == null)
-            {
-                System.Environment.SetEnvironmentVariable(name, value);
-            }
-        }
-
-        // <summary>
-        // This method initializes status,ssh,hooks & deployment locks used by Kudu to ensure
-        // synchronized operations. This method creates a dictionary of locks which is injected
-        // into various controllers to resolve the locks they need.
-        // <list type="bullet">  
-        //     <listheader>  
-        //         <term>Locks used by Kudu:</term>  
-        //     </listheader>  
-        //     <item>  
-        //         <term>Status Lock</term>  
-        //         <description>Used by DeploymentStatusManager</description>  
-        //     </item> 
-        //     <item>  
-        //         <term>SSH Lock</term>  
-        //         <description>Used by SSHKeyController</description>  
-        //     </item> 
-        //     <item>  
-        //         <term>Hooks Lock</term>  
-        //         <description>Used by WebHooksManager</description>  
-        //     </item> 
-        //     <item>  
-        //         <term>Deployment Lock</term>  
-        //         <description>
-        //             Used by DeploymentController, DeploymentManager, SettingsController, 
-        //             FetchDeploymentManager, LiveScmController, ReceivePackHandlerMiddleware
-        //         </description>  
-        //     </item> 
-        // </list>  
-        // </summary>
-        // <remarks>
-        //     Uses File watcher.
-        //     This originally used Ninject's "WhenInjectedInto" in .Net project for specific instances. IServiceCollection
-        //     doesn't support this concept, or anything similar like named instances. There are a few possibilities, 
-        //     but the hack solution for now is just injecting a dictionary of locks and letting each dependent resolve 
-        //     the one it needs.
-        // </remarks>
-        private static void SetupLocks(ITraceFactory traceFactory, IEnvironment environment)
-        {
-            var lockPath = Path.Combine(environment.SiteRootPath, Constants.LockPath);
-            var deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
-            var statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
-            var sshKeyLockPath = Path.Combine(lockPath, Constants.SSHKeyLockFile);
-            var hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
-
-            _deploymentLock = new DeploymentLockFile(deploymentLockPath, traceFactory);
-            _deploymentLock.InitializeAsyncLocks();
-
-            var statusLock = new LockFile(statusLockPath, traceFactory);
-            var sshKeyLock = new LockFile(sshKeyLockPath, traceFactory);
-            var hooksLock = new LockFile(hooksLockPath, traceFactory);
-
-            NamedLocks = new Dictionary<string, IOperationLock>
-            {
-                { "status", statusLock }, 
-                { "ssh", sshKeyLock }, 
-                { "hooks", hooksLock }, 
-                { "deployment", _deploymentLock }
-            };
-        }
-
-        // <summary>
-        // 
-        // </summary>
-        private static void EnsureSiteBitnessEnvironmentVariable()
-        {
-            SetEnvironmentVariableIfNotYetSet("SITE_BITNESS", System.Environment.Is64BitProcess ? Constants.X64Bit : Constants.X86Bit);
         }
 
         // <summary>
@@ -772,29 +565,28 @@ namespace Kudu.Services.Web
         // <param name="scheme"></param>
         // <param name="host"></param>
         // <param name="port"></param>
-        private static void ProxyRequestsIfRelativeUrlMatch(string relativeUrl,
+        private static void ProxyRequestsIfRelativeUrlMatch(
+            string relativeUrl,
             string scheme,
             string host,
             string port,
             IApplicationBuilder app)
         {
-            try
+            // Console.WriteLine("Forwarding request"+relativeUrl);
+            var containsRelativePath = new Func<HttpContext, bool>(i =>
+                i.Request.Path.Value.StartsWith(relativeUrl, StringComparison.OrdinalIgnoreCase));
+            
+            app.MapWhen(containsRelativePath, builder => builder.RunProxy(new ProxyOptions
             {
-                app.MapWhen(ContainsRelativeUrl(relativeUrl, _httpContextAccessor.HttpContext), builder => builder.RunProxy(new ProxyOptions
-                {
                     Scheme = scheme,
                     Host = host,
                     Port = port
-                }));
-            }
-            catch
-            {
-                //Handles 500 errors
-
-
-            }
+            }));
         }
 
+        
+        private static HttpContext GetHttpContext(HttpContext httpContext) => httpContext;
+        
         private static Func<HttpContext, bool> ContainsRelativeUrl(string relativeUrl, HttpContext httpContext)
         {
             return x => httpContext.Request.Path.Value.StartsWith(relativeUrl, StringComparison.OrdinalIgnoreCase);

@@ -36,6 +36,7 @@ using Kudu.Core.SSHKey;
 using Kudu.Services.Diagnostics;
 using Kudu.Services.Performance;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.ResponseCompression;
 
 namespace Kudu.Services.Web.Services
 { 
@@ -66,11 +67,41 @@ namespace Kudu.Services.Web.Services
                 new GitExeServer(
                     sp.GetRequiredService<IEnvironment>(),
                     _deploymentLock,
-                    Util.GetRequestTraceFile(sp),
+                    KuduWebUtil.GetRequestTraceFile(sp),
                     sp.GetRequiredService<IRepositoryFactory>(),
                     sp.GetRequiredService<IDeploymentEnvironment>(),
                     sp.GetRequiredService<IDeploymentSettingsManager>(),
                     sp.GetRequiredService<ITraceFactory>()));
+        }
+
+        public static void AddGZipCompression(this IServiceCollection services)
+        {
+            services.Configure<GzipCompressionProviderOptions>(options => options.Level = System.IO.Compression.CompressionLevel.Optimal);
+            services.AddResponseCompression();
+        }
+
+        public static void AddWebJobsDependencies(this IServiceCollection services)
+        {
+            //IContinuousJobsManager continuousJobManager = new ContinuousJobsManager(
+            //    etwTraceFactory,
+            //    kernel.Get<IEnvironment>(),
+            //    kernel.Get<IDeploymentSettingsManager>(),
+            //    kernel.Get<IAnalytics>());
+
+            //OperationManager.SafeExecute(triggeredJobsManager.CleanupDeletedJobs);
+            //OperationManager.SafeExecute(continuousJobManager.CleanupDeletedJobs);
+
+            //kernel.Bind<IContinuousJobsManager>().ToConstant(continuousJobManager)
+            //                     .InTransientScope();
+        }
+
+        public static void AddDeployementServices(this IServiceCollection services, IEnvironment environment)
+        {
+            services.AddScoped<ISettings>(sp => new XmlSettings.Settings(KuduWebUtil.GetSettingsPath(environment)));
+            services.AddScoped<IDeploymentSettingsManager, DeploymentSettingsManager>();
+            services.AddScoped<IDeploymentStatusManager, DeploymentStatusManager>();
+            services.AddScoped<ISiteBuilderFactory, SiteBuilderFactory>();
+            services.AddScoped<IWebHooksManager, WebHooksManager>();
         }
     }
 }

@@ -37,8 +37,9 @@ namespace Kudu.Services
                 // Redirect GET /deploy requests to the Kudu root for convenience when using URL from Azure portal
                 if (string.Equals(context.Request.Method, "GET", StringComparison.OrdinalIgnoreCase))
                 {
-                    context.Response.Redirect("/");
-                    return;
+                    throw new IOException("hello");
+                    //context.Response.Redirect("/");
+                    //return;
                 }
 
                 if (!string.Equals(context.Request.Method, "POST", StringComparison.OrdinalIgnoreCase))
