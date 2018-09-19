@@ -29,6 +29,7 @@ namespace Kudu.Core.Infrastructure
 
         public static void CreateDirectory(string path)
         {
+            Console.WriteLine(path);
             Instance.Directory.CreateDirectory(path);
         }
 

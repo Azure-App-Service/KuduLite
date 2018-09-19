@@ -317,7 +317,7 @@ namespace Kudu.Services.Web
                 EnableDirectoryBrowsing = true
             });
             */
-            ProxyRequestsIfRelativeUrlMatch(@"/webssh", "http", "127.0.0.1", "6000", app);
+            ProxyRequestsIfRelativeUrlMatch(@"/webssh", "http", "127.0.0.1", "3000", app);
 
             ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
 
@@ -335,7 +335,7 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
             
-            //app.UseTraceMiddleware();
+            app.UseTraceMiddleware();
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 

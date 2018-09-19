@@ -43,7 +43,7 @@ namespace Kudu
         public const string DummyRazorExtension = ".kudu777";
 
         // Kudu trace text file related
-        public const string DeploymentTracePath = LogFilesPath + @"\kudu\deployment";
+        public const string DeploymentTracePath = LogFilesPath + @"/kudu/deployment";
 
         public const string TraceFileFormat = "{0}-{1}.txt";
         public const string TraceFileEnvKey = "KUDU_TRACE_FILE";
