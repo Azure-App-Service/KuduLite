@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Kudu.Contracts.Settings;
+using Kudu.Core.Helpers;
 
 namespace Kudu.Core.Deployment.Generator
 {
@@ -18,9 +20,31 @@ namespace Kudu.Core.Deployment.Generator
         {
             var tcs = new TaskCompletionSource<object>();
             context.Logger.Log("Running custom deployment command...");
-
+            var commandFullPath = _command;
+            
             try
             {
+                if (!OSDetector.IsOnWindows())
+                {
+                    if (commandFullPath.StartsWith("."))
+                    {
+                        string finalCommandPath = Path.GetFullPath(Path.Combine(RepositoryPath, commandFullPath));
+                        if (File.Exists(finalCommandPath))
+                        {
+                            commandFullPath = finalCommandPath;
+                        }
+                    }
+                    if(commandFullPath.Contains(RepositoryPath))
+                    {
+                        context.Logger.Log("Setting execute permissions for " + commandFullPath);
+                        PermissionHelper.Chmod("ugo+x", commandFullPath, Environment, DeploymentSettings, context.Logger);
+                    }
+                    else
+                    {
+                        context.Logger.Log("Not setting execute permissions for " + commandFullPath);
+                    }
+                }
+                
                 RunCommand(context, _command);
 
                 tcs.SetResult(null);
@@ -33,9 +57,6 @@ namespace Kudu.Core.Deployment.Generator
             return tcs.Task;
         }
 
-        public override string ProjectType
-        {
-            get { return "CUSTOM DEPLOYMENT"; }
-        }
+        public override string ProjectType => "CUSTOM DEPLOYMENT";
     }
 }
