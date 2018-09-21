@@ -11,6 +11,9 @@ using Kudu.Core.SourceControl;
 using System.Globalization;
 using Kudu.Core;
 using System.Linq;
+using System.Net.Http;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Hosting.Internal;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 
@@ -39,7 +42,10 @@ namespace Kudu.Services.Deployment
         }
 
         [HttpPost]
+        [IgnoreAntiforgeryToken]
+        [DisableRequestSizeLimit]
         public async Task<IActionResult> ZipPushDeploy(
+            [FromServices] IAntiforgery antiforgery,
             bool isAsync = false,
             string author = null,
             string authorEmail = null,
@@ -48,12 +54,13 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("ZipPushDeploy"))
             {
-                var zipFileName = Path.ChangeExtension(Path.GetRandomFileName(), "zip");
-                var zipFilePath = Path.Combine(_environment.ZipTempPath, zipFileName);
+                var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
+                //var zipFileName = Path.ChangeExtension(Path.GetRandomFileName(), "zip");
+                //var zipFilePath = Path.Combine(_environment.ZipTempPath, zipFileName);
 
                 using (_tracer.Step("Writing zip file to {0}", zipFilePath))
                 {
-                    using (var file = FileSystemHelpers.CreateFile(zipFilePath))
+                    using (var file = System.IO.File.Create(zipFilePath))
                     {
                         await Request.Body.CopyToAsync(file);
                     }
