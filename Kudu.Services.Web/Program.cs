@@ -12,6 +12,7 @@ namespace Kudu.Services.Web
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-                .UseStartup<Startup>();
+//            .UseKestrel(options => { options.Limits.MaxRequestBodySize = null; }) 
+            .UseStartup<Startup>();
     }
 }

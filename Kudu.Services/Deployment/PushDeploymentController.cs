@@ -42,10 +42,8 @@ namespace Kudu.Services.Deployment
         }
 
         [HttpPost]
-        [IgnoreAntiforgeryToken]
         [DisableRequestSizeLimit]
         public async Task<IActionResult> ZipPushDeploy(
-            [FromServices] IAntiforgery antiforgery,
             bool isAsync = false,
             string author = null,
             string authorEmail = null,

@@ -11,7 +11,6 @@ using Kudu.Contracts.Settings;
 using Kudu.Core.Settings;
 using Kudu.Core;
 using System.IO;
-using System.Net;
 using Microsoft.AspNetCore.Http;
 using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
@@ -38,6 +37,7 @@ namespace Kudu.Services.Web
     {
         private static string Format = "hh.mm.ss.ffffff";
         private readonly IHostingEnvironment _hostingEnvironment;
+        private IEnvironment _webAppEnvironment;
         private IHttpContextAccessor _httpContextAccessor;
         private static readonly ServerConfiguration serverConfiguration = new ServerConfiguration();
 
@@ -53,7 +53,7 @@ namespace Kudu.Services.Web
 
         /// <summary>
         /// This method gets called by the runtime. It is used to add services 
-        /// to the container. It uses the Extension Pateern.
+        /// to the container. It uses the Extension pattern.
         /// </summary>
         /// <todo>
         ///   CORE TODO trace exceptions here, see the catch in NinjectServices.Start()
@@ -92,6 +92,8 @@ namespace Kudu.Services.Web
             KuduWebUtil.EnsureSiteBitnessEnvironmentVariable();
 
             IEnvironment environment = KuduWebUtil.GetEnvironment(_hostingEnvironment);
+
+            _webAppEnvironment = environment;
 
             KuduWebUtil.EnsureDotNetCoreEnvironmentVariable(environment);
 
@@ -284,7 +286,7 @@ namespace Kudu.Services.Web
             return uriBuilder.Uri;
         }
 
-        public void Configure(IApplicationBuilder app)
+        public void Configure(IApplicationBuilder app, IApplicationLifetime applicationLifetime)
         {
             Console.WriteLine("\nConfigure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
@@ -308,15 +310,16 @@ namespace Kudu.Services.Web
                     RequestPath = "/wwwroot"
             });
             */
-            /*
+            
             app.UseFileServer(new FileServerOptions
             {
                 FileProvider = new PhysicalFileProvider(
-                Path.Combine("/home/site", "wwwroot")),
+                _webAppEnvironment.WebRootPath),
                 RequestPath = "/wwwroot",
                 EnableDirectoryBrowsing = true
             });
-            */
+            applicationLifetime.ApplicationStopping.Register(OnShutdown);
+
             ProxyRequestsIfRelativeUrlMatch(@"/webssh", "http", "127.0.0.1", "3000", app);
 
             ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
@@ -335,7 +338,7 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
             
-            app.UseTraceMiddleware();
+            //app.UseTraceMiddleware();
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 
@@ -362,7 +365,7 @@ namespace Kudu.Services.Web
             app.Map("/deploy", appBranch => appBranch.RunFetchHandler());
 
             // Log streaming
-            // app.Map("/api/logstream", appBranch => appBranch.RunLogStreamHandler());
+            app.Map("/api/logstream", appBranch => appBranch.RunLogStreamHandler());
 
             // Clone url
             foreach (var url in new[] { "/git-upload-pack", $"/{configuration.GitServerRoot}/git-upload-pack" })
@@ -379,8 +382,6 @@ namespace Kudu.Services.Web
             {
                 app.Map(url, appBranch => appBranch.RunCustomGitRepositoryHandler());
             };
-
-         
 
             //app.UseStaticFiles();
             app.UseMvc(routes =>
@@ -457,8 +458,12 @@ namespace Kudu.Services.Web
 
                 // CORE TODO
                 // Logs
-                //routes.MapHandlerDual<LogStreamHandler>(kernel, "logstream", "logstream/{*path}");
-                //routes.MapHttpRoute("recent-logs", "api/logs/recent", new { controller = "Diagnostics", action = "GetRecentLogs" }, new { verb = new HttpMethodConstraint("GET") });
+                foreach (var url in new[] { "/logstream", "/logstream/{*path}" })
+                {
+                    app.Map(url, appBranch => appBranch.RunLogStreamHandler());
+                };
+                //routes.MapHttpRouteDual<LogStreamHandler>(kernel, "logstream", "logstream/{*path}");
+                routes.MapHttpRouteDual("recent-logs", "api/logs/recent", new { controller = "Diagnostics", action = "GetRecentLogs" }, new { verb = new HttpMethodRouteConstraint("GET") });
 
                 if (!OSDetector.IsOnWindows())
                 {
@@ -608,6 +613,12 @@ namespace Kudu.Services.Web
         {
             Console.WriteLine($"path("+DateTime.Now+"): {context.Request.Path} "+context.Request.Path);
             return false;
+        }
+        
+        private void OnShutdown()
+        {
+            //Wait while the data is flushed
+            System.Threading.Thread.Sleep(1000);
         }
     }
 }

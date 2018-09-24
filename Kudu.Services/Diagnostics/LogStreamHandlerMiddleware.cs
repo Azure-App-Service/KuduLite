@@ -12,6 +12,7 @@ namespace Kudu.Services.Performance
         public LogStreamHandlerMiddleware(RequestDelegate next)
         {
         }
+        
         public Task Invoke(HttpContext context, LogStreamManager manager, ITracer tracer)
         {
             using (tracer.Step("LogStreamHandlerMiddleware.Invoke"))
@@ -20,11 +21,8 @@ namespace Kudu.Services.Performance
                 {
                     return manager.ProcessRequest(context);
                 }
-                else
-	            {
-                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    return Task.CompletedTask;
-                }
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                return Task.CompletedTask;
             }
         }
     }

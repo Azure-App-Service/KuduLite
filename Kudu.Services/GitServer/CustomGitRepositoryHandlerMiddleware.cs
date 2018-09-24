@@ -79,7 +79,7 @@ namespace Kudu.Services.GitServer
                                 }
                                 // context.Response.OutputStream.PktWrite("# service=git-upload-pack\n");
                                 // context.Response.OutputStream.PktFlush();
-                                Helpers.WriteNoCache(context.Response);
+                                context.Response.WriteNoCache();
                                 gitServer.AdvertiseUploadPack(context.Response.Body);
                             }
                         }

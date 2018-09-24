@@ -10,7 +10,7 @@ namespace Kudu.Services.ServiceHookHandlers
 {
     public class GitHubHandler : GitHubCompatHandler
     {
-        private IEnvironment _environment;
+        private readonly IEnvironment _environment;
         private const string PrivateKeyFile = "id_rsa";
 
         public GitHubHandler()

@@ -162,7 +162,7 @@ namespace Kudu.Services.Web
 
             // CORE TODO Clean this up
             var kuduConsoleFullPath = Path.Combine(AppContext.BaseDirectory, 
-                hostingEnvironment.IsDevelopment() ? AppContext.BaseDirectory + @"\Kudu.Console\bin\Debug\netcoreapp2.1" : KuduConsoleRelativePath, 
+                hostingEnvironment.IsDevelopment() ? @"..\..\..\..\Kudu.Console\bin\Debug\netcoreapp2.0" : KuduConsoleRelativePath, 
                 KuduConsoleFilename);
             //kuduConsoleFullPath = Path.Combine(System.AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
 
@@ -181,7 +181,7 @@ namespace Kudu.Services.Web
             if (Directory.Exists(System.Environment.ExpandEnvironmentVariables(@"%HOME%"))) return;
 
             //For Debug
-            System.Environment.SetEnvironmentVariable("HOME", OSDetector.IsOnWindows() ? @"G:\kudu-debug" : "/home");
+            System.Environment.SetEnvironmentVariable("HOME", OSDetector.IsOnWindows() ? @"F:\kudu-debug" : "/home");
 
             /*
             // If MapPath("/_app") returns a valid folder, set %HOME% to that, regardless of
