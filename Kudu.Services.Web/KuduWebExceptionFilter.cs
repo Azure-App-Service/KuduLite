@@ -33,6 +33,8 @@ namespace Kudu.Services.Web
             response.StatusCode = (int)status;
             response.ContentType = "application/json";
             var err = message + " Yolo: " + context.Exception.StackTrace;
+            Console.WriteLine(context.Exception.Message);
+            Console.WriteLine(context.Exception.StackTrace);
             response.WriteAsync(err);
         }
     }

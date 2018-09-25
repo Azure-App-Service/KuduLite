@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Constraints;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Settings;
@@ -21,7 +20,6 @@ using Kudu.Services.Web.Infrastructure;
 using Kudu.Core.Deployment;
 using Kudu.Contracts.SourceControl;
 using Kudu.Core.SourceControl;
-using Kudu.Services.Web.Services;
 using Kudu.Services.GitServer;
 using Kudu.Core.Commands;
 using Newtonsoft.Json.Serialization;
@@ -29,6 +27,7 @@ using Kudu.Services.Web.Tracing;
 using Kudu.Core.SSHKey;
 using Kudu.Services.Diagnostics;
 using Kudu.Services.Performance;
+using Microsoft.Azure.Web.DataProtection;
 using Microsoft.Extensions.FileProviders;
 
 namespace Kudu.Services.Web
@@ -218,7 +217,7 @@ namespace Kudu.Services.Web
             services.AddScoped<IApplicationLogsReader, ApplicationLogsReader>();
 
             // Git server
-            services.AddGitServer();
+            services.AddGitServer(KuduWebUtil.GetDeploymentLock(traceFactory,environment));
 
             // Git Servicehook Parsers
             services.AddGitServiceHookParsers();

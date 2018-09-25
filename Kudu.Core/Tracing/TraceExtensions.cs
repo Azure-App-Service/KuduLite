@@ -33,6 +33,7 @@ namespace Kudu.Core.Tracing
 
         public static IDisposable Step(this ITracer tracer, string message)
         {
+            Console.WriteLine(message);
             return tracer.Step(message, _empty);
         }
 

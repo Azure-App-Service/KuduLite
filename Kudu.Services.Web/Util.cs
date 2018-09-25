@@ -80,9 +80,12 @@ namespace Kudu.Services.Web
             _deploymentLock.InitializeAsyncLocks();
 
             var statusLock = new LockFile(statusLockPath, traceFactory);
+            statusLock.InitializeAsyncLocks();
             var sshKeyLock = new LockFile(sshKeyLockPath, traceFactory);
+            sshKeyLock.InitializeAsyncLocks();
             var hooksLock = new LockFile(hooksLockPath, traceFactory);
-
+            hooksLock.InitializeAsyncLocks();
+            
             _namedLocks = new Dictionary<string, IOperationLock>
             {
                 { "status", statusLock },

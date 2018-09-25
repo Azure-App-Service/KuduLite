@@ -20,6 +20,7 @@
 
 #endregion
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using Microsoft.Net.Http.Headers;
@@ -178,8 +179,8 @@ namespace Kudu.Services.GitServer
             }
 
             // get repository for the WebRoot
-            var initLock = GetInstance<IOperationLock>();
-            initLock.LockOperation(() =>
+            var initLock = GetInstance<IDictionary<string,IOperationLock>>();
+            initLock["deployment"].LockOperation(() =>
             {
                 IRepository repository = _repositoryFactory.GetRepository();
 
