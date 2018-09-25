@@ -338,7 +338,7 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
             
-            //app.UseTraceMiddleware();
+            app.UseTraceMiddleware();
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 
