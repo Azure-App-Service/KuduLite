@@ -13,6 +13,8 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc.Routing;
+using UriHelper = Kudu.Services.Infrastructure.UriHelper;
 
 namespace Kudu.Services.Web.Tracing
 {
@@ -20,8 +22,20 @@ namespace Kudu.Services.Web.Tracing
     {
         private static readonly object _stepKey = new object();
         private static int _traceStartup;
+        
+        private static readonly DateTime _startDateTime = DateTime.UtcNow;
+        private static DateTime _lastRequestDateTime;
 
+        private static DateTime _nextHeartbeatDateTime = DateTime.MinValue; 
+        
         private readonly RequestDelegate _next;
+        
+        private static readonly Lazy<string> _kuduVersion = new Lazy<string>(() =>
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
+            return fvi.FileVersion;
+        });
 
         public TraceMiddleware(RequestDelegate next)
         {
@@ -30,31 +44,69 @@ namespace Kudu.Services.Web.Tracing
 
         public async Task Invoke(HttpContext context)
         {
-            // CORE TODO Not sure if EndRequest logic makes more sense as a separate middleware
-            // we explicitly put at the end of the pipe.
             BeginRequest(context);
-
-            await _next.Invoke(context);
-
+            try
+            {
+                await _next.Invoke(context);
+            }
+            catch (Exception ex)
+            {
+                await LogException(context, ex);
+            }
+            // At the end of the pipe
             EndRequest(context);
         }
 
+        
+        private async Task LogException(HttpContext httpContext, Exception exception)
+        {
+            try
+            {
+                var tracer = TraceServices.GetRequestTracer(httpContext);
+                var error = exception;
+
+                //LogErrorRequest(httpContext, error);
+               // _logger.LogCritical(exception.Message, exception);
+               // _logger.LogCritical(exception.Message, exception);
+
+                if (tracer != null || tracer.TraceLevel > TraceLevel.Off)
+                {
+                    tracer.TraceError(error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+            //return httpContext.Response.WriteAsync("Test Exception");
+        }
+        
         private void BeginRequest(HttpContext httpContext)
         {
             var httpRequest = httpContext.Request;
+            
+            _lastRequestDateTime = DateTime.UtcNow;
 
             /* CORE TODO missing functionality:
-             * UpTime and LastRequestTime
-             * LogBeginRequest (bypass ITracer entirely and log straight to ETW)
+             * UpTime and LastRequestTime - Underway
+             * LogBeginRequest (bypass ITracer entirely and log straight to ETW)   - Underway
              * Disallow GET requests from CSM extensions bridge
-             * TryConvertSpecialHeadersToEnvironmentVariable
-             * Razor dummy extension for vfs
+             * TryConvertSpecialHeadersToEnvironmentVariable - Done
+             * Razor dummy extension for vfs - Do we need it for Linux Kudu?
              * 
              */
+            
+            
+            LogBeginRequest(httpContext);
 
             // Always trace the startup request.
             ITracer tracer = TraceStartup(httpContext);
-
+            
+            // Trace heartbeat periodically
+            TraceHeartbeat();
+           
+            TryConvertSpecialHeadersToEnvironmentVariable(httpRequest);
+            
             // Skip certain paths
             if (TraceExtensions.ShouldSkipRequest(httpRequest))
             {
@@ -182,13 +234,20 @@ namespace Kudu.Services.Web.Tracing
             }
         }
 
-        // CORE TODO HttpRequest.RawUrl no longer exists in ASP.NET Core. This reproduces the
-        // functionality as best as I can tell, may need some checking.
         private static string GetRawUrl(HttpRequest request)
         {
             var uri = new Uri(request.GetDisplayUrl());
             return uri.PathAndQuery;
         }
+        
+        private static string GetHostUrl(HttpRequest request)
+        {
+            var uri = new Uri(request.GetDisplayUrl());
+            return uri.Host;
+        }
+        
+        public static TimeSpan LastRequestTime => DateTime.UtcNow - _lastRequestDateTime;
+        public static TimeSpan UpTime => DateTime.UtcNow - _startDateTime;
 
         private static Dictionary<string, string> GetTraceAttributes(HttpContext httpContext)
         {
@@ -254,9 +313,65 @@ namespace Kudu.Services.Web.Tracing
 
             return tracer;
         }
+        
+        private static void TraceHeartbeat()
+        {
+            var now = DateTime.UtcNow;
+            if (_nextHeartbeatDateTime >= now) return;
+            _nextHeartbeatDateTime = now.AddHours(1);
+
+            OperationManager.SafeExecute(() =>
+            {
+                KuduEventSource.Log.GenericEvent(
+                    ServerConfiguration.GetApplicationName(),
+                    string.Format("Heartbeat pid:{0}, domain:{1}", Process.GetCurrentProcess().Id, AppDomain.CurrentDomain.Id),
+                    string.Empty,
+                    Environment.GetEnvironmentVariable(SettingsKeys.ScmType),
+                    Environment.GetEnvironmentVariable(SettingsKeys.WebSiteSku),
+                    _kuduVersion.Value);
+            });
+        }
+        
+        private static void LogBeginRequest(HttpContext httpContext)
+        {
+            OperationManager.SafeExecute(() =>
+            {
+                var request = httpContext.Request;
+                var requestId = request.GetRequestId() ?? Guid.NewGuid().ToString();
+                httpContext.Items[Constants.RequestIdHeader] = requestId;
+                httpContext.Items[Constants.RequestDateTimeUtc] = DateTime.UtcNow;
+                KuduEventSource.Log.ApiEvent(
+                    ServerConfiguration.GetApplicationName(),
+                    "OnBeginRequest",
+                    GetRawUrl(request),
+                    request.Method,
+                    requestId,
+                    0,
+                    0,
+                    request.GetUserAgent());
+            });
+        }
+        
+        private static void TryConvertSpecialHeadersToEnvironmentVariable(HttpRequest request)
+        {
+            try
+            {
+                // RDBug 6738223 : AlwaysOn request again SCM has wrong Host Name to main site
+                // Ignore Always on request for now till bug is fixed
+                if (!string.Equals("AlwaysOn", request.Headers["User-Agent"].ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    System.Environment.SetEnvironmentVariable(Constants.HttpHost, GetHostUrl(request));
+                }
+            }
+            catch
+            {
+                // this is temporary hack for host name invalid due to ~ (http://~1hostname/)
+                // we don't know how to repro it yet.
+            }
+        }
     }
 
-    public static class MyMiddlewareExtensions
+    public static class TraceMiddlewareExtension
     {
         public static IApplicationBuilder UseTraceMiddleware(this IApplicationBuilder builder)
         {
