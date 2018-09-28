@@ -21,8 +21,8 @@ namespace Kudu.Core.Tracing
         public const string ExecutingExternalProcessTrace = "Executing external process";
         public const string BackgroundTrace = "BackgroundTrace";
 
-        public const int MaxXmlFiles = 200;
-        public const int CleanUpIntervalSecs = 10;
+        public const int MaxXmlFiles = 10000;
+        public const int CleanUpIntervalSecs = 20;
 
         private static object _cleanupLock = new object();
         private static bool _cleanupPending = false;
@@ -291,7 +291,10 @@ namespace Kudu.Core.Tracing
                         {
                             foreach (var file in files.OrderBy(n => n).Take(toCleanup))
                             {
-                                FileSystemHelpers.DeleteFileSafe(file);
+                                if (file.Contains("Default"))
+                                {
+                                    FileSystemHelpers.DeleteFileSafe(file);
+                                }
                             }
                         }
                     }
