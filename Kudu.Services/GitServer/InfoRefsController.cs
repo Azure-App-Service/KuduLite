@@ -152,7 +152,7 @@ namespace Kudu.Services.GitServer
         /// </param>
         protected static string GetServiceType(string service)
         {
-            if (String.IsNullOrWhiteSpace(service))
+            if (string.IsNullOrWhiteSpace(service))
             {
                 return null;
             }

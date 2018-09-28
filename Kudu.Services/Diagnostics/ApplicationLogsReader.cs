@@ -51,7 +51,7 @@ namespace Kudu.Services.Diagnostics
                     .Select(f => new ResumableLogFileReader(f, _tracer))
                     .ToList();
 
-                List<ApplicationLogEntry> logs = new List<ApplicationLogEntry>();
+                var logs = new List<ApplicationLogEntry>();
                 while (logs.Count < top && logReaders.Count > 0)
                 {
                     logReaders.Sort((reader1, reader2) => reader2.LastTime.CompareTo(reader1.LastTime));

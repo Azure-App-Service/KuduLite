@@ -51,14 +51,14 @@ namespace Kudu.Services.GitServer
 
         public static void PktWrite(this Stream response, string input, params object[] args)
         {
-            input = String.Format(input, args);
+            input = string.Format(input, args);
             var toWrite = (input.Length + 4).ToString("x").PadLeft(4, '0') + input;
             response.Write(Encoding.UTF8.GetBytes(toWrite), 0, Encoding.UTF8.GetByteCount(toWrite));
         }
 
         public static void PktFlush(this Stream response)
         {
-            var toWrite = "0000";
+            const string toWrite = "0000";
             response.Write(Encoding.UTF8.GetBytes(toWrite), 0, Encoding.UTF8.GetByteCount(toWrite));
         }
     }

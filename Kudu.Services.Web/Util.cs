@@ -121,13 +121,11 @@ namespace Kudu.Services.Web
         public static string GetRequestTraceFile(IServiceProvider serviceProvider)
         {
             var traceLevel = serviceProvider.GetRequiredService<IDeploymentSettingsManager>().GetTraceLevel();
-            // CORE TODO Need TraceServices implementation
-            //if (level > TraceLevel.Off)
-            //{
-            //    return TraceServices.CurrentRequestTraceFile;
-            //}
-
-            return null;
+            // CORE TODO Need TraceServices implementation - Done , Testing left
+            if (traceLevel <= TraceLevel.Off) return null;
+            var contextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
+            var httpContext = contextAccessor.HttpContext;
+            return TraceServices.GetRequestTraceFile(httpContext);
         }
 
         public static ITracer GetTracerWithoutContext(IEnvironment environment, IDeploymentSettingsManager settings)
@@ -165,7 +163,7 @@ namespace Kudu.Services.Web
 
             // CORE TODO Clean this up
             var kuduConsoleFullPath = Path.Combine(AppContext.BaseDirectory, 
-                hostingEnvironment.IsDevelopment() ? @"..\..\..\..\Kudu.Console\bin\Debug\netcoreapp2.0" : KuduConsoleRelativePath, 
+                hostingEnvironment.IsDevelopment() ? @"..\..\..\..\Kudu.Console\bin\Debug\netcoreapp2.2" : KuduConsoleRelativePath, 
                 KuduConsoleFilename);
             //kuduConsoleFullPath = Path.Combine(System.AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
 

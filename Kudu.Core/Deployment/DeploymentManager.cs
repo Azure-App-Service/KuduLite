@@ -285,6 +285,7 @@ namespace Kudu.Core.Deployment
 
                 if (exception != null)
                 {
+                    tracer.TraceError(exception);
                     throw new DeploymentFailedException(exception);
                 }
             }

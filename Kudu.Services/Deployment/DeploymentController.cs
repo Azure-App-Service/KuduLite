@@ -288,7 +288,7 @@ namespace Kudu.Services.Deployment
         public bool TryParseDeployResult(string id, JObject payload, out DeployResult deployResult)
         {
             deployResult = null;
-            if (String.IsNullOrEmpty(id) || payload == null)
+            if (string.IsNullOrEmpty(id) || payload == null)
             {
                 return false;
             }
@@ -300,19 +300,19 @@ namespace Kudu.Services.Deployment
             }
 
             var message = payload.Value<string>("message");
-            if (String.IsNullOrEmpty(message))
+            if (string.IsNullOrEmpty(message))
             {
                 return false;
             }
 
             var deployer = payload.Value<string>("deployer");
-            if (String.IsNullOrEmpty(deployer))
+            if (string.IsNullOrEmpty(deployer))
             {
                 return false;
             }
 
             var author = payload.Value<string>("author");
-            if (String.IsNullOrEmpty(author))
+            if (string.IsNullOrEmpty(author))
             {
                 return false;
             }
@@ -416,11 +416,9 @@ namespace Kudu.Services.Deployment
                     var deployments = _deploymentManager.GetLogEntries(id).ToList();
                     foreach (var entry in deployments)
                     {
-                        if (entry.HasDetails)
-                        {
-                            Uri baseUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(Request), new Uri(Request.GetDisplayUrl()).AbsolutePath);
-                            entry.DetailsUrl = kUriHelper.MakeRelative(baseUri, entry.Id);
-                        }
+                        if (!entry.HasDetails) continue;
+                        Uri baseUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(Request), new Uri(Request.GetDisplayUrl()).AbsolutePath);
+                        entry.DetailsUrl = kUriHelper.MakeRelative(baseUri, entry.Id);
                     }
 
                     return Ok(ArmUtils.AddEnvelopeOnArmRequest(deployments, Request));
@@ -501,7 +499,8 @@ namespace Kudu.Services.Deployment
                 using (_tracer.Step("DeploymentService.GetLatestDeployment"))
                 {
                     var results = _deploymentManager.GetResults();
-                    pending = results.Where(r => r.Status != DeployStatus.Success && r.Status != DeployStatus.Failed).FirstOrDefault();
+                    pending = results.FirstOrDefault(r => r.Status != DeployStatus.Success && r.Status != DeployStatus.Failed);
+
                     if (pending != null)
                     {
                         _tracer.Trace("Deployment {0} is {1}", pending.Id, pending.Status);
@@ -581,15 +580,9 @@ namespace Kudu.Services.Deployment
 
             var ifNoneMatchHeader = request.Headers["If-None-Match"];
 
-            if (!StringValues.IsNullOrEmpty(ifNoneMatchHeader))
-            {
-                if (EntityTagHeaderValue.TryParseList(ifNoneMatchHeader, out IList<Microsoft.Net.Http.Headers.EntityTagHeaderValue> ifNoneMatchEtags))
-                {
-                    return ifNoneMatchEtags.Any(t => currentEtag.Compare(t, useStrongComparison: false));
-                }
-            }
-
-            return false;
+            if (StringValues.IsNullOrEmpty(ifNoneMatchHeader)) return false;
+            return EntityTagHeaderValue.TryParseList(ifNoneMatchHeader, out IList<Microsoft.Net.Http.Headers.EntityTagHeaderValue> ifNoneMatchEtags) 
+                   && ifNoneMatchEtags.Any(t => currentEtag.Compare(t, useStrongComparison: false));
         }
 
         private IEnumerable<DeployResult> GetResults(HttpRequest request)
@@ -635,7 +628,7 @@ namespace Kudu.Services.Deployment
 
         class DeploymentsCacheItem
         {
-            public readonly static DeploymentsCacheItem None = new DeploymentsCacheItem();
+            public static readonly DeploymentsCacheItem None = new DeploymentsCacheItem();
 
             public List<DeployResult> Results { get; set; }
 

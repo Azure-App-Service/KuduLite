@@ -17,7 +17,6 @@ namespace Kudu.Services.Settings
 
         public SettingsController(
             IDeploymentSettingsManager settingsManager,
-            //IOperationLock deploymentLock
             IDictionary<string, IOperationLock> namedLocks)
         {
             _settingsManager = settingsManager;

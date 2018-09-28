@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO.Abstractions;
 using System.Linq;
 using System.Xml.Linq;
 using Kudu.Core.Infrastructure;
@@ -11,7 +9,7 @@ namespace Kudu.Core.Deployment
 {
     public class XmlLogger : IDetailedLogger
     {
-        private readonly static object LogLock = new object();
+        private static readonly object LogLock = new object();
         private readonly string _path;
         private readonly IAnalytics _analytics;
 
@@ -84,12 +82,7 @@ namespace Kudu.Core.Deployment
             }
 
             var firstErrorEntry = document.Root.Elements("entry").First(s => s.Attribute("type").Value == ((int)(LogEntryType.Error)).ToString());
-            if (firstErrorEntry != null)
-            {
-                return firstErrorEntry.Element("message").Value;
-            }
-
-            return "No error found in log.";
+            return firstErrorEntry != null ? firstErrorEntry.Element("message")?.Value : "No error found in log.";
         }
 
         private XDocument GetDocument()

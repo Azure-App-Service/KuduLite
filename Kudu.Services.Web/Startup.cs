@@ -29,6 +29,10 @@ using Kudu.Services.Diagnostics;
 using Kudu.Services.Performance;
 using Microsoft.Azure.Web.DataProtection;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
+using NLog;
+using NLog.Targets;
+using ILogger = Kudu.Core.Deployment.ILogger;
 
 namespace Kudu.Services.Web
 {
@@ -66,11 +70,7 @@ namespace Kudu.Services.Web
 
             Console.WriteLine("\nConfigure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
-            services.AddMvcCore(
-                    config => {
-                        config.Filters.Add(typeof(KuduWebExceptionFilter));
-                    }
-                )
+            services.AddMvcCore()
                 .AddRazorPages()
                 .AddAuthorization()
                 .AddJsonFormatters()
@@ -115,6 +115,8 @@ namespace Kudu.Services.Web
                 sp.GetRequiredService<IHttpContextAccessor>().HttpContext));
 
             services.AddDeployementServices(environment);
+            
+            
             /*
              * CORE TODO all this business around ITracerFactory/ITracer/GetTracer()/
              * ILogger needs serious refactoring:
@@ -125,7 +127,6 @@ namespace Kudu.Services.Web
              * - ITracer vs. ITraceFactory is redundant and confusing.
              * - All this stuff with funcs and factories and TraceServices is overcomplicated.
              * TraceServices only serves to confuse stuff now that we're avoiding
-             * HttpContext.Current
              */
             Func<IServiceProvider, ITracer> resolveTracer = sp => KuduWebUtil.GetTracer(sp);
             ITracer CreateTracerThunk() => resolveTracer(services.BuildServiceProvider());
@@ -199,7 +200,6 @@ namespace Kudu.Services.Web
             //                                         .InRequestScope();
 
             // Deployment Service
-            
 
             services.AddWebJobsDependencies();
 
@@ -268,6 +268,10 @@ namespace Kudu.Services.Web
             //        kernel.Get<IAnalytics>(),
             //        kernel.Get<ITraceFactory>()));
             //GlobalConfiguration.Configuration.Filters.Add(new EnsureRequestIdHandlerAttribute());
+            
+            //FileTarget target = LogManager.Configuration.FindTargetByName("file") as FileTarget;
+            //String logfile = _webAppEnvironment.LogFilesPath + "/.txt";
+            //target.FileName = logfile;
         }
 
         // CORE TODO See NinjectServices.Stop
@@ -285,46 +289,14 @@ namespace Kudu.Services.Web
             return uriBuilder.Uri;
         }
 
-        public void Configure(IApplicationBuilder app, IApplicationLifetime applicationLifetime)
+        public void Configure(IApplicationBuilder app, 
+            IApplicationLifetime applicationLifetime,
+            ILoggerFactory loggerFactory)
         {
             Console.WriteLine("\nConfigure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
-            app.UseStaticFiles();
-
-            /*
-            app.UseStaticFiles(new StaticFileOptions
-            {
-                FileProvider = new PhysicalFileProvider(
-                    Path.Combine(_hostingEnvironment.WebRootPath, "")),
-                RequestPath = "/wwwroot"
-            });
-            */
-            app.UseResponseCompression();
+            loggerFactory.AddEventSourceLogger();
             
-            /*
-            app.UseDirectoryBrowser(new DirectoryBrowserOptions
-            {
-                FileProvider = new PhysicalFileProvider(
-                    Path.Combine(_hostingEnvironment.WebRootPath, "")),
-                    RequestPath = "/wwwroot"
-            });
-            */
-            
-            app.UseFileServer(new FileServerOptions
-            {
-                FileProvider = new PhysicalFileProvider(
-                _webAppEnvironment.WebRootPath),
-                RequestPath = "/wwwroot",
-                EnableDirectoryBrowsing = true
-            });
-            applicationLifetime.ApplicationStopping.Register(OnShutdown);
-
-            ProxyRequestsIfRelativeUrlMatch(@"/webssh", "http", "127.0.0.1", "3000", app);
-
-            ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
-
-            ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
-
             
             if (_hostingEnvironment.IsDevelopment())
             {
@@ -338,6 +310,18 @@ namespace Kudu.Services.Web
             }
             
             app.UseTraceMiddleware();
+            
+            app.UseResponseCompression();
+            
+            applicationLifetime.ApplicationStopping.Register(OnShutdown);
+            
+            app.UseStaticFiles();
+
+            ProxyRequestsIfRelativeUrlMatch(@"/webssh", "http", "127.0.0.1", "3000", app);
+
+            ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
+
+            ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 
@@ -381,6 +365,14 @@ namespace Kudu.Services.Web
             {
                 app.Map(url, appBranch => appBranch.RunCustomGitRepositoryHandler());
             };
+            
+            app.UseFileServer(new FileServerOptions
+            {
+                FileProvider = new PhysicalFileProvider(
+                    _webAppEnvironment.WebRootPath),
+                RequestPath = "/wwwroot",
+                EnableDirectoryBrowsing = true
+            });
 
             //app.UseStaticFiles();
             app.UseMvc(routes =>
@@ -561,7 +553,18 @@ namespace Kudu.Services.Web
             
             app.MapWhen(containsRelativePath, application => application.Run(async context =>
             {
+                //context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 await context.Response.WriteAsync("Kestrel Running");
+            }));
+            
+            var containsRelativePath2 = new Func<HttpContext, bool>(i =>
+                i.Request.Path.Value.StartsWith("/TestException", StringComparison.OrdinalIgnoreCase));
+            
+            app.MapWhen(containsRelativePath2, application => application.Run(async context =>
+            {
+                //context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                //await context.Response.WriteAsync("Kestrel Running");
+                throw new Exception("Exception Handler Test");
             }));
             /*
            app.Run(async context =>

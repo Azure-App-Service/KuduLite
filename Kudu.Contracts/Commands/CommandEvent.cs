@@ -1,4 +1,6 @@
-﻿namespace Kudu.Core.Commands
+﻿using System;
+
+namespace Kudu.Core.Commands
 {
     public class CommandEvent
     {

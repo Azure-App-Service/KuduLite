@@ -13,7 +13,7 @@ namespace Kudu.Services.Web.Tracing
 
         private static Func<ITracer> _traceFactory;
         
-        // CORE TODO The CurrentRequestTraceFile and HttpMethod properties
+        // CORE TODO The CurrentRequestTraceFile - Done and HttpMethod properties
         // were replaced with methods that require the caller to pass the context, as HttpContext.Current
         // no longer exists and is a bad practice anyway. CurrentRequestTracer was removed, as
         // GetRequestTracer(HttpContext) already exists.
@@ -81,5 +81,6 @@ namespace Kudu.Services.Web.Tracing
 
             return tracer;
         }
+        
     }
 }

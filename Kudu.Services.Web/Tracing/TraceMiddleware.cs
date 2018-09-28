@@ -11,6 +11,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Routing;
@@ -52,6 +53,7 @@ namespace Kudu.Services.Web.Tracing
             catch (Exception ex)
             {
                 await LogException(context, ex);
+                ExceptionDispatchInfo.Capture(ex.InnerException??ex).Throw();
             }
             // At the end of the pipe
             EndRequest(context);
