@@ -216,7 +216,7 @@ namespace Kudu.Core.Deployment
                             using (var writer = new ProgressWriter())
                             {
                                 // Update to the specific changeset or branch
-                                repository.Update(targetBranch ?? id);
+                                repository.Update(targetBranch ?? id); 
                             }
                         }
                     }
@@ -789,8 +789,10 @@ namespace Kudu.Core.Deployment
         /// </summary>
         private IDeploymentStatusFile VerifyDeployment(string id, bool isDeploying)
         {
+            _traceFactory.GetTracer().Step("Verifying Deployment "+" status id : "+id);
             IDeploymentStatusFile statusFile = _status.Open(id);
-
+            _traceFactory.GetTracer().Step("Status File Opened ");
+            
             if (statusFile == null)
             {
                 return null;
