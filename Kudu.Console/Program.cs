@@ -175,6 +175,7 @@ namespace Kudu.Console
 
                     deploymentTask.Wait();
 
+                    /*
                     if (PostDeploymentHelper.IsAutoSwapEnabled())
                     {
                         string branch = settingsManager.GetBranch();
@@ -185,12 +186,15 @@ namespace Kudu.Console
                             PostDeploymentHelper.PerformAutoSwap(env.RequestId, env.SiteRestrictedJwt, new PostDeploymentTraceListener(tracer, deploymentManager.GetLogger(changeSet.Id))).Wait();
                         }
                     }
+                    */
                 }
                 catch (Exception e)
                 {
                     tracer.TraceError(e);
-                    System.Console.WriteLine("Exception from Console : "+e.Message);
-                    System.Console.WriteLine("Trace : "+e.StackTrace);
+                    System.Console.WriteLine("Exception from Console : ");
+                    System.Console.WriteLine(e.Message);
+                    System.Console.WriteLine("Trace : ");
+                    System.Console.WriteLine(e.StackTrace);
                     System.Console.Error.WriteLine(e.GetBaseException().Message);
                     System.Console.Error.WriteLine(Resources.Log_DeploymentError);
                     return 1;
