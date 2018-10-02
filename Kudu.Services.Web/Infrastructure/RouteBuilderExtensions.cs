@@ -6,6 +6,12 @@ namespace Kudu.Services.Web.Infrastructure
 {
 
     // CORE NOTE This was renamed/reworked from RouteCollectionExtensions
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <!--CORE TODO -->
+    /// Supporting the concept of "deprecated" routes
     public static class RouteBuilderExtensions
     {
         public const string DeprecatedKey = "deprecated";

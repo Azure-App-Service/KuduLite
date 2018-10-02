@@ -309,6 +309,15 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
             
+            var containsRelativePath = new Func<HttpContext, bool>(i =>
+                i.Request.Path.Value.StartsWith("/Default", StringComparison.OrdinalIgnoreCase));
+            
+            app.MapWhen(containsRelativePath, application => application.Run(async context =>
+            {
+                //context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await context.Response.WriteAsync("Kestrel Running");
+            }));
+            
             app.UseTraceMiddleware();
             
             app.UseResponseCompression();
@@ -547,15 +556,6 @@ namespace Kudu.Services.Web
             });
 
             // CORE TODO Remove This
-         
-            var containsRelativePath = new Func<HttpContext, bool>(i =>
-                i.Request.Path.Value.StartsWith("/Default", StringComparison.OrdinalIgnoreCase));
-            
-            app.MapWhen(containsRelativePath, application => application.Run(async context =>
-            {
-                //context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                await context.Response.WriteAsync("Kestrel Running");
-            }));
             
             var containsRelativePath2 = new Func<HttpContext, bool>(i =>
                 i.Request.Path.Value.StartsWith("/TestException", StringComparison.OrdinalIgnoreCase));

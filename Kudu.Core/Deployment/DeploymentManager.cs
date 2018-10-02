@@ -92,7 +92,10 @@ namespace Kudu.Core.Deployment
 
         public DeployResult GetResult(string id)
         {
-            return GetResult(id, _status.ActiveDeploymentId, IsDeploying);
+            using (_traceFactory.GetTracer().Step("Verifying deployment - GetResult IDeployment Manager "+_status.ActiveDeploymentId))
+            {
+                return GetResult(id, _status.ActiveDeploymentId, IsDeploying);   
+            }
         }
 
         public IEnumerable<LogEntry> GetLogEntries(string id)
@@ -278,9 +281,12 @@ namespace Kudu.Core.Deployment
 
                 // Reload status file with latest updates
                 statusFile = _status.Open(id);
-                if (statusFile != null)
+                using (tracer.Step("Reloading status file with latest updates"))
                 {
-                    await _hooksManager.PublishEventAsync(HookEventTypes.PostDeployment, statusFile);
+                    if (statusFile != null)
+                    {
+                        await _hooksManager.PublishEventAsync(HookEventTypes.PostDeployment, statusFile);
+                    }
                 }
 
                 if (exception != null)
@@ -335,13 +341,18 @@ namespace Kudu.Core.Deployment
         {
             // Order the results by date (newest first). Previously, we supported OData to allow
             // arbitrary queries, but that was way overkill and brought in too many large binaries.
-            IEnumerable<DeployResult> results = EnumerateResults().OrderByDescending(t => t.ReceivedTime).ToList();
+            IEnumerable<DeployResult> results;
+            using (_traceFactory.GetTracer().Step("Purging deployments : getting results"))
+            {
+                results = EnumerateResults().OrderByDescending(t => t.ReceivedTime).ToList();                
+            }
             try
             {
                 results = PurgeDeployments(results);
             }
             catch (Exception ex)
             {
+                _traceFactory.GetTracer().TraceError(ex);
                 // tolerate purge error
                 _analytics.UnexpectedException(ex);
             }
@@ -372,10 +383,14 @@ namespace Kudu.Core.Deployment
             if (results.Any())
             {
                 var toDelete = new List<DeployResult>();
+                _traceFactory.GetTracer().Trace("Results for purge : "+results);
                 toDelete.AddRange(GetPurgeTemporaryDeployments(results));
                 toDelete.AddRange(GetPurgeFailedDeployments(results));
-                toDelete.AddRange(this.GetPurgeObsoleteDeployments(results));
-
+                toDelete.AddRange(GetPurgeObsoleteDeployments(results));
+                _traceFactory.GetTracer().Trace("Get Purge Temporary Deployments : "+GetPurgeTemporaryDeployments(results));
+                _traceFactory.GetTracer().Trace("Get Purge Failed Deployments : "+GetPurgeFailedDeployments(results));
+                _traceFactory.GetTracer().Trace("Get Purge Obsolete Deployments : "+GetPurgeObsoleteDeployments(results));
+                
                 if (toDelete.Any())
                 {
                     var tracer = _traceFactory.GetTracer();
@@ -506,8 +521,10 @@ namespace Kudu.Core.Deployment
 
         private DeployResult GetResult(string id, string activeDeploymentId, bool isDeploying)
         {
+            _traceFactory.GetTracer().Trace("Verifying deployment for id : "+id);
             var file = VerifyDeployment(id, isDeploying);
-
+            _traceFactory.GetTracer().Trace("Verified : "+id);
+            
             if (file == null)
             {
                 return null;
@@ -775,11 +792,13 @@ namespace Kudu.Core.Deployment
 
             foreach (var id in FileSystemHelpers.GetDirectories(_environment.DeploymentsPath))
             {
-                DeployResult result = GetResult(id, activeDeploymentId, isDeploying);
+                using (_traceFactory.GetTracer().Step("Processing Deployment Directory "+id)) {
+                    DeployResult result = GetResult(id, activeDeploymentId, isDeploying);
 
-                if (result != null)
-                {
-                    yield return result;
+                    if (result != null)
+                    {
+                        yield return result;
+                    }
                 }
             }
         }
@@ -789,9 +808,9 @@ namespace Kudu.Core.Deployment
         /// </summary>
         private IDeploymentStatusFile VerifyDeployment(string id, bool isDeploying)
         {
-            _traceFactory.GetTracer().Step("Verifying Deployment "+" status id : "+id);
+            _traceFactory.GetTracer().Step("Inside Verify Deployment "+" id : "+id);
             IDeploymentStatusFile statusFile = _status.Open(id);
-            _traceFactory.GetTracer().Step("Status File Opened ");
+            _traceFactory.GetTracer().Step("Is Status file null ? "+(statusFile==null));
             
             if (statusFile == null)
             {
@@ -808,8 +827,10 @@ namespace Kudu.Core.Deployment
             if (!isDeploying)
             {
                 ILogger logger = GetLogger(id);
+                _traceFactory.GetTracer().Step("No deployment in progress and Verify deployment of id " + id +
+                                               " requested, this status file is not complete also");
                 logger.LogUnexpectedError();
-
+                //_traceFactory.GetTracer().Step("Unexpected Error "+statusFile.Message);
                 MarkStatusComplete(statusFile, success: false);
             }
 

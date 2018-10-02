@@ -175,7 +175,6 @@ namespace Kudu.Console
 
                     deploymentTask.Wait();
 
-                    /*
                     if (PostDeploymentHelper.IsAutoSwapEnabled())
                     {
                         string branch = settingsManager.GetBranch();
@@ -186,7 +185,6 @@ namespace Kudu.Console
                             PostDeploymentHelper.PerformAutoSwap(env.RequestId, env.SiteRestrictedJwt, new PostDeploymentTraceListener(tracer, deploymentManager.GetLogger(changeSet.Id))).Wait();
                         }
                     }
-                    */
                 }
                 catch (Exception e)
                 {

@@ -510,7 +510,10 @@ namespace Kudu.Services.SourceControl
             }
 
             // Inspect deployment for errors
-            return _deploymentManager.GetResult(commitId);
+            using (Tracer.Step("Inspecting deployment live scm editor"))
+            {
+                return _deploymentManager.GetResult(commitId);   
+            }
         }
 
         private static EntityTagHeaderValue CreateEtag(string tag)

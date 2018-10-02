@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Kudu.Contracts.Settings;
 
 namespace Kudu.Core.Settings
@@ -11,7 +12,8 @@ namespace Kudu.Core.Settings
         // the defaults, since things like 'branch' will rarely want a different global default
         private static readonly Dictionary<string, string> _defaultSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
                 { SettingsKeys.DeploymentBranch, "master" },
-                { SettingsKeys.TraceLevel, ((int)DeploymentSettingsExtension.DefaultTraceLevel).ToString() },
+                //{ SettingsKeys.TraceLevel, ((int)DeploymentSettingsExtension.DefaultTraceLevel).ToString() },
+                { SettingsKeys.TraceLevel, (TraceLevel.Verbose).ToString() },
                 { SettingsKeys.CommandIdleTimeout, ((int)DeploymentSettingsExtension.DefaultCommandIdleTimeout.TotalSeconds).ToString() },
                 { SettingsKeys.LogStreamTimeout, ((int)DeploymentSettingsExtension.DefaultLogStreamTimeout.TotalSeconds).ToString() },
                 { SettingsKeys.BuildArgs, "" }
