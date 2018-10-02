@@ -27,6 +27,7 @@ namespace Kudu.Console
 {
     internal class Program
     {
+        
         private static int Main(string[] args)
         {
             // Turn flag on in app.config to wait for debugger on launch
@@ -74,9 +75,13 @@ namespace Kudu.Console
             string deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
 
             IOperationLock deploymentLock = new LockFile(deploymentLockPath, traceFactory);
-
+            
+            //REMOVE TODO
+            tracer.Step("Trying to perform deploy if kudu console can see the deployment lock to be acquired");
             if (deploymentLock.IsHeld)
             {
+                //REMOVE TODO
+                tracer.Step("deployment lock is held");
                 return PerformDeploy(appRoot, wapTargets, deployer, lockPath, env, settingsManager, level, tracer, traceFactory, deploymentLock);
             }
 
@@ -84,8 +89,12 @@ namespace Kudu.Console
             // When we reach here, deployment lock must be HELD! To solve above issue, we lock again before continue.
             try
             {
+                //REMOVE TODO
+                tracer.Step("deployment lock wasn't held. trying to lock it again here");
                 return deploymentLock.LockOperation(() =>
                 {
+                    //REMOVE TODO
+                    tracer.Step("lock acquired");
                     return PerformDeploy(appRoot, wapTargets, deployer, lockPath, env, settingsManager, level, tracer, traceFactory, deploymentLock);
                 }, "Performing deployment", TimeSpan.Zero);
             }
@@ -201,10 +210,12 @@ namespace Kudu.Console
 
             if (logger.HasErrors)
             {
+                //REMOVE TODO
+                tracer.Step("Perform deploy had errors");
                 System.Console.Error.WriteLine(Resources.Log_DeploymentError);
                 return 1;
             }
-
+            tracer.Step("Perform deploy exiting successfully");
             return 0;
         }
 
@@ -219,7 +230,7 @@ namespace Kudu.Console
                     // Kudu.exe is executed as part of git.exe (post-receive), giving its initial depth of 4 indentations
                     string logPath = Path.Combine(env.TracePath, logFile);
                     // since git push is "POST", which then run kudu.exe
-                    return new CascadeTracer(tracer, new TextTracer(logPath, level, 4), new ETWTracer(env.RequestId, requestMethod: HttpMethod.Post.Method));
+                    return new CascadeTracer(tracer, new TextTracer(logPath, level, 4), new ETWTracer(env.RequestId, requestMethod: HttpMethod.Post.Method),new ConsoleTracer());
                 }
 
                 return tracer;
@@ -236,7 +247,8 @@ namespace Kudu.Console
                 if (!String.IsNullOrEmpty(logFile))
                 {
                     string logPath = Path.Combine(env.RootPath, Constants.DeploymentTracePath, logFile);
-                    return new CascadeLogger(primary, new TextLogger(logPath));
+                    //return new CascadeLogger(primary, new TextLogger(logPath));
+                    return new CascadeLogger(primary, new ConsoleLogger());
                 }
             }
 

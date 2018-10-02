@@ -177,123 +177,126 @@ namespace Kudu.Core.Deployment
             Console.WriteLine("Deploy Async");
             using (var deploymentAnalytics = new DeploymentAnalytics(_analytics, _settings))
             {
-                Exception exception = null;
-                ITracer tracer = _traceFactory.GetTracer();
-                IDisposable deployStep = null;
-                ILogger innerLogger = null;
-                string targetBranch = null;
+                    Exception exception = null;
+                    ITracer tracer = _traceFactory.GetTracer();
+                    IDisposable deployStep = null;
+                    ILogger innerLogger = null;
+                    string targetBranch = null;
 
-                // If we don't get a changeset, find out what branch we should be deploying and get the commit ID from it
-                if (changeSet == null)
-                {
-                    targetBranch = _settings.GetBranch();
-
-                    changeSet = repository.GetChangeSet(targetBranch);
-
+                    // If we don't get a changeset, find out what branch we should be deploying and get the commit ID from it
                     if (changeSet == null)
                     {
-                        throw new InvalidOperationException(String.Format("The current deployment branch is '{0}', but nothing has been pushed to it", targetBranch));
-                    }
-                }
+                        targetBranch = _settings.GetBranch();
 
-                string id = changeSet.Id;
-                IDeploymentStatusFile statusFile = null;
-                try
-                {
-                    deployStep = tracer.Step($"DeploymentManager.Deploy(id:{id})");
-                    // Remove the old log file for this deployment id
-                    string logPath = GetLogPath(id);
-                    FileSystemHelpers.DeleteFileSafe(logPath);
+                        changeSet = repository.GetChangeSet(targetBranch);
 
-                    statusFile = GetOrCreateStatusFile(changeSet, tracer, deployer);
-                    statusFile.MarkPending();
-
-                    ILogger logger = GetLogger(changeSet.Id);
-
-                    if (needFileUpdate)
-                    {
-                        using (tracer.Step("Updating to specific changeset"))
+                        if (changeSet == null)
                         {
-                            innerLogger = logger.Log(Resources.Log_UpdatingBranch, targetBranch ?? id);
+                            throw new InvalidOperationException(String.Format(
+                                "The current deployment branch is '{0}', but nothing has been pushed to it",
+                                targetBranch));
+                        }
+                    }
 
-                            using (var writer = new ProgressWriter())
+                    string id = changeSet.Id;
+                    IDeploymentStatusFile statusFile = null;
+                    try
+                    {
+                        deployStep = tracer.Step($"DeploymentManager.Deploy(id:{id})");
+                        // Remove the old log file for this deployment id
+                        string logPath = GetLogPath(id);
+                        FileSystemHelpers.DeleteFileSafe(logPath);
+
+                        statusFile = GetOrCreateStatusFile(changeSet, tracer, deployer);
+                        statusFile.MarkPending();
+
+                        ILogger logger = GetLogger(changeSet.Id);
+
+                        if (needFileUpdate)
+                        {
+                            using (tracer.Step("Updating to specific changeset"))
                             {
-                                // Update to the specific changeset or branch
-                                repository.Update(targetBranch ?? id); 
+                                innerLogger = logger.Log(Resources.Log_UpdatingBranch, targetBranch ?? id);
+
+                                using (var writer = new ProgressWriter())
+                                {
+                                    // Update to the specific changeset or branch
+                                    repository.Update(targetBranch ?? id);
+                                }
                             }
                         }
-                    }
 
-                    if (_settings.ShouldUpdateSubmodules())
-                    {
-                        using (tracer.Step("Updating submodules"))
+                        if (_settings.ShouldUpdateSubmodules())
                         {
-                            innerLogger = logger.Log(Resources.Log_UpdatingSubmodules);
+                            using (tracer.Step("Updating submodules"))
+                            {
+                                innerLogger = logger.Log(Resources.Log_UpdatingSubmodules);
 
-                            repository.UpdateSubmodules();
+                                repository.UpdateSubmodules();
+                            }
+                        }
+
+                        if (clean)
+                        {
+                            tracer.Trace("Cleaning {0} repository", repository.RepositoryType);
+
+                            innerLogger = logger.Log(Resources.Log_CleaningRepository, repository.RepositoryType);
+
+                            repository.Clean();
+                        }
+
+                        // set to null as Build() below takes over logging
+                        innerLogger = null;
+
+                        // Perform the build deployment of this changeset
+                        await Build(changeSet, tracer, deployStep, repository, deploymentAnalytics, fullBuildByDefault);
+
+                        if (!OSDetector.IsOnWindows() && _settings.RestartAppContainerOnGitDeploy())
+                        {
+                            logger.Log(Resources.Log_TriggeringContainerRestart);
+                            LinuxContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        exception = ex;
+
+                        if (innerLogger != null)
+                        {
+                            innerLogger.Log(ex);
+                        }
+
+                        if (statusFile != null)
+                        {
+                            MarkStatusComplete(statusFile, success: false);
+                        }
+
+                        tracer.TraceError(ex);
+
+                        deploymentAnalytics.Error = ex.ToString();
+
+                        if (deployStep != null)
+                        {
+                            deployStep.Dispose();
                         }
                     }
 
-                    if (clean)
+                    // Reload status file with latest updates
+                    statusFile = _status.Open(id);
+                    using (tracer.Step("Reloading status file with latest updates"))
                     {
-                        tracer.Trace("Cleaning {0} repository", repository.RepositoryType);
-
-                        innerLogger = logger.Log(Resources.Log_CleaningRepository, repository.RepositoryType);
-
-                        repository.Clean();
+                        if (statusFile != null)
+                        {
+                            await _hooksManager.PublishEventAsync(HookEventTypes.PostDeployment, statusFile);
+                        }
                     }
 
-                    // set to null as Build() below takes over logging
-                    innerLogger = null;
-
-                    // Perform the build deployment of this changeset
-                    await Build(changeSet, tracer, deployStep, repository, deploymentAnalytics, fullBuildByDefault);
-
-                    if (!OSDetector.IsOnWindows() && _settings.RestartAppContainerOnGitDeploy())
+                    if (exception != null)
                     {
-                        logger.Log(Resources.Log_TriggeringContainerRestart);
-                        LinuxContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason);
+                        tracer.TraceError(exception);
+                        throw new DeploymentFailedException(exception);
                     }
-                }
-                catch (Exception ex)
-                {
-                    exception = ex;
-
-                    if (innerLogger != null)
-                    {
-                        innerLogger.Log(ex);
-                    }
-
-                    if (statusFile != null)
-                    {
-                        MarkStatusComplete(statusFile, success: false);
-                    }
-
-                    tracer.TraceError(ex);
-
-                    deploymentAnalytics.Error = ex.ToString();
-
-                    if (deployStep != null)
-                    {
-                        deployStep.Dispose();
-                    }
-                }
-
-                // Reload status file with latest updates
-                statusFile = _status.Open(id);
-                using (tracer.Step("Reloading status file with latest updates"))
-                {
-                    if (statusFile != null)
-                    {
-                        await _hooksManager.PublishEventAsync(HookEventTypes.PostDeployment, statusFile);
-                    }
-                }
-
-                if (exception != null)
-                {
-                    tracer.TraceError(exception);
-                    throw new DeploymentFailedException(exception);
-                }
+           
             }
         }
 
@@ -808,15 +811,20 @@ namespace Kudu.Core.Deployment
         /// </summary>
         private IDeploymentStatusFile VerifyDeployment(string id, bool isDeploying)
         {
+            _traceFactory.GetTracer().Step("ISDeploying : "+IsDeploying);
+            _traceFactory.GetTracer().Step("ISDeploying via current lock state: " + _deploymentLock.IsHeld);
             _traceFactory.GetTracer().Step("Inside Verify Deployment "+" id : "+id);
             IDeploymentStatusFile statusFile = _status.Open(id);
             _traceFactory.GetTracer().Step("Is Status file null ? "+(statusFile==null));
+            _traceFactory.GetTracer().Step("Is Status isComplete ? "+(statusFile != null ? statusFile.Complete.ToString():"null status file"));
+            _traceFactory.GetTracer().Step("Is Status Status ? "+(statusFile != null ? statusFile.Status.ToString(): "null status file"));
             
             if (statusFile == null)
             {
                 return null;
             }
-
+            
+            
             if (statusFile.Complete)
             {
                 return statusFile;

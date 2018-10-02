@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
@@ -141,6 +143,12 @@ namespace Kudu.Core.Infrastructure
             Stream lockStream = null;
             try
             {
+                
+                //REMOVE TODO
+                _traceFactory.GetTracer().Trace("Locking "+operationName);
+                StackTrace stackTrace = new StackTrace();
+                _traceFactory.GetTracer().Trace(LogMyCaller(" My Caller "));
+                
                 FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_path));
 
                 lockStream = FileSystemHelpers.OpenFile(_path, FileMode.Create, FileAccess.Write, FileShare.Read);
@@ -154,8 +162,12 @@ namespace Kudu.Core.Infrastructure
 
                 return true;
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
+                    //REMOVE TODO
+                   _traceFactory.GetTracer().TraceError("Error acquiring the lock  "+ex.Message+" "+ex.StackTrace);
+                     StackTrace stackTrace = new StackTrace();
+                    _traceFactory.GetTracer().Trace("My caller : "+LogMyCaller(" My Caller "));
                 if (!_ensureLock)
                 {
                     // if it is ReadOnly file system, we will skip the lock
@@ -169,6 +181,10 @@ namespace Kudu.Core.Infrastructure
             }
             catch (IOException ex)
             {
+                //REMOVE TODO
+                _traceFactory.GetTracer().TraceError("Error acquiring the lock  "+ex.Message+" "+ex.StackTrace);
+                StackTrace stackTrace = new StackTrace();
+                _traceFactory.GetTracer().Trace("My caller : "+LogMyCaller(" My Caller "));
                 if (!_ensureLock)
                 {
                     // if not enough disk space, no one has the lock.
@@ -178,12 +194,20 @@ namespace Kudu.Core.Infrastructure
             }
             catch (Exception ex)
             {
+                //REMOVE TODO
+                _traceFactory.GetTracer().TraceError("Error acquiring the lock  "+ex.Message+" "+ex.StackTrace);
+                StackTrace stackTrace = new StackTrace();
+                _traceFactory.GetTracer().Trace("My caller : "+LogMyCaller(" My Caller "));
                 TraceIfUnknown(ex);
             }
             finally
             {
                 if (lockStream != null)
                 {
+                    //REMOVE TODO
+                    _traceFactory.GetTracer().TraceError("closing lock  ");
+                    StackTrace stackTrace = new StackTrace();
+                    _traceFactory.GetTracer().Trace("My caller : "+LogMyCaller(" My Caller "));
                     lockStream.Close();
                 }
             }
@@ -240,6 +264,9 @@ namespace Kudu.Core.Infrastructure
         /// <returns>Task indicating the task of acquiring the lock.</returns>
         public Task LockAsync(string operationName)
         {
+            //REMOVE TODO
+            _traceFactory.GetTracer().Trace("Trying to asynchronously acquire the lock  ");
+            _traceFactory.GetTracer().Trace("My caller : "+LogMyCaller(" My Caller ").ToString());
             if (_lockFileWatcher == null)
             {
                 throw new InvalidOperationException(Resources.Error_AsyncLockNotInitialized);
@@ -272,6 +299,11 @@ namespace Kudu.Core.Infrastructure
             // cleanup inactive lock file.  technically, it is not needed
             // we just want to see the lock folder is clean, if no active lock.
             DeleteFileSafe();
+            
+            //REMOVE TODO
+            _traceFactory.GetTracer().Trace("Releasing the lock");
+            StackTrace stackTrace = new StackTrace();
+            _traceFactory.GetTracer().Trace("My caller : "+LogMyCaller(" My Caller "));
 
             OnLockRelease();
         }
@@ -312,6 +344,11 @@ namespace Kudu.Core.Infrastructure
         {
             if (!_lockRequestQueue.IsEmpty)
             {
+                //REMOVE TODO
+                _traceFactory.GetTracer().Trace("Releasing the lock and trying to acquire next one in the queue");
+                StackTrace stackTrace = new StackTrace();
+                _traceFactory.GetTracer().Trace("My caller : "+LogMyCaller(" My Caller "));
+                
                 QueueItem item;
                 if (_lockRequestQueue.TryPeek(out item) && Lock(item.OperationName))
                 {
@@ -349,6 +386,20 @@ namespace Kudu.Core.Infrastructure
             public string OperationName { get; private set; }
 
             public TaskCompletionSource<bool> HasLock { get; private set; }
+        }
+        
+        //REMOVE TODO
+        //using System.Runtime.CompilerServices;
+        static string LogMyCaller(object message)
+        {
+            // frame 1, true for source info
+            StackFrame frame = new StackFrame(1, true);
+            var method = frame.GetMethod();
+            var fileName = frame.GetFileName();
+            var lineNumber = frame.GetFileLineNumber();
+
+            // we'll just use a simple Console write for now    
+            return fileName+"(" + lineNumber + ") : " + method.Name + "    " + message;
         }
     }
 }

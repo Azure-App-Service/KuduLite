@@ -11,7 +11,8 @@ namespace Kudu.Console.Services
             if (type == LogEntryType.Error)
             {
                 HasErrors = true;
-
+                //REMOVE TODO
+                System.Console.WriteLine("\n\n\n\n\nKUDU CONSOLE ERROR : "+value+"\n\n\n\n\n\n\n");
                 System.Console.Error.WriteLine(value);
             }
             else
