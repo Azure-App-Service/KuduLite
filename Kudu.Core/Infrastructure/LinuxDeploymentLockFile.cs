@@ -1,28 +1,20 @@
-﻿using System;
 using Kudu.Contracts.SourceControl;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
 
 namespace Kudu.Core.Infrastructure
 {
-    /// <summary>
-    /// Specific to deployment lock.
-    /// </summary>
-    public class DeploymentLockFile : LockFile
+    public class LinuxDeploymentLockFile : LinuxLockFile
     {
-        public DeploymentLockFile(string path, ITraceFactory traceFactory)
-            : base(path, traceFactory)
+        public LinuxDeploymentLockFile(string path) : base(path)
         {
         }
 
-        // This is set when IRepositoryFactory is created in Ninject.
-        public IRepositoryFactory RepositoryFactory
+        public LinuxDeploymentLockFile(string path, ITraceFactory traceFactory, bool ensureLock = false) : base(path, traceFactory, ensureLock)
         {
-            get;
-            set;
         }
-
-        override public void OnLockAcquired()
+       
+        public override void OnLockAcquired()
         {
             IRepositoryFactory repositoryFactory = RepositoryFactory;
             if (repositoryFactory != null)

@@ -28,8 +28,8 @@ namespace Kudu.Services.Web
         private const string KuduConsoleRelativePath = "KuduConsole";
         private static Dictionary<string, IOperationLock> _namedLocks ;
         // CORE TODO Is this still true?
-        // Due to a bug in Ninject we can't use Dispose to clean up LockFile so we shut it down manually
-        private static DeploymentLockFile _deploymentLock;
+        // Due to a bug in Ninject we can't use Dispose to clean up WindowsLockFile so we shut it down manually
+        private static LockFile _deploymentLock;
 
 
         // <summary>
@@ -75,16 +75,15 @@ namespace Kudu.Services.Web
             var statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
             var sshKeyLockPath = Path.Combine(lockPath, Constants.SSHKeyLockFile);
             var hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
-
             _deploymentLock = new DeploymentLockFile(deploymentLockPath, traceFactory);
             _deploymentLock.InitializeAsyncLocks();
-
+            
             var statusLock = new LockFile(statusLockPath, traceFactory);
             statusLock.InitializeAsyncLocks();
-            var sshKeyLock = new LockFile(sshKeyLockPath, traceFactory);
+            var sshKeyLock = new LinuxLockFile(sshKeyLockPath, traceFactory);
             sshKeyLock.InitializeAsyncLocks();
-            var hooksLock = new LockFile(hooksLockPath, traceFactory);
-            hooksLock.InitializeAsyncLocks();
+            var hooksLock = new LinuxLockFile(hooksLockPath, traceFactory);
+            hooksLock.InitializeAsyncLocks(); 
             
             _namedLocks = new Dictionary<string, IOperationLock>
             {
@@ -243,7 +242,7 @@ namespace Kudu.Services.Web
             }
         }
 
-        public static DeploymentLockFile GetDeploymentLock(ITraceFactory traceFactory, IEnvironment environment)
+        public static LockFile GetDeploymentLock(ITraceFactory traceFactory, IEnvironment environment)
         {
             if (_namedLocks == null || _deploymentLock == null)
             {

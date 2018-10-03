@@ -92,10 +92,7 @@ namespace Kudu.Core.Deployment
 
         public DeployResult GetResult(string id)
         {
-            using (_traceFactory.GetTracer().Step("Verifying deployment - GetResult IDeployment Manager "+_status.ActiveDeploymentId))
-            {
-                return GetResult(id, _status.ActiveDeploymentId, IsDeploying);   
-            }
+             return GetResult(id, _status.ActiveDeploymentId, IsDeploying);   
         }
 
         public IEnumerable<LogEntry> GetLogEntries(string id)
@@ -345,10 +342,7 @@ namespace Kudu.Core.Deployment
             // Order the results by date (newest first). Previously, we supported OData to allow
             // arbitrary queries, but that was way overkill and brought in too many large binaries.
             IEnumerable<DeployResult> results;
-            using (_traceFactory.GetTracer().Step("Purging deployments : getting results"))
-            {
-                results = EnumerateResults().OrderByDescending(t => t.ReceivedTime).ToList();                
-            }
+            results = EnumerateResults().OrderByDescending(t => t.ReceivedTime).ToList();                
             try
             {
                 results = PurgeDeployments(results);
@@ -386,13 +380,9 @@ namespace Kudu.Core.Deployment
             if (results.Any())
             {
                 var toDelete = new List<DeployResult>();
-                _traceFactory.GetTracer().Trace("Results for purge : "+results);
                 toDelete.AddRange(GetPurgeTemporaryDeployments(results));
                 toDelete.AddRange(GetPurgeFailedDeployments(results));
                 toDelete.AddRange(GetPurgeObsoleteDeployments(results));
-                _traceFactory.GetTracer().Trace("Get Purge Temporary Deployments : "+GetPurgeTemporaryDeployments(results));
-                _traceFactory.GetTracer().Trace("Get Purge Failed Deployments : "+GetPurgeFailedDeployments(results));
-                _traceFactory.GetTracer().Trace("Get Purge Obsolete Deployments : "+GetPurgeObsoleteDeployments(results));
                 
                 if (toDelete.Any())
                 {
@@ -524,10 +514,7 @@ namespace Kudu.Core.Deployment
 
         private DeployResult GetResult(string id, string activeDeploymentId, bool isDeploying)
         {
-            _traceFactory.GetTracer().Trace("Verifying deployment for id : "+id);
-            var file = VerifyDeployment(id, isDeploying);
-            _traceFactory.GetTracer().Trace("Verified : "+id);
-            
+            var file = VerifyDeployment(id, isDeploying);            
             if (file == null)
             {
                 return null;
@@ -811,13 +798,7 @@ namespace Kudu.Core.Deployment
         /// </summary>
         private IDeploymentStatusFile VerifyDeployment(string id, bool isDeploying)
         {
-            _traceFactory.GetTracer().Step("ISDeploying : "+IsDeploying);
-            _traceFactory.GetTracer().Step("ISDeploying via current lock state: " + _deploymentLock.IsHeld);
-            _traceFactory.GetTracer().Step("Inside Verify Deployment "+" id : "+id);
             IDeploymentStatusFile statusFile = _status.Open(id);
-            _traceFactory.GetTracer().Step("Is Status file null ? "+(statusFile==null));
-            _traceFactory.GetTracer().Step("Is Status isComplete ? "+(statusFile != null ? statusFile.Complete.ToString():"null status file"));
-            _traceFactory.GetTracer().Step("Is Status Status ? "+(statusFile != null ? statusFile.Status.ToString(): "null status file"));
             
             if (statusFile == null)
             {
@@ -835,8 +816,6 @@ namespace Kudu.Core.Deployment
             if (!isDeploying)
             {
                 ILogger logger = GetLogger(id);
-                _traceFactory.GetTracer().Step("No deployment in progress and Verify deployment of id " + id +
-                                               " requested, this status file is not complete also");
                 logger.LogUnexpectedError();
                 //_traceFactory.GetTracer().Step("Unexpected Error "+statusFile.Message);
                 MarkStatusComplete(statusFile, success: false);
