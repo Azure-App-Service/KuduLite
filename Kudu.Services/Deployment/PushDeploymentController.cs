@@ -12,6 +12,7 @@ using System.Globalization;
 using Kudu.Core;
 using System.Linq;
 using System.Net.Http;
+using Kudu.Services.Util;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Hosting.Internal;
 using Microsoft.AspNetCore.Mvc;
@@ -43,6 +44,7 @@ namespace Kudu.Services.Deployment
 
         [HttpPost]
         [DisableRequestSizeLimit]
+        [RequestFormSizeLimit(valueCountLimit: 500000, Order = 1)]
         public async Task<IActionResult> ZipPushDeploy(
             bool isAsync = false,
             string author = null,
