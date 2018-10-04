@@ -73,6 +73,8 @@ namespace Kudu.Services.Web.Tracing
 
                 if (tracer != null || tracer.TraceLevel > TraceLevel.Off)
                 {
+                    Console.WriteLine(exception.Message);
+                    Console.WriteLine(exception.InnerException.StackTrace);
                     tracer.TraceError(error);
                 }
             }

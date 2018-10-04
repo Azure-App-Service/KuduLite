@@ -27,6 +27,7 @@ using Kudu.Services.Web.Tracing;
 using Kudu.Core.SSHKey;
 using Kudu.Services.Diagnostics;
 using Kudu.Services.Performance;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Azure.Web.DataProtection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
@@ -69,6 +70,11 @@ namespace Kudu.Services.Web
         {
 
             Console.WriteLine("\nConfigure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+            
+            services.Configure<FormOptions>(options =>
+            {
+                options.MultipartBodyLengthLimit = 5242880;
+            });
 
             services.AddMvcCore()
                 .AddRazorPages()
