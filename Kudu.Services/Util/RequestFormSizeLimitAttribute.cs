@@ -7,9 +7,10 @@ namespace Kudu.Services.Util
     /// <summary>
     /// Filter to set size limits for request form data
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
-    public class RequestFormSizeLimitAttribute : Attribute, IAuthorizationFilter, IOrderedFilter
-    {
+//    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+ //   public class RequestFormSizeLimitAttribute : Attribute, IAuthorizationFilter, IOrderedFilter
+ //   {
+        /*
         private readonly FormOptions _formOptions;
 
         public RequestFormSizeLimitAttribute(int valueCountLimit)
@@ -33,5 +34,6 @@ namespace Kudu.Services.Util
                 features.Set<IFormFeature>(new FormFeature(context.HttpContext.Request, _formOptions));
             }
         }
-    }
+        */
+ //   }
 }

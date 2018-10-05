@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Hosting.Internal;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Kudu.Services.Deployment
 {
@@ -44,7 +45,7 @@ namespace Kudu.Services.Deployment
 
         [HttpPost]
         [DisableRequestSizeLimit]
-        [RequestFormSizeLimit(valueCountLimit: 500000, Order = 1)]
+        [DisableFormValueModelBinding]
         public async Task<IActionResult> ZipPushDeploy(
             bool isAsync = false,
             string author = null,
@@ -57,15 +58,28 @@ namespace Kudu.Services.Deployment
                 var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
                 //var zipFileName = Path.ChangeExtension(Path.GetRandomFileName(), "zip");
                 //var zipFilePath = Path.Combine(_environment.ZipTempPath, zipFileName);
-
+                FormValueProvider formModel;
                 using (_tracer.Step("Writing zip file to {0}", zipFilePath))
                 {
                     using (var file = System.IO.File.Create(zipFilePath))
                     {
-                        await Request.Body.CopyToAsync(file);
+                        formModel = await Request.StreamFile(file);
                     }
                 }
-
+                 
+                /*
+                var bindingSuccessful = await TryUpdateModelAsync(viewModel, prefix: "",
+                    valueProvider: formModel);
+ 
+                if (!bindingSuccessful)
+                {
+                    if (!ModelState.IsValid)
+                    {
+                        return BadRequest(ModelState);
+                    }
+                }
+                */
+                 
                 var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
                 {
                     AllowDeploymentWhileScmDisabled = true,

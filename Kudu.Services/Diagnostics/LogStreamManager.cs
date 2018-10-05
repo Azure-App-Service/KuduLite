@@ -150,52 +150,54 @@ namespace Kudu.Services.Performance
             return context.Response.WriteAsync(msg);
         }
 
-        //private void Initialize(string path)
-        //{
-        //    System.Diagnostics.Debug.Assert(_watcher == null, "we only allow one manager per request!");
+        /*
+        private void Initialize(string path)
+        {
+            System.Diagnostics.Debug.Assert(_watcher == null, "we only allow one manager per request!");
 
-        //    // initalize _logFiles before the file watcher since file watcher event handlers reference _logFiles
-        //    // this mirrors the Reset() where we stop the file watcher before nulling _logFile.
-        //    if (_logFiles == null)
-        //    {
-        //        var logFiles = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-        //        foreach (var ext in LogFileExtensions)
-        //        {
-        //            foreach (var file in Directory.GetFiles(path, "*" + ext, SearchOption.AllDirectories))
-        //            {
-        //                try
-        //                {
-        //                    logFiles[file] = new FileInfo(file).Length;
-        //                }
-        //                catch (Exception ex)
-        //                {
-        //                    // avoiding racy with providers cleaning up log file
-        //                    _tracer.TraceError(ex);
-        //                }
-        //            }
-        //        }
+            // initalize _logFiles before the file watcher since file watcher event handlers reference _logFiles
+            // this mirrors the Reset() where we stop the file watcher before nulling _logFile.
+            if (_logFiles == null)
+            {
+                var logFiles = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+                foreach (var ext in LogFileExtensions)
+                {
+                    foreach (var file in Directory.GetFiles(path, "*" + ext, SearchOption.AllDirectories))
+                    {
+                        try
+                        {
+                            logFiles[file] = new FileInfo(file).Length;
+                        }
+                        catch (Exception ex)
+                        {
+                            // avoiding racy with providers cleaning up log file
+                            _tracer.TraceError(ex);
+                        }
+                    }
+                }
 
-        //        _logFiles = logFiles;
-        //    }
+                _logFiles = logFiles;
+            }
 
-        //    if (_watcher == null)
-        //    {
-        //        IFileSystemWatcher watcher = OSDetector.IsOnWindows()
-        //            ? (IFileSystemWatcher)new FileSystemWatcherWrapper(path, includeSubdirectories: true)
-        //            : new NaiveFileSystemWatcher(path, LogFileExtensions);
-        //        watcher.Changed += new FileSystemEventHandler(DoSafeAction<object, FileSystemEventArgs>(OnChanged, "LogStreamManager.OnChanged"));
-        //        watcher.Deleted += new FileSystemEventHandler(DoSafeAction<object, FileSystemEventArgs>(OnDeleted, "LogStreamManager.OnDeleted"));
-        //        watcher.Renamed += new RenamedEventHandler(DoSafeAction<object, RenamedEventArgs>(OnRenamed, "LogStreamManager.OnRenamed"));
-        //        watcher.Error += new ErrorEventHandler(DoSafeAction<object, ErrorEventArgs>(OnError, "LogStreamManager.OnError"));
-        //        watcher.Start();
-        //        _watcher = watcher;
-        //    }
+           if (_watcher == null)
+            {
+                IFileSystemWatcher watcher = OSDetector.IsOnWindows()
+                    ? (IFileSystemWatcher)new FileSystemWatcherWrapper(path, includeSubdirectories: true)
+                    : new NaiveFileSystemWatcher(path, LogFileExtensions);
+                watcher.Changed += new FileSystemEventHandler(DoSafeAction<object, FileSystemEventArgs>(OnChanged, "LogStreamManager.OnChanged"));
+                watcher.Deleted += new FileSystemEventHandler(DoSafeAction<object, FileSystemEventArgs>(OnDeleted, "LogStreamManager.OnDeleted"));
+                watcher.Renamed += new RenamedEventHandler(DoSafeAction<object, RenamedEventArgs>(OnRenamed, "LogStreamManager.OnRenamed"));
+                watcher.Error += new ErrorEventHandler(DoSafeAction<object, ErrorEventArgs>(OnError, "LogStreamManager.OnError"));
+                watcher.Start();
+                _watcher = watcher;
+            }
 
-        //    if (_heartbeat == null)
-        //    {
-        //        _heartbeat = new Timer(OnHeartbeat, null, HeartbeatInterval, HeartbeatInterval);
-        //    }
-        //}
+            if (_heartbeat == null)
+            {
+                _heartbeat = new Timer(OnHeartbeat, null, HeartbeatInterval, HeartbeatInterval);
+            }
+        }
+        */
 
         // Suppress exception on callback to not crash the process.
         private Action<T1, T2> DoSafeAction<T1, T2>(Action<T1, T2> func, string eventName)

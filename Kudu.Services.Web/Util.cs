@@ -114,7 +114,7 @@ namespace Kudu.Services.Web
             var requestTraceFile = TraceServices.GetRequestTraceFile(httpContext);
             if (level <= TraceLevel.Off || requestTraceFile == null) return NullTracer.Instance;
             var textPath = Path.Combine(environment.TracePath, requestTraceFile);
-            return new CascadeTracer(new XmlTracer(environment.TracePath, level), new TextTracer(textPath, level), new ETWTracer(environment.RequestId, TraceServices.GetHttpMethod(httpContext)), new ConsoleTracer());
+            return new CascadeTracer(new XmlTracer(environment.TracePath, level), new TextTracer(textPath, level), new ETWTracer(environment.RequestId, TraceServices.GetHttpMethod(httpContext)));
         }
 
         public static string GetRequestTraceFile(IServiceProvider serviceProvider)

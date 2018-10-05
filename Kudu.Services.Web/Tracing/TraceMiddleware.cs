@@ -146,17 +146,22 @@ namespace Kudu.Services.Web.Tracing
 
             foreach (string key in httpContext.Request.Headers.Keys)
             {
-                if (!key.Equals("Authorization", StringComparison.OrdinalIgnoreCase) &&
-                    !key.Equals("X-MS-CLIENT-PRINCIPAL-NAME", StringComparison.OrdinalIgnoreCase) &&
-                    !key.Equals(Constants.SiteRestrictedJWT, StringComparison.OrdinalIgnoreCase))
+                if (key != null)
                 {
-                    attribs[key] = httpContext.Request.Headers[key];
-                }
-                else
-                {
-                    // for sensitive header, we only trace first 3 characters following by "..."
-                    var value = httpContext.Request.Headers[key].ToString();
-                    attribs[key] = string.IsNullOrEmpty(value) ? value : (value.Substring(0, Math.Min(3, value.Length)) + "...");
+                    if (!key.Equals("Authorization", StringComparison.OrdinalIgnoreCase) &&
+                        !key.Equals("X-MS-CLIENT-PRINCIPAL-NAME", StringComparison.OrdinalIgnoreCase) &&
+                        !key.Equals(Constants.SiteRestrictedJWT, StringComparison.OrdinalIgnoreCase))
+                    {
+                        attribs[key] = httpContext.Request.Headers[key];
+                    }
+                    else
+                    {
+                        // for sensitive header, we only trace first 3 characters following by "..."
+                        var value = httpContext.Request.Headers[key].ToString();
+                        attribs[key] = string.IsNullOrEmpty(value)
+                            ? value
+                            : (value.Substring(0, Math.Min(3, value.Length)) + "...");
+                    }
                 }
             }
 

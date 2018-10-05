@@ -73,14 +73,19 @@ namespace Kudu.Services.Web
             
             services.Configure<FormOptions>(options =>
             {
-                options.MultipartBodyLengthLimit = 5242880;
+                options.MultipartBodyLengthLimit = 52428800;
+                options.ValueCountLimit = 500000;
+                options.KeyLengthLimit = 500000;
             });
 
+            
             services.AddMvcCore()
                 .AddRazorPages()
                 .AddAuthorization()
+                .AddFormatterMappings()
                 .AddJsonFormatters()
                 .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
+            
 
             services.AddGZipCompression();
 
@@ -324,7 +329,7 @@ namespace Kudu.Services.Web
                 await context.Response.WriteAsync("Kestrel Running");
             }));
             
-            app.UseTraceMiddleware();
+          
             
             app.UseResponseCompression();
             
@@ -389,6 +394,8 @@ namespace Kudu.Services.Web
                 EnableDirectoryBrowsing = true
             });
 
+            app.UseTraceMiddleware();
+            
             //app.UseStaticFiles();
             app.UseMvc(routes =>
             {
@@ -478,19 +485,19 @@ namespace Kudu.Services.Web
                 }
 
                 // CORE TODO
-                //var processControllerName = OSDetector.IsOnWindows() ? "Process" : "LinuxProcess";
+                var processControllerName = OSDetector.IsOnWindows() ? "Process" : "LinuxProcess";
 
                 // Processes
-                //routes.MapHttpProcessesRoute("all-processes", "", new { controller = processControllerName, action = "GetAllProcesses" }, new { verb = new HttpMethodConstraint("GET") });
-                //routes.MapHttpProcessesRoute("one-process-get", "/{id}", new { controller = processControllerName, action = "GetProcess" }, new { verb = new HttpMethodConstraint("GET") });
-                //routes.MapHttpProcessesRoute("one-process-delete", "/{id}", new { controller = processControllerName, action = "KillProcess" }, new { verb = new HttpMethodConstraint("DELETE") });
-                //routes.MapHttpProcessesRoute("one-process-dump", "/{id}/dump", new { controller = processControllerName, action = "MiniDump" }, new { verb = new HttpMethodConstraint("GET") });
-                //routes.MapHttpProcessesRoute("start-process-profile", "/{id}/profile/start", new { controller = processControllerName, action = "StartProfileAsync" }, new { verb = new HttpMethodConstraint("POST") });
-                //routes.MapHttpProcessesRoute("stop-process-profile", "/{id}/profile/stop", new { controller = processControllerName, action = "StopProfileAsync" }, new { verb = new HttpMethodConstraint("GET") });
-                //routes.MapHttpProcessesRoute("all-threads", "/{id}/threads", new { controller = processControllerName, action = "GetAllThreads" }, new { verb = new HttpMethodConstraint("GET") });
-                //routes.MapHttpProcessesRoute("one-process-thread", "/{processId}/threads/{threadId}", new { controller = processControllerName, action = "GetThread" }, new { verb = new HttpMethodConstraint("GET") });
-                //routes.MapHttpProcessesRoute("all-modules", "/{id}/modules", new { controller = processControllerName, action = "GetAllModules" }, new { verb = new HttpMethodConstraint("GET") });
-                //routes.MapHttpProcessesRoute("one-process-module", "/{id}/modules/{baseAddress}", new { controller = processControllerName, action = "GetModule" }, new { verb = new HttpMethodConstraint("GET") });
+                routes.MapHttpProcessesRoute("all-processes", "", new { controller = processControllerName, action = "GetAllProcesses" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapHttpProcessesRoute("one-process-get", "/{id}", new { controller = processControllerName, action = "GetProcess" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapHttpProcessesRoute("one-process-delete", "/{id}", new { controller = processControllerName, action = "KillProcess" }, new { verb = new HttpMethodRouteConstraint("DELETE") });
+                routes.MapHttpProcessesRoute("one-process-dump", "/{id}/dump", new { controller = processControllerName, action = "MiniDump" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapHttpProcessesRoute("start-process-profile", "/{id}/profile/start", new { controller = processControllerName, action = "StartProfileAsync" }, new { verb = new HttpMethodRouteConstraint("POST") });
+                routes.MapHttpProcessesRoute("stop-process-profile", "/{id}/profile/stop", new { controller = processControllerName, action = "StopProfileAsync" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapHttpProcessesRoute("all-threads", "/{id}/threads", new { controller = processControllerName, action = "GetAllThreads" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapHttpProcessesRoute("one-process-thread", "/{processId}/threads/{threadId}", new { controller = processControllerName, action = "GetThread" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapHttpProcessesRoute("all-modules", "/{id}/modules", new { controller = processControllerName, action = "GetAllModules" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapHttpProcessesRoute("one-process-module", "/{id}/modules/{baseAddress}", new { controller = processControllerName, action = "GetModule" }, new { verb = new HttpMethodRouteConstraint("GET") });
 
                 // Runtime
                 //routes.MapHttpRouteDual("runtime", "diagnostics/runtime", new { controller = "Runtime", action = "GetRuntimeVersions" }, new { verb = new HttpMethodConstraint("GET") });
@@ -558,11 +565,11 @@ namespace Kudu.Services.Web
                 // catch all unregistered url to properly handle not found
                 // this is to work arounf the issue in TraceModule where we see double OnBeginRequest call
                 // for the same request (404 and then 200 statusCode).
-                //routes.MapRoute("error-404", "{*path}", new { controller = "Error404", action = "Handle" });
+                routes.MapRoute("error-404", "{*path}", new { controller = "Error404", action = "Handle" });
             });
 
             // CORE TODO Remove This
-            
+            /*
             var containsRelativePath2 = new Func<HttpContext, bool>(i =>
                 i.Request.Path.Value.StartsWith("/TestException", StringComparison.OrdinalIgnoreCase));
             
@@ -572,6 +579,7 @@ namespace Kudu.Services.Web
                 //await context.Response.WriteAsync("Kestrel Running");
                 throw new Exception("Exception Handler Test");
             }));
+            */
             /*
            app.Run(async context =>
             {
@@ -615,12 +623,6 @@ namespace Kudu.Services.Web
         private static Func<HttpContext, bool> ContainsRelativeUrl(string relativeUrl, HttpContext httpContext)
         {
             return x => httpContext.Request.Path.Value.StartsWith(relativeUrl, StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool LogPathOnConsole(HttpContext context)
-        {
-            Console.WriteLine($"path("+DateTime.Now+"): {context.Request.Path} "+context.Request.Path);
-            return false;
         }
         
         private void OnShutdown()
