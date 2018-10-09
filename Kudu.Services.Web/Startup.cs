@@ -329,6 +329,14 @@ namespace Kudu.Services.Web
                 await context.Response.WriteAsync("Kestrel Running");
             }));
             
+            var containsRelativePath2 = new Func<HttpContext, bool>(i =>
+                i.Request.Path.Value.StartsWith("/Version", StringComparison.OrdinalIgnoreCase));
+            
+            app.MapWhen(containsRelativePath2, application => application.Run(async context =>
+            {
+                //context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await context.Response.WriteAsync("KuduL:2");
+            }));
           
             
             app.UseResponseCompression();
