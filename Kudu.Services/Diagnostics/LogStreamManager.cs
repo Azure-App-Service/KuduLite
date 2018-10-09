@@ -9,11 +9,14 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace Kudu.Services.Performance
 {
@@ -30,11 +33,12 @@ namespace Kudu.Services.Performance
 
         private readonly object _thisLock = new object();
         private readonly string _logPath;
+        private string _filter;
         private readonly IEnvironment _environment;
         private readonly ITracer _tracer;
         private readonly IOperationLock _operationLock;
         // CORE TODO No longer needed, each task can check context.RequestAborted token
-        //private readonly List<ProcessRequestAsyncResult> _results;
+        // private readonly List<Task> _results;
 
         private Dictionary<string, long> _logFiles;
         private IFileSystemWatcher _watcher;
@@ -72,12 +76,13 @@ namespace Kudu.Services.Performance
             _startTime = DateTime.UtcNow;
             _lastTraceTime = _startTime;
 
+            DisableResponseBuffering(context);
             var stopwatch = Stopwatch.StartNew();
             
             // CORE TODO Shutdown detector registration
 
             // CORE TODO double check on semantics of this (null vs empty etc);
-            var filter = context.Request.Query[FilterQueryKey].ToString();
+            _filter = context.Request.Query[FilterQueryKey].ToString();
 
             // CORE TODO parse from path
             // path route as in logstream/{*path} without query strings
@@ -105,10 +110,17 @@ namespace Kudu.Services.Performance
 
             path = FileSystemHelpers.EnsureDirectory(Path.Combine(_logPath, routePath));
 
+
             await WriteInitialMessage(context);
 
             // CORE TODO Get the fsw and keep it in scope here with a using that ends at the end
-            //Initialize(path);
+
+            //WriteInitialMessage(context);
+
+            lock (_thisLock)
+            {
+                Initialize(path, context);
+            }
 
             // CORE TODO diagnostics setting for enabling app logging            
 
@@ -150,8 +162,7 @@ namespace Kudu.Services.Performance
             return context.Response.WriteAsync(msg);
         }
 
-        /*
-        private void Initialize(string path)
+        private void Initialize(string path, HttpContext context)
         {
             System.Diagnostics.Debug.Assert(_watcher == null, "we only allow one manager per request!");
 
@@ -179,28 +190,55 @@ namespace Kudu.Services.Performance
                 _logFiles = logFiles;
             }
 
-           if (_watcher == null)
+            if (_watcher == null)
             {
                 IFileSystemWatcher watcher = OSDetector.IsOnWindows()
                     ? (IFileSystemWatcher)new FileSystemWatcherWrapper(path, includeSubdirectories: true)
                     : new NaiveFileSystemWatcher(path, LogFileExtensions);
-                watcher.Changed += new FileSystemEventHandler(DoSafeAction<object, FileSystemEventArgs>(OnChanged, "LogStreamManager.OnChanged"));
-                watcher.Deleted += new FileSystemEventHandler(DoSafeAction<object, FileSystemEventArgs>(OnDeleted, "LogStreamManager.OnDeleted"));
-                watcher.Renamed += new RenamedEventHandler(DoSafeAction<object, RenamedEventArgs>(OnRenamed, "LogStreamManager.OnRenamed"));
-                watcher.Error += new ErrorEventHandler(DoSafeAction<object, ErrorEventArgs>(OnError, "LogStreamManager.OnError"));
+                watcher.Changed += new FileSystemEventHandler(DoSafeAction<object, FileSystemEventArgs, HttpContext>(OnChanged, "LogStreamManager.OnChanged", context));
+                watcher.Deleted += new FileSystemEventHandler(DoSafeAction<object, FileSystemEventArgs,HttpContext>(OnDeleted, "LogStreamManager.OnDeleted", context));
+                watcher.Renamed += new RenamedEventHandler(DoSafeAction<object, RenamedEventArgs,HttpContext>(OnRenamed, "LogStreamManager.OnRenamed", context));
+                //watcher.Error += new ErrorEventHandler(DoSafeAction<object, ErrorEventArgs,HttpContext>(OnError, "LogStreamManager.OnError", context));
+                watcher.Error += new ErrorEventHandler(DoSafeAction<object, ErrorEventArgs,HttpContext>(OnError, "LogStreamManager.OnError", context));
                 watcher.Start();
                 _watcher = watcher;
             }
 
             if (_heartbeat == null)
             {
-                _heartbeat = new Timer(OnHeartbeat, null, HeartbeatInterval, HeartbeatInterval);
+                _heartbeat = new Timer(OnHeartbeat, context, HeartbeatInterval, HeartbeatInterval);
             }
         }
-        */
+
+        private Action<T1> HeartbeatWrapper<T1, T2>(Action<T1,T2> func, T2 context)
+        {
+            return (t1) =>
+            {
+                try
+                {
+                    try
+                    {
+                        func(t1, context);
+                    }
+                    catch (Exception ex)
+                    {
+                        using (_tracer.Step("LogStreamManager.Heartbeat"))
+                        {
+                            _tracer.TraceError(ex);
+                        }
+                    }
+
+                }
+                catch
+                {
+                    //no-op 
+                }
+            };
+
+        }
 
         // Suppress exception on callback to not crash the process.
-        private Action<T1, T2> DoSafeAction<T1, T2>(Action<T1, T2> func, string eventName)
+        private Action<T1, T2> DoSafeAction<T1, T2, T3>(Action<T1, T2, T3> func, string eventName, T3 context)
         {
             return (t1, t2) =>
             {
@@ -208,7 +246,7 @@ namespace Kudu.Services.Performance
                 {
                     try
                     {
-                        func(t1, t2);
+                        func(t1, t2, context);
                     }
                     catch (Exception ex)
                     {
@@ -224,5 +262,336 @@ namespace Kudu.Services.Performance
                 }
             };
         }
+        
+        private void DisableResponseBuffering(HttpContext context)
+        {
+            IHttpBufferingFeature bufferingFeature = context.Features.Get<IHttpBufferingFeature>();
+            if (bufferingFeature != null)
+            {
+                bufferingFeature.DisableResponseBuffering();
+            }
+        }
+        
+        private void Reset()
+        {
+            if (_watcher != null)
+            {
+                _watcher.Stop();
+                // dispose is blocked till all change request handled, 
+                // this could lead to deadlock as we share the same lock
+                // http://stackoverflow.com/questions/73128/filesystemwatcher-dispose-call-hangs
+                // in the meantime, let GC handle it
+                // _watcher.Dispose();
+                _watcher = null;
+            }
+
+            if (_heartbeat != null)
+            {
+                _heartbeat.Dispose();
+                _heartbeat = null;
+            }
+
+            _logFiles = null;
+        }
+        
+        private void OnHeartbeat(object state)
+        {
+            try
+            {
+                try
+                {
+                    HttpContext context = (HttpContext) state;
+                    TimeSpan ts = DateTime.UtcNow.Subtract(_startTime);
+                    if (ts >= _timeout)
+                    {
+                        TerminateClient(String.Format(CultureInfo.CurrentCulture, Resources.LogStream_Timeout, DateTime.UtcNow.ToString("s"), (int)ts.TotalMinutes, System.Environment.NewLine), context);
+                    }
+                    else
+                    {
+                        ts = DateTime.UtcNow.Subtract(_lastTraceTime);
+                        if (ts >= HeartbeatInterval)
+                        {
+                            NotifyClient(String.Format(CultureInfo.CurrentCulture, Resources.LogStream_Heartbeat, DateTime.UtcNow.ToString("s"), (int)ts.TotalMinutes, System.Environment.NewLine),context);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    using (_tracer.Step("LogStreamManager.OnHeartbeat"))
+                    {
+                        _tracer.TraceError(ex);
+                    }
+                }
+            }
+            catch
+            {
+                // no-op
+            }
+        }
+
+        private void OnChanged(object sender, FileSystemEventArgs e, HttpContext context)
+        {
+            if (e.ChangeType == WatcherChangeTypes.Changed && MatchFilters(e.FullPath))
+            {
+                // reading the delta of file changed, retry if failed.
+                IEnumerable<string> lines = null;
+                OperationManager.Attempt(() =>
+                {
+                    lines = GetChanges(e);
+                }, 3, 100);
+
+                if (lines.Count() > 0)
+                {
+                    _lastTraceTime = DateTime.UtcNow;
+
+                    NotifyClient(lines,context);
+                }
+            }
+        }
+
+        /*
+        private string ParseRequest(HttpContext context)
+        {
+            _filter = context.Request.QueryString[FilterQueryKey];
+
+            // path route as in logstream/{*path} without query strings
+            string routePath = context.Request.RequestContext.RouteData.Values["path"] as string;
+            
+            // trim '/'
+            routePath = String.IsNullOrEmpty(routePath) ? routePath : routePath.Trim('/');
+
+            // logstream at root
+            if (String.IsNullOrEmpty(routePath))
+            {
+                _enableTrace = true;
+                return _logPath;
+            }
+
+            var firstPath = routePath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            if (string.Equals(firstPath, "Application", StringComparison.OrdinalIgnoreCase))
+            {
+                _enableTrace = true;
+            }
+
+            return FileSystemHelpers.EnsureDirectory(Path.Combine(_logPath, routePath));
+        }
+        */
+
+        private static bool MatchFilters(string fileName)
+        {
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                foreach (string ext in LogFileExtensions)
+                {
+                    if (fileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private void NotifyClient(string text, HttpContext context)
+        {
+            NotifyClient(new string[] { text },context);
+        }
+
+        private async Task NotifyClient(IEnumerable<string> lines, HttpContext context)
+        {
+                if (!context.RequestAborted.IsCancellationRequested)
+                {
+                    try
+                    {
+                        foreach (var line in lines)
+                        {
+                            await context.Response.WriteAsync(line);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        _tracer.TraceError("Error notifying client");
+                    }
+                }
+        }
+
+        private IEnumerable<string> GetChanges(FileSystemEventArgs e)
+        {
+            lock (_thisLock)
+            {
+                // do no-op if races between idle timeout and file change event
+                /*
+                if (_results.Count == 0)
+                {
+                    return Enumerable.Empty<string>();
+                }
+                */
+
+                long offset = 0;
+                if (!_logFiles.TryGetValue(e.FullPath, out offset))
+                {
+                    _logFiles[e.FullPath] = 0;
+                }
+
+                using (FileStream fs = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                {
+                    long length = fs.Length;
+
+                    // file was truncated
+                    if (offset > length)
+                    {
+                        _logFiles[e.FullPath] = offset = 0;
+                    }
+
+                    // multiple events
+                    if (offset == length)
+                    {
+                        return Enumerable.Empty<string>();
+                    }
+
+                    if (offset != 0)
+                    {
+                        fs.Seek(offset, SeekOrigin.Begin);
+                    }
+
+                    List<string> changes = new List<string>();
+
+                    StreamReader reader = new StreamReader(fs);
+                    while (!reader.EndOfStream)
+                    {
+                        string line = ReadLine(reader);
+                        if (String.IsNullOrEmpty(_filter) || line.IndexOf(_filter, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            changes.Add(line);
+                        }
+                    }
+
+                    // Adjust offset and return changes
+                    _logFiles[e.FullPath] = reader.BaseStream.Position;
+
+                    return changes;
+                }
+            }
+        }
+
+        private void OnDeleted(object sender, FileSystemEventArgs e, HttpContext context)
+        {
+            if (e.ChangeType == WatcherChangeTypes.Deleted)
+            {
+                lock (_thisLock)
+                {
+                    _logFiles.Remove(e.FullPath);
+                }
+            }
+        }
+
+        private void OnRenamed(object sender, RenamedEventArgs e, HttpContext context)
+        {
+            if (e.ChangeType == WatcherChangeTypes.Renamed)
+            {
+                lock (_thisLock)
+                {
+                    _logFiles.Remove(e.OldFullPath);
+                }
+            }
+        }
+
+        private void OnError(object sender, ErrorEventArgs e, HttpContext context)
+        {
+            try
+            {
+                lock (_thisLock)
+                {
+                    if (_watcher != null)
+                    {
+                        string path = _watcher.Path;
+                        Reset();
+                        Initialize(path,context);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                OnCriticalError(ex, context);
+            }
+        }
+
+        private void OnCriticalError(Exception ex, HttpContext context)
+        {
+            TerminateClient(String.Format(CultureInfo.CurrentCulture, Resources.LogStream_Error, System.Environment.NewLine, DateTime.UtcNow.ToString("s"), ex.Message), context);
+        }
+
+        private void TerminateClient(string text, HttpContext context)
+        {
+            NotifyClient(text, context);
+            lock (_thisLock)
+            {
+                // Proactively cleanup resources
+                Reset();
+            }
+            /*
+            lock (_thisLock)
+            {
+                foreach (ProcessRequestAsyncResult result in _results)
+                {
+                    //CORE CHECK
+                    result.Complete(false);
+                }
+
+                _results.Clear();
+
+                // Proactively cleanup resources
+                Reset();
+            }
+            */
+        }
+
+        // this has the same performance and implementation as StreamReader.ReadLine()
+        // they both account for '\n' or '\r\n' as new line chars.  the difference is 
+        // this returns the result with preserved new line chars.
+        // without this, logstream can only guess whether it is '\n' or '\r\n' which is 
+        // subjective to each log providers/files.
+        private static string ReadLine(StreamReader reader)
+        {
+            var strb = new StringBuilder();
+            int val;
+            while ((val = reader.Read()) >= 0)
+            {
+                char ch = (char)val;
+                strb.Append(ch);
+                switch (ch)
+                {
+                    case '\r':
+                    case '\n':
+                        if (ch == '\r' && (char)reader.Peek() == '\n')
+                        {
+                            ch = (char)reader.Read();
+                            strb.Append(ch);
+                        }
+                        return strb.ToString();
+                    default:
+                        break;
+                }
+            }
+
+            return strb.ToString();
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Reset();
+            }
+        }
     }
 }
+    
+    

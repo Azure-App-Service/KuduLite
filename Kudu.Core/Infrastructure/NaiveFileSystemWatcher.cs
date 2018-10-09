@@ -1,4 +1,6 @@
-﻿namespace Kudu.Core.Infrastructure
+﻿using Microsoft.AspNetCore.Http;
+
+namespace Kudu.Core.Infrastructure
 {
     using System;
     using System.Collections.Generic;
@@ -38,6 +40,7 @@
         }
 
         public string Path { get; }
+        public HttpContext context { get; }
 
         public event FileSystemEventHandler Changed;
 

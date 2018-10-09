@@ -1,4 +1,6 @@
-﻿namespace Kudu.Core.Infrastructure
+﻿using Microsoft.AspNetCore.Http;
+
+namespace Kudu.Core.Infrastructure
 {
     using System.IO;
 

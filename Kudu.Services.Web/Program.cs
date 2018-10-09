@@ -33,7 +33,7 @@ namespace Kudu.Services.Web
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-//            .UseKestrel(options => { options.Limits.MaxRequestBodySize = null; }) 
+              .UseKestrel(options => { options.Limits.MaxRequestBodySize = null; }) 
               .ConfigureLogging(logging =>
                 {
                     logging.ClearProviders();
