@@ -78,8 +78,8 @@
                         using (var md5 = System.Security.Cryptography.MD5.Create())
                         {
                             var hash = md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(email.ToLowerInvariant().Trim()));
-                            var imageUrl = String.Format("https://secure.gravatar.com/avatar/{0}.jpg?d=mm",
-                                BitConverter.ToString(hash).ToLowerInvariant().Replace("-", String.Empty));
+                            var imageUrl = string.Format("https://secure.gravatar.com/avatar/{0}.jpg?d=mm",
+                                BitConverter.ToString(hash).ToLowerInvariant().Replace("-", string.Empty));
 
                             if (displayName.StartsWith("xn--"))
                             {

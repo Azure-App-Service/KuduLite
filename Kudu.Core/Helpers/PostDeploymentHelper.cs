@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Infrastructure;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Kudu.Core.Helpers
 {
@@ -127,13 +128,13 @@ namespace Kudu.Core.Helpers
             // Read host.json 
             // Get HubName property for Durable Functions
             string taskHubName = null;
-            if (File.Exists(Path.Combine(functionsPath, Constants.FunctionsHostConfigFile)))
+            string hostJson = Path.Combine(functionsPath, Constants.FunctionsHostConfigFile);
+            if (File.Exists(hostJson))
             {
-                string hostJson = Path.Combine(functionsPath, Constants.FunctionsHostConfigFile);
                 taskHubName = GetTaskHub(hostJson);
             }
 
-            
+            // Collect each functions.json
             var triggers = Directory
                     .GetDirectories(functionsPath)
                     .Select(d => Path.Combine(d, Constants.FunctionsConfigFile))
@@ -151,11 +152,11 @@ namespace Kudu.Core.Helpers
             {
                 foreach (var trigger in triggers)
                 {
-                    object typeValue;
+                    JToken typeValue;
                     if (trigger.TryGetValue("type", out typeValue)
                         && typeValue != null
-                        && (trigger["type"].ToString().Equals("orchestrationTrigger", StringComparison.OrdinalIgnoreCase)
-                            || trigger["type"].ToString().Equals("activityTrigger", StringComparison.OrdinalIgnoreCase)))
+                        && (typeValue.ToString().Equals("orchestrationTrigger", StringComparison.OrdinalIgnoreCase)
+                            || typeValue.ToString().Equals("activityTrigger", StringComparison.OrdinalIgnoreCase)))
                     {
                         trigger["taskHubName"] = taskHubName;
                     }
@@ -328,14 +329,14 @@ namespace Kudu.Core.Helpers
             }
         }
 
-        private static IEnumerable<Dictionary<string, object>> DeserializeFunctionTrigger(string functionJson)
+        private static IEnumerable<JObject> DeserializeFunctionTrigger(string functionJson)
         {
             try
             {
                 var functionName = Path.GetFileName(Path.GetDirectoryName(functionJson));
-                var json = JsonConvert.DeserializeObject<Dictionary<string, object>>(File.ReadAllText(functionJson));
+                var json = JObject.Parse(File.ReadAllText(functionJson));
 
-                object value;
+                JToken value;
                 // https://github.com/Azure/azure-webjobs-sdk-script/blob/a9bafba78a3a8092bfd61a8c7093200dae867efb/src/WebJobs.Script/Host/ScriptHost.cs#L1476-L1498
                 if (json.TryGetValue("disabled", out value))
                 {
@@ -353,7 +354,7 @@ namespace Kudu.Core.Helpers
                     if (disabled)
                     {
                         Trace(TraceEventType.Verbose, "Function {0} is disabled", functionName);
-                        return Enumerable.Empty<Dictionary<string, object>>();
+                        return Enumerable.Empty<JObject>();
                     }
                 }
 
@@ -361,11 +362,11 @@ namespace Kudu.Core.Helpers
                 if (excluded)
                 {
                     Trace(TraceEventType.Verbose, "Function {0} is excluded", functionName);
-                    return Enumerable.Empty<Dictionary<string, object>>();
+                    return Enumerable.Empty<JObject>();
                 }
 
-                var triggers = new List<Dictionary<string, object>>();
-                foreach (Dictionary<string, object> binding in (object[])json["bindings"])
+                var triggers = new List<JObject>();
+                foreach (JObject binding in (JArray)json["bindings"])
                 {
                     var type = (string)binding["type"];
                     if (type.EndsWith("Trigger", StringComparison.OrdinalIgnoreCase))
@@ -385,9 +386,10 @@ namespace Kudu.Core.Helpers
             catch (Exception ex)
             {
                 Trace(TraceEventType.Warning, "{0} is invalid. {1}", functionJson, ex);
-            }
 
-            return Enumerable.Empty<Dictionary<string, object>>();
+                // Fail the deployment if invalid function.json
+                throw;
+            }
         }
 
         private static void WriteAutoSwapOngoing()
