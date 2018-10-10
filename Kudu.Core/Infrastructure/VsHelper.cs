@@ -104,9 +104,19 @@ namespace Kudu.Core.Infrastructure
             }
 
             var outputTypes = from propertyGroup in root.Elements(GetName("PropertyGroup"))
-                              let outputType = propertyGroup.Element(GetName("OutputType"))
-                              where outputType != null && String.Equals(outputType.Value, "exe", StringComparison.OrdinalIgnoreCase)
-                              select outputType.Value;
+                let outputType = propertyGroup.Element(GetName("OutputType"))
+                where outputType != null && String.Equals(outputType.Value, "exe", StringComparison.OrdinalIgnoreCase)
+                select outputType.Value;
+
+            if (!outputTypes.Any())
+            {
+                // new csproj does not have a namespace:http://schemas.microsoft.com/developer/msbuild/2003
+                outputTypes = from propertyGroup in root.Elements(XName.Get("PropertyGroup"))
+                    let outputType = propertyGroup.Element(XName.Get("OutputType"))
+                    where outputType != null &&
+                          String.Equals(outputType.Value, "exe", StringComparison.OrdinalIgnoreCase)
+                    select outputType.Value;
+            }
 
             return outputTypes.Any();
         }

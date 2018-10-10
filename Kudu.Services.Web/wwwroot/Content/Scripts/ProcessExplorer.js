@@ -169,7 +169,7 @@ var Utilities = (function () {
             }
         }
         iframe.src = url;
-   };
+    };
 
     Utilities.arrayToDivs = function (lines) {
         var htmls = [];
@@ -232,7 +232,7 @@ var Utilities = (function () {
         {
             checkbox.checked = true;
         }
-       
+
         span.appendChild(checkbox);
 
         var label = document.createElement("span");
@@ -399,7 +399,7 @@ var Process = (function () {
             _this.dialog().dialog("open");
             $("li").blur();
         }, false)));
-        
+
         var profilingButton = Utilities.getButton("btn btn-info", this._json.id + "-Profiling", this._json.is_profile_running ? "Stop Profiling" : "Start Profiling", function (e) {
             handleProfilingEvents(e, _this._json.id, _this._json.iis_profile_timeout_in_seconds);
         }, false);
@@ -411,13 +411,13 @@ var Process = (function () {
             $(profilingButton).addClass("btn-danger");
         }
 
-        if (Process.prototype.WebSiteSku === "Free" || Process.prototype.WebSiteSku === "Shared") {
+        if (Process.prototype.WebSiteSku === "Free" || Process.prototype.WebSiteSku === "Shared" || Process.prototype.WebSiteSku === "Dynamic") {
             $(profilingButton).css("opacity", "0.5");
             $(profilingButton).off("click");
-            $(profilingButton).attr("title", "Profiling is not supported for Free/Shared sites.");
+            $(profilingButton).attr("title", "Profiling is not supported for Free/Shared sites or Function apps in consumption plan.");
             $(profilingButton).tooltip().show();
 
-            var iisProfilingCheckboxControl = iisProfilingCheckbox.childNodes.item(this._json.id + "-iisProfilingCheck");           
+            var iisProfilingCheckboxControl = iisProfilingCheckbox.childNodes.item(this._json.id + "-iisProfilingCheck");
             if (iisProfilingCheckboxControl != null) {
                 iisProfilingCheckboxControl.disabled = 'disabled';
             }
@@ -425,7 +425,7 @@ var Process = (function () {
 
         tr.appendChild(Utilities.ToTd(iisProfilingCheckbox));
         tr.appendChild(Utilities.ToTd(profilingButton));
-        
+
         return $(tr);
     };
 
@@ -1033,9 +1033,9 @@ function postProfileRequest(action, processId, iisProfiling) {
         uri = uri + "?iisProfiling=true";
 
     var request = {
-            method: "POST",
-            contentType: "application/json",
-        };
+        method: "POST",
+        contentType: "application/json",
+    };
     return $.ajax(uri, request);
 }
 
@@ -1064,7 +1064,7 @@ function showModal(title, content) {
             width: "500px",
             open: function () {
                 $(this).siblings(".ui-dialog-titlebar")
-                              .find("button").blur();
+                    .find("button").blur();
             },
             create: function () {
                 $(".ui-dialog").find(".ui-dialog-titlebar").css({
@@ -1087,13 +1087,13 @@ function stopProfiling(e, processId) {
     Utilities.downloadURL(uri, true);
     e.target.textContent = "Start Profiling";
     e.target.title = "It may take a few seconds for the download profile dialog to appear";
-    
+
     $(e.currentTarget).removeClass("btn-danger");  // remove highlight button if the profiler has stopped
 
     var iisProfilingCheckbox = document.getElementById(processId + "-iisProfilingCheck");
     if (iisProfilingCheckbox != null) {
         iisProfilingCheckbox.disabled = "";
-        iisProfilingCheckbox.checked = false; 
+        iisProfilingCheckbox.checked = false;
     }
 }
 

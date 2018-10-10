@@ -34,5 +34,5 @@ copy_to_build_dir() {
   fi
 }
 
-retry npm install https://github.com/projectkudu/KuduScript/tarball/ed6e062a407cd5793e52f261bc666a2d76aa3e81
+retry npm install https://github.com/projectkudu/KuduScript/tarball/30eb44889eedb6a317501efcaa781801a5adc5b3
 copy_to_build_dir "$@"
