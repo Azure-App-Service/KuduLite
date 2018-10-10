@@ -95,8 +95,8 @@ namespace Kudu.Services.Deployment
                 {
                     AllowDeploymentWhileScmDisabled = true,
                     Deployer = deployer,
-                    TargetPath = @"webapps\ROOT",
-                    WatchedFilePath = @"WEB-INF\web.xml",
+                    TargetPath = Path.Combine("webapps", "ROOT"),
+                    WatchedFilePath = Path.Combine("WEB-INF", "web.xml"),
                     IsContinuous = false,
                     AllowDeferredDeployment = false,
                     IsReusable = false,
