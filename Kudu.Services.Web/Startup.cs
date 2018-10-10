@@ -78,7 +78,7 @@ namespace Kudu.Services.Web
                 options.KeyLengthLimit = 500000;
             });
 
-            
+
             services.AddMvcCore()
                 .AddRazorPages()
                 .AddAuthorization()

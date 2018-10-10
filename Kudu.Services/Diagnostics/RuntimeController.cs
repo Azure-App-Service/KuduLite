@@ -8,6 +8,8 @@ using Kudu.Contracts.Tracing;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Tracing;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace Kudu.Services.Diagnostics
 {
@@ -22,14 +24,12 @@ namespace Kudu.Services.Diagnostics
             _tracer = tracer;
         }
 
-        // CORE TODO Equivalent?
-        // [LowerCaseFormatterConfig]
         [HttpGet]
-        public RuntimeInfo GetRuntimeVersions(bool allVersions = false)
+        public IActionResult GetRuntimeVersions(bool allVersions = false)
         {
             using (_tracer.Step("RuntimeController.GetRuntimeVersions"))
             {
-                return new RuntimeInfo
+                return Json(new RuntimeInfo
                 {
                     NodeVersions = GetNodeVersions(allVersions),
                     System = new
@@ -40,7 +40,7 @@ namespace Kudu.Services.Diagnostics
                             "BuildLabEx", null),
                         cores = Environment.ProcessorCount,
                     }
-                };
+                },new JsonSerializerSettings{ ContractResolver = new CamelCasePropertyNamesContractResolver()});
             }
         }
 
