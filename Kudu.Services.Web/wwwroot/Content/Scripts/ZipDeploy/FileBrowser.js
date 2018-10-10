@@ -63,6 +63,7 @@ var statusbar = {
             }
         }
 };
+
 function showAceHelpModal() {
     $('#ace-help-modal').modal();
     $('#ace-help-modal .modal-body').load('/DebugConsole/AceHelp.html',
@@ -78,6 +79,8 @@ function showAceHelpModal() {
             }
         });
 }
+
+
 var copyObjectsManager = {
     init: function () {
         this._copyProgressObjects = {};
@@ -90,6 +93,7 @@ var copyObjectsManager = {
         this._infoMessage = message;
     },
     addCopyStats: function (uri, loadedData, totalData) {
+
         uri = uri.substring(uri.indexOf('/vfs') + 5, uri.length); // slice uri to be prettier[ex: http://localhost:37911/api/vfs/ttesstt//Kudu.FunctionalTests/Vfs/VfsControllerTest.cs => ttesstt//Kudu.FunctionalTests/Vfs/VfsControllerTest.cs]
         if (this._copyProgressObjects[uri]) {
             if (loadedData === totalData) {
@@ -102,9 +106,11 @@ var copyObjectsManager = {
             this._copyProgressObjects[uri].startDate = $.now();
             this._copyProgressObjects[uri].copyPackEnded = false; //this is used for when copying multiple files in the same time so that i may still have a coherent percentage
         }
+
         if (totalData === 0) { // empty files appear to have size 0
             totalData = loadedData = 1;
         }
+
         this._copyProgressObjects[uri].loadedData = loadedData;
         this._copyProgressObjects[uri].totalData = totalData;
     },
@@ -115,6 +121,7 @@ var copyObjectsManager = {
         var currentTransfered = 0;
         var finalTransfered = 0;
         var foundItem = false;
+
         for (var key in this._copyProgressObjects) {
             var co = this._copyProgressObjects[key];
             if (co.copyPackEnded === false) {
@@ -123,17 +130,20 @@ var copyObjectsManager = {
                 finalTransfered += co.totalData;
             }
         }
+
         var perc = 0;
         if (foundItem) {
             perc = parseInt((currentTransfered / finalTransfered) * 100);
         } else { // to avoid 0/0
             perc = 100;
         }
+
         if (perc === 100 && foundItem) { // if all transactions have finished & have some unmarked transaction pack, cancel it out
             for (var key in this._copyProgressObjects) {
                 this._copyProgressObjects[key].copyPackEnded = true;
             }
         }
+
         return perc;
     },
     removeAtIndex: function (index) {
@@ -145,7 +155,9 @@ var copyObjectsManager = {
         this._copyProgressObjects = {};
     }
 }
+
 copyObjectsManager.init();
+
 $.connection.hub.url = appRoot + "api/filesystemhub";
 var fileSystemHub = $.connection.fileSystemHub;
 fileSystemHub.client.fileExplorerChanged = function () {
@@ -159,50 +171,33 @@ $.connection.hub.start().done(function () {
                 dataType: "text"
             });
         },
+
         setContent: function (item, text) {
-            var _url = "";
-            var _method = "";
-            if (item.href !== undefined && item.href !== null && item.href !== "") {
-                if (item.href.toUpperCase() === "/API/ZIP/SITE/WWWROOT") {
-                    //This call is to upload a ZIP file
-                    if (!((text.name.split(".")[text.name.split(".").length - 1]).toUpperCase() === "ZIP") || (text.name.split(".").length < 2)) {
-                        showErrorAsToast("'" + text.name + "' is not a ZIP file. Only ZIP upload is allowed.");
-                        setTimeout(function () { removeAllToasts(); }, 3000);
-                        return;
+            var _url = item.href.replace(/#/g, encodeURIComponent("#"));
+            return $.ajax({
+                url: _url,
+                data: text,
+                method: "PUT",
+                xhr: function () {  // Custom XMLHttpRequest
+                    var myXhr = $.ajaxSettings.xhr();
+                    if (myXhr.upload) { // Check if upload property exists
+                        myXhr.upload.addEventListener('progress', function (e) {
+                            copyProgressHandlingFunction(e, _url);
+                        }, false); // For handling the progress of the upload
                     }
-                    else {
-                        _url = "/api/zipdeploy/?isAsync=true";
-                        _method = "POST"
-                    }
+                    return myXhr;
+                },
+                processData: false,
+                headers: {
+                    "If-Match": "*"
                 }
-                else {
-                    //This call is to save the contents of a file from Ace
-                    _url = item.href.replace(/#/g, encodeURIComponent("#"));
-                    _method = "PUT"
-                }
-                return $.ajax({
-                    url: _url,
-                    data: text,
-                    method: _method,
-                    xhr: function () {  // Custom XMLHttpRequest
-                        var myXhr = $.ajaxSettings.xhr();
-                        if (myXhr.upload) { // Check if upload property exists
-                            myXhr.upload.addEventListener('progress', function (e) {
-                                copyProgressHandlingFunction(e, _url);
-                            }, false); // For handling the progress of the upload
-                        }
-                        return myXhr;
-                    },
-                    processData: false,
-                    headers: {
-                        "If-Match": "*"
-                    }
-                });
-            }
+            });
         },
+
         getChildren: function (item) {
             return $.get(item.href);
         },
+
         createFolder: function (folder) {
             return $.ajax({
                 // Add trailing slash for new folder when calling VFS
@@ -219,6 +214,7 @@ $.connection.hub.start().done(function () {
                 }
             });
         },
+
         createFile: function (file) {
             return $.ajax({
                 // No trailing slash for new file when calling VFS
@@ -228,6 +224,7 @@ $.connection.hub.start().done(function () {
                 error: function (xhr, status, error) { showErrorAsToast(xhr); }
             });
         },
+
         addFiles: function (files, unzip) {
             return whenArray(
                 $.map(files, function (item) {
@@ -238,11 +235,14 @@ $.connection.hub.start().done(function () {
                 })
             );
         },
+
         deleteItems: function (item) {
             var url = item.href;
+
             if (item.mime === "inode/directory") {
                 url += "?recursive=true";
             }
+
             return $.ajax({
                 url: url,
                 method: "DELETE",
@@ -252,7 +252,9 @@ $.connection.hub.start().done(function () {
             });
         }
     };
+
     var MAX_VIEW_ITEMS = 300;
+
     var node = function (data, parent) {
         this.parent = parent;
         this.name = ko.observable(data.name);
@@ -267,16 +269,20 @@ $.connection.hub.start().done(function () {
         this.children = ko.observableArray([]);
         this.editing = ko.observable(data.editing || false);
         this._fetchStatus;
+
         this.fetchChildren = function (force) {
             var that = this;
+
             if (!that._fetchStatus || (force && that._fetchStatus === 2)) {
                 that._fetchStatus = 1;
                 viewModel.processing(true);
+
                 return Vfs.getChildren(that)
                     .done(function (data) {
                         viewModel.processing(false);
                         var children = that.children;
                         children.removeAll();
+
                         // maxViewItems overridable by localStorage setting.
                         var maxViewItems = getLocalStorageSetting("maxViewItems", MAX_VIEW_ITEMS);
                         var folders = [];
@@ -292,9 +298,11 @@ $.connection.hub.start().done(function () {
                                 }
                             }
                         });
+
                         // view display folders then files
                         children.push.apply(children, folders);
                         children.push.apply(children, files);
+
                         that._fetchStatus = 2;
                     }).fail(showError);
             } else {
@@ -316,15 +324,18 @@ $.connection.hub.start().done(function () {
                 });
             }
         }
+
         this.selectNode = function () {
             stashCurrentSelection(viewModel.selected());
             updateSelectedAndNotifyCommandLine(this);
         };
+
         this.selectChild = function (descendantPath) {
             var childName = descendantPath.split(/\/|\\/)[0].toLowerCase(),
                 matches = $.grep(this.children(), function (elm) {
                     return elm.name().toLowerCase() === childName;
                 });
+
             if (matches && matches.length) {
                 var selectedChild = matches[0];
                 updateSelectedOnly(selectedChild).done(function () {
@@ -334,6 +345,7 @@ $.connection.hub.start().done(function () {
                 });
             }
         }
+
         this.selectParent = function () {
             var that = viewModel.selected();
             if (that.parent) {
@@ -341,6 +353,7 @@ $.connection.hub.start().done(function () {
                 updateSelectedAndNotifyCommandLine(that.parent);
             }
         }
+
         this.editItem = function () {
             var that = this;
             // Blank out the editor before fetching new content
@@ -366,6 +379,7 @@ $.connection.hub.start().done(function () {
                     }).fail(showError);
             }
         }
+
         this.saveItem = function () {
             var text = viewModel.editText();
             statusbar.savingChanges();
@@ -378,6 +392,7 @@ $.connection.hub.start().done(function () {
                 statusbar.errorState.set();
             });
         }
+
         this.saveItemAndClose = function () {
             var text = viewModel.editText();
             statusbar.savingChanges();
@@ -392,8 +407,8 @@ $.connection.hub.start().done(function () {
             });
         }
     }
-    //Start inside wwwroot since this is where the upload will be made by the ZipDeploy API
-    var root = new node({ name: "/wwwroot", type: "dir", path: "D:\\home\\site\\wwwroot", href: appRoot + "api/vfs/site/wwwroot" }),
+
+    var root = new node({ name: "/", type: "dir", href: appRoot + "api/vfs/" }),
         ignoreWorkingDirChange = false, // global variables
         viewModel = {
             root: root,
@@ -441,6 +456,7 @@ $.connection.hub.start().done(function () {
                 }
             }
         };
+
     viewModel.specialDirsIndex = ko.dependentObservable(function () {
         var result = {};
         ko.utils.arrayForEach(viewModel.specialDirs(), function (value) {
@@ -448,47 +464,51 @@ $.connection.hub.start().done(function () {
         });
         return result;
     }, viewModel),
+
         viewModel.showSiteRoot = ko.computed(function () {
             if ($.isEmptyObject(viewModel.specialDirsIndex())) {
                 return true;
             }
             return viewModel.specialDirsIndex()['LocalSiteRoot'] !== undefined;
         }, viewModel);
+
     root.fetchChildren();
-    ko.applyBindings(viewModel, document.getElementById("main"));
+    ko.applyBindings(viewModel, document.getElementById("#main"));
     setupFileSystemWatcher();
-    if (root.path() !== null && root.path() !== "" && root.path !== undefined) {
-        updateFileSystemWatcher(root.path());
-    }
-    /*
-   window.KuduExec.workingDir.subscribe(function (newValue) {
-       if (ignoreWorkingDirChange) {
-           ignoreWorkingDirChange = false;
-           return;
-       }
+
+    window.KuduExec.workingDir.subscribe(function (newValue) {
+        if (ignoreWorkingDirChange) {
+            ignoreWorkingDirChange = false;
+            return;
+        }
+
         function getRelativePath(parent, childDir) {
-           var parentPath = (parent.path() || window.KuduExec.appRoot).toLowerCase();
-           if (childDir.length >= parentPath.length && childDir.toLowerCase().indexOf(parentPath) === 0) {
-               return { parent: parent, relativePath: childDir.substring(parentPath.length).replace(/^(\/|\\)?(.*)(\/|\\)?$/g, "$2") };
-           }
-       }
+            var parentPath = (parent.path() || window.KuduExec.appRoot).toLowerCase();
+            if (childDir.length >= parentPath.length && childDir.toLowerCase().indexOf(parentPath) === 0) {
+                return { parent: parent, relativePath: childDir.substring(parentPath.length).replace(/^(\/|\\)?(.*)(\/|\\)?$/g, "$2") };
+            }
+        }
+
         var relativeDir = getRelativePath(viewModel.root, newValue) ||
-           getRelativePath(viewModel.specialDirsIndex()["LocalSiteRoot"], newValue) ||
-           getRelativePath(viewModel.specialDirsIndex()["SystemDrive"], newValue)
+            getRelativePath(viewModel.specialDirsIndex()["LocalSiteRoot"], newValue) ||
+            getRelativePath(viewModel.specialDirsIndex()["SystemDrive"], newValue)
+
         stashCurrentSelection(viewModel.selected());
-       if (!relativeDir || !relativeDir.relativePath) {
-           updateSelectedOnly((relativeDir && relativeDir.parent) || viewModel.root)
-       } else {
-           relativeDir.parent.selectChild(relativeDir.relativePath);
-       }
-   });
-   */
+        if (!relativeDir || !relativeDir.relativePath) {
+            updateSelectedOnly((relativeDir && relativeDir.parent) || viewModel.root)
+        } else {
+            relativeDir.parent.selectChild(relativeDir.relativePath);
+        }
+    });
+
     updateSelectedAndNotifyCommandLine = function (newValue) {
         updateSelectedOnly(newValue);
+
         // notify command line 
         ignoreWorkingDirChange = true;
-        //window.KuduExec.changeDir(newValue.path());
+        window.KuduExec.changeDir(newValue.path());
     }
+
     // updateSelectedOnly return a promise since it also update its children
     updateSelectedOnly = function (newValue) {
         viewModel.selected(newValue); // update selected
@@ -496,37 +516,42 @@ $.connection.hub.start().done(function () {
         // in old code, children are ONLY FORCE update if navigate using File Explorer, in NEW CODE, we standardize them
         return newValue.fetchChildren(/* force */ true); // update children of selected
     }
-    /*
-   window.KuduExec.completePath = function (value, dirOnly) {
-       var subDirs = value.toLowerCase().split(/\/|\\/),
-           cur = viewModel.selected(),
-           curToken = "";
+
+    window.KuduExec.completePath = function (value, dirOnly) {
+        var subDirs = value.toLowerCase().split(/\/|\\/),
+            cur = viewModel.selected(),
+            curToken = "";
+
         while (subDirs.length && cur) {
-           curToken = subDirs.shift();
-           if (curToken === ".." && cur && cur.parent) {
-               cur = cur.parent;
-               continue;
-           }
+            curToken = subDirs.shift();
+            if (curToken === ".." && cur && cur.parent) {
+                cur = cur.parent;
+                continue;
+            }
+
             if (!cur.children || !cur.children().length) {
-               cur = null;
-               break;
-           }
+                cur = null;
+                break;
+            }
+
             cur = $.grep(cur.children(), function (elm) {
-               if (dirOnly && !elm.isDirectory()) {
-                   return false;
-               }
+                if (dirOnly && !elm.isDirectory()) {
+                    return false;
+                }
+
                 return subDirs.length ? (elm.name().toLowerCase() === curToken) : elm.name().toLowerCase().indexOf(curToken) === 0;
-           });
+            });
+
             if (cur && cur.length === 1 && subDirs.length) {
-               // If there's more path to traverse and we have exactly one match, return
-               cur = cur[0];
-           }
-       }
-       if (cur) {
-           return $.map(cur, function (elm) { return elm.name(); });
-       }
-   };
-   */
+                // If there's more path to traverse and we have exactly one match, return
+                cur = cur[0];
+            }
+        }
+        if (cur) {
+            return $.map(cur, function (elm) { return elm.name(); });
+        }
+    };
+
     //monitor file upload progress
     function copyProgressHandlingFunction(e, uniqueUrl, forceUpdateModal) {
         if (e && uniqueUrl && e.lengthComputable) {
@@ -534,10 +559,13 @@ $.connection.hub.start().done(function () {
         }
         var perc = copyObjectsManager.getCurrentPercentCompletion(); // perc-per-total transaction
         var copyObjs = copyObjectsManager.getCopyStats();
+
         $('#copy-percentage').text(perc + "%");
+
         if (perc != 100 && perc != 0) {
             viewModel.isTransferInProgress(true);
         }
+
         //handler for clearing out cache once it gets too large
         var currentObjCount = Object.keys(copyObjs).length;
         if (currentObjCount > 2000) {
@@ -547,8 +575,10 @@ $.connection.hub.start().done(function () {
             var date = new Date();
             copyObjectsManager.setInfoMessage('Cache was partialy auto-cleared at ' + date.toLocaleString() + ' for performance improvements');
         }
+
         if ($('#files-transfered-modal').is(':visible') || forceUpdateModal) { // update if modal visible
             viewModel.copyProgStats(copyObjs); // update viewmodel
+
             var modalHeaderText = '';
             if (perc < 100) {
                 modalHeaderText = 'Transferred Files (<b>' + perc + '%</b>).';
@@ -558,27 +588,34 @@ $.connection.hub.start().done(function () {
             modalHeaderText += ' ' + ((_temp = copyObjectsManager.getInfoMessage()) ? _temp : "");
             $('#files-transfered-modal .modal-header').html(modalHeaderText);
         }
+
     }
+
     function setupFileSystemWatcher() {
         updateFileSystemWatcher(null);
     }
+
     function updateFileSystemWatcher(newValue) {
         window.viewModel = viewModel;
         fileSystemHub.server.register(newValue);
     }
-    //window.KuduExec.updateFileSystemWatcher = updateFileSystemWatcher;
+
+    window.KuduExec.updateFileSystemWatcher = updateFileSystemWatcher;
+
     function stashCurrentSelection(selected) {
         if (window.history && window.history.pushState) {
             // shunTODO, onpopstate does not care about this value
             window.history.pushState(selected.path(), selected.name());
         }
     }
+
     function getLocalStorageSetting(name, defaultValue) {
         try {
             var value = window.localStorage[name];
             if (value === undefined) {
                 return defaultValue;
             }
+
             if (typeof (defaultValue) === "number") {
                 return parseInt(value);
             } else if (typeof (defaultValue) === "boolean") {
@@ -590,6 +627,7 @@ $.connection.hub.start().done(function () {
             return defaultValue;
         }
     }
+
     window.onpopstate = function (evt) {
         if (viewModel.fileEdit()) {
             // If we're editing, exit the editing.
@@ -601,20 +639,25 @@ $.connection.hub.start().done(function () {
             }
         }
     };
+
     $("#fileList").on("keydown", "input[type=text]", function (evt) {
         var context = ko.contextFor(this),
             data = context.$data;
+
         if (evt.which === 27) { // Cancel if Esc is pressed.
             data.parent.children.remove(data);
             return false;
         }
     });
+
     $("#createFolder").click(function (evt) {
         evt.preventDefault();
+
         var newFolder = new node({ name: "", type: "dir", href: "", editing: true }, viewModel.selected());
         $(this).prop("disabled", true);
         viewModel.selected().children.unshift(newFolder);
         $("#fileList input[type='text']").focus();
+
         newFolder.name.subscribe(function (value) {
             newFolder.href = trimTrailingSlash(newFolder.parent.href) + "/" + value + "/";
             newFolder._href(newFolder.href);
@@ -625,12 +668,15 @@ $.connection.hub.start().done(function () {
             $("#createFolder").prop("disabled", false);
         });
     });
+
     $("#createFile").click(function (evt) {
         evt.preventDefault();
+
         var newFile = new node({ name: "", type: "", href: "", editing: true }, viewModel.selected());
         $(this).prop("disabled", true);
         viewModel.selected().children.unshift(newFile);
         $("#fileList input[type='text']").focus();
+
         newFile.name.subscribe(function (value) {
             newFile.href = trimTrailingSlash(newFile.parent.href) + "/" + value;
             newFile._href(newFile.href);
@@ -641,154 +687,63 @@ $.connection.hub.start().done(function () {
             $("#createFile").prop("disabled", false);
         });
     });
+
     // Drag and drop
     $("#fileList")
         .on("dragenter dragover", function (e) {
             e.preventDefault();
             e.stopPropagation();
-            if (viewModel.selected().name().toUpperCase() == "/WWWROOT") {
-                if (!(e.originalEvent.dataTransfer === null)) {
-                    if (e.originalEvent.dataTransfer.items.length != 1) {
-                        //Attempt to upload more than one file, hence deny . If length is < 1 then it is likely a browser compatability issue
-                        $("#upload-nonzip").addClass('upload-unzip-show');
-                    }
-                    else {
-                        if (_isZipFile(e)) {
-                            $("#upload-unzip").addClass('upload-unzip-show');
-                        }
-                        else {
-                            //Deny upload of non zip 
-                            $("#upload-nonzip").addClass('upload-unzip-show');
-                        }
-                    }
-                }
-                else {
-                    //Browser is IE / Edge. Do your checks here. Whatever check we do here, we need to replicate the same in _isZipFile function
-                    $("#upload-nonzip").addClass('upload-unzip-show');
-                    showErrorAsToast("Unable to determine file type. Please report this on Kudu github page along with your browser version");
-                    setTimeout(function () { removeAllToasts(); }, 5000)
-                }
-            }
-            else {
-                //An attempt is being made to upload on a folder other than WWWRoot
-                $("#upload-nonzip").addClass('upload-unzip-show');
+            if (_isZipFile(e)) {
+                $(".show-on-hover").addClass('upload-unzip-show');
             }
         })
         .on("drop", function (evt) {
             evt.preventDefault();
             evt.stopPropagation();
-            $("#upload-unzip").removeClass('upload-unzip-show');
-            $("#upload-unzip").removeClass('upload-unzip-hover');
-            $("#upload-nonzip").removeClass('upload-unzip-show');
-            $("#upload-nonzip").removeClass('upload-unzip-hover');
-            //Do not take any action when the file is dropped on a DIV other than the one intended for ZIP deploy
-            //$("#copy-percentage").text("");
-            //var dir = viewModel.selected();
-            //viewModel.processing(true);
-            //_getInputFiles(evt).done(function (files) {
-            //    Vfs.addFiles(files).always(function () {
-            //        dir.fetchChildren( /* force */ true);
-            //        viewModel.processing(false);
-            //        $("#copy-percentage").text("");
-            //    });
-            //});
-        }).on("dragleave", function (e) {
-        $("#upload-unzip").removeClass('upload-unzip-show');
-        $("#upload-nonzip").removeClass('upload-unzip-show');
-    });
-    $("#upload-nonzip")
-        .on("dragenter dragover", function (e) {
-            $("#upload-nonzip").addClass('upload-unzip-hover');
-        })
-        .on("drop", function (evt) {
-            evt.preventDefault();
-            evt.stopPropagation();
-            $("#upload-nonzip").removeClass('upload-unzip-show');
-            $("#upload-nonzip").removeClass('upload-unzip-hover');
-            //var dir = viewModel.selected();
-            //viewModel.processing(true);
-            //_getInputFiles(evt).done(function (files) {
-            //    Vfs.addFiles(files, _isZipFile(evt)).always(function () {
-            //        dir.fetchChildren( /* force */ true);
-            //        viewModel.processing(false);
-            //    });
-            //});
-        }).on("dragleave", function (e) {
-        $("#upload-nonzip").removeClass('upload-unzip-hover');
-    });
-    var refreshCurrentTreeDataInterval = 10000;
-    function _CheckForDeploymentCompleteAndUpdateStatus(pollURL, initialCall) {
-        if (initialCall) {
-            ClearDeploymentLogTree();
-            LoadDeploymentLogTree(pollURL);
-            setTimeout(function () {
-                _CheckForDeploymentCompleteAndUpdateStatus(pollURL, false);
-            }, 3000);
-        }
-        else {
-            $.ajax({
-                method: "GET",
-                url: pollURL
-            }).done(function (respData) {
-                if (!respData.complete) {
-                    //You dont have to fetch the details of a specific deployment, you can merely fetch the details of the latest deployment
-                    //For latest deployment. Fetch the Latest deployment via "/api/deployments/latest/" and then get the details via /api/deployments/<<DepId>>/log"
-                    refreshCurrentTreeData();
-                    setTimeout(function () {
-                        _CheckForDeploymentCompleteAndUpdateStatus(pollURL, false);
-                    }, refreshCurrentTreeDataInterval);
-                }
-                else {
-                    viewModel.processing(false);
-                }
-            }).fail(function () {
-                setTimeout(function () {
-                    _CheckForDeploymentCompleteAndUpdateStatus(pollURL, false);
-                }, refreshCurrentTreeDataInterval);
-            });
-        }
-    }
-    $("#upload-unzip")
-        .on("dragenter dragover", function (e) {
-            $("#upload-unzip").addClass('upload-unzip-hover');
-        })
-        .on("drop", function (evt) {
-            evt.preventDefault();
-            evt.stopPropagation();
-            $("#upload-unzip").removeClass('upload-unzip-show');
-            $("#upload-unzip").removeClass('upload-unzip-hover');
+
+            $(".show-on-hover").removeClass('upload-unzip-show');
+            $(".show-on-hover").removeClass('upload-unzip-hover');
+            $("#copy-percentage").text("");
             var dir = viewModel.selected();
             viewModel.processing(true);
             _getInputFiles(evt).done(function (files) {
-                Vfs.addFiles(files, _isZipFile(evt)).done(function (data, textStatus, jqXHR) {
-                    if (jqXHR) {
-                        if (jqXHR.status == "202") {
-                            var deploymentPollURL = jqXHR.getResponseHeader("Location");
-                            if (!((deploymentPollURL === null) || (deploymentPollURL === undefined))) {
-                                //Get relative URL to poll
-                                deploymentPollURL = deploymentPollURL.replace(window.location.origin, "");
-                                _CheckForDeploymentCompleteAndUpdateStatus(deploymentPollURL, true);
-                            }
-                        }
-                    }
-                }).fail(function (error) {
+                Vfs.addFiles(files).always(function () {
+                    dir.fetchChildren( /* force */ true);
                     viewModel.processing(false);
-                    showErrorAsToast(error + " - Error while calling ZipDeploy");
+                    $("#copy-percentage").text("");
                 });
-                //There is no need to fetch children here since this is a Zip Deploy and the server will push changes to wwwroot even without us requesting for it explicitly
-                //Vfs.addFiles(files, _isZipFile(evt)).always(function () {
-                //    dir.fetchChildren( /* force */ true);
-                //    viewModel.processing(false);
-                //});
             });
         }).on("dragleave", function (e) {
-        $("#upload-unzip").removeClass('upload-unzip-hover');
+        $(".show-on-hover").removeClass('upload-unzip-show');
     });
+
+    $("#upload-unzip")
+        .on("dragenter dragover", function (e) {
+            $(".show-on-hover").addClass('upload-unzip-hover');
+        })
+        .on("drop", function (evt) {
+            evt.preventDefault();
+            evt.stopPropagation();
+
+            $(".show-on-hover").removeClass('upload-unzip-show');
+            $(".show-on-hover").removeClass('upload-unzip-hover');
+            var dir = viewModel.selected();
+            viewModel.processing(true);
+            _getInputFiles(evt).done(function (files) {
+                Vfs.addFiles(files, _isZipFile(evt)).always(function () {
+                    dir.fetchChildren( /* force */ true);
+                    viewModel.processing(false);
+                });
+            });
+        }).on("dragleave", function (e) {
+        $(".show-on-hover").removeClass('upload-unzip-hover');
+    });
+
     var defaults = { fileList: '40%', console: '45%' };
     $('#resizeHandle .down')
         .on('click', function (e) {
-            var fileList = $('#fileList');
-            var console = $('#depProgress');
+            var fileList = $('#fileList'),
+                console = window.$KuduExecConsole;
             if (!console.is(':visible')) {
                 return;
             } else if (fileList.is(":visible")) {
@@ -802,10 +757,11 @@ $.connection.hub.start().done(function () {
                 fileList.show();
             }
         });
+
     $('#resizeHandle .up')
         .on('click', function (e) {
-            var fileList = $('#fileList');
-            var console = $('#depProgress');
+            var fileList = $('#fileList'),
+                console = window.$KuduExecConsole;
             if (!fileList.is(':visible')) {
                 return;
             } else if (console.is(':visible')) {
@@ -819,10 +775,13 @@ $.connection.hub.start().done(function () {
                 console.show();
             }
         });
+
+
     function _getInputFiles(evt) {
         var dt = evt.originalEvent.dataTransfer,
             items = evt.originalEvent.dataTransfer.items,
             isSupportedGetAsEntry = typeof DataTransferItem !== "undefined" && !!(DataTransferItem.prototype.webkitGetAsEntry || DataTransferItem.prototype.getAsEntry);
+
         if (items && items.length && isSupportedGetAsEntry) {
             return whenArray($.map(items, function (item) {
                 if (item.kind === 'file') {
@@ -838,6 +797,7 @@ $.connection.hub.start().done(function () {
             })]);
         }
     }
+
     function _isZipFile(evt) {
         if (evt.originalEvent.dataTransfer === null) {
             //dataTransfer is null in Edge / IE. Assume a zip file. Unzip will no-op 
@@ -846,9 +806,7 @@ $.connection.hub.start().done(function () {
         var items = evt.originalEvent.dataTransfer.items || evt.originalEvent.dataTransfer.files;
         if (items) {
             var filesArray = $.map(items, function (item) {
-                //if (item.type === 'application/x-zip-compressed' || item.type === 'application/zip' || item.type === '')
-                //Being strict about a ZIP file. item.type is '' for a folder and we do not want to allow upload of a folder here.
-                if (item.type === 'application/x-zip-compressed' || item.type === 'application/zip')
+                if (item.type === 'application/x-zip-compressed' || item.type === 'application/zip' || item.type === '')
                     return item;
             });
             if (filesArray && filesArray.length === items.length) {
@@ -863,6 +821,7 @@ $.connection.hub.start().done(function () {
             return true;
         }
     }
+
     function _processEntry(entry, parentPath) {
         parentPath = parentPath || '';
         var deferred = $.Deferred();
@@ -871,23 +830,36 @@ $.connection.hub.start().done(function () {
                 deferred.resolveWith(null, [{ name: parentPath + '/' + entry.name, contents: file }]);
             });
         } else {
-            entry.createReader().readEntries(function (entries) {
-                var directoryPath = parentPath + '/' + entry.name;
-                whenArray($.map(entries, function (e) {
-                    return _processEntry(e, directoryPath);
-                })).done(function () {
-                    deferred.resolveWith(null, [Array.prototype.concat.apply([], arguments)]);
-                });;
-            });
+            var dirReader = entry.createReader();
+            var totalEntriesInDir = [];
+            var directoryCallback = function (entries) {
+                if (entries.length) {
+                    totalEntriesInDir = totalEntriesInDir.concat(entries);
+                    // keep reading
+                    dirReader.readEntries(directoryCallback);
+                } else {
+                    // finished reading, process totalEntriesInDir
+                    var directoryPath = parentPath + '/' + entry.name;
+                    whenArray($.map(totalEntriesInDir, function (e) {
+                        return _processEntry(e, directoryPath);
+                    })).done(function () {
+                        deferred.resolveWith(null, [Array.prototype.concat.apply([], arguments)]);
+                    });
+                }
+            }
+            dirReader.readEntries(directoryCallback);
         }
         return deferred.promise();
     }
+
     function whenArray(deferreds) {
         return $.when.apply($, deferreds);
     }
+
     function trimTrailingSlash(input) {
         return input.replace(/(\/|\\)$/, '');
     }
+
     function showError(error) {
         if (error.status === 403) {
             $('#403-error-modal').modal();
@@ -896,6 +868,7 @@ $.connection.hub.start().done(function () {
         // Should we also display a '403 Forbidden' toast? It's probably too much.
         // showErrorAsToast(error);
     }
+
     function showErrorAsToast(error) {
         viewModel.processing(false);
         // Check if 'error' has a status property.
@@ -921,7 +894,9 @@ $.connection.hub.start().done(function () {
         // 'error' is a string
         else toast(error);
     }
+
 });
+
 // Toast notifications for backend errors
 function toast(errorMsg) {
     var scaffold = '\
@@ -933,7 +908,7 @@ function toast(errorMsg) {
                 <p><strong>ERROR</strong></p>' +
         errorMsg +
         '</div>\
-    </div>';
+        </div>';
     var item = $(scaffold);
     $('#toast').append($(item));
     $(item).animate({ 'right': '12px' }, 'fast');
@@ -944,6 +919,7 @@ function toast(errorMsg) {
         });
     });
 }
+
 function removeAllToasts() {
     $('.notification').remove();
-} 
+}
