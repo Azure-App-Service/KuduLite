@@ -43,10 +43,12 @@ namespace Kudu.Services.Deployment
             _traceFactory = traceFactory;
         }
 
+
         [HttpPost]
         [DisableRequestSizeLimit]
         [DisableFormValueModelBinding]
-        public async Task<IActionResult> ZipPushDeploy(
+        [Route("api/zipdeploy")]
+        public async Task<IActionResult> ZipPushDeployMultiPart(
             [FromQuery] bool isAsync = false,
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
@@ -56,18 +58,43 @@ namespace Kudu.Services.Deployment
             using (_tracer.Step("ZipPushDeploy"))
             {
                 var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
-                //var zipFileName = Path.ChangeExtension(Path.GetRandomFileName(), "zip");
-                //var zipFilePath = Path.Combine(_environment.ZipTempPath, zipFileName);
-                FormValueProvider formModel;
                 using (_tracer.Step("Writing zip file to {0}", zipFilePath))
                 {
-                    using (var file = System.IO.File.Create(zipFilePath))
+
+                    if (HttpContext.Request.ContentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                     {
-                        formModel = await Request.StreamFile(file);
+                        FormValueProvider formModel;
+                        using (_tracer.Step("Writing zip file to {0}", zipFilePath))
+                        {
+                            using (var file = System.IO.File.Create(zipFilePath))
+                            {
+                                formModel = await Request.StreamFile(file);
+                            }
+                        } 
+                          
                     }
+                    else
+                    {
+                        using (var file = System.IO.File.Create(zipFilePath))
+                        {
+                            await Request.Body.CopyToAsync(file);
+                        } 
+                    }       
                 }
-                 
-                var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
+                return await ZipDeployHelper(zipFilePath, isAsync, author, authorEmail, deployer, message);
+            }
+        }
+
+
+        public async Task<IActionResult> ZipDeployHelper(
+            string zipFilePath,
+            bool isAsync,
+            string author,
+            string authorEmail,
+            string deployer,
+            string message)
+        {
+            var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
                 {
                     AllowDeploymentWhileScmDisabled = true,
                     Deployer = deployer,
@@ -114,7 +141,6 @@ namespace Kudu.Services.Deployment
                     default:
                         return BadRequest();
                 }
-            }
         }
 
         private async Task LocalZipFetch(IRepository repository, DeploymentInfoBase deploymentInfo, string targetBranch, ILogger logger, ITracer tracer)

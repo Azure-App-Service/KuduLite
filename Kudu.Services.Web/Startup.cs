@@ -29,6 +29,7 @@ using Kudu.Core.SSHKey;
 using Kudu.Services.Diagnostics;
 using Kudu.Services.Performance;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.Azure.Web.DataProtection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
