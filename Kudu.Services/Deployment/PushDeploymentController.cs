@@ -47,11 +47,11 @@ namespace Kudu.Services.Deployment
         [DisableRequestSizeLimit]
         [DisableFormValueModelBinding]
         public async Task<IActionResult> ZipPushDeploy(
-            bool isAsync = false,
-            string author = null,
-            string authorEmail = null,
-            string deployer = DefaultDeployer,
-            string message = DefaultMessage)
+            [FromQuery] bool isAsync = false,
+            [FromQuery] string author = null,
+            [FromQuery] string authorEmail = null,
+            [FromQuery] string deployer = DefaultDeployer,
+            [FromQuery] string message = DefaultMessage)
         {
             using (_tracer.Step("ZipPushDeploy"))
             {
@@ -66,19 +66,6 @@ namespace Kudu.Services.Deployment
                         formModel = await Request.StreamFile(file);
                     }
                 }
-                 
-                /*
-                var bindingSuccessful = await TryUpdateModelAsync(viewModel, prefix: "",
-                    valueProvider: formModel);
- 
-                if (!bindingSuccessful)
-                {
-                    if (!ModelState.IsValid)
-                    {
-                        return BadRequest(ModelState);
-                    }
-                }
-                */
                  
                 var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
                 {

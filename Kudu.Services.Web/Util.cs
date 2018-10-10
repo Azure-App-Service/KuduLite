@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Environment = Kudu.Core.Environment;
 
 namespace Kudu.Services.Web
 {

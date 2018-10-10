@@ -31,7 +31,7 @@ namespace Kudu.Services
                 obj["siteLastModified"] = System.IO.File.ReadAllText(lastModifiedFile);
             }
 
-            return Ok(obj);
+            return Json(obj);
         }
     }
 }

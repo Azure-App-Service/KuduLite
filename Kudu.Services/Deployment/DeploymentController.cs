@@ -600,9 +600,6 @@ namespace Kudu.Services.Deployment
         {
             try
             {
-                // CORE TODO double check this; we no longer have Request.Content
-                //var payload = Request.Content.ReadAsAsync<JObject>().Result;
-
                 JObject payload;
                 using (var reader = new StreamReader(Request.Body))
                 {

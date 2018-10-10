@@ -92,12 +92,8 @@ namespace Kudu.Services.Web.Tracing
             _lastRequestDateTime = DateTime.UtcNow;
 
             /* CORE TODO missing functionality:
-             * UpTime and LastRequestTime - Underway
-             * LogBeginRequest (bypass ITracer entirely and log straight to ETW)   - Underway
              * Disallow GET requests from CSM extensions bridge
-             * TryConvertSpecialHeadersToEnvironmentVariable - Done
              * Razor dummy extension for vfs - Do we need it for Linux Kudu?
-             * 
              */
             
             

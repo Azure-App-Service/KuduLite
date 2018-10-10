@@ -10,6 +10,7 @@ using Kudu.Contracts.Settings;
 using Kudu.Core.Settings;
 using Kudu.Core;
 using System.IO;
+using System.Net.Http.Formatting;
 using Microsoft.AspNetCore.Http;
 using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
@@ -60,7 +61,6 @@ namespace Kudu.Services.Web
         /// to the container. It uses the Extension pattern.
         /// </summary>
         /// <todo>
-        ///   CORE TODO trace exceptions here, see the catch in NinjectServices.Start()
         ///   CORE TODO Remove initializing contextAccessor : This is new. See if over time we can refactor away the need for this?
         ///   It's kind of a quick hack/compatibility shim. Ideally you want to get the request context only from where
         ///   it's specifically provided to you (Request.HttpContext in a controller, or as an Invoke() parameter in
@@ -358,7 +358,7 @@ namespace Kudu.Services.Web
             //GlobalConfiguration.Configuration.Formatters.Clear();
             //GlobalConfiguration.Configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
 
-            //var jsonFormatter = new JsonMediaTypeFormatter();
+            var jsonFormatter = new JsonMediaTypeFormatter();
             //GlobalConfiguration.Configuration.Formatters.Add(jsonFormatter);
             //GlobalConfiguration.Configuration.DependencyResolver = new NinjectWebApiDependencyResolver(kernel);
             //GlobalConfiguration.Configuration.Filters.Add(new TraceExceptionFilterAttribute());

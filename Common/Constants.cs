@@ -25,7 +25,7 @@ namespace Kudu
         public const string SiteFolder = @"site";
         public const string LogFilesPath = @"LogFiles";
         public const string ApplicationLogFilesDirectory = "Application";
-        public readonly static string TracePath = Path.Combine(LogFilesPath, "kudu", "trace");
+        public static readonly string TracePath = Path.Combine(LogFilesPath, "kudu", "trace");
         public const string SiteExtensionLogsDirectory = "siteExtLogs";
         public const string DeploySettingsPath = "settings.xml";
         public const string ActiveDeploymentFile = "active";

@@ -109,6 +109,12 @@ namespace Kudu.Contracts.Settings
 
             return StringUtils.IsTrueLike(value);
         }
+        
+        public static bool LogTriggeredJobsToAppLogs(this IDeploymentSettingsManager settings)
+        {
+            string value = settings.GetValue(SettingsKeys.WebJobsLogTriggeredJobsToAppLogs);
+            return StringUtils.IsTrueLike(value);
+        }
 
         public static string GetBranch(this IDeploymentSettingsManager settings)
         {
