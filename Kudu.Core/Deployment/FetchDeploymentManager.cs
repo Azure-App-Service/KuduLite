@@ -217,6 +217,7 @@ namespace Kudu.Core.Deployment
                                 changeSet,
                                 deploymentInfo.Deployer,
                                 clean: false,
+                                deploymentInfo: deploymentInfo,
                                 needFileUpdate: deploySpecificCommitId,
                                 fullBuildByDefault: deploymentInfo.DoFullBuildByDefault);
                         }

@@ -23,8 +23,8 @@ namespace Kudu.Services.Deployment
 {
     public class PushDeploymentController : Controller
     {
-        private const string DefaultDeployer = "Zip-Push";
-        private const string DefaultMessage = "Created via zip push deployment";
+        private const string DefaultDeployer = "Push-Deployer";
+        private const string DefaultMessage = "Created via a push deployment";
 
         private readonly IEnvironment _environment;
         private readonly IFetchDeploymentManager _deploymentManager;
@@ -47,8 +47,7 @@ namespace Kudu.Services.Deployment
         [HttpPost]
         [DisableRequestSizeLimit]
         [DisableFormValueModelBinding]
-        [Route("api/zipdeploy")]
-        public async Task<IActionResult> ZipPushDeployMultiPart(
+        public async Task<IActionResult> ZipPushDeploy(
             [FromQuery] bool isAsync = false,
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
@@ -57,51 +56,14 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("ZipPushDeploy"))
             {
-                var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
-                using (_tracer.Step("Writing zip file to {0}", zipFilePath))
-                {
-
-                    if (HttpContext.Request.ContentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
-                    {
-                        FormValueProvider formModel;
-                        using (_tracer.Step("Writing zip file to {0}", zipFilePath))
-                        {
-                            using (var file = System.IO.File.Create(zipFilePath))
-                            {
-                                formModel = await Request.StreamFile(file);
-                            }
-                        } 
-                          
-                    }
-                    else
-                    {
-                        using (var file = System.IO.File.Create(zipFilePath))
-                        {
-                            await Request.Body.CopyToAsync(file);
-                        } 
-                    }       
-                }
-                return await ZipDeployHelper(zipFilePath, isAsync, author, authorEmail, deployer, message);
-            }
-        }
-
-
-        public async Task<IActionResult> ZipDeployHelper(
-            string zipFilePath,
-            bool isAsync,
-            string author,
-            string authorEmail,
-            string deployer,
-            string message)
-        {
-            var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
+                
+                var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
                 {
                     AllowDeploymentWhileScmDisabled = true,
                     Deployer = deployer,
                     IsContinuous = false,
                     AllowDeferredDeployment = false,
                     IsReusable = false,
-                    RepositoryUrl = zipFilePath,
                     TargetChangeset = DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed zip file"),
                     CommitId = null,
                     RepositoryType = RepositoryType.None,
@@ -112,36 +74,110 @@ namespace Kudu.Services.Deployment
                     Message = message
                 };
 
-                var result = await _deploymentManager.FetchDeploy(deploymentInfo, isAsync, UriHelper.GetRequestUri(Request), "HEAD");
-
-                switch (result)
-                {
-                    case FetchDeploymentRequestResult.RunningAynschronously:
-                        if (isAsync)
-                        {
-                            // latest deployment keyword reserved to poll till deployment done
-                            Response.GetTypedHeaders().Location =
-                                new Uri(UriHelper.GetRequestUri(Request),
-                                String.Format("/api/deployments/{0}?deployer={1}&time={2}", Constants.LatestDeployment, deploymentInfo.Deployer, DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ")));
-                        }
-                        return Accepted();
-                    case FetchDeploymentRequestResult.ForbiddenScmDisabled:
-                        // Should never hit this for zip push deploy
-                        _tracer.Trace("Scm is not enabled, reject all requests.");
-                        return Forbid();
-                    case FetchDeploymentRequestResult.ConflictAutoSwapOngoing:
-                        return StatusCode(StatusCodes.Status409Conflict, Resources.Error_AutoSwapDeploymentOngoing);
-                    case FetchDeploymentRequestResult.Pending:
-                        // Shouldn't happen here, as we disallow deferral for this use case
-                        return Accepted();
-                    case FetchDeploymentRequestResult.RanSynchronously:
-                        return Ok();
-                    case FetchDeploymentRequestResult.ConflictDeploymentInProgress:
-                        return StatusCode(StatusCodes.Status409Conflict, Resources.Error_DeploymentInProgress);
-                    default:
-                        return BadRequest();
-                }
+                return await PushDeployAsync(deploymentInfo, isAsync);
+            }
         }
+        
+        
+        [HttpPost]
+        [DisableRequestSizeLimit]
+        [DisableFormValueModelBinding]
+        public async Task<IActionResult> WarPushDeploy(
+            [FromQuery] bool isAsync = false,
+            [FromQuery] string author = null,
+            [FromQuery] string authorEmail = null,
+            [FromQuery] string deployer = DefaultDeployer,
+            [FromQuery] string message = DefaultMessage)
+        {
+            using (_tracer.Step("WarPushDeploy"))
+            {
+                var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
+                {
+                    AllowDeploymentWhileScmDisabled = true,
+                    Deployer = deployer,
+                    TargetPath = @"webapps\ROOT",
+                    WatchedFilePath = @"WEB-INF\web.xml",
+                    IsContinuous = false,
+                    AllowDeferredDeployment = false,
+                    IsReusable = false,
+                    TargetChangeset = DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed war file"),
+                    CommitId = null,
+                    RepositoryType = RepositoryType.None,
+                    Fetch = LocalZipFetch,
+                    DoFullBuildByDefault = false,
+                    Author = author,
+                    AuthorEmail = authorEmail,
+                    Message = message
+                };
+
+                return await PushDeployAsync(deploymentInfo, isAsync);
+            }
+        }
+        
+        
+         private async Task<IActionResult> PushDeployAsync(
+            ZipDeploymentInfo deploymentInfo,
+            bool isAsync)
+        {
+            var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
+
+            using (_tracer.Step("Writing zip file to {0}", zipFilePath))
+            {
+
+                if (HttpContext.Request.ContentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+                {
+                    FormValueProvider formModel;
+                    using (_tracer.Step("Writing zip file to {0}", zipFilePath))
+                    {
+                        using (var file = System.IO.File.Create(zipFilePath))
+                        {
+                            formModel = await Request.StreamFile(file);
+                        }
+                    } 
+                          
+                }
+                else
+                {
+                    using (var file = System.IO.File.Create(zipFilePath))
+                    {
+                        await Request.Body.CopyToAsync(file);
+                    } 
+                }       
+            }
+
+            deploymentInfo.RepositoryUrl = zipFilePath;
+
+            var result = await _deploymentManager.FetchDeploy(deploymentInfo, isAsync, UriHelper.GetRequestUri(Request), "HEAD");
+
+            switch (result)
+            {
+                case FetchDeploymentRequestResult.RunningAynschronously:
+                    if (isAsync)
+                    {
+                        // latest deployment keyword reserved to poll till deployment done
+                        Response.GetTypedHeaders().Location =
+                            new Uri(UriHelper.GetRequestUri(Request),
+                                String.Format("/api/deployments/{0}?deployer={1}&time={2}", Constants.LatestDeployment, deploymentInfo.Deployer, DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ")));
+                    }
+                    return Accepted();
+                case FetchDeploymentRequestResult.ForbiddenScmDisabled:
+                    // Should never hit this for zip push deploy
+                    _tracer.Trace("Scm is not enabled, reject all requests.");
+                    return Forbid();
+                case FetchDeploymentRequestResult.ConflictAutoSwapOngoing:
+                    return StatusCode(StatusCodes.Status409Conflict, Resources.Error_AutoSwapDeploymentOngoing);
+                case FetchDeploymentRequestResult.Pending:
+                    // Shouldn't happen here, as we disallow deferral for this use case
+                    return Accepted();
+                case FetchDeploymentRequestResult.RanSynchronously:
+                    return Ok();
+                case FetchDeploymentRequestResult.ConflictDeploymentInProgress:
+                    return StatusCode(StatusCodes.Status409Conflict, Resources.Error_DeploymentInProgress);
+                default:
+                    return BadRequest();
+            }
+        }
+
 
         private async Task LocalZipFetch(IRepository repository, DeploymentInfoBase deploymentInfo, string targetBranch, ILogger logger, ITracer tracer)
         {

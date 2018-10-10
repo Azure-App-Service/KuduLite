@@ -168,6 +168,7 @@ namespace Kudu.Core.Deployment
             ChangeSet changeSet,
             string deployer,
             bool clean,
+            DeploymentInfoBase deploymentInfo = null,
             bool needFileUpdate = true,
             bool fullBuildByDefault = true)
         {
@@ -246,7 +247,7 @@ namespace Kudu.Core.Deployment
                         innerLogger = null;
 
                         // Perform the build deployment of this changeset
-                        await Build(changeSet, tracer, deployStep, repository, deploymentAnalytics, fullBuildByDefault);
+                        await Build(changeSet, tracer, deployStep, repository, deploymentInfo, deploymentAnalytics, fullBuildByDefault);
 
                         if (!OSDetector.IsOnWindows() && _settings.RestartAppContainerOnGitDeploy())
                         {
@@ -550,6 +551,7 @@ namespace Kudu.Core.Deployment
             ITracer tracer,
             IDisposable deployStep,
             IRepository repository,
+            DeploymentInfoBase deploymentInfo,
             DeploymentAnalytics deploymentAnalytics,
             bool fullBuildByDefault)
         {
@@ -646,7 +648,7 @@ namespace Kudu.Core.Deployment
                     Tracer = tracer,
                     Logger = logger,
                     GlobalLogger = _globalLogger,
-                    OutputPath = GetOutputPath(_environment, perDeploymentSettings),
+                    OutputPath = GetOutputPath(deploymentInfo, _environment, perDeploymentSettings),
                     BuildTempPath = buildTempPath,
                     CommitId = id,
                     Message = changeSet.Message
@@ -676,9 +678,9 @@ namespace Kudu.Core.Deployment
 
                         await PostDeploymentHelper.SyncFunctionsTriggers(_environment.RequestId, _environment.SiteRestrictedJwt, new PostDeploymentTraceListener(tracer, logger));
 
-                        if (_settings.TouchWebConfigAfterDeployment())
+                        if (_settings.TouchWatchedFileAfterDeployment())
                         {
-                            TryTouchWebConfig(context);
+                            TryTouchWatchedFile(context, deploymentInfo);
                         }
 
                         FinishDeployment(id, deployStep);
@@ -757,11 +759,16 @@ namespace Kudu.Core.Deployment
             deploymentAnalytics.Error = ex.ToString();
         }
 
-        private static string GetOutputPath(IEnvironment environment, IDeploymentSettingsManager perDeploymentSettings)
+        private static string GetOutputPath(DeploymentInfoBase deploymentInfo, IEnvironment environment, IDeploymentSettingsManager perDeploymentSettings)
         {
             string targetPath = perDeploymentSettings.GetTargetPath();
-
-            if (!String.IsNullOrEmpty(targetPath))
+            
+            if (string.IsNullOrWhiteSpace(targetPath))
+            {
+                targetPath = deploymentInfo?.TargetPath;
+            }
+            
+            if (!string.IsNullOrWhiteSpace(targetPath))
             {
                 targetPath = targetPath.Trim('\\', '/');
                 return Path.GetFullPath(Path.Combine(environment.WebRootPath, targetPath));
@@ -846,15 +853,21 @@ namespace Kudu.Core.Deployment
             }
         }
 
-        private static void TryTouchWebConfig(DeploymentContext context)
-        {
+        private static void TryTouchWatchedFile(DeploymentContext context, DeploymentInfoBase deploymentInfo)
+        {	        
             try
             {
-                // Touch web.config
-                string webConfigPath = Path.Combine(context.OutputPath, "web.config");
-                if (File.Exists(webConfigPath))
+                string watchedFileRelativePath = deploymentInfo?.WatchedFilePath;
+                if (string.IsNullOrWhiteSpace(watchedFileRelativePath))
                 {
-                    File.SetLastWriteTimeUtc(webConfigPath, DateTime.UtcNow);
+                    watchedFileRelativePath = "web.config";
+                }
+                
+                string watchedFileAbsolutePath = Path.Combine(context.OutputPath, watchedFileRelativePath);
+
+                if (File.Exists(watchedFileAbsolutePath))
+                {
+                    File.SetLastWriteTimeUtc(watchedFileAbsolutePath, DateTime.UtcNow);
                 }
             }
             catch (Exception ex)
