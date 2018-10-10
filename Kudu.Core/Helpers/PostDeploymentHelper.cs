@@ -122,9 +122,20 @@ namespace Kudu.Core.Helpers
 
             VerifyEnvironments();
 
-            var funtionsPath = System.Environment.ExpandEnvironmentVariables(@"%HOME%\site\wwwroot");
+            var functionsPath = System.Environment.ExpandEnvironmentVariables(@"%HOME%\site\wwwroot");
+            
+            // Read host.json 
+            // Get HubName property for Durable Functions
+            string taskHubName = null;
+            if (File.Exists(Path.Combine(functionsPath, Constants.FunctionsHostConfigFile)))
+            {
+                string hostJson = Path.Combine(functionsPath, Constants.FunctionsHostConfigFile);
+                taskHubName = GetTaskHub(hostJson);
+            }
+
+            
             var triggers = Directory
-                    .GetDirectories(funtionsPath)
+                    .GetDirectories(functionsPath)
                     .Select(d => Path.Combine(d, Constants.FunctionsConfigFile))
                     .Where(File.Exists)
                     .SelectMany(f => DeserializeFunctionTrigger(f))
@@ -133,6 +144,21 @@ namespace Kudu.Core.Helpers
             if (!string.IsNullOrEmpty(RoutingRunTimeVersion))
             {
                 triggers.Add(new Dictionary<string, object> { { "type", "routingTrigger" } });
+            }
+            
+            // Add hubName to each Durable Functions trigger
+            if (!string.IsNullOrEmpty(taskHubName))
+            {
+                foreach (var trigger in triggers)
+                {
+                    if (trigger.TryGetValue("type", out object typeValue)
+                        && typeValue != null
+                        && (trigger["type"].ToString().Equals("orchestrationTrigger", StringComparison.OrdinalIgnoreCase)
+                            || trigger["type"].ToString().Equals("activityTrigger", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        trigger["taskHubName"] = taskHubName;
+                    }
+                }
             }
 
             var content = JsonConvert.SerializeObject(triggers);
@@ -158,6 +184,22 @@ namespace Kudu.Core.Helpers
             // this couples with sync function triggers
             await SyncLogicAppJson(requestId, tracer);
         }
+        
+        private static string GetTaskHub(string hostConfigPath)
+        {
+            string taskHubName = null;
+            Dictionary<string, object> json = (Dictionary<string, object>)JsonConvert.DeserializeObject(File.ReadAllText(hostConfigPath));
+            if (json.TryGetValue(Constants.DurableTask, out object durableTaskValue) && durableTaskValue != null)
+            {
+                Dictionary<string, object> kvp = (Dictionary<string, object>)json[Constants.DurableTask];
+                if (kvp.TryGetValue(Constants.HubName, out object hubNameValue) && hubNameValue != null)
+                {
+                    taskHubName = kvp[Constants.HubName].ToString();
+                }
+            }
+            return taskHubName;
+        }
+
 
         public static async Task SyncLogicAppJson(string requestId, TraceListener tracer)
         {
