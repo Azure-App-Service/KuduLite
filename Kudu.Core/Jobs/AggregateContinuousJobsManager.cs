@@ -18,7 +18,7 @@ namespace Kudu.Core.Jobs
             IHttpContextAccessor httpContextAccessor)
             : base(new ContinuousJobsManager(environment.JobsBinariesPath, traceFactory, environment, settings, analytics, httpContextAccessor),
                 excludedList => new ContinuousJobsManager(environment.SecondaryJobsBinariesPath, traceFactory, environment, settings, analytics, httpContextAccessor, excludedList),
-                settings)
+                settings, environment, traceFactory, Constants.ContinuousPath)
         {
         }
         public void DisableJob(string jobName)

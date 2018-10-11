@@ -4,19 +4,34 @@ using System.IO;
 using System.Linq;
 using Kudu.Contracts.Jobs;
 using Kudu.Contracts.Settings;
- namespace Kudu.Core.Jobs
+using Kudu.Core.Tracing;
+
+namespace Kudu.Core.Jobs
 {
     public abstract class AggregateJobsManagerBase<TJob> where TJob : JobBase, new()
     {
         protected JobsManagerBase<TJob> PrimaryJobManager { get; private set; }
         protected JobsManagerBase<TJob> SecondaryJobManager { get; private set; }
         private readonly IDeploymentSettingsManager _settings;
-         protected AggregateJobsManagerBase(JobsManagerBase<TJob> primaryManager, Func<IEnumerable<string>, JobsManagerBase<TJob>> secondaryManagerFactory, IDeploymentSettingsManager settings)
+        private readonly IEnvironment _environment;
+        private readonly ITraceFactory _traceFactory;
+        private readonly string _jobType;
+        
+        protected AggregateJobsManagerBase(
+             JobsManagerBase<TJob> primaryManager, 
+             Func<IEnumerable<string>, JobsManagerBase<TJob>> secondaryManagerFactory, 
+             IDeploymentSettingsManager settings, 
+             IEnvironment environment, 
+             ITraceFactory traceFactory, 
+             string jobType)
         {
             PrimaryJobManager = primaryManager;
             // pass the list of primary job names so the second manager can excluded them
             SecondaryJobManager = secondaryManagerFactory(PrimaryJobManager.ListJobs(forceRefreshCache: false).Select(j => j.Name));
             _settings = settings;
+            _environment = environment;
+            _traceFactory = traceFactory;
+            _jobType = jobType;
         }
          public void DeleteJob(string jobName)
         {
@@ -34,8 +49,9 @@ using Kudu.Contracts.Settings;
         }
          public void CleanupDeletedJobs()
         {
-            PrimaryJobManager.CleanupDeletedJobs();
-            SecondaryJobManager.CleanupDeletedJobs();
+            var jobs = ListJobs(forceRefreshCache: true).Select(j => j.Name);
+            SecondaryJobManager.CleanupDeletedJobs();	            var jobsDataPath = Path.Combine(_environment.JobsDataPath, _jobType);
+            JobsManagerBase.CleanupDeletedJobs(jobs, jobsDataPath, _traceFactory.GetTracer());
         }
          public TJob CreateOrReplaceJobFromFileStream(Stream scriptFileStream, string jobName, string scriptFileName)
             => GetWriteJobManagerForJob(jobName).CreateOrReplaceJobFromFileStream(scriptFileStream, jobName, scriptFileName);

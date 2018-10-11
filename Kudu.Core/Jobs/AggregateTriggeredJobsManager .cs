@@ -12,7 +12,7 @@ namespace Kudu.Core.Jobs
         public AggregateTriggeredJobsManager(ITraceFactory traceFactory, IEnvironment environment, IDeploymentSettingsManager settings, IAnalytics analytics, IWebHooksManager hooksManager,IHttpContextAccessor httpContextAccessor)
             : base(new TriggeredJobsManager(environment.JobsBinariesPath, traceFactory, environment, settings, analytics, hooksManager, httpContextAccessor),
                 excludedList => new TriggeredJobsManager(environment.SecondaryJobsBinariesPath, traceFactory, environment, settings, analytics, hooksManager, httpContextAccessor, excludedList),
-                settings)
+                settings, environment, traceFactory, Constants.TriggeredPath)
         {
         }
         public TriggeredJobHistory GetJobHistory(string jobName, string etag, out string currentETag)
