@@ -683,10 +683,10 @@ namespace Kudu.Core.Deployment
                         builder.PostBuild(context);
 
                         await PostDeploymentHelper.SyncFunctionsTriggers(
-                            _environment.RequestId,
+                            _environment.RequestId, 
                             _environment.SiteRestrictedJwt, 
-                            new PostDeploymentTraceListener(tracer, logger),
-                            deploymentInfo.SyncFunctionsTriggersPath);
+                            new PostDeploymentTraceListener(tracer, logger), 
+                            deploymentInfo?.SyncFunctionsTriggersPath);
 
                         if (_settings.TouchWatchedFileAfterDeployment())
                         {
