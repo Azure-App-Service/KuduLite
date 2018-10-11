@@ -38,6 +38,7 @@ namespace Kudu.Core
         private readonly string _jobsDataPath;
         private readonly string _jobsBinariesPath;
         private readonly string _sitePackagesPath;
+        private readonly string _secondaryJobsBinariesPath;
 
         // This ctor is used only in unit tests
         public Environment(
@@ -84,6 +85,7 @@ namespace Kudu.Core
 
             _jobsDataPath = Path.Combine(_dataPath, Constants.JobsPath);
             _jobsBinariesPath = _jobsDataPath;
+            _secondaryJobsBinariesPath = _jobsDataPath;
 
             _logFilesPath = Path.Combine(rootPath, Constants.LogFilesPath);
             _applicationLogFilesPath = Path.Combine(_logFilesPath, Constants.ApplicationLogFilesDirectory);
@@ -140,6 +142,7 @@ namespace Kudu.Core
             _dataPath = Path.Combine(rootPath, Constants.DataPath);
             _jobsDataPath = Path.Combine(_dataPath, Constants.JobsPath);
             _jobsBinariesPath = Path.Combine(_webRootPath, Constants.AppDataPath, Constants.JobsPath);
+            _secondaryJobsBinariesPath = Path.Combine(SiteRootPath, Constants.JobsPath);
             string userDefinedWebJobRoot = System.Environment.GetEnvironmentVariable(SettingsKeys.WebJobsRootPath);
             if (!String.IsNullOrEmpty(userDefinedWebJobRoot))
             {
@@ -324,6 +327,11 @@ namespace Kudu.Core
         public string JobsBinariesPath
         {
             get { return _jobsBinariesPath; }
+        }
+
+        public string SecondaryJobsBinariesPath
+        {
+            get { return _secondaryJobsBinariesPath; }
         }
 
         public string SiteExtensionSettingsPath

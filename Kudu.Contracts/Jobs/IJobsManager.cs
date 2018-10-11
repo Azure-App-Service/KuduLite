@@ -7,6 +7,8 @@ namespace Kudu.Contracts.Jobs
     public interface IJobsManager<TJob> where TJob : JobBase, new()
     {
         IEnumerable<TJob> ListJobs(bool forceRefreshCache);
+        
+        bool HasJob(string jobName);
 
         TJob GetJob(string jobName);
 
