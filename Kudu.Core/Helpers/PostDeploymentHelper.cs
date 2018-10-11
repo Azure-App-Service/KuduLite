@@ -155,7 +155,7 @@ namespace Kudu.Core.Helpers
             }
             
             // Add hubName, connection, to each Durable Functions trigger
-            if (durableConfig != null && durableConfig.ContainsKey(Constants.HubName))
+            if (durableConfig != null)
             {
                 foreach (var trigger in triggers)
                 {
@@ -165,8 +165,14 @@ namespace Kudu.Core.Helpers
                         && (typeValue.ToString().Equals("orchestrationTrigger", StringComparison.OrdinalIgnoreCase)
                             || typeValue.ToString().Equals("activityTrigger", StringComparison.OrdinalIgnoreCase)))
                     {
-                        trigger["taskHubName"] = durableConfig[Constants.HubName];
-                        trigger["connection"] = durableConfig[Constants.DurableTaskStorageConnection];
+                        if (durableConfig.ContainsKey(Constants.HubName))
+                        {
+                            trigger["taskHubName"] = durableConfig[Constants.HubName];
+                        }
+                        if (durableConfig.ContainsKey(Constants.DurableTaskStorageConnection))
+                        {
+                            trigger[Constants.DurableTaskStorageConnection] = durableConfig[Constants.DurableTaskStorageConnection];
+                        }
                     }
                 }
             }
