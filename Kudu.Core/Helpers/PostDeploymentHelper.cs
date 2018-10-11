@@ -132,11 +132,11 @@ namespace Kudu.Core.Helpers
             
             // Read host.json 
             // Get HubName property for Durable Functions
-            string taskHubName = null;
+            Dictionary<string, string> durableConfig = null;
             string hostJson = Path.Combine(functionsPath, Constants.FunctionsHostConfigFile);
             if (File.Exists(hostJson))
             {
-                taskHubName = GetTaskHub(hostJson);
+                ReadDurableConfig(hostJson, out durableConfig);
             }
 
             // Collect each functions.json
@@ -154,8 +154,8 @@ namespace Kudu.Core.Helpers
                 triggers.Add(routing);
             }
             
-            // Add hubName to each Durable Functions triggers
-            if (!string.IsNullOrEmpty(taskHubName))
+            // Add hubName, connection, to each Durable Functions trigger
+            if (durableConfig != null && durableConfig.ContainsKey(Constants.HubName))
             {
                 foreach (var trigger in triggers)
                 {
@@ -165,7 +165,8 @@ namespace Kudu.Core.Helpers
                         && (typeValue.ToString().Equals("orchestrationTrigger", StringComparison.OrdinalIgnoreCase)
                             || typeValue.ToString().Equals("activityTrigger", StringComparison.OrdinalIgnoreCase)))
                     {
-                        trigger["taskHubName"] = taskHubName;
+                        trigger["taskHubName"] = durableConfig[Constants.HubName];
+                        trigger["connection"] = durableConfig[Constants.DurableTaskStorageConnection];
                     }
                 }
             }
@@ -194,9 +195,9 @@ namespace Kudu.Core.Helpers
             await SyncLogicAppJson(requestId, tracer);
         }
         
-        private static string GetTaskHub(string hostConfigPath)
+        private static void ReadDurableConfig(string hostConfigPath, out Dictionary<string, string> config)
         {
-            string taskHubName = null;
+            config = new Dictionary<string, string>();
             var json = JObject.Parse(File.ReadAllText(hostConfigPath));
             
             JToken durableTaskValue;
@@ -205,13 +206,17 @@ namespace Kudu.Core.Helpers
             if (json.TryGetValue(Constants.DurableTask, StringComparison.OrdinalIgnoreCase, out durableTaskValue) && durableTaskValue != null)
             {
                 var kvp = (JObject)durableTaskValue;
-                JToken hubNameValue;
-                if (kvp.TryGetValue(Constants.HubName, StringComparison.OrdinalIgnoreCase, out hubNameValue) && hubNameValue != null)
+                JToken nameValue;
+                if (kvp.TryGetValue(Constants.HubName, StringComparison.OrdinalIgnoreCase, out nameValue) && nameValue != null)
                 {
-                    taskHubName = kvp[Constants.HubName].ToString();
+                    config.Add(Constants.HubName, nameValue.ToString());
+                }
+                
+                if (kvp.TryGetValue(Constants.DurableTaskStorageConnection, StringComparison.OrdinalIgnoreCase, out nameValue) && nameValue != null)
+                {
+                    config.Add(Constants.DurableTaskStorageConnection, nameValue.ToString());
                 }
             }
-            return taskHubName;
         }
 
 
