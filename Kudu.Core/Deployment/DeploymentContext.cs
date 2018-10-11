@@ -13,6 +13,8 @@ namespace Kudu.Core.Deployment
         /// Path to the next manifest file.
         /// </summary>
         public string NextManifestFilePath { get; set; }
+ 
+        public bool IgnoreManifest { get; set; }
 
         /// <summary>
         /// Writes diagnostic output to the trace.

@@ -91,15 +91,22 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("WarPushDeploy"))
             {
+                var appName = HttpContext.Request.Query["name"].ToString();
+                if (string.IsNullOrWhiteSpace(appName))
+                {
+                    appName = "ROOT";
+                }
+                
                 var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
                 {
                     AllowDeploymentWhileScmDisabled = true,
                     Deployer = deployer,
-                    TargetPath = Path.Combine("webapps", "ROOT"),
+                    TargetPath = Path.Combine("webapps", appName),
                     WatchedFilePath = Path.Combine("WEB-INF", "web.xml"),
                     IsContinuous = false,
                     AllowDeferredDeployment = false,
                     IsReusable = false,
+                    CleanupTargetDirectory = true, // For now, always cleanup the target directory. If needed, make it configurable
                     TargetChangeset = DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed war file"),
                     CommitId = null,
                     RepositoryType = RepositoryType.None,

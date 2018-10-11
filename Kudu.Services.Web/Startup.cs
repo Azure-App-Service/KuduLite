@@ -600,14 +600,14 @@ namespace Kudu.Services.Web
         }
 
         // <summary>
-        // 
+        // Used for Reverse Proxying. Forwards a request to another path based on a
+        // relative path to Kestrel
         // </summary>
         // <param name="app"></param>
-        // <param name="httpContext"></param>
         // <param name="relativeUrl"></param>
         // <param name="scheme"></param>
-        // <param name="host"></param>
-        // <param name="port"></param>
+        // <param name="host">The proxy server host</param>
+        // <param name="port">The proxy server port. This field is always required</param>
         private static void ProxyRequestsIfRelativeUrlMatch(
             string relativeUrl,
             string scheme,
@@ -615,7 +615,6 @@ namespace Kudu.Services.Web
             string port,
             IApplicationBuilder app)
         {
-            // Console.WriteLine("Forwarding request"+relativeUrl);
             var containsRelativePath = new Func<HttpContext, bool>(i =>
                 i.Request.Path.Value.StartsWith(relativeUrl, StringComparison.OrdinalIgnoreCase));
             

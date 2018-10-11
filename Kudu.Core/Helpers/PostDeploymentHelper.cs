@@ -61,12 +61,6 @@ namespace Kudu.Core.Helpers
             get { return System.Environment.GetEnvironmentVariable(Constants.FunctionRunTimeVersion); }
         }
 
-        // ROUTING_EXTENSION_VERSION = 1.0
-        private static string RoutingRunTimeVersion
-        {
-            get { return System.Environment.GetEnvironmentVariable(Constants.RoutingRunTimeVersion); }
-        }
-
         // LOGICAPP_URL = [url to PUT logicapp.json to]
         private static string LogicAppUrl
         {
@@ -142,12 +136,14 @@ namespace Kudu.Core.Helpers
                     .SelectMany(f => DeserializeFunctionTrigger(f))
                     .ToList();
 
-            if (!string.IsNullOrEmpty(RoutingRunTimeVersion))
+            if (File.Exists(Path.Combine(functionsPath, Constants.ProxyConfigFile)))
             {
-                triggers.Add(new Dictionary<string, object> { { "type", "routingTrigger" } });
+                var routing = new JObject();
+                routing["type"] = "routingTrigger";
+                triggers.Add(routing);
             }
             
-            // Add hubName to each Durable Functions trigger
+            // Add hubName to each Durable Functions triggers
             if (!string.IsNullOrEmpty(taskHubName))
             {
                 foreach (var trigger in triggers)
