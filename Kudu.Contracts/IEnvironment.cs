@@ -29,5 +29,6 @@
         string RequestId { get; }               // e.g. x-arr-log-id or x-ms-request-id header value
         string SiteRestrictedJwt { get; }       // e.g. x-ms-site-restricted-jwt header value
         string KuduConsoleFullPath { get; }     // e.g. KuduConsole/kudu.dll
+        string SitePackagesPath { get; }        // e.g. /data/SitePackages
     }
 }

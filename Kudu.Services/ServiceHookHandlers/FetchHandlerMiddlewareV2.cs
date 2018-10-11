@@ -113,7 +113,12 @@ namespace Kudu.Services
                     case FetchDeploymentRequestResult.ConflictDeploymentInProgress:
                         context.Response.StatusCode = StatusCodes.Status409Conflict;
                         await context.Response.WriteAsync(Resources.Error_DeploymentInProgress);
-                        break;
+                        return;
+                    case FetchDeploymentRequestResult.ConflictRunFromRemoteZipConfigured:
+                        context.Response.StatusCode = StatusCodes.Status409Conflict;
+                        await context.Response.WriteAsync(Resources.Error_RunFromRemoteZipConfigured);
+                        return;
+                    case FetchDeploymentRequestResult.RanSynchronously:
                     default:
                         context.Response.StatusCode = StatusCodes.Status200OK;
                         break;

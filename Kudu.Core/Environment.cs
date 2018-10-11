@@ -37,6 +37,7 @@ namespace Kudu.Core
         private readonly string _dataPath;
         private readonly string _jobsDataPath;
         private readonly string _jobsBinariesPath;
+        private readonly string _sitePackagesPath;
 
         // This ctor is used only in unit tests
         public Environment(
@@ -54,6 +55,7 @@ namespace Kudu.Core
                 string nodeModulesPath,
                 string dataPath,
                 string siteExtensionSettingsPath,
+                string sitePackagesPath,
                 string requestId,
                 string siteRestrictedJwt,
                 IHttpContextAccessor httpContextAccessor)
@@ -88,6 +90,7 @@ namespace Kudu.Core
             _tracePath = Path.Combine(rootPath, Constants.TracePath);
             _analyticsPath = Path.Combine(tempPath ?? _logFilesPath, Constants.SiteExtensionLogsDirectory);
             _deploymentTracePath = Path.Combine(rootPath, Constants.DeploymentTracePath);
+            _sitePackagesPath = sitePackagesPath;
 
             RequestId = !string.IsNullOrEmpty(requestId) ? requestId : Guid.Empty.ToString();
             SiteRestrictedJwt = siteRestrictedJwt;
@@ -147,7 +150,8 @@ namespace Kudu.Core
                 // if userDefinedWebJobRoot = "D:/home/functionfolder", _jobsBinariesPath = "D:/home/functionfolder"
                 _jobsBinariesPath = Path.Combine(_webRootPath, userDefinedWebJobRoot);
             }
-
+            _sitePackagesPath = Path.Combine(_dataPath, Constants.SitePackages);
+            
             RequestId = !string.IsNullOrEmpty(requestId) ? requestId : Guid.Empty.ToString();
             SiteRestrictedJwt = siteRetrictedJwt;
 
@@ -332,6 +336,14 @@ namespace Kudu.Core
             get
             {
                 return this.WebRootPath;
+            }
+        }
+        
+        public string SitePackagesPath
+        {
+            get
+            {
+                return _sitePackagesPath;
             }
         }
 

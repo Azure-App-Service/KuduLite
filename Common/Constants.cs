@@ -127,6 +127,7 @@ namespace Kudu
         public const string DurableTask = "durableTask";
         public const string Extensions = "extensions";
         public const string SitePackages = "SitePackages";
+        public const string SiteVersionTxt = "siteversion.txt";
         public const string PackageNameTxt = "packagename.txt";
     }
 }
