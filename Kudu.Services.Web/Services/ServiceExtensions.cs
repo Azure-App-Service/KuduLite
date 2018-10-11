@@ -60,7 +60,7 @@ namespace Kudu.Services.Web
 
         public static void AddWebJobsDependencies(this IServiceCollection services)
         {
-            //IContinuousJobsManager continuousJobManager = new ContinuousJobsManager(
+            //IContinuousJobsManager continuousJobManager = new AggregateContinuousJobsManager(
             //    etwTraceFactory,
             //    kernel.Get<IEnvironment>(),
             //    kernel.Get<IDeploymentSettingsManager>(),

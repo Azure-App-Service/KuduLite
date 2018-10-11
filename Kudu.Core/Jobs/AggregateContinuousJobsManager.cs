@@ -8,9 +8,9 @@ using Microsoft.AspNetCore.Http;
 
 namespace Kudu.Core.Jobs
 {
-    public class AggregrateContinuousJobsManager : AggregrateJobsManagerBase<ContinuousJob>, IContinuousJobsManager
+    public class AggregateContinuousJobsManager : AggregateJobsManagerBase<ContinuousJob>, IContinuousJobsManager
     {
-        public AggregrateContinuousJobsManager(
+        public AggregateContinuousJobsManager(
             ITraceFactory traceFactory, 
             IEnvironment environment, 
             IDeploymentSettingsManager settings, 

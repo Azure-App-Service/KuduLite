@@ -7,9 +7,9 @@ using Microsoft.AspNetCore.Http;
 
 namespace Kudu.Core.Jobs
 {
-    public class AggregrateTriggeredJobsManager : AggregrateJobsManagerBase<TriggeredJob>, ITriggeredJobsManager
+    public class AggregateTriggeredJobsManager : AggregateJobsManagerBase<TriggeredJob>, ITriggeredJobsManager
     {
-        public AggregrateTriggeredJobsManager(ITraceFactory traceFactory, IEnvironment environment, IDeploymentSettingsManager settings, IAnalytics analytics, IWebHooksManager hooksManager,IHttpContextAccessor httpContextAccessor)
+        public AggregateTriggeredJobsManager(ITraceFactory traceFactory, IEnvironment environment, IDeploymentSettingsManager settings, IAnalytics analytics, IWebHooksManager hooksManager,IHttpContextAccessor httpContextAccessor)
             : base(new TriggeredJobsManager(environment.JobsBinariesPath, traceFactory, environment, settings, analytics, hooksManager, httpContextAccessor),
                 excludedList => new TriggeredJobsManager(environment.SecondaryJobsBinariesPath, traceFactory, environment, settings, analytics, hooksManager, httpContextAccessor, excludedList),
                 settings)
