@@ -58,7 +58,6 @@ namespace Kudu.Core
                 string siteExtensionSettingsPath,
                 string sitePackagesPath,
                 string requestId,
-                string siteRestrictedJwt,
                 IHttpContextAccessor httpContextAccessor)
         {
             if (repositoryPath == null)
@@ -95,8 +94,6 @@ namespace Kudu.Core
             _sitePackagesPath = sitePackagesPath;
 
             RequestId = !string.IsNullOrEmpty(requestId) ? requestId : Guid.Empty.ToString();
-            SiteRestrictedJwt = siteRestrictedJwt;
-
             _httpContextAccessor = httpContextAccessor;
         }
 
@@ -105,7 +102,6 @@ namespace Kudu.Core
                 string binPath,
                 string repositoryPath,
                 string requestId,
-                string siteRetrictedJwt,
                 string kuduConsoleFullPath,
                 IHttpContextAccessor httpContextAccessor)
         {
@@ -156,7 +152,6 @@ namespace Kudu.Core
             _sitePackagesPath = Path.Combine(_dataPath, Constants.SitePackages);
             
             RequestId = !string.IsNullOrEmpty(requestId) ? requestId : Guid.Empty.ToString();
-            SiteRestrictedJwt = siteRetrictedJwt;
 
             _httpContextAccessor = httpContextAccessor;
 
@@ -383,12 +378,6 @@ namespace Kudu.Core
         }
 
         public string RequestId
-        {
-            get;
-            private set;
-        }
-
-        public string SiteRestrictedJwt
         {
             get;
             private set;

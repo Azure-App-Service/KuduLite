@@ -33,7 +33,9 @@ namespace Kudu.Core.Functions
             tracer = tracer ?? _traceFactory.GetTracer();
             using (tracer.Step("FunctionManager.SyncTriggers"))
             {
-                await PostDeploymentHelper.SyncFunctionsTriggers(_environment.RequestId, _environment.SiteRestrictedJwt, new PostDeploymentTraceListener(tracer));
+                await PostDeploymentHelper.SyncFunctionsTriggers(
+                    _environment.RequestId, 
+                    new PostDeploymentTraceListener(tracer));
             }
         }
 

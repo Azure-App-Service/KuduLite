@@ -59,9 +59,8 @@ namespace Kudu.Console
             string wapTargets = args[1];
             string deployer = args.Length == 2 ? null : args[2];
             string requestId = System.Environment.GetEnvironmentVariable(Constants.RequestIdHeader);
-            string siteRestrictedJwt = System.Environment.GetEnvironmentVariable(Constants.SiteRestrictedJWT);
 
-            IEnvironment env = GetEnvironment(appRoot, requestId, siteRestrictedJwt);
+            IEnvironment env = GetEnvironment(appRoot, requestId);
             ISettings settings = new XmlSettings.Settings(GetSettingsPath(env));
             IDeploymentSettingsManager settingsManager = new DeploymentSettingsManager(settings);
 
@@ -184,7 +183,9 @@ namespace Kudu.Console
                         IDeploymentStatusFile statusFile = deploymentStatusManager.Open(changeSet.Id);
                         if (statusFile != null && statusFile.Status == DeployStatus.Success)
                         {
-                            PostDeploymentHelper.PerformAutoSwap(env.RequestId, env.SiteRestrictedJwt, new PostDeploymentTraceListener(tracer, deploymentManager.GetLogger(changeSet.Id))).Wait();
+                            PostDeploymentHelper.PerformAutoSwap(env.RequestId,
+                                    new PostDeploymentTraceListener(tracer, deploymentManager.GetLogger(changeSet.Id)))
+                                .Wait();
                         }
                     }
                 }
@@ -246,7 +247,7 @@ namespace Kudu.Console
             return Path.Combine(environment.DeploymentsPath, Constants.DeploySettingsPath);
         }
 
-        private static IEnvironment GetEnvironment(string siteRoot, string requestId, string siteRestrictedJwt)
+        private static IEnvironment GetEnvironment(string siteRoot, string requestId)
         {
             string root = Path.GetFullPath(Path.Combine(siteRoot, ".."));
 
@@ -269,7 +270,6 @@ namespace Kudu.Console
                 EnvironmentHelper.NormalizeBinPath(binPath),
                 repositoryPath,
                 requestId,
-                siteRestrictedJwt,
                 null,
                 null);
         }

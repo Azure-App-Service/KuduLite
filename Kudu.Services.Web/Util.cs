@@ -159,7 +159,6 @@ namespace Kudu.Services.Web
             // CORE TODO see if we can refactor out PlatformServices as high up as we can?
             var binPath = AppContext.BaseDirectory;
             var requestId = httpContext?.Request.GetRequestId();
-            var siteRetrictedJwt = httpContext?.Request.GetSiteRetrictedJwt();
 
             // CORE TODO Clean this up
             var kuduConsoleFullPath = Path.Combine(AppContext.BaseDirectory, 
@@ -169,7 +168,7 @@ namespace Kudu.Services.Web
 
 
             // CORE TODO Environment now requires an HttpContextAccessor, which I have set to null here
-            return new Core.Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId, siteRetrictedJwt, kuduConsoleFullPath, null);
+            return new Core.Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId, kuduConsoleFullPath, null);
         }
 
         /// <summary>
