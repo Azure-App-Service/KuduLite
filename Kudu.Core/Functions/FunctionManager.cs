@@ -98,7 +98,7 @@ namespace Kudu.Core.Functions
                 setConfigChanged();
             }
 
-            if (functionEnvelope.TestData != null)
+            if (functionEnvelope?.TestData != null)
             {
                 await FileSystemHelpers.WriteAllTextToFileAsync(dataFilePath, functionEnvelope.TestData);
             }
