@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Kudu.Core.Settings;
 using Environment = Kudu.Core.Environment;
 
 namespace Kudu.Services.Web
@@ -194,6 +195,33 @@ namespace Kudu.Services.Web
                 System.Environment.SetEnvironmentVariable("HOME", path);
             }
             */
+        }
+        
+        public static void EnsureValidDeploymentXmlSettings(IEnvironment environment)
+        {
+            var path = GetSettingsPath(environment);
+            if (File.Exists(path))
+            {
+                try
+                {
+                    var settings = new DeploymentSettingsManager(new XmlSettings.Settings(path));
+                    settings.GetValue(SettingsKeys.TraceLevel);
+                }
+                catch (Exception ex)
+                {
+                    DateTime lastWriteTimeUtc = DateTime.MinValue;
+                    OperationManager.SafeExecute(() => lastWriteTimeUtc = File.GetLastWriteTimeUtc(path));
+                    // trace initialization error
+                    KuduEventSource.Log.KuduException(
+                        ServerConfiguration.GetApplicationName(),
+                        "Startup.cs",
+                        string.Empty,
+                        string.Empty,
+                        string.Format("Invalid '{0}' is detected and deleted.  Last updated time was {1}.", path, lastWriteTimeUtc),
+                        ex.ToString());
+                    File.Delete(path);
+                }
+            }
         }
 
         public static void PrependFoldersToPath(IEnvironment environment)

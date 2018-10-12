@@ -107,6 +107,10 @@ namespace Kudu.Services.Web
             _webAppEnvironment = environment;
 
             KuduWebUtil.EnsureDotNetCoreEnvironmentVariable(environment);
+            
+            //CORE TODO Check this
+            // fix up invalid /home/site/deployments/settings.xml
+            KuduWebUtil.EnsureValidDeploymentXmlSettings(environment);
 
             // Add various folders that never change to the process path. All child processes will inherit this
             KuduWebUtil.PrependFoldersToPath(environment);
