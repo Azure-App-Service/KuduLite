@@ -571,7 +571,7 @@ namespace Kudu.Services.Web
                 //routes.MapHttpRoute("download-functions", "api/functions/admin/download", new { controller = "Function", action = "DownloadFunctions" }, new { verb = new HttpMethodConstraint("GET") });
 
                 // Docker Hook Endpoint
-                if (!OSDetector.IsOnWindows())
+                if (!OSDetector.IsOnWindows()|| (OSDetector.IsOnWindows() && EnvironmentHelper.IsWindowsContainers()))
                 {
                     routes.MapHttpRouteDual("docker", "docker/hook", new { controller = "Docker", action = "ReceiveHook" }, new { verb = new HttpMethodRouteConstraint("POST") });
                 }
