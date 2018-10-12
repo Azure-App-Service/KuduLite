@@ -93,7 +93,7 @@ namespace Kudu.Services.Performance
         {
             using (_tracer.Step("DiagnosticsController.GetDockerLogs"))
             {
-                var currentDockerLogFilenames = GetCurrentDockerLogFilenames();
+                var currentDockerLogFilenames = GetCurrentDockerLogFilenames(SearchOption.TopDirectoryOnly);
 
                 var vfsBaseAddress = UriHelper.MakeRelative(
                     UriHelper.GetBaseUri(Request), "api/vfs");
@@ -126,7 +126,9 @@ namespace Kudu.Services.Performance
         {
             using (_tracer.Step("DiagnosticsController.GetDockerLogsZip"))
             {
-                var currentDockerLogFilenames = GetCurrentDockerLogFilenames();
+                // Also search for "today's" files in sub folders. Windows containers archives log files
+                // when they reach a certain size.
+                var currentDockerLogFilenames = GetCurrentDockerLogFilenames(SearchOption.AllDirectories);
 
                 return new FileCallbackResult("application/zip", (outputStream, _) =>
                 {
@@ -146,11 +148,11 @@ namespace Kudu.Services.Performance
             }
         }
 
-        private string[] GetCurrentDockerLogFilenames()
+        private string[] GetCurrentDockerLogFilenames(SearchOption searchOption)
         {
             // Get all non-rolled Docker log filenames from the LogFiles directory
             var nonRolledDockerLogFilenames =
-                FileSystemHelpers.ListFiles(_environment.LogFilesPath, SearchOption.TopDirectoryOnly, new[] { "*" })
+                FileSystemHelpers.ListFiles(_environment.LogFilesPath, searchOption, new[] { "*" })
                 .Where(f => NONROLLED_DOCKER_LOG_FILENAME_REGEX.IsMatch(Path.GetFileName(f)))
                 .ToArray();
 

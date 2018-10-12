@@ -492,7 +492,8 @@ namespace Kudu.Services.Web
                 //routes.MapHttpRouteDual<LogStreamHandler>(kernel, "logstream", "logstream/{*path}");
                 routes.MapHttpRouteDual("recent-logs", "api/logs/recent", new { controller = "Diagnostics", action = "GetRecentLogs" }, new { verb = new HttpMethodRouteConstraint("GET") });
 
-                if (!OSDetector.IsOnWindows())
+                // Enable these for Linux and Windows Containers.
+                if (!OSDetector.IsOnWindows() || (OSDetector.IsOnWindows() && EnvironmentHelper.IsWindowsContainers()))
                 {
                     routes.MapRoute("current-docker-logs-zip", "api/logs/docker/zip", new { controller = "Diagnostics", action = "GetDockerLogsZip" }, new { verb = new HttpMethodRouteConstraint("GET") });
                     routes.MapRoute("current-docker-logs", "api/logs/docker", new { controller = "Diagnostics", action = "GetDockerLogs" }, new { verb = new HttpMethodRouteConstraint("GET") });
