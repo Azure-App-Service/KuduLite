@@ -337,7 +337,7 @@ namespace Kudu.Services.Deployment
                     }
                 }
             }
-            
+            DeploymentHelper.PurgeZipsIfNecessary(_environment.SitePackagesPath, tracer, _settings.GetMaxZipPackageCount());
         }
 
         private void DeleteFilesAndDirsExcept(string fileToKeep, string dirToKeep, ITracer tracer)
