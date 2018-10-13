@@ -28,6 +28,7 @@ using Kudu.Services.Web.Tracing;
 using Kudu.Core.SSHKey;
 using Kudu.Services.Diagnostics;
 using Kudu.Services.Performance;
+using Kudu.Services.TunnelServer;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.Azure.Web.DataProtection;
@@ -346,6 +347,12 @@ namespace Kudu.Services.Web
             
             app.UseResponseCompression();
             
+            var containsRelativePath3 = new Func<HttpContext, bool>(i =>
+                i.Request.Path.Value.StartsWith("/api/debugext2", StringComparison.OrdinalIgnoreCase));
+
+            app.Map("/api/debugext2", a => a.UseMiddleware<DebugExtensionMiddleware>());
+            //app.MapWhen(containsRelativePath3, builder => builder.Use(DebugExtensionMiddleware));
+            
             applicationLifetime.ApplicationStopping.Register(OnShutdown);
             
             app.UseStaticFiles();
@@ -418,7 +425,7 @@ namespace Kudu.Services.Web
                 routes.MapRoute(
                     name: "default",
                     template: "{controller}/{action=Index}/{id?}");
-
+                
                 // Git Service
                 routes.MapRoute("git-info-refs-root", "info/refs", new { controller = "InfoRefs", action = "Execute" });
                 routes.MapRoute("git-info-refs", configuration.GitServerRoot + "/info/refs", new { controller = "InfoRefs", action = "Execute" });
@@ -580,7 +587,7 @@ namespace Kudu.Services.Web
                 // catch all unregistered url to properly handle not found
                 // this is to work arounf the issue in TraceModule where we see double OnBeginRequest call
                 // for the same request (404 and then 200 statusCode).
-                routes.MapRoute("error-404", "{*path}", new { controller = "Error404", action = "Handle" });
+                //routes.MapRoute("error-404", "{*path}", new { controller = "Error404", action = "Handle" });
             });
 
             // CORE TODO Remove This
