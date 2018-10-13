@@ -350,8 +350,8 @@ namespace Kudu.Services.Web
             var containsRelativePath3 = new Func<HttpContext, bool>(i =>
                 i.Request.Path.Value.StartsWith("/api/debugext2", StringComparison.OrdinalIgnoreCase));
 
-            app.Map("/api/debugext2", a => a.UseMiddleware<DebugExtensionMiddleware>());
-            //app.MapWhen(containsRelativePath3, builder => builder.Use(DebugExtensionMiddleware));
+            //app.Map("/api/debugext2", a => a.UseMiddleware<DebugExtensionMiddleware>());
+            app.MapWhen(containsRelativePath3, builder => builder.UseMiddleware<DebugExtensionMiddleware>());
             
             applicationLifetime.ApplicationStopping.Register(OnShutdown);
             
