@@ -5,6 +5,8 @@
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <TieredCompilation>true</TieredCompilation>
     <AssemblyName>kudu</AssemblyName>
+    <Configurations>Debug</Configurations>
+    <Platforms>AnyCPU</Platforms>
   </PropertyGroup>
 
   <ItemGroup>

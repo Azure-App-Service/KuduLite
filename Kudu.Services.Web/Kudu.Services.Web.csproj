@@ -2,6 +2,8 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <TieredCompilation>true</TieredCompilation>
+    <Configurations>Debug</Configurations>
+    <Platforms>AnyCPU</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.App" Version="2.2.0-preview2-35157" />
@@ -12,7 +14,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Proxy" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="2.8.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="2.9.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.0.0" />
     <PackageReference Include="XmlSettings" Version="0.1.3" />
   </ItemGroup>
@@ -46,6 +48,12 @@
   <Target Name="CopyNodeModulesToPublishDir" AfterTargets="Publish">
     <ItemGroup>
       <NodeModules Include="$(TargetDir)node_modules\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(NodeModules)" DestinationFolder="$(PublishDir)node_modules\%(RecursiveDir)" />
+  </Target>
+  <Target Name="CompileKuduConsole" AfterTargets="Publish">
+    <ItemGroup>
+      <Compile></Compile>
     </ItemGroup>
     <Copy SourceFiles="@(NodeModules)" DestinationFolder="$(PublishDir)node_modules\%(RecursiveDir)" />
   </Target>
