@@ -3,6 +3,8 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <TieredCompilation>true</TieredCompilation>
+    <Configurations>Debug</Configurations>
+    <Platforms>AnyCPU</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,9 +31,9 @@
     <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.0.1" />
     <PackageReference Include="Microsoft.Azure.WebSites.DataProtection" Version="0.1.78-alpha" />
     <PackageReference Include="ncrontab" Version="3.3.0" />
-    <PackageReference Include="NuGet.Protocol" Version="4.4.0" />
+    <PackageReference Include="NuGet.Protocol" Version="4.8.0" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.4.0" />
-    <PackageReference Include="System.IO.Abstractions" Version="2.1.0.174" />
+    <PackageReference Include="System.IO.Abstractions" Version="2.1.0.192" />
     <PackageReference Include="XmlSettings" Version="0.1.3" />
   </ItemGroup>
 
