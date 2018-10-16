@@ -58,6 +58,7 @@ namespace Kudu.Core.Infrastructure
         public LinuxLockFile(string path)
             : this(path, NullTracerFactory.Instance)
         {
+            _lockRequestQueue = new ConcurrentQueue<QueueItem>();
         }
 
         /// <summary>
@@ -140,7 +141,7 @@ namespace Kudu.Core.Infrastructure
                 //OnLockRelease();
                 return true;
             }
-            catch (UnauthorizedAccessException ex)
+            catch (UnauthorizedAccessException)
             {
                 if (!_ensureLock)
                 {

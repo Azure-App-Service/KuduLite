@@ -15,13 +15,6 @@ namespace Kudu.Core.Infrastructure
         {
         }
 
-        // This is set when IRepositoryFactory is created in Ninject.
-        public IRepositoryFactory RepositoryFactory
-        {
-            get;
-            set;
-        }
-
         override public void OnLockAcquired()
         {
             IRepositoryFactory repositoryFactory = RepositoryFactory;

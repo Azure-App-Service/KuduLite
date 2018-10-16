@@ -2,9 +2,16 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <TieredCompilation>true</TieredCompilation>
-    <Configurations>Debug</Configurations>
-    <Platforms>AnyCPU</Platforms>
   </PropertyGroup>
+  <!-- Supressing Net Core migration warnings-->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);NU1608</NoWarn>
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+    <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
+  </PropertyGroup>
+  <Target Name="BeforeBuild" AfterTargets="BeforeBuild">
+    <Message Importance="High" Text="%0a+++ Building KuduLite +++%0a%0a" />
+  </Target>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.App" Version="2.2.0-preview2-35157" />
   </ItemGroup>
@@ -13,14 +20,15 @@
     <PackageReference Include="NLog" Version="4.5.1" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Proxy" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="2.9.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Proxy" Version="0.2.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="2.8.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.0.0" />
     <PackageReference Include="XmlSettings" Version="0.1.3" />
   </ItemGroup>
   <ItemGroup>
     <DotNetCliToolReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Tools" Version="2.0.0" />
   </ItemGroup>
+  <Target Name="_IncludePrePublishGeneratedContent" BeforeTargets="GetCopyToPublishDirectoryItems" Condition=" '$(EnableDefaultItems)' == 'true' And '$(EnableDefaultContentItems)' == 'true' " />
   <ItemGroup>
     <ProjectReference Include="..\Kudu.Core\Kudu.Core.csproj" />
     <ProjectReference Include="..\Kudu.Services\Kudu.Services.csproj" />
@@ -41,20 +49,32 @@
   <!-- CORE TODO this used to have a "BuildOutputsUpdated" condition that used compile timestamps. Not sure if they're still available. -->
   <!-- CORE TODO I think the best way to make this work right with publish is to restore to the source folder and then add a dynamic ContentWithTargetPath -->
   <!-- Run updateNodeModules to install kuduscript -->
-  <Target Name="PutNodeModulesInBinDir" AfterTargets="Build">
-    <Exec Command="&quot;$(ProjectDir)\updateNodeModules.cmd&quot; &quot;$(TargetDir)&quot;" Condition=" '$(OS)' == 'Windows_NT'" />
-    <Exec Command="sh $(ProjectDir)/updateNodeModules.sh &quot;$(TargetDir)&quot;" Condition=" '$(OS)' != 'Windows_NT'" />
+  <PropertyGroup>
+	  <ProjectOutputDir Condition="'$(OS)' != 'Windows_NT' AND '$(Configuration)'=='Release'">$(MSBuildProjectDirectory)/$(OutputPath)</ProjectOutputDir>
+	  <ProjectOutputDir Condition="'$(OS)' != 'Windows_NT' AND '$(Configuration)'=='Debug'">$(MSBuildProjectDirectory)/$(OutputPath)</ProjectOutputDir>
+	  <ProjectOutputDir Condition="'$(OS)' == 'Windows_NT' AND '$(Configuration)'=='Release'">$(MSBuildProjectDirectory)\$(PublishDir)</ProjectOutputDir>
+          <ProjectOutputDir Condition="'$(OS)' == 'Windows_NT' AND '$(Configuration)'=='Debug'">$(MSBuildProjectDirectory)\$(OutputPath)</ProjectOutputDir>
+  </PropertyGroup>	  
+  <Target Name="PutNodeModulesInBinDir" AfterTargets="Build">    
+	  <Exec Command="$(ProjectDir)\updateNodeModules.cmd &quot;$(MSBuildProjectDirectory)\$(PublishDir)&quot;" Condition="'$(OS)' == 'Windows_NT' AND  '$(Configuration)'=='Release'" />
+	  <Exec Command="$(ProjectDir)\updateNodeModules.cmd &quot;$(MSBuildProjectDirectory)\$(OutputPath)&quot;" Condition="'$(OS)' == 'Windows_NT' AND  '$(Configuration)'=='Debug'" />
+          <Exec Command="sh $(ProjectDir)/updateNodeModules.sh &quot;$(PublishDir)&quot;" Condition="'$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
+	  <Exec Command="sh $(ProjectDir)/updateNodeModules.sh &quot;$(OutputPath)&quot;" Condition="'$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Debug'" />
   </Target>
-  <Target Name="CopyNodeModulesToPublishDir" AfterTargets="Publish">
-    <ItemGroup>
-      <NodeModules Include="$(TargetDir)node_modules\**\*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(NodeModules)" DestinationFolder="$(PublishDir)node_modules\%(RecursiveDir)" />
+  <Target Name="BuildKuduConsole" AfterTargets="Build">
+    <!--Use $(Property Name) to reference a property-->
+    <Message Text="%0a%0aBuilding KuduConsole%0a" Importance="high" />
+    <Exec Command="dotnet build ../Kudu.Console -o $(MSBuildProjectDirectory)/$(PublishDir)..\KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' == 'Windows_NT'" />
+    <Exec Command="dotnet build ../Kudu.Console -o $(OutputPath)/KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' != 'Windows_NT'" />
+    <Exec Command="dotnet publish ../Kudu.Console --configuration Release -o $(MSBuildProjectDirectory)\$(PublishDir)\KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' == 'Windows_NT'" />
+    <Exec Command="dotnet publish ../Kudu.Console --configuration Release -o $(PublishDir)/KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' != 'Windows_NT'" />
   </Target>
-  <Target Name="CompileKuduConsole" AfterTargets="Publish">
-    <ItemGroup>
-      <Compile></Compile>
-    </ItemGroup>
-    <Copy SourceFiles="@(NodeModules)" DestinationFolder="$(PublishDir)node_modules\%(RecursiveDir)" />
+  <Target Name="ChangePermissions" AfterTargets="publish">
+    <Exec Command="chmod -R +x $(PublishDir)/KuduConsole" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
+    <Exec Command="chmod -R +x $(PublishDir)/node_modules" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
+    <Exec Command="chmod -R +x $(PublishDir)/Scripts" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
+    <Exec Command="chmod -R +x $(OutputPath)/KuduConsole" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Debug'" />
+    <Exec Command="chmod -R +x $(OutputPath)/node_modules" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Debug'" />
+    <Exec Command="chmod -R +x $(OutputPath)/Scripts" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Debug'" />
   </Target>
 </Project>

@@ -23,10 +23,6 @@ namespace Kudu.Services.Web
 {
     public static class KuduWebUtil
     {
-         // CORE TODO this is a hack, esp. considering the hardcoded path separator, hardcoded "Debug\netcoreapp2.0", etc.
-        // The idea is that we want Kudu.Services.Web to run kudu.dll from the directory it was built to when we are locally
-        // debugging, but in release, we will put the published app into a dedicated directory.
-        // Note that the paths are relative to the ApplicationBasePath (Kudu.Services.Web bin directory)
         private const string KuduConsoleFilename = "kudu.dll";
         private const string KuduConsoleRelativePath = "KuduConsole";
         private static Dictionary<string, IOperationLock> _namedLocks ;
@@ -117,7 +113,7 @@ namespace Kudu.Services.Web
             var requestTraceFile = TraceServices.GetRequestTraceFile(httpContext);
             if (level <= TraceLevel.Off || requestTraceFile == null) return NullTracer.Instance;
             var textPath = Path.Combine(environment.TracePath, requestTraceFile);
-            return new CascadeTracer(new XmlTracer(environment.TracePath, level), new TextTracer(textPath, level), new ETWTracer(environment.RequestId, TraceServices.GetHttpMethod(httpContext)));
+            return new CascadeTracer(new XmlTracer(environment.TracePath, level), new TextTracer(textPath, level), new ETWTracer(environment.RequestId, TraceServices.GetHttpMethod(httpContext)), new ConsoleTracer());
         }
 
         public static string GetRequestTraceFile(IServiceProvider serviceProvider)
@@ -153,24 +149,15 @@ namespace Kudu.Services.Web
             return new TextLogger(textPath);
         }
 
-        public static IEnvironment GetEnvironment(IHostingEnvironment hostingEnvironment, IDeploymentSettingsManager settings = null, HttpContext httpContext = null)
+        public static IEnvironment GetEnvironment(IHostingEnvironment hostingEnvironment, IDeploymentSettingsManager settings = null, IHttpContextAccessor httpContextAccessor = null)
         {
             var root = PathResolver.ResolveRootPath();
             var siteRoot = Path.Combine(root, Constants.SiteFolder);
             var repositoryPath = Path.Combine(siteRoot, settings == null ? Constants.RepositoryPath : settings.GetRepositoryPath());
-            // CORE TODO see if we can refactor out PlatformServices as high up as we can?
             var binPath = AppContext.BaseDirectory;
-            var requestId = httpContext?.Request.GetRequestId();
-
-            // CORE TODO Clean this up
-            var kuduConsoleFullPath = Path.Combine(AppContext.BaseDirectory, 
-                hostingEnvironment.IsDevelopment() ? @"..\..\..\..\Kudu.Console\bin\Debug\netcoreapp2.2" : KuduConsoleRelativePath, 
-                KuduConsoleFilename);
-            //kuduConsoleFullPath = Path.Combine(System.AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
-
-
-            // CORE TODO Environment now requires an HttpContextAccessor, which I have set to null here
-            return new Core.Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId, kuduConsoleFullPath, null);
+            var requestId = httpContextAccessor?.HttpContext.Request.GetRequestId();
+            var kuduConsoleFullPath = Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
+            return new Core.Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId, kuduConsoleFullPath, httpContextAccessor);
         }
 
         /// <summary>
