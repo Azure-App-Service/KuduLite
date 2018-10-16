@@ -49,7 +49,7 @@ namespace Kudu.Services.Performance
 
         // CORE TODO
         //private ShutdownDetector _shutdownDetector;
-        private CancellationTokenRegistration _cancellationTokenRegistration;
+        //private CancellationTokenRegistration _cancellationTokenRegistration;
 
         // TODO need to grab "path" from request path
 
@@ -90,23 +90,12 @@ namespace Kudu.Services.Performance
 
             string path;
             string routePath = "";
-            bool enableTrace = false;
+            //bool enableTrace;
 
             // trim '/'
             routePath = String.IsNullOrEmpty(routePath) ? routePath : routePath.Trim('/');
 
-            // logstream at root
-            if (String.IsNullOrEmpty(routePath))
-            {
-                enableTrace = true;
-                path = _logPath;
-            }
-
             var firstPath = routePath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-            if (string.Equals(firstPath, "Application", StringComparison.OrdinalIgnoreCase))
-            {
-                enableTrace = true;
-            }
 
             path = FileSystemHelpers.EnsureDirectory(Path.Combine(_logPath, routePath));
 
@@ -114,9 +103,7 @@ namespace Kudu.Services.Performance
             await WriteInitialMessage(context);
 
             // CORE TODO Get the fsw and keep it in scope here with a using that ends at the end
-
-            //WriteInitialMessage(context);
-
+            
             lock (_thisLock)
             {
                 Initialize(path, context);
@@ -343,7 +330,6 @@ namespace Kudu.Services.Performance
                 if (lines.Count() > 0)
                 {
                     _lastTraceTime = DateTime.UtcNow;
-
                     NotifyClient(lines,context);
                 }
             }
@@ -398,7 +384,7 @@ namespace Kudu.Services.Performance
             NotifyClient(new string[] { text },context);
         }
 
-        private async Task NotifyClient(IEnumerable<string> lines, HttpContext context)
+        private async void NotifyClient(IEnumerable<string> lines, HttpContext context)
         {
                 if (!context.RequestAborted.IsCancellationRequested)
                 {

@@ -20,8 +20,6 @@ namespace Kudu.Services.Web
 { 
     public static class ServiceExtensions
     {
-        private static IOperationLock _deploymentLock;
-
         public static void AddGitServiceHookParsers(this IServiceCollection services)
         {
             services.AddScoped<IServiceHookHandler, GenericHandler>();

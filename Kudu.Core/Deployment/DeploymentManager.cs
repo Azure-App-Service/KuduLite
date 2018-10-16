@@ -491,7 +491,7 @@ namespace Kudu.Core.Deployment
             return strb.ToString();
         }
 
-        internal IDeploymentStatusFile GetOrCreateStatusFile(ChangeSet changeSet, ITracer tracer, string deployer)
+        IDeploymentStatusFile GetOrCreateStatusFile(ChangeSet changeSet, ITracer tracer, string deployer)
         {
             string id = changeSet.Id;
 

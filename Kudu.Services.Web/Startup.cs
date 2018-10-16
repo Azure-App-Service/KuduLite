@@ -42,7 +42,6 @@ namespace Kudu.Services.Web
 {
     public class Startup
     {
-        private static string Format = "hh.mm.ss.ffffff";
         private readonly IHostingEnvironment _hostingEnvironment;
         private IEnvironment _webAppEnvironment;
         private IHttpContextAccessor _httpContextAccessor;
@@ -129,7 +128,7 @@ namespace Kudu.Services.Web
 
             // Per request environment
             services.AddScoped<IEnvironment>(sp => KuduWebUtil.GetEnvironment(_hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>(),
-                sp.GetRequiredService<IHttpContextAccessor>().HttpContext));
+                sp.GetRequiredService<IHttpContextAccessor>()));
 
             services.AddDeployementServices(environment);
             

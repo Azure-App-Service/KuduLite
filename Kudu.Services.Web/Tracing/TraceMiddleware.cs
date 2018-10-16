@@ -52,7 +52,7 @@ namespace Kudu.Services.Web.Tracing
             }
             catch (Exception ex)
             {
-                await LogException(context, ex);
+                await Task.Run(() => LogException(context, ex));
                 ExceptionDispatchInfo.Capture(ex.InnerException??ex).Throw();
             }
             // At the end of the pipe
@@ -60,7 +60,7 @@ namespace Kudu.Services.Web.Tracing
         }
 
         
-        private async Task LogException(HttpContext httpContext, Exception exception)
+        private void LogException(HttpContext httpContext, Exception exception)
         {
             try
             {
@@ -115,7 +115,8 @@ namespace Kudu.Services.Web.Tracing
                 // in Azure env, browser non-ajax requests and referer mismatch with host
                 // since browser uses referer for other scenarios (such as href, redirect), we may return 
                 // this header (benign) in such cases.
-                if (Kudu.Core.Environment.IsAzureEnvironment() && !TraceExtensions.IsAjaxRequest(httpRequest) && TraceExtensions.MismatchedHostReferer(httpRequest))
+                if (Core.Environment.IsAzureEnvironment() && !TraceExtensions.IsAjaxRequest(httpRequest) &&
+                    TraceExtensions.MismatchedHostReferer(httpRequest))
                 {
                     httpContext.Response.Headers.Add("X-FRAME-OPTIONS", "DENY");
                 }
@@ -266,7 +267,7 @@ namespace Kudu.Services.Web.Tracing
             attribs.Add("pid", String.Join(",",
                 Process.GetCurrentProcess().Id,
                 AppDomain.CurrentDomain.Id.ToString(),
-                System.Threading.Thread.CurrentThread.ManagedThreadId));
+                Thread.CurrentThread.ManagedThreadId));
 
             return attribs;
         }
@@ -364,7 +365,7 @@ namespace Kudu.Services.Web.Tracing
                 // Ignore Always on request for now till bug is fixed
                 if (!string.Equals("AlwaysOn", request.Headers["User-Agent"].ToString(), StringComparison.OrdinalIgnoreCase))
                 {
-                    System.Environment.SetEnvironmentVariable(Constants.HttpHost, GetHostUrl(request));
+                    Environment.SetEnvironmentVariable(Constants.HttpHost, GetHostUrl(request));
                 }
             }
             catch

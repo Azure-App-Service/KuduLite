@@ -158,7 +158,7 @@ namespace Kudu.Core.Infrastructure
 
                 return true;
             }
-            catch (UnauthorizedAccessException ex)
+            catch (UnauthorizedAccessException)
             {
                 if (!_ensureLock)
                 {

@@ -30,9 +30,11 @@ copy_to_build_dir() {
   if [ ! -d "node_modules" ]; then
     exit 1
   else 
-    mv node_modules "$@"
+    cp node_modules "$@"
+	mv node_modules "$@/KuduConsole"
   fi
 }
 
-retry npm install https://github.com/projectkudu/KuduScript/tarball/16de31b5f5ca590ea085979e5fa5e74bb62f647e
+printf "\n\nInstalling Kudu Script\n"
+retry npm --loglevel=error install https://github.com/projectkudu/KuduScript/tarball/16de31b5f5ca590ea085979e5fa5e74bb62f647e
 copy_to_build_dir "$@"

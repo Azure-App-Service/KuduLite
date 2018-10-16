@@ -25,9 +25,7 @@ public static class FileStreamingHelper
  
 		// Used to accumulate all the form url encoded key value pairs in the 
 		// request.
-		var formAccumulator = new KeyValueAccumulator();
-		string targetFilePath = null;
- 
+		var formAccumulator = new KeyValueAccumulator(); 
 		var boundary = MultipartRequestHelper.GetBoundary(
 			MediaTypeHeaderValue.Parse(request.ContentType),
 			_defaultFormOptions.MultipartBoundaryLengthLimit);
