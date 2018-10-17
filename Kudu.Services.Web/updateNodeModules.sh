@@ -26,7 +26,7 @@ retry() {
 }
 
 copy_to_build_dir() {
-  rm -rf "$@/node_modules"	
+  rm -rf "$@node_modules"	
   if [ ! -d "node_modules" ]; then
     exit 1
   else

@@ -58,19 +58,16 @@
   <Target Name="PutNodeModulesInBinDir" AfterTargets="Build">    
 	  <Exec Command="$(ProjectDir)\updateNodeModules.cmd &quot;$(MSBuildProjectDirectory)\$(PublishDir)&quot;" Condition="'$(OS)' == 'Windows_NT' AND  '$(Configuration)'=='Release'" />
 	  <Exec Command="$(ProjectDir)\updateNodeModules.cmd &quot;$(MSBuildProjectDirectory)\$(OutputPath)&quot;" Condition="'$(OS)' == 'Windows_NT' AND  '$(Configuration)'=='Debug'" />
-	  <Exec Command="sh $(ProjectDir)/updateNodeModules.sh &quot;$(MSBuildProjectDirectory)/$(PublishDir)&quot;" Condition="'$(OS)' != 'Windows_NT' AND  '$(Configuration)'=='Release'" />
-	  <Exec Command="sh $(ProjectDir)/updateNodeModules.sh &quot;$(MSBuildProjectDirectory)/$(OutputPath)&quot;" Condition="'$(OS)' != 'Windows_NT' AND  '$(Configuration)'=='Debug'" />
+	  <Exec Command="sh $(ProjectDir)/updateNodeModules.sh &quot;$(PublishDir)&quot;" Condition="'$(OS)' != 'Windows_NT'" />
   </Target>
   <Target Name="BuildKuduConsole" AfterTargets="Build">
     <!--Use $(Property Name) to reference a property-->
     <Message Text="%0a%0aBuilding KuduConsole%0a" Importance="high" />
     <Exec Command="dotnet build ../Kudu.Console -o $(MSBuildProjectDirectory)/$(PublishDir)..\KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' == 'Windows_NT'" />
-    <Exec Command="dotnet build ../Kudu.Console -o $(MSBuildProjectDirectory)/$(PublishDir)../KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' != 'Windows_NT'" />
+    <Exec Command="dotnet build ../Kudu.Console -o $(OutputPath)/KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' != 'Windows_NT'" />
     <Exec Command="dotnet publish ../Kudu.Console --configuration Release -o $(MSBuildProjectDirectory)\$(PublishDir)\KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' == 'Windows_NT'" />
-    <Exec Command="dotnet publish ../Kudu.Console --configuration Release -o $(MSBuildProjectDirectory)/$(PublishDir)/KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' != 'Windows_NT'" />
-    <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(OutputPath)/KuduConsole" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Debug'" />
-    <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(PublishDir)KuduConsole" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
-    <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(OutputPath)/node_modules" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Debug'" />
-    <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(PublishDir)/node_modules" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
+    <Exec Command="dotnet publish ../Kudu.Console --configuration Release -o $(MSBuildProjectDirectory)/KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' != 'Windows_NT'" />
+    <Exec Command="chmod -R +x $(PublishDir)/KuduConsole" Condition=" '$(OS)' != 'Windows_NT'" />
+    <Exec Command="chmod -R +x $(PublishDir)/node_modules" Condition=" '$(OS)' != 'Windows_NT'" />
   </Target>
 </Project>
