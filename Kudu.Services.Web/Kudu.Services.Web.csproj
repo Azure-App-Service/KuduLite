@@ -68,6 +68,8 @@
     <Exec Command="dotnet build ../Kudu.Console -o $(OutputPath)/KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' != 'Windows_NT'" />
     <Exec Command="dotnet publish ../Kudu.Console --configuration Release -o $(MSBuildProjectDirectory)\$(PublishDir)\KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' == 'Windows_NT'" />
     <Exec Command="dotnet publish ../Kudu.Console --configuration Release -o $(MSBuildProjectDirectory)/KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' != 'Windows_NT'" />
+    </Target>
+  <Target Name="BuildKuduConsole" AfterTargets="publish">
     <Exec Command="chmod -R +x $(PublishDir)/KuduConsole" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
     <Exec Command="chmod -R +x $(PublishDir)/node_modules" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
     <Exec Command="chmod -R +x $(PublishDir)/Scripts" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
