@@ -31,7 +31,7 @@ copy_to_build_dir() {
     exit 1
   else
     mkdir -p "$@"
-    mkdir -p "$@KuduConsole"
+    mkdir -p "$@/KuduConsole"
     cp -r node_modules "$@"
     mv node_modules "$@/KuduConsole/node_modules"
   fi
