@@ -30,6 +30,8 @@ copy_to_build_dir() {
   if [ ! -d "node_modules" ]; then
     exit 1
   else
+    mkdir -p "$@"
+    mkdir -p "$@KuduConsole"
     cp -r node_modules "$@"
     cp -r node_modules "$@/KuduConsole"
   fi
