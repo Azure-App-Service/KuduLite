@@ -49,23 +49,28 @@
   <!-- CORE TODO this used to have a "BuildOutputsUpdated" condition that used compile timestamps. Not sure if they're still available. -->
   <!-- CORE TODO I think the best way to make this work right with publish is to restore to the source folder and then add a dynamic ContentWithTargetPath -->
   <!-- Run updateNodeModules to install kuduscript -->
-  <Target Name="PutNodeModulesInBinDir" AfterTargets="Build">
-    <Exec Command="&quot;$(ProjectDir)\updateNodeModules.cmd&quot; &quot;$(MSBuildProjectDirectory)/$(PublishDir)&quot;" Condition="'$(OS)' == 'Windows_NT'" />
-    <Exec Command="sh $(ProjectDir)/updateNodeModules.sh &quot;$(MSBuildProjectDirectory)/$(PublishDir)&quot;" Condition="'$(OS)' != 'Windows_NT'" />
-  </Target>
-  <Target Name="CopyNodeModulesToPublishDir" AfterTargets="Publish">
-    <ItemGroup>
-      <NodeModules Include="$(TargetDir)node_modules\**\*" />
-    </ItemGroup>
-    <Message Text="@(NodeModules)"  Importance="High"/>
-    <Copy SourceFiles="@(NodeModules)" DestinationFolder="$(MSBuildProjectDirectory)/$(PublishDir)node_modules\%(RecursiveDir)" />
+  <PropertyGroup>
+	  <ProjectOutputDir Condition="'$(OS)' != 'Windows_NT' AND '$(Configuration)'=='Release'">$(MSBuildProjectDirectory)/$(OutputPath)</ProjectOutputDir>
+	  <ProjectOutputDir Condition="'$(OS)' != 'Windows_NT' AND '$(Configuration)'=='Debug'">$(MSBuildProjectDirectory)/$(OutputPath)</ProjectOutputDir>
+	  <ProjectOutputDir Condition="'$(OS)' == 'Windows_NT' AND '$(Configuration)'=='Release'">$(MSBuildProjectDirectory)\$(PublishDir)</ProjectOutputDir>
+          <ProjectOutputDir Condition="'$(OS)' == 'Windows_NT' AND '$(Configuration)'=='Debug'">$(MSBuildProjectDirectory)\$(OutputPath)</ProjectOutputDir>
+  </PropertyGroup>	  
+  <Target Name="PutNodeModulesInBinDir" AfterTargets="Build">    
+	  <Exec Command="$(ProjectDir)\updateNodeModules.cmd &quot;$(MSBuildProjectDirectory)\$(PublishDir)&quot;" Condition="'$(OS)' == 'Windows_NT' AND  '$(Configuration)'=='Release'" />
+	  <Exec Command="$(ProjectDir)\updateNodeModules.cmd &quot;$(MSBuildProjectDirectory)\$(OutputPath)&quot;" Condition="'$(OS)' == 'Windows_NT' AND  '$(Configuration)'=='Debug'" />
+	  <Exec Command="sh $(ProjectDir)/updateNodeModules.sh &quot;$(MSBuildProjectDirectory)/$(PublishDir)&quot;" Condition="'$(OS)' != 'Windows_NT' AND  '$(Configuration)'=='Release'" />
+	  <Exec Command="sh $(ProjectDir)/updateNodeModules.sh &quot;$(MSBuildProjectDirectory)/$(OutputPath)&quot;" Condition="'$(OS)' != 'Windows_NT' AND  '$(Configuration)'=='Debug'" />
   </Target>
   <Target Name="BuildKuduConsole" AfterTargets="Build">
     <!--Use $(Property Name) to reference a property-->
     <Message Text="%0a%0aBuilding KuduConsole%0a" Importance="high" />
-    <Exec Command="dotnet build ../Kudu.Console -o $(MSBuildProjectDirectory)/$(PublishDir)..\KuduConsole" Condition="'$(Configuration)' == 'Debug'" />
-    <Exec Command="dotnet publish ../Kudu.Console --configuration Release -o $(MSBuildProjectDirectory)/$(PublishDir)KuduConsole" Condition="'$(Configuration)' == 'Release'" />
-    <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(PublishDir)..\KuduConsole" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Debug'" />
+    <Exec Command="dotnet build ../Kudu.Console -o $(MSBuildProjectDirectory)/$(PublishDir)..\KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' == 'Windows_NT'" />
+    <Exec Command="dotnet build ../Kudu.Console -o $(MSBuildProjectDirectory)/$(PublishDir)../KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' != 'Windows_NT'" />
+    <Exec Command="dotnet publish ../Kudu.Console --configuration Release -o $(MSBuildProjectDirectory)\$(PublishDir)\KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' == 'Windows_NT'" />
+    <Exec Command="dotnet publish ../Kudu.Console --configuration Release -o $(MSBuildProjectDirectory)/$(PublishDir)/KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' != 'Windows_NT'" />
+    <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(OutputPath)/KuduConsole" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Debug'" />
     <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(PublishDir)KuduConsole" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
+    <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(OutputPath)/node_modules" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Debug'" />
+    <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(PublishDir)node_modules" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
   </Target>
 </Project>

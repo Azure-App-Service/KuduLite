@@ -7,10 +7,10 @@
 #usage		     : sh updateNodeModules.sh
 #================================================================================
 
-MAX_RETRIES = 5
+MAX_RETRIES=5
 
 retry() {
-  n = 1
+  n=1
   while true; do
     "$@" && break || {
       if [[ $n -lt $max ]]; then
@@ -29,12 +29,13 @@ copy_to_build_dir() {
   rm -rf "$@/node_modules"	
   if [ ! -d "node_modules" ]; then
     exit 1
-  else 
-    cp node_modules "$@"
-	mv node_modules "$@/KuduConsole"
+  else
+    cp -r node_modules "$@"
+    cp -r node_modules "$@/KuduConsole"
   fi
 }
 
-printf "\n\nInstalling Kudu Script\n"
+printf "\n\nInstalling Kudu Script\n\n" 
+echo "$@"
 retry npm --loglevel=error install https://github.com/projectkudu/KuduScript/tarball/16de31b5f5ca590ea085979e5fa5e74bb62f647e
 copy_to_build_dir "$@"
