@@ -71,6 +71,6 @@
     <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(OutputPath)/KuduConsole" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Debug'" />
     <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(PublishDir)KuduConsole" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
     <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(OutputPath)/node_modules" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Debug'" />
-    <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(PublishDir)node_modules" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
+    <Exec Command="chmod -R +x $(MSBuildProjectDirectory)/$(PublishDir)/node_modules" Condition=" '$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
   </Target>
 </Project>
