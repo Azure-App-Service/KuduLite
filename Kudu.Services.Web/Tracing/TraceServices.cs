@@ -50,6 +50,7 @@ namespace Kudu.Services.Web.Tracing
 
         internal static ITracer GetRequestTracer(HttpContext httpContext)
         {
+            if (httpContext == null) return null;
             return httpContext.Items[_traceKey] as ITracer;
         }
 

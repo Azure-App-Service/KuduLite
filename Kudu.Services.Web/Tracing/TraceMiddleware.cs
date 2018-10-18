@@ -96,11 +96,10 @@ namespace Kudu.Services.Web.Tracing
              * Razor dummy extension for vfs - Do we need it for Linux Kudu?
              */
             
-            
-            LogBeginRequest(httpContext);
-
             // Always trace the startup request.
             ITracer tracer = TraceStartup(httpContext);
+            
+            LogBeginRequest(httpContext);
             
             // Trace heartbeat periodically
             TraceHeartbeat();

@@ -3,6 +3,9 @@ setlocal enabledelayedexpansion
 
 pushd %1
 
+echo Hello World
+echo %1 
+
 set attempts=5
 set counter=0
 
@@ -16,6 +19,8 @@ echo Attempt %counter% out of %attempts%
 
 cmd /c npm --loglevel=error install https://github.com/projectkudu/KuduScript/tarball/16de31b5f5ca590ea085979e5fa5e74bb62f647e
 IF %ERRORLEVEL% NEQ 0 goto error
+if not exist "KuduConsole" mkdir KuduConsole
+xcopy node_modules KuduConsole
 goto end
 
 :error

@@ -150,7 +150,9 @@ namespace Kudu.Core.Deployment
             }
         }
 
-        public async Task PerformDeployment(DeploymentInfoBase deploymentInfo, IDisposable tempDeployment = null, ChangeSet tempChangeSet = null)
+        public async Task PerformDeployment(DeploymentInfoBase deploymentInfo, 
+            IDisposable tempDeployment = null, 
+            ChangeSet tempChangeSet = null)
         {
             DateTime currentMarkerFileUTC;
             DateTime nextMarkerFileUTC = FileSystemHelpers.GetLastWriteTimeUtc(_markerFilePath);
