@@ -127,8 +127,7 @@ namespace Kudu.Services.Web
             TraceServices.TraceLevel = noContextDeploymentsSettingsManager.GetTraceLevel();
 
             // Per request environment
-            services.AddScoped<IEnvironment>(sp => KuduWebUtil.GetEnvironment(_hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>(),
-                sp.GetRequiredService<IHttpContextAccessor>()));
+            services.AddScoped<IEnvironment>(sp => KuduWebUtil.GetEnvironment(_hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>()));
 
             services.AddDeployementServices(environment);
             
@@ -352,6 +351,8 @@ namespace Kudu.Services.Web
             //app.Map("/api/debugext2", a => a.UseMiddleware<DebugExtensionMiddleware>());
             app.MapWhen(containsRelativePath3, builder => builder.UseMiddleware<DebugExtensionMiddleware>());
             
+            app.UseTraceMiddleware();
+            
             applicationLifetime.ApplicationStopping.Register(OnShutdown);
             
             app.UseStaticFiles();
@@ -412,8 +413,6 @@ namespace Kudu.Services.Web
                 RequestPath = "/wwwroot",
                 EnableDirectoryBrowsing = true
             });
-
-            app.UseTraceMiddleware();
             
             //app.UseStaticFiles();
             app.UseMvc(routes =>
