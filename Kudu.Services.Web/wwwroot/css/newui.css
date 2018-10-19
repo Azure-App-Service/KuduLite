@@ -1,0 +1,119 @@
+
+@import url(http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,700italic,100,300,400,700);
+body {
+    font-family: 'Open Sans', sans-serif;
+}
+
+body p {
+    font-style: italic;
+    font-weight: 300;
+}
+html, html a, body {
+    -webkit-font-smoothing: antialiased;
+}
+
+a {
+    transition: all 0.3s ease-in-out;
+}
+
+body {
+    font-size: 14px;
+    color: #3d3d3d;
+    line-height: 1.5;
+    letter-spacing: 0.2px;
+    overflow-x: hidden;
+}
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        letter-spacing: 0.5px;
+        line-height: 1.5;
+    }
+
+    small {
+        font-weight: 300;
+        color: #171717;
+    }
+
+
+p {
+    line-height: 1.9;
+}
+
+.lead {
+    font-size: 18px;
+}
+
+ul {
+    margin-bottom: 0;
+}
+
+a :hover, :focus {
+     text-decoration: none;
+     color: #575757;
+ }
+
+a :focus {
+     outline: none;
+ }  
+
+a :hover, :focus, .active {
+     color: #575757;
+ }
+
+:focus {
+    outline: none;
+}
+
+hr {
+    border-top: 1px solid black;
+}
+
+
+#side-menu {
+    background-color: blue;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    z-index: 1000;
+}
+
+.logo {
+    display: block;
+    margin-top: 10px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    text-align: center;
+}
+
+.logo-clr {
+    border-bottom: 1px solid #455a64;
+    display: block;
+    padding-top: 10px;
+    max-height: 100px;
+    margin-left:0px;
+    transition: all 0.2s ease;
+    color:#313435;
+}
+
+.sidebar-link .active::before {
+     background: #2196f3;
+     border-radius: 50%;
+     content: '';
+     display: block;
+     height: 8px;
+     left: -4px;
+     position: absolute;
+     top: calc(50% - 4px);
+     width: 8px;
+ }
+
+.text-bold{
+    font-weight: 700;
+}
+
+.text-light{
+    font-weight: 100;
+}

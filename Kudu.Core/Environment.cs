@@ -77,6 +77,8 @@ namespace Kudu.Core
             _diagnosticsPath = diagnosticsPath;
             _locksPath = locksPath;
             _sshKeyPath = sshKeyPath;
+            Console.WriteLine("Root Path : "+rootPath);
+            Console.WriteLine("SSH Key Path : "+_sshKeyPath);
             _scriptPath = scriptPath;
             _nodeModulesPath = nodeModulesPath;
 

@@ -1,0 +1,88 @@
+﻿@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor httpContextAccessor
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- This forces IE to not use compatibility mode, which Kudu is broken for -->
+    
+    @if (!Kudu.Core.Helpers.OSDetector.IsOnWindows())
+    {
+        <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    }
+    else
+    {
+        <link rel="shortcut icon" type="image/x-icon" href="/linux_favicon.ico" />
+        <link rel="icon" type="image/x-icon" href="/linux_favicon.ico" />
+	
+    }
+    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width" charset="utf-8" />
+    <title>Azure App Service</title>
+    <link href="//functionscdn.azureedge.net/public/kudu/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet" />
+    <script type="text/javascript" src="//ajax.aspnetcdn.com/ajax/jquery/jquery-2.1.0.min.js"></script>
+    <script type="text/javascript" src="//functionscdn.azureedge.net/public/kudu/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.4.1/css/all.css" integrity="sha384-5sAR7xN1Nv6T6+dT2mhtzEpVJvfS3NScPQTrOxhwjIuvcA67KV2R5Jz6kr4abQsz" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="/Content/Styles/newui.css">
+    @RenderSection("PageHead", required: false)
+    <style>
+        /* Set height of the grid so .sidenav can be 100% (adjust if needed) */
+        .row.content {height: 1500px}
+    
+        /* Set gray background color and 100% height */
+        .sidenav {
+            background-color: #f1f1f1;
+            height: 100%;
+        }
+    
+        /* Set black background color, white text and some padding */
+        footer {
+            background-color: #555;
+            color: white;
+            padding: 15px;
+        }
+    </style>
+    @if (Core.Helpers.OSDetector.IsOnWindows())
+    {
+        <script>
+            $.serverOS = "windows";
+        </script>
+    }
+    else
+    {
+        <script>
+            $.serverOS = "linux";
+        </script>
+    }
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row content">
+        <div class="col-sm-2 sidenav">
+            <a class="sidebar-link td-n" href="/newui">
+                <div class="row">
+                    <div class="col-md-2 col-sm-12 padding-0 center-block logo">
+                        <img src="/Content/Images/AppService.png" height="40">
+                    </div>
+                    <div class="col-md-9 col-sm-12 logo-clr" style="margin-left: 20px;">
+                        <h4>Azure App Service</h4>
+                    </div>
+                </div>
+            </a>
+            <ul class="nav nav-pills nav-stacked" style="margin-top: 20px">
+                <li class="active"><a href="/newui"> <i class="fas fa-home"></i> Home</a></li>
+                <li><a href="~/newui/Env"> <i class="fas fa-tasks"></i> Environment</a></li>
+                <li><a href="~/newui/webssh/host"> <i class="fas fa-terminal"></i> WebSSH</a></li>
+                <li><a href="~/newui/DebugConsole"> <i class="fas fa-laptop-code"></i> Bash</a></li>
+                <li><a href="~/newui/api/logstream" title="If no log events are being generated the page may not load."> <i class="fas fa-stream"></i> Log stream</a></li>
+            </ul><br>
+        </div>
+        @RenderBody()
+    </div>
+</div>
+<footer class="bdT ta-c p-30 lh-0 fsz-sm c-grey-600">
+    <span>Copyright © 2018 Microsoft Corporation. All rights reserved.</span>
+</footer>
+</body>
+</html>
