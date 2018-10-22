@@ -18,6 +18,7 @@ namespace Kudu.Core.Deployment.Generator
         protected GeneratorSiteBuilder(IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string repositoryPath)
             : base(environment, settings, propertyProvider, repositoryPath)
         {
+            FileLogHelper.Log("Stack Trace in GeneratorSiteBuilder: " + System.Environment.StackTrace);
         }
 
         // TODO: Do we still need this
@@ -183,6 +184,8 @@ namespace Kudu.Core.Deployment.Generator
                 }
                 else
                 {
+                    FileLogHelper.Log("Environment.NodeModulesPath: " + Environment.NodeModulesPath);
+                    FileLogHelper.Log("DeploymentScriptGeneratorToolPath: returns " + Path.Combine(Environment.NodeModulesPath, ".bin", "kuduscript"));
                     return Path.Combine(Environment.NodeModulesPath, ".bin", "kuduscript");
                 }
             }

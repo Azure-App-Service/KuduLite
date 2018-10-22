@@ -6,7 +6,6 @@ namespace Kudu.Core.Helpers
     {
         public static string NormalizeBinPath(string binPath)
         {
-            System.IO.File.AppendAllText("/tmp/jlawlogs.txt", String.Format("NormalizeBinPath called with: {0} ", binPath));
             if (!string.IsNullOrWhiteSpace(binPath) && !OSDetector.IsOnWindows())
             {
                 int binIdx = binPath.LastIndexOf("Bin", StringComparison.Ordinal);
@@ -22,7 +21,8 @@ namespace Kudu.Core.Helpers
                 }
             }
 
-            System.IO.File.AppendAllText("/tmp/jlawlogs.txt", String.Format("NormalizeBinPath returns with: {0} ", binPath));
+            FileLogHelper.Log("NormalizeBinPath returned " + binPath);
+
             return binPath;
         }
         
@@ -37,6 +37,15 @@ namespace Kudu.Core.Helpers
                 isXenon = (parsedXenon == 1);
             }
             return isXenon;
+        }
+    }
+
+    public static class FileLogHelper
+    {
+        public static void Log(string message)
+        {
+            string output = string.Format("{0}: {1}\n", DateTime.UtcNow, message);
+            System.IO.File.AppendAllText("/tmp/filelogs.txt", output);
         }
     }
 }
