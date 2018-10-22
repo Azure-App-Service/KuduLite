@@ -23,6 +23,11 @@ namespace Kudu.Core.Helpers
 
             FileLogHelper.Log("NormalizeBinPath returned " + binPath);
 
+            if (binPath.StartsWith("/opt/Kudu/bin"))
+            {
+                FileLogHelper.Log("NormalizeBinPath: stacktrace: " + System.Environment.StackTrace);
+            }
+
             return binPath;
         }
         
