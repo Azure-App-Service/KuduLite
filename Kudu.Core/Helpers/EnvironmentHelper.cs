@@ -6,6 +6,7 @@ namespace Kudu.Core.Helpers
     {
         public static string NormalizeBinPath(string binPath)
         {
+            System.IO.File.AppendAllText("/tmp/jlawlogs.txt", String.Format("NormalizeBinPath called with: {0} ", binPath));
             if (!string.IsNullOrWhiteSpace(binPath) && !OSDetector.IsOnWindows())
             {
                 int binIdx = binPath.LastIndexOf("Bin", StringComparison.Ordinal);
@@ -21,6 +22,7 @@ namespace Kudu.Core.Helpers
                 }
             }
 
+            System.IO.File.AppendAllText("/tmp/jlawlogs.txt", String.Format("NormalizeBinPath returns with: {0} ", binPath));
             return binPath;
         }
         
