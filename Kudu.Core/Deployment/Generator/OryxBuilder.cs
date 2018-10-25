@@ -47,11 +47,11 @@ namespace Kudu.Core.Deployment.Generator
             FileLogHelper.Log("Completed oryx build...");
         }
 
-        public override void PostBuild(DeploymentContext context)
-        {
-            // no-op
-            context.Logger.Log($"Skipping post build. Project type: {ProjectType}");
-            FileLogHelper.Log("Completed PostBuild oryx....");
-        }
+        //public override void PostBuild(DeploymentContext context)
+        //{
+        //    // no-op
+        //    context.Logger.Log($"Skipping post build. Project type: {ProjectType}");
+        //    FileLogHelper.Log("Completed PostBuild oryx....");
+        //}
     }
 }
