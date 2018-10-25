@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Kudu.Core.Helpers;
+using Kudu.Contracts.Settings;
 
 namespace Kudu.Core.Deployment.Generator
 {
