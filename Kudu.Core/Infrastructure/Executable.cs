@@ -248,6 +248,7 @@ namespace Kudu.Core.Infrastructure
         {
             using (GetProcessStep(tracer, arguments))
             {
+                Kudu.Core.Helpers.FileLogHelper.Log("ExecuteAsync: " + arguments);
                 using (Process process = CreateProcess(arguments))
                 {
                     var wrapper = new ProcessWrapper(process);
