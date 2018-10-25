@@ -46,6 +46,8 @@ namespace Kudu.Core.Deployment.Generator
             RunCommand(context, oryxBuildCommand, false, "Running oryx build...");
 
             FileLogHelper.Log("Completed oryx build...");
+
+            return Task.CompletedTask;
         }
 
         //public override void PostBuild(DeploymentContext context)
