@@ -32,7 +32,6 @@ namespace Kudu.Core.Deployment.Generator
 
             string framework = System.Environment.GetEnvironmentVariable("FRAMEWORK");
             string version = System.Environment.GetEnvironmentVariable("FRAMEWORK_VERSION");
-            string deploymentTarget = "/home/site/wwwroot"; //System.Environment.GetEnvironmentVariable("$DEPLOYMENT_TARGET");
 
             string oryxLanguage = "";
 
@@ -45,7 +44,11 @@ namespace Kudu.Core.Deployment.Generator
                 oryxLanguage = "python";
             }
 
-            string oryxBuildCommand = string.Format("oryx build {0} {1} -l {2} --language-version {3}", deploymentTarget, deploymentTarget, oryxLanguage, version);
+            string oryxBuildCommand = string.Format("oryx build {0} -o {1} -l {2} --language-version {3}",
+                context.OutputPath,
+                context.OutputPath,
+                oryxLanguage,
+                version);
 
             FileLogHelper.Log("Running OryxBuild with  " + oryxBuildCommand);
             RunCommand(context, oryxBuildCommand, false, "Running oryx build...");
