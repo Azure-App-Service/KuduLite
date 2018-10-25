@@ -248,7 +248,6 @@ namespace Kudu.Core.Infrastructure
         {
             using (GetProcessStep(tracer, arguments))
             {
-                Kudu.Core.Helpers.FileLogHelper.Log("ExecuteAsync: " + arguments);
                 using (Process process = CreateProcess(arguments))
                 {
                     var wrapper = new ProcessWrapper(process);
@@ -285,6 +284,9 @@ namespace Kudu.Core.Infrastructure
 
         internal Process CreateProcess(string arguments)
         {
+            StringBuilder createProcessLogEntry = new StringBuilder();
+            createProcessLogEntry.AppendFormat("CreateProcess {0}: {1}\n", Path, arguments);
+            
             var psi = new ProcessStartInfo
             {
                 FileName = Path,
@@ -308,7 +310,10 @@ namespace Kudu.Core.Infrastructure
             foreach (var pair in EnvironmentVariables)
             {
                 psi.EnvironmentVariables[pair.Key] = pair.Value;
+                createProcessLogEntry.AppendFormat("{0}: {1}\n", pair.Key, pair.Value);
             }
+
+            Kudu.Core.Helpers.FileLogHelper.Log(createProcessLogEntry.ToString());
 
             var process = new Process()
             {
