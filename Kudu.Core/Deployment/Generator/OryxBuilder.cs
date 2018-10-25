@@ -5,14 +5,14 @@ namespace Kudu.Core.Deployment.Generator
 {
     public class OryxBuilder : ExternalCommandBuilder
     {
-        public string ProjectType => "Oryx-Build";
+        public override string ProjectType => "Oryx-Build";
 
         public OryxBuilder(IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string sourcePath)
             : base(environment, settings, propertyProvider, sourcePath)
         {
         }
 
-        public Task Build(DeploymentContext context)
+        public override Task Build(DeploymentContext context)
         {
             FileLogHelper.Log("In oryx build...");
 
@@ -47,7 +47,7 @@ namespace Kudu.Core.Deployment.Generator
             FileLogHelper.Log("Completed oryx build...");
         }
 
-        public void PostBuild(DeploymentContext context)
+        public override void PostBuild(DeploymentContext context)
         {
             // no-op
             context.Logger.Log($"Skipping post build. Project type: {ProjectType}");
