@@ -19,7 +19,12 @@ namespace Kudu.Core.Deployment.Generator
 
             // Step 1: Run kudusync
 
-            string kuduSyncCommand = string.Format("kudusync -v 50 -f \"$DEPLOYMENT_SOURCE\" -t \"$DEPLOYMENT_TARGET\" -n \"$NEXT_MANIFEST_PATH\" -p \"$PREVIOUS_MANIFEST_PATH\" -i \".git;.hg;.deployment;.deply.sh\"");
+            string kuduSyncCommand = string.Format("kudusync -v 50 -f {0} -t {1} -n {2} -p {3} -i \".git;.hg;.deployment;.deploy.sh\"",
+                RepositoryPath,
+                context.OutputPath,
+                context.NextManifestFilePath,
+                context.PreviousManifestFilePath
+                );
 
             FileLogHelper.Log("Running KuduSync with  " + kuduSyncCommand);
 
