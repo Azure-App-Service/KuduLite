@@ -116,7 +116,8 @@ namespace Kudu.Services.Arm
         }
 
         // CORE TODO
-        /*public static HttpResponseMessage CreateErrorResponse(HttpRequestMessage request, HttpStatusCode statusCode, Exception exception)
+        /*
+        public static HttpResponseM CreateErrorResponse(HttpRequest request, HttpStatusCode statusCode, Exception exception)
         {
             if (IsArmRequest(request))
             {
@@ -124,7 +125,8 @@ namespace Kudu.Services.Arm
             }
 
             return request.CreateErrorResponse(statusCode, exception);
-        }*/
+        }
+        */
 
         // this error will be deserialized conforming with ARM spec
         public class ArmErrorInfo

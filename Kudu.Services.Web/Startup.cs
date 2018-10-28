@@ -192,27 +192,15 @@ namespace Kudu.Services.Web
             // with NinjectServices.Stop via WebActivator.ApplicationShutdownMethodAttribute
             //Shutdown += () => TraceShutdown(environment, noContextDeploymentsSettingsManager);
 
-            // CORE TODO
             // LogStream service
             // The hooks and log stream start endpoint are low traffic end-points. Re-using it to avoid creating another lock
             var logStreamManagerLock = KuduWebUtil.GetNamedLocks(traceFactory, environment)["hooks"];
-            //kernel.Bind<LogStreamManager>().ToMethod(context => new LogStreamManager(Path.Combine(environment.RootPath, Constants.LogFilesPath),
-            //                                                                         context.Kernel.Get<IEnvironment>(),
-            //                                                                         context.Kernel.Get<IDeploymentSettingsManager>(),
-            //                                                                         context.Kernel.Get<ITracer>(),
-            //                                                                         shutdownDetector,
-            //                                                                         logStreamManagerLock));
 
             services.AddTransient(sp => new LogStreamManager(Path.Combine(environment.RootPath, Constants.LogFilesPath),
                                                              sp.GetRequiredService<IEnvironment>(),
                                                              sp.GetRequiredService<IDeploymentSettingsManager>(),
                                                              sp.GetRequiredService<ITracer>(),
                                                              logStreamManagerLock));
-
-            // CORE TODO Need to implement this, and same comment as in InfoRefsController.cs (not sure why it needs the kernel/iserviceprovider as a
-            // service locator, why does it need "delayed binding"?)
-            //kernel.Bind<CustomGitRepositoryHandler>().ToMethod(context => new CustomGitRepositoryHandler(t => context.Kernel.Get(t)))
-            //                                         .InRequestScope();
 
             // Deployment Service
 
@@ -224,7 +212,8 @@ namespace Kudu.Services.Web
             services.AddScoped<IFetchDeploymentManager, FetchDeploymentManager>();
             services.AddScoped<ISSHKeyManager, SSHKeyManager>();
 
-            services.AddScoped<IRepositoryFactory>(sp => KuduWebUtil.GetDeploymentLock(traceFactory,environment).RepositoryFactory = new RepositoryFactory(
+            services.AddScoped<IRepositoryFactory>(
+                sp => KuduWebUtil.GetDeploymentLock(traceFactory,environment).RepositoryFactory = new RepositoryFactory(
                 sp.GetRequiredService<IEnvironment>(), sp.GetRequiredService<IDeploymentSettingsManager>(), sp.GetRequiredService<ITraceFactory>()));
 
             // CORE NOTE This was previously wired up in Ninject with .InSingletonScope. I'm not sure how that worked,
@@ -466,7 +455,6 @@ namespace Kudu.Services.Web
                 // Deployment script
                 routes.MapRoute("get-deployment-script", "api/deploymentscript", new { controller = "Deployment", action = "GetDeploymentScript" }, new { verb = new HttpMethodRouteConstraint("GET") });
 
-                // CORE TODO
                 // SSHKey
                 routes.MapHttpRouteDual("get-sshkey", "api/sshkey", new { controller = "SSHKey", action = "GetPublicKey" }, new { verb = new HttpMethodRouteConstraint("GET") });
                 routes.MapHttpRouteDual("put-sshkey", "api/sshkey", new { controller = "SSHKey", action = "SetPrivateKey" }, new { verb = new HttpMethodRouteConstraint("PUT") });
@@ -587,25 +575,6 @@ namespace Kudu.Services.Web
                 // for the same request (404 and then 200 statusCode).
                 //routes.MapRoute("error-404", "{*path}", new { controller = "Error404", action = "Handle" });
             });
-
-            // CORE TODO Remove This
-            /*
-            var containsRelativePath2 = new Func<HttpContext, bool>(i =>
-                i.Request.Path.Value.StartsWith("/TestException", StringComparison.OrdinalIgnoreCase));
-            
-            app.MapWhen(containsRelativePath2, application => application.Run(async context =>
-            {
-                //context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                //await context.Response.WriteAsync("Kestrel Running");
-                throw new Exception("Exception Handler Test");
-            }));
-            */
-            /*
-           app.Run(async context =>
-            {
-                await context.Response.WriteAsync("Krestel Running"); // returns a 200
-            });
-            */
             Console.WriteLine("\nExiting Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
         }
 

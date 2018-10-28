@@ -73,7 +73,7 @@ namespace Kudu.Console
             string lockPath = Path.Combine(env.SiteRootPath, Constants.LockPath);
             string deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
 
-            IOperationLock deploymentLock = new LockFile(deploymentLockPath, traceFactory);
+            IOperationLock deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
             
             if (deploymentLock.IsHeld)
             {
@@ -251,6 +251,7 @@ namespace Kudu.Console
         {
             string root = Path.GetFullPath(Path.Combine(siteRoot, ".."));
 
+            // CORE TODO : test by setting SCM_REPOSITORY_PATH 
             // REVIEW: this looks wrong because it ignores SCM_REPOSITORY_PATH
             string repositoryPath = Path.Combine(siteRoot, Constants.RepositoryPath);
 
@@ -270,7 +271,7 @@ namespace Kudu.Console
                 EnvironmentHelper.NormalizeBinPath(binPath),
                 repositoryPath,
                 requestId,
-                null,
+                Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu.dll"),
                 null);
         }
     }

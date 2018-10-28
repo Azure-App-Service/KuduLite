@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.SourceControl;
@@ -16,7 +17,7 @@ namespace Kudu.Core.Infrastructure
             get { return _lock.LockInfo;}
         }
         
-        public bool IsHeld
+        public virtual bool IsHeld
         {
             get { return _lock.IsHeld; }
         }
@@ -25,7 +26,8 @@ namespace Kudu.Core.Infrastructure
         {
             if (!OSDetector.IsOnWindows())
             {
-                _lock = new LinuxLockFile(path);
+                Console.WriteLine("Creating new linux lock");
+                _lock = new WindowsLockFile(path);
             }
             else
             {
@@ -37,7 +39,8 @@ namespace Kudu.Core.Infrastructure
         {
             if (!OSDetector.IsOnWindows())
             {
-                _lock = new LinuxLockFile(path,traceFactory,ensureLock);
+                Console.WriteLine("Creating new linux lock");
+                _lock = new WindowsLockFile(path,traceFactory,ensureLock);
             }
             else
             {
@@ -46,7 +49,7 @@ namespace Kudu.Core.Infrastructure
         }
         
         
-        public bool Lock(string operationName)
+        public virtual bool Lock(string operationName)
         {
             return _lock.Lock(operationName);
         }
@@ -61,7 +64,7 @@ namespace Kudu.Core.Infrastructure
             return  _lock.LockAsync(operationName);
         }
 
-        public void Release()
+        public virtual void Release()
         {
              _lock.Release();
         }

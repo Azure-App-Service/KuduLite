@@ -63,7 +63,7 @@ namespace Kudu.Core.Infrastructure
             }
         }
 
-        public void InitializeAsyncLocks()
+        public virtual void InitializeAsyncLocks()
         {
             _lockRequestQueue = new ConcurrentQueue<QueueItem>();
 
@@ -93,7 +93,7 @@ namespace Kudu.Core.Infrastructure
             }
         }
 
-        public bool IsHeld
+        public virtual bool IsHeld
         {
             get
             {
@@ -107,7 +107,7 @@ namespace Kudu.Core.Infrastructure
                 {
                     // If there is a file, lets see if someone has an open handle to it, or if it's
                     // just hanging there for no reason
-                    using (FileSystemHelpers.OpenFile(_path, FileMode.Open, FileAccess.Write, FileShare.Read)) { }
+                    using (FileSystemHelpers.OpenFile(_path, FileMode.Open, FileAccess.Read, FileShare.Read)) { }
                 }
                 catch (UnauthorizedAccessException)
                 {
@@ -139,7 +139,7 @@ namespace Kudu.Core.Infrastructure
             }
         }
 
-        public bool Lock(string operationName)
+        public virtual bool Lock(string operationName)
         {
             Stream lockStream = null;
             try
@@ -147,7 +147,7 @@ namespace Kudu.Core.Infrastructure
 
                 FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_path));
 
-                lockStream = FileSystemHelpers.OpenFile(_path, FileMode.Create, FileAccess.Write, FileShare.Read);
+                lockStream = FileSystemHelpers.OpenFile(_path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
 
                 WriteLockInfo(operationName, lockStream);
 
@@ -260,7 +260,7 @@ namespace Kudu.Core.Infrastructure
             return item.HasLock.Task;
         }
 
-        public void Release()
+        public virtual void Release()
         {
             // Normally, this should never be null here, but currently some LiveScmEditorController code calls Release() incorrectly
             if (_lockStream == null)

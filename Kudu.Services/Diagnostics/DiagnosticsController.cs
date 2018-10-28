@@ -225,8 +225,7 @@ namespace Kudu.Services.Performance
                         zip.AddDirectory(dir, _tracer, Path.GetFileName(path));
                     }
                 }
-                // CORE TODO use filesystemhelper?
-                else if (System.IO.File.Exists(path))
+                else if (FileSystemHelpers.FileExists(path))
                 {
                     zip.AddFile(path, _tracer, String.Empty);
                 }

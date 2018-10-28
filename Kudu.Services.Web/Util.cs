@@ -28,7 +28,7 @@ namespace Kudu.Services.Web
         private static Dictionary<string, IOperationLock> _namedLocks ;
         // CORE TODO Is this still true?
         // Due to a bug in Ninject we can't use Dispose to clean up WindowsLockFile so we shut it down manually
-        private static LockFile _deploymentLock;
+        private static DeploymentLockFile _deploymentLock;
 
 
         // <summary>
@@ -74,7 +74,7 @@ namespace Kudu.Services.Web
             var statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
             var sshKeyLockPath = Path.Combine(lockPath, Constants.SSHKeyLockFile);
             var hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
-            _deploymentLock = new DeploymentLockFile(deploymentLockPath, traceFactory);
+            _deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
             _deploymentLock.InitializeAsyncLocks();
             
             var statusLock = new LockFile(statusLockPath, traceFactory);
@@ -119,7 +119,6 @@ namespace Kudu.Services.Web
         public static string GetRequestTraceFile(IServiceProvider serviceProvider)
         {
             var traceLevel = serviceProvider.GetRequiredService<IDeploymentSettingsManager>().GetTraceLevel();
-            // CORE TODO Need TraceServices implementation - Done , Testing left
             if (traceLevel <= TraceLevel.Off) return null;
             var contextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
             var httpContext = contextAccessor.HttpContext;
@@ -259,7 +258,7 @@ namespace Kudu.Services.Web
             }
         }
 
-        public static LockFile GetDeploymentLock(ITraceFactory traceFactory, IEnvironment environment)
+        public static DeploymentLockFile GetDeploymentLock(ITraceFactory traceFactory, IEnvironment environment)
         {
             if (_namedLocks == null || _deploymentLock == null)
             {

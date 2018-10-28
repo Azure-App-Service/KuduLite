@@ -233,19 +233,15 @@ namespace Kudu.Services.Deployment
                     targetInfo.MoveTo(moveTarget);
                 }
 
-                var cleanTask = Task.Run(() => DeleteFilesAndDirsExcept(sourceZipFile, extractTargetDirectory, tracer));
-                var extractTask = Task.Run(() =>
+                DeleteFilesAndDirsExcept(sourceZipFile, extractTargetDirectory, tracer);
+                FileSystemHelpers.CreateDirectory(extractTargetDirectory);
+                using (var file = info.OpenRead())
+                using (var zip = new ZipArchive(file, ZipArchiveMode.Read))
                 {
-                    FileSystemHelpers.CreateDirectory(extractTargetDirectory);
+                    zip.Extract(extractTargetDirectory);
+                }
 
-                    using (var file = info.OpenRead())
-                    using (var zip = new ZipArchive(file, ZipArchiveMode.Read))
-                    {
-                        zip.Extract(extractTargetDirectory);
-                    }
-                });
-
-                await Task.WhenAll(cleanTask, extractTask);
+                //await Task.WhenAll(cleanTask, extractTask);
             }
             
             CommitRepo(repository, zipDeploymentInfo);

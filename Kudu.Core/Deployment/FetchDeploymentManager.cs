@@ -117,7 +117,7 @@ namespace Kudu.Core.Deployment
             _tracer.Trace("Attempting to fetch target branch {0}", targetBranch);
             try
             {
-                return await _deploymentLock.LockOperationAsync(async () =>
+                return await _deploymentLock.LockOperation(async () =>
                 {
                     if (PostDeploymentHelper.IsAutoSwapOngoing())
                     {
@@ -125,6 +125,7 @@ namespace Kudu.Core.Deployment
                     }
 
                     await PerformDeployment(deployInfo);
+                    Console.WriteLine("\n\n\n\n Perform deployment Over\n\n\n");
                     return FetchDeploymentRequestResult.RanSynchronously;
                 }, "Performing continuous deployment", TimeSpan.Zero);
             }
@@ -323,7 +324,7 @@ namespace Kudu.Core.Deployment
                     string hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
                     var statusLock = new LockFile(statusLockPath, traceFactory);
                     var hooksLock = new LockFile(hooksLockPath, traceFactory);
-                    var deploymentLock = new DeploymentLockFile(deploymentLockPath, traceFactory);
+                    var deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
 
                     var analytics = new Analytics(settings, new ServerConfiguration(), traceFactory);
                     var deploymentStatusManager = new DeploymentStatusManager(environment, analytics, statusLock);

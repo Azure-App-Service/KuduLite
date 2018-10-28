@@ -833,11 +833,12 @@ namespace Kudu.Core.Deployment
             {
                 return statusFile;
             }
-
+            Console.WriteLine("id : "+id+" , isDeploying : "+isDeploying);
             // There's an incomplete deployment, yet nothing is going on, mark this deployment as failed
             // since it probably means something died
             if (!isDeploying)
             {
+                Console.WriteLine("\n\n\n\n\nERRRRORRRRRR\n\n\n\n\n\n");
                 ILogger logger = GetLogger(id);
                 logger.LogUnexpectedError();
                 //_traceFactory.GetTracer().Step("Unexpected Error "+statusFile.Message);

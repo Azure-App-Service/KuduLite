@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -37,14 +36,26 @@ namespace Kudu.Core.Infrastructure
 
         private ConcurrentQueue<QueueItem> _lockRequestQueue;
 
-        public bool IsHeld
+        public virtual bool IsHeld
         {
             get
             {
                 try
                 {
                     AcquireExclusiveLock();
-                    Release();
+                    Console.WriteLine("Flock is not held, could acquire it");
+                    int ret = flock(_fd, LOCK_UN | LOCK_NB);
+                    if (ret == -1)
+                    {
+                        Errno error = Mono.Unix.Native.Syscall.GetLastError();
+                        throw new Exception("AcquireExLock flock returned: " + error.ToString());
+                    }
+                    //LinuxEventProvider.LogInfo("Bindings", "Released exclusive lock on: " + _windowsLockFile);
+                    if (_fd != 0)
+                    {
+                        Mono.Unix.Native.Syscall.close(_fd);
+                        _fd = 0;
+                    }
                     return false;
                 }
                 catch (Exception)
@@ -74,9 +85,9 @@ namespace Kudu.Core.Infrastructure
             _ensureLock = ensureLock;
             _lockFile = Path.GetFullPath(path);
 
+            // CORE TODO Remove
             FileSystemHelpers.EnsureDirectory("/home/site");
-            FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_lockFile));
-            
+
         }
         
         public OperationLockInfo LockInfo
@@ -123,22 +134,18 @@ namespace Kudu.Core.Infrastructure
             // no-op
         }
         
-        public bool Lock(string operationName)
+        public virtual bool Lock(string operationName)
         {
-            Stream lockStream = null;
             try
             {
                 
-                //FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_lockFile));
+                FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_lockFile));
 
                 //lockStream = FileSystemHelpers.OpenFile(_lockFile, FileMode.Create, FileAccess.Write, FileShare.Read);
 
                 //WriteLockInfo(operationName, lockStream);
-
                 AcquireExclusiveLock();
-                
-                lockStream = null;
-                //OnLockRelease();
+
                 return true;
             }
             catch (UnauthorizedAccessException)
@@ -169,9 +176,9 @@ namespace Kudu.Core.Infrastructure
             }
             finally
             {
-                if (lockStream != null)
+                if (!IsHeld)
                 {
-                    lockStream.Close();
+                    File.Delete(_lockFile);
                 }
             }
 
@@ -207,13 +214,13 @@ namespace Kudu.Core.Infrastructure
             }
         }
 
-        public void AcquireExclusiveLock()
+        private void AcquireExclusiveLock()
         {
             _fd = Mono.Unix.Native.Syscall.open(
                 _lockFile,
                 Mono.Unix.Native.OpenFlags.O_CREAT | 
                 Mono.Unix.Native.OpenFlags.O_WRONLY | 
-                Mono.Unix.Native.OpenFlags.O_APPEND |
+                Mono.Unix.Native.OpenFlags.O_APPEND | 
                 Mono.Unix.Native.OpenFlags.O_NONBLOCK,
                 FilePermissions.ACCESSPERMS);
 
@@ -231,23 +238,17 @@ namespace Kudu.Core.Infrastructure
                 throw new Exception("AcquireExLock flock returned: " + error.ToString());
             }
             
-            if (_fd != 0)
-            {
-                Mono.Unix.Native.Syscall.close(_fd);
-                _fd = 0;
-            }
             //LinuxEventProvider.LogInfo("Bindings", "Acquired exclusive lock on: " + _windowsLockFile);
         }
 
-        public void Release()
+        public virtual void Release()
         {
             int ret = flock(_fd, LOCK_UN | LOCK_NB);
             if (ret == -1)
             {
                 Errno error = Mono.Unix.Native.Syscall.GetLastError();
-                throw new Exception("AcquireExLock flock returned: " + error.ToString());
+                throw new Exception("ReleaseExLock flock returned: " + error.ToString());
             }
-            //LinuxEventProvider.LogInfo("Bindings", "Released exclusive lock on: " + _windowsLockFile);
             if (_fd != 0)
             {
                 Mono.Unix.Native.Syscall.close(_fd);
@@ -257,78 +258,23 @@ namespace Kudu.Core.Infrastructure
 
         public IRepositoryFactory RepositoryFactory { get; set; }
 
-
-        /// <summary>
-        /// When a lock file change has been detected we check whether there are queued up lock requests.
-        /// If so then we attempt to get the lock and dequeue the next request.
-        /// </summary>
-        private void OnLockReleasedInternal(object sender, FileSystemEventArgs e)
-        {
-            if (!_lockRequestQueue.IsEmpty)
-            {                
-                QueueItem item;
-                if (_lockRequestQueue.TryPeek(out item) && Lock(item.OperationName))
-                {
-                    if (!_lockRequestQueue.IsEmpty)
-                    {
-                        if (!_lockRequestQueue.TryDequeue(out item))
-                        {
-                            string msg = String.Format(Resources.Error_AsyncLockNoLockRequest, _lockRequestQueue.Count);
-                            _traceFactory.GetTracer().TraceError(msg);
-                            Release();
-                        }
-
-                        if (!item.HasLock.TrySetResult(true))
-                        {
-                            _traceFactory.GetTracer().TraceError(Resources.Error_AsyncLockRequestCompleted);
-                            Release();
-                        }
-                    }
-                    else
-                    {
-                        Release();
-                    }
-                }
-            }
-        }
-
-        /*
-        ~FileRWLock()
+        
+        ~LinuxLockFile()
         {
             if (_fd != 0)
             {
                 Mono.Unix.Native.Syscall.close(_fd);
                 _fd = 0;
             }
+            File.Delete(_lockFile);
         }
-        */
+        
 
         public void InitializeAsyncLocks()
         {
-            //
-            // Create the file.
-            //
+            CreateAndCloseLockFile();
 
-            int fd = Mono.Unix.Native.Syscall.open(
-                    _lockFile,
-                    Mono.Unix.Native.OpenFlags.O_CREAT | Mono.Unix.Native.OpenFlags.O_WRONLY | Mono.Unix.Native.OpenFlags.O_APPEND | Mono.Unix.Native.OpenFlags.O_NONBLOCK,
-                    FilePermissions.ACCESSPERMS);
-
-            if (fd == -1)
-            {
-                Errno error = Mono.Unix.Native.Syscall.GetLastError();
-                throw new Exception("FileRWLock: file open returned:  " + error.ToString());
-            }
-
-            _fd = fd;
-            
-            //
-            // close the file.
-            //
-
-            Mono.Unix.Native.Syscall.close(fd);
-
-            uint groupId = (uint) Mono.Unix.Native.Syscall.getgrnam("kudu_group").gr_gid;
+            uint groupId = (uint) Mono.Unix.Native.Syscall.getgrnam(System.Environment.GetEnvironmentVariable("KUDU_RUN_USER")).gr_gid;
 
             //
             // chown the file file
@@ -351,6 +297,39 @@ namespace Kudu.Core.Infrastructure
             //
 
             Mono.Unix.Native.Syscall.chmod(_lockFile, permissions);
+        }
+
+
+        public void CreateAndCloseLockFile()
+        {
+
+            if (!File.Exists(_lockFile))
+            {
+                File.Create(_lockFile);
+            }
+
+            //
+            // Create the file.
+            //
+
+            int fd = Mono.Unix.Native.Syscall.open(
+                    _lockFile,
+                    Mono.Unix.Native.OpenFlags.O_CREAT | Mono.Unix.Native.OpenFlags.O_WRONLY | Mono.Unix.Native.OpenFlags.O_APPEND | Mono.Unix.Native.OpenFlags.O_NONBLOCK,
+                    FilePermissions.ACCESSPERMS);
+
+            if (fd == -1)
+            {
+                Errno error = Mono.Unix.Native.Syscall.GetLastError();
+                throw new Exception("FileRWLock: file open returned:  " + error.ToString());
+            }
+
+            _fd = 0;
+
+            //
+            // close the file.
+            //
+
+            Mono.Unix.Native.Syscall.close(fd);
         }
         
         // we only write the lock info at lock's enter since
