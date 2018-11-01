@@ -28,23 +28,23 @@
   string commitFile = System.IO.Path.Combine(hostingEnvironment.WebRootPath, "commit.txt");
   string sha = System.IO.File.Exists(commitFile) ? System.IO.File.ReadAllText(commitFile).Trim() : null;
   var version = Constants.KuduBuild;
-  bool showLearningBanner = deploymentManager.GetResults().Count() != 0;
+  bool showLearningBanner = deploymentManager.GetResults().Count() == 0;
 }
             <div class="jumbotron" style="background-color:#f6f6f6;padding-top:20px;padding-bottom:10px">
                 <div class="row border-between">
                     <div class="col-md-7">
                         <div class="row align-middle" style="margin-left:1px">
                             <h3>Kudu<span style="font-weight:200">Lite</span></h3>@version</div>
-                        <small>Site UpTime: <i class="fas fa-circle" style="color:#26C281;font-size:small;margin-right:5px"></i>@Tracing.TraceMiddleware.UpTime.ToString(@"dd\.hh\:mm\:ss") | Site Folder: @PathResolver.ResolveRootPath() | Temp Folder: @System.IO.Path.GetTempPath()</small>
-                        <br> <small onclick="clickLink(this)" id="curr-instance">Attached to Worker : @System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")</small>
+                        <small>Site UpTime: <i class="fas fa-circle" style="color:#26C281;font-size:x-small;margin-right:5px"></i>@Tracing.TraceMiddleware.UpTime.ToString(@"dd\.hh\:mm\:ss") | Site Folder: @PathResolver.ResolveRootPath() | Temp Folder: @System.IO.Path.GetTempPath()</small>
+                        <br> <small onclick="clickLink(this)" id="curr-instance">Attached to Worker <i class="fas fa-desktop"></i>@System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")</small>
                         </div>
                     @if(!showLearningBanner)
                     {
-                        <div class="col-md-5">
+                        <div class="col-md-5" id="is-deploying-banner" style="display:none">
                             <div>
                                 <div class="col-md-10 row-fluid">
                                     <h6 style="font-weight: 300"> Deployment Underway</h6>
-                                    <h6 class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa">Extracting Zip File...</h6>
+                                    <h6 class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa" id = "deployment-status">...</h6>
                                 </div>
                                 <div class="col-md-2 row-fluid">
                                     <div class="centering text-center">
@@ -71,7 +71,6 @@
                                     <a class="btn btn-primary btn-sm align-middle bkg-light-gray border-0" href="#" role="button"> Learn Node <i class="fab fa-node-js"></i> Development</a>
                                 </div>
                             </div>
-                     
                         </div>
                     }
                 </div>
@@ -113,4 +112,40 @@
         </div>
     </div>
     </div>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
+<script>
+    function checkDeployingStatus() {
+        $.ajax({
+            url: "/api/isdeploying",
+            type: "GET",
+            success: function(data) {
+                console.log("deployment going on" +data["value"]);
+                if (data["value"]) {
+                    $('#is-deploying-banner').css("display", "block");
+                    $.ajax({
+                        url: "/api/deployments/latest",
+                        type: "GET",
+                        success: function(data) {
+                            console.log("latest deployment data");
+                            console.log(data);
+                            $("#deployment-status").html(data["progress"]+"...");
+                        },
+                        dataType: "json",
+                        timeout: 2000
+                    });
+                } else {
+                    $('#is-deploying-banner').css("display", "none");
+                }
+            },
+            dataType: "json",
+            //complete: setTimeout(function() { checkDeployingStatus() }, 5000),
+            timeout: 2000
+        });
+    }
 
+    //checkDeployingStatus(); // This will run on page load
+    
+    setInterval(function() {
+        checkDeployingStatus(); // this will run after every 5 seconds
+    }, 5000);
+</script>

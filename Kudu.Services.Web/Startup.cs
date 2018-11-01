@@ -455,6 +455,9 @@ namespace Kudu.Services.Web
                 // Deployment script
                 routes.MapRoute("get-deployment-script", "api/deploymentscript", new { controller = "Deployment", action = "GetDeploymentScript" }, new { verb = new HttpMethodRouteConstraint("GET") });
 
+                // IsDeploying status 
+                routes.MapRoute("is-deployment-underway", "api/isDeploying", new { controller = "Deployment", action = "IsDeploying" }, new { verb = new HttpMethodRouteConstraint("GET") });
+
                 // SSHKey
                 routes.MapHttpRouteDual("get-sshkey", "api/sshkey", new { controller = "SSHKey", action = "GetPublicKey" }, new { verb = new HttpMethodRouteConstraint("GET") });
                 routes.MapHttpRouteDual("put-sshkey", "api/sshkey", new { controller = "SSHKey", action = "SetPrivateKey" }, new { verb = new HttpMethodRouteConstraint("PUT") });

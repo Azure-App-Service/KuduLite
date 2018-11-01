@@ -102,6 +102,14 @@ namespace Kudu.Services.Deployment
             return result;
         }
 
+        
+        [HttpGet]
+        public IActionResult IsDeploying()
+        {
+            return Json(new Dictionary<string,bool>(){{"value" , _deploymentLock.IsHeld}});
+        }
+        
+        
         /// <summary>
         /// Deploy a previous deployment
         /// </summary>
