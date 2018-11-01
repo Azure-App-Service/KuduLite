@@ -62,7 +62,7 @@ namespace Kudu.Contracts.Infrastructure
             if (!success)
             {
                 var lockInfo = lockObj.LockInfo;
-                throw new LockOperationException(String.Format(CultureInfo.CurrentCulture, Resources.Error_OperationLockTimeout, operationName, lockInfo.OperationName, lockInfo.AcquiredDateTime));
+                throw new LockOperationException(String.Format(CultureInfo.CurrentCulture, Resources.Error_OperationLockTimeout, operationName, operationName,""));
             }
 
             return result;

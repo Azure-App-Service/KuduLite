@@ -11,10 +11,17 @@
 }
 
 <style>
-  .bg-grad{
-    background-image: linear-gradient(to right, #06B0BA, #2F3B61);
-  }
+    .bg-grad{
+        background-image: linear-gradient(to right, #06B0BA, #2F3B61);
+    }
 </style>
+
+<script type="text/javascript">
+    function clickLink(a) {
+        var url1 = a.getAttribute('value');
+        document.cookie = 'ARRAffinity='+document.getElementById("curr-instance")+'; expires=Wed, 1 Jan 2070 13:47:11 UTC; path=/newui';
+    }
+</script>
 
 @{
   //string commitFile = Server.MapPath("~/commit.txt");
@@ -29,7 +36,7 @@
                         <div class="row align-middle" style="margin-left:1px">
                             <h3>Kudu<span style="font-weight:200">Lite</span></h3>@version</div>
                         <small>Site UpTime: <i class="fas fa-circle" style="color:#26C281;font-size:small;margin-right:5px"></i>@Tracing.TraceMiddleware.UpTime.ToString(@"dd\.hh\:mm\:ss") | Site Folder: @PathResolver.ResolveRootPath() | Temp Folder: @System.IO.Path.GetTempPath()</small>
-                        <br> <small>Attached to Worker : @System.Environment.GetEnvironmentVariable("WEBSITE_RUNTIME_ID")</small>
+                        <br> <small onclick="clickLink(this)" id="curr-instance">Attached to Worker : @System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")</small>
                         </div>
                     @if(!showLearningBanner)
                     {
