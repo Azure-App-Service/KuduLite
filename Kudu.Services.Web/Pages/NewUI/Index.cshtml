@@ -1,7 +1,9 @@
 
 @page
+@using Kudu.Core.Deployment
 @using Microsoft.AspNetCore.Hosting
 @inject IHostingEnvironment hostingEnvironment
+@inject IDeploymentManager deploymentManager
 
 @{
     ViewBag.Title = "title";
@@ -19,33 +21,89 @@
   string commitFile = System.IO.Path.Combine(hostingEnvironment.WebRootPath, "commit.txt");
   string sha = System.IO.File.Exists(commitFile) ? System.IO.File.ReadAllText(commitFile).Trim() : null;
   var version = Constants.KuduBuild;
+  bool showLearningBanner = deploymentManager.GetResults().Count() != 0;
 }
+            <div class="jumbotron" style="background-color:#f6f6f6;padding-top:20px;padding-bottom:10px">
+                <div class="row border-between">
+                    <div class="col-md-7">
+                        <div class="row align-middle" style="margin-left:1px">
+                            <h3>Kudu<span style="font-weight:200">Lite</span></h3>@version</div>
+                        <small>Site UpTime: <i class="fas fa-circle" style="color:#26C281;font-size:small;margin-right:5px"></i>@Tracing.TraceMiddleware.UpTime.ToString(@"dd\.hh\:mm\:ss") | Site Folder: @PathResolver.ResolveRootPath() | Temp Folder: @System.IO.Path.GetTempPath()</small>
+                        <br> <small>Attached to Worker : @System.Environment.GetEnvironmentVariable("WEBSITE_RUNTIME_ID")</small>
+                        </div>
+                    @if(!showLearningBanner)
+                    {
+                        <div class="col-md-5">
+                            <div>
+                                <div class="col-md-10 row-fluid">
+                                    <h6 style="font-weight: 300"> Deployment Underway</h6>
+                                    <h6 class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa">Extracting Zip File...</h6>
+                                </div>
+                                <div class="col-md-2 row-fluid">
+                                    <div class="centering text-center">
+                                        <a class="btn btn-primary btn-sm align-middle" href="#" role="button">Stream Logs</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="progress" style="margin-left: 15px; margin-right: 10px">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; background-color: #26C281"></div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="col-md-5" >
+                            <div class="container-fluid">     
+                                <div class="col-md-3 row-fluid">
+                                    <a class="btn btn-primary btn-sm" href="#" role="button"><i class="fas fa-cloud-upload-alt"></i>Deploy your first app</a>
+                                </div>
+                                <div class="col-md-3 row-fluid">
+                                    <a class="btn btn-primary btn-sm align-middle bkg-light-gray border-0" href="#" role="button"><i class="fab fa-wikipedia-w"></i> Read Kudu Wiki</a>
+                                </div>
+                                <div class="col-md-3 row-fluid">
+                                    <a class="btn btn-primary btn-sm align-middle bkg-light-gray border-0" href="#" role="button"> Learn Node <i class="fab fa-node-js"></i> Development</a>
+                                </div>
+                            </div>
+                     
+                        </div>
+                    }
+                </div>
+            </div>
+    <div class="container">
+    <div class="card-deck mb-3 text-center" >
+        <div class="card mb-4 shadow-sm border-0" style="background-color:#f6f6f6">
+            <h6 class="font-weight-normal">App Essentials</h6>
+            <div class="card-body">
+                <ul class="list-unstyled mt-3 mb-4">
+                    <li>App Settings</li>
+                    <li>Browse WWWRoot</li>
+                    <li>System Configuration</li>
+                </ul>
+            </div>
+        </div>
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header">
+                <h6 class="my-0 font-weight-normal">Deployments</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mt-3 mb-4">
+                    <li>List of Deployments</li>
+                    <li>Source control</li>
+                </ul>
+            </div>
+        </div>
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header">
+                <h6 class="my-0 font-weight-normal">Web App Container</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mt-3 mb-4">
+                    <li>Docker Logs</li>
+                    <li>Download as Zip</li>
+                    <li>Process Dump</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    </div>
 
-<div class="col-sm-10">
-  <div class="row dashboard-status py-4 px-3 mb-4" style="background-color: #fdfdfd"> 
-    <div class="col-md-5">
-      <h5 class="mb-0">Kudu<span class="text-light">Lite</span> Build: @version
-        @if (!string.IsNullOrEmpty(sha))
-        {
-            <text>
-              (<a id="sha" href="https://github.com/ProjectKudu/kudu/commit/@sha">@sha.Substring(0, 10)</a>)
-            </text>
-        } </h5><small> Site UpTime: <i class="fas fa-circle" style="color:#26C281"></i> @Tracing.TraceMiddleware.UpTime.ToString(@"dd\.hh\:mm\:ss") </small>
-    </div>
-    
-    <div class="col-md-4">
-      <h6 class="mb-0">Site Folder: @PathResolver.ResolveRootPath()</h6>
-      <h6 class="mb-0">Temp Folder: @System.IO.Path.GetTempPath()</h6>
-    </div>
-    
-    <div class="col-md-1" style="margin: 0 auto; height: 100%; text-align: center">
-      <div class="block-base" style="text-align: center !important;height: 100%"><a href="https://github.com/projectkudu/kudu/wiki" class="p-3 d-block underline-0 text-base"> Need Help <span class="text-primary"><i class="far fa-question-circle"></i></span></a></div>
-    </div>
-    
-  </div>
-  
-  <div class="row px-3 mb-4">
-    <div class="col-12">
-    </div>
-  </div>
-</div>
