@@ -32,7 +32,6 @@ namespace Kudu.Contracts.Infrastructure
             try
             {   
                 operation();
-                Console.WriteLine("\n\n\n\n\n\n\n\nRETURNNNNNN\n\n\n\n\n\n\n\n");
                 return true;
             }
             finally

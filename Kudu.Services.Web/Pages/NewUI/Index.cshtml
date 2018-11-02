@@ -115,6 +115,7 @@
 <script src="https://code.jquery.com/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
 <script>
     function checkDeployingStatus() {
+        var wasDeploying = false;
         $.ajax({
             url: "/api/isdeploying",
             type: "GET",
@@ -128,13 +129,19 @@
                         success: function(data) {
                             console.log("latest deployment data");
                             console.log(data);
-                            $("#deployment-status").html(data["progress"]+"...");
+                            wasDeploying = true;
+                            $("#deployment-status").html(data["status_text"]+"...");
                         },
                         dataType: "json",
                         timeout: 2000
                     });
                 } else {
                     $('#is-deploying-banner').css("display", "none");
+                    if (wasDeploying) {
+                        
+                    } else {
+                        
+                    }
                 }
             },
             dataType: "json",
