@@ -34,26 +34,44 @@ namespace Kudu.Core.Deployment.Generator
             string version = System.Environment.GetEnvironmentVariable("FRAMEWORK_VERSION");
 
             string oryxLanguage = "";
+            string additionalOptions = "";
+            bool runOryxBuild = false;
 
             if (framework.StartsWith("NODE"))
             {
                 oryxLanguage = "nodejs";
+                runOryxBuild = true;
             }
             else if (framework.StartsWith("PYTHON"))
             {
                 oryxLanguage = "python";
+                runOryxBuild = true;
+
+                string virtualEnvName = "antenv";
+
+                if (version.StartsWith("3.6"))
+                {
+                    virtualEnvName = "antenv3.6";
+                }
+                else if (version.StartsWith("2.7"))
+                {
+                    virtualEnvName = "antenv2.7";
+                }
+
+                additionalOptions = string.Format("-p virtualenv_name={0}", virtualEnvName);
             }
 
-            string oryxBuildCommand = string.Format("oryx build {0} -o {1} -l {2} --language-version {3}",
-                context.OutputPath,
-                context.OutputPath,
-                oryxLanguage,
-                version);
+            if (runOryxBuild)
+            {
+                string oryxBuildCommand = string.Format("oryx build {0} -o {1} -l {2} --language-version {3} {4}",
+                    context.OutputPath,
+                    context.OutputPath,
+                    oryxLanguage,
+                    version,
+                    additionalOptions);
 
-            FileLogHelper.Log("Running OryxBuild with  " + oryxBuildCommand);
-            RunCommand(context, oryxBuildCommand, false, "Running oryx build...");
-
-            FileLogHelper.Log("Completed oryx build...");
+                RunCommand(context, oryxBuildCommand, false, "Running oryx build...");
+            }
 
             return Task.CompletedTask;
         }
