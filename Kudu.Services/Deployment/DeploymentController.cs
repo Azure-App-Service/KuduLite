@@ -149,7 +149,7 @@ namespace Kudu.Services.Deployment
                                     deployResult.Url = deploymentUri;
                                     deployResult.LogUrl = kUriHelper.MakeRelative(deploymentUri, "log");
 
-                                    //response = Request.CreateResponse(HttpStatusCode.OK, ArmUtils.AddEnvelopeOnArmRequest(deployResult, Request));
+                                    // response = Request.CreateResponse(HttpStatusCode.OK, ArmUtils.AddEnvelopeOnArmRequest(deployResult, Request));
                                     result = Ok(ArmUtils.AddEnvelopeOnArmRequest(deployResult, Request));
                                     return;
                                 }

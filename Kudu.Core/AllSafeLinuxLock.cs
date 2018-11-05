@@ -103,7 +103,7 @@ namespace Kudu.Core
             lockInfo.heldByTID = Thread.CurrentThread.ManagedThreadId;
             lockInfo.heldByWorker = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
             lockInfo.heldByOp = operationName;
-            lockInfo.lockExpiry = DateTime.Now.AddSeconds(300);
+            lockInfo.lockExpiry = DateTime.Now.AddSeconds(600);
             Console.WriteLine("CreatingLockDir - LockInfoObj : "+lockInfo);
             var json = JsonConvert.SerializeObject(lockInfo);
             FileSystemHelpers.WriteAllText(locksPath+"/deployment/info.lock",json);

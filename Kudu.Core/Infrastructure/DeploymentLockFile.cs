@@ -15,12 +15,7 @@ namespace Kudu.Core.Infrastructure
     {
         private static readonly ReaderWriterLockSlim rwl = new ReaderWriterLockSlim();
         private readonly string _path;
-        private static LinuxLockFile _linuxLock;
-        private readonly bool _isLinux;
         private static DeploymentLockFile _deploymentLockFile;
-        private static bool isFlockHeld;
-        private static bool isFileWatcherLockHeld;
-        private static bool isReaderWriterLockHeld;
         //private static AllSafeLinuxLock _linuxLock;
 
         public static DeploymentLockFile GetInstance(string path, ITraceFactory traceFactory)
