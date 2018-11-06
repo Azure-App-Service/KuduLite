@@ -335,7 +335,7 @@ namespace Kudu.Services.Web
             app.UseResponseCompression();
             
             var containsRelativePath3 = new Func<HttpContext, bool>(i =>
-                i.Request.Path.Value.StartsWith("/api/debugext2", StringComparison.OrdinalIgnoreCase));
+                i.Request.Path.Value.StartsWith("/AppServiceTunnel/Tunnel.ashx", StringComparison.OrdinalIgnoreCase));
 
             //app.Map("/api/debugext2", a => a.UseMiddleware<DebugExtensionMiddleware>());
             app.MapWhen(containsRelativePath3, builder => builder.UseMiddleware<DebugExtensionMiddleware>());
@@ -348,9 +348,9 @@ namespace Kudu.Services.Web
 
             ProxyRequestsIfRelativeUrlMatch(@"/webssh", "http", "127.0.0.1", "3000", app);
 
-            ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
+            //ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
 
-            ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
+            //ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 

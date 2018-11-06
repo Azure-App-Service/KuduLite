@@ -2,6 +2,7 @@
 
 body {
     font-size: .875rem;
+    color: #141823;
 }
 
 .feather {
@@ -44,8 +45,8 @@ body {
 }
 
 .sidebar .nav-link {
-    font-weight: 300;
-    color: #42526E;
+    font-weight: 400;
+    color: #212529;
     border-top: #A1A19E;
 }
 
@@ -64,6 +65,7 @@ body {
 .sidebar .nav-link:hover{
     color: #252e3e !important;
     background-color: #e5e8ec !important;
+    font-weight: 500;
 }
 
 .sidebar .nav-link:hover .feather,
@@ -171,4 +173,14 @@ body {
 
 .clr-icon-navbar {
     color: #42526E !important;
+}
+
+.fa-style {
+    font-size: 0.75rem;
+    text-shadow: none;
+}
+
+a {
+    text-decoration:none;
+    color:  #252e3e;
 }

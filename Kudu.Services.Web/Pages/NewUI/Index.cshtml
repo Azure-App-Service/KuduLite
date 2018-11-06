@@ -28,7 +28,7 @@
   string commitFile = System.IO.Path.Combine(hostingEnvironment.WebRootPath, "commit.txt");
   string sha = System.IO.File.Exists(commitFile) ? System.IO.File.ReadAllText(commitFile).Trim() : null;
   string workerIdHash = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
-  string workerIdShortHash = workerIdHash?.Substring(0,8);
+  string workerIdShortHash = workerIdHash?.Substring(0,12);
   var version = Constants.KuduBuild;
   bool showLearningBanner = deploymentManager.GetResults().Count() == 0;
 }
@@ -38,7 +38,7 @@
                         <div class="row align-middle" style="margin-left:1px">
                             <h3>Kudu<span style="font-weight:200">Lite</span></h3>@version</div>
                         <small>Site UpTime: <i class="fas fa-circle" style="color:#26C281;font-size:x-small;margin-right:5px"></i>@Tracing.TraceMiddleware.UpTime.ToString(@"dd\.hh\:mm\:ss") | Site Folder: @PathResolver.ResolveRootPath() | Temp Folder: @System.IO.Path.GetTempPath()</small>
-                        <br> <small onclick="clickLink(this)" id="curr-instance" title="@workerIdHash">Attached to Worker: &nbsp;<i class="fas fa-desktop"></i>&nbsp;@workerIdShortHash</small>
+                        <br> <small onclick="clickLink(this)" id="curr-instance" title="@workerIdHash">Attached to Worker: &nbsp;<i class="fas fa-desktop fa-style"></i>&nbsp;<a href="#">@workerIdShortHash </a>| <i class="fas fa-network-wired fa-style"></i> <a href="#"> Switch Worker</a></small>
                         </div>
                     @if(!showLearningBanner)
                     {
@@ -188,10 +188,10 @@
             type: "GET",
             success: function(data) {
                 //$("#latest-deployment-deployer").html(data["deployer"]);
-                if (data["status"] === "4") {
+                if (data["status"] === 4) {
                     $("#latest-deployment-id")
                         .html(data["id"] + "&nbsp;<i class=\"fas fa-check-circle\" style=\"color: #26C281;\"></i>");
-                } else if (data["status"] === "1" || data["status"] === "2") {
+                } else if (data["status"] === 1 || data["status"] === 2) {
                         $("#latest-deployment-id")
                             .html(data["id"] + "&nbsp;<i class=\"fas fa-exclamation-circle\" style=\"color: #ff5e57;\"></i>");
                 }else {
@@ -207,7 +207,9 @@
             }
         });
     };
+    
     UpdateLatestDeploymentStatus();
+    
     function timeSince(date) {
         
         var seconds = Math.floor((date) / 1000);
