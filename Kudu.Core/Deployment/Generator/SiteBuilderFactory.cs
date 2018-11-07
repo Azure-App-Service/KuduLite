@@ -26,6 +26,15 @@ namespace Kudu.Core.Deployment.Generator
         {
             string repositoryRoot = repository.RepositoryPath;
 
+            string enableOryxBuild = System.Environment.GetEnvironmentVariable("ENABLE_ORYX_BUILD");
+            if (!string.IsNullOrEmpty(enableOryxBuild))
+            {
+                if (enableOryxBuild.Equals("true", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new OryxBuilder(_environment, settings, _propertyProvider, repositoryRoot);
+                }
+            }
+
             // Use the cached vs projects file finder for: a. better performance, b. ignoring solutions/projects under node_modules
             var fileFinder = new CachedVsProjectsFileFinder(repository);
 
