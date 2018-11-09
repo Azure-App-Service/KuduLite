@@ -63,7 +63,8 @@ namespace Kudu.Services.Deployment
                     IsContinuous = false,
                     AllowDeferredDeployment = false,
                     IsReusable = false,
-                    TargetChangeset = DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed zip file"),
+                    TargetChangeset =
+                        DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed zip file"),
                     CommitId = null,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipHandler,
@@ -72,7 +73,7 @@ namespace Kudu.Services.Deployment
                     AuthorEmail = authorEmail,
                     Message = message
                 };
-                
+
                 if (_settings.RunFromLocalZip())
                 {
                     // This is used if the deployment is Run-From-Zip
@@ -81,14 +82,17 @@ namespace Kudu.Services.Deployment
                     deploymentInfo.ZipName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
                     // This is also for Run-From-Zip where we need to extract the triggers
                     // for post deployment sync triggers.
-                    deploymentInfo.SyncFunctionsTriggersPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-                };
-                
+                    deploymentInfo.SyncFunctionsTriggersPath =
+                        Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+                }
+
+                ;
+
                 return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
             }
         }
-        
-        
+
+
         [HttpPost]
         [DisableRequestSizeLimit]
         [DisableFormValueModelBinding]
@@ -106,7 +110,7 @@ namespace Kudu.Services.Deployment
                 {
                     appName = "ROOT";
                 }
-                
+
                 var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
                 {
                     AllowDeploymentWhileScmDisabled = true,
@@ -116,8 +120,10 @@ namespace Kudu.Services.Deployment
                     IsContinuous = false,
                     AllowDeferredDeployment = false,
                     IsReusable = false,
-                    CleanupTargetDirectory = true, // For now, always cleanup the target directory. If needed, make it configurable
-                    TargetChangeset = DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed war file"),
+                    CleanupTargetDirectory =
+                        true, // For now, always cleanup the target directory. If needed, make it configurable
+                    TargetChangeset =
+                        DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed war file"),
                     CommitId = null,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipFetch,
@@ -130,11 +136,11 @@ namespace Kudu.Services.Deployment
                 return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
             }
         }
-        
-        
-        private async Task<IActionResult> PushDeployAsync(ZipDeploymentInfo deploymentInfo, bool isAsync, HttpContext context)
-        {
 
+
+        private async Task<IActionResult> PushDeployAsync(ZipDeploymentInfo deploymentInfo, bool isAsync,
+            HttpContext context)
+        {
             var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
             if (_settings.RunFromLocalZip())
             {
@@ -155,7 +161,6 @@ namespace Kudu.Services.Deployment
                                 formModel = await Request.StreamFile(file);
                             }
                         }
-
                     }
                     else
                     {
@@ -165,10 +170,12 @@ namespace Kudu.Services.Deployment
                         }
                     }
                 }
+
                 deploymentInfo.RepositoryUrl = zipFilePath;
             }
 
-            var result = await _deploymentManager.FetchDeploy(deploymentInfo, isAsync, UriHelper.GetRequestUri(Request), "HEAD");
+            var result =
+                await _deploymentManager.FetchDeploy(deploymentInfo, isAsync, UriHelper.GetRequestUri(Request), "HEAD");
 
             switch (result)
             {
@@ -178,8 +185,10 @@ namespace Kudu.Services.Deployment
                         // latest deployment keyword reserved to poll till deployment done
                         Response.GetTypedHeaders().Location =
                             new Uri(UriHelper.GetRequestUri(Request),
-                                String.Format("/api/deployments/{0}?deployer={1}&time={2}", Constants.LatestDeployment, deploymentInfo.Deployer, DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ")));
+                                String.Format("/api/deployments/{0}?deployer={1}&time={2}", Constants.LatestDeployment,
+                                    deploymentInfo.Deployer, DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ")));
                     }
+
                     return Accepted();
                 case FetchDeploymentRequestResult.ForbiddenScmDisabled:
                     // Should never hit this for zip push deploy
@@ -202,9 +211,10 @@ namespace Kudu.Services.Deployment
         }
 
 
-        private async Task LocalZipFetch(IRepository repository, DeploymentInfoBase deploymentInfo, string targetBranch, ILogger logger, ITracer tracer)
+        private Task LocalZipFetch(IRepository repository, DeploymentInfoBase deploymentInfo, string targetBranch,
+            ILogger logger, ITracer tracer)
         {
-            var zipDeploymentInfo = (ZipDeploymentInfo)deploymentInfo;
+            var zipDeploymentInfo = (ZipDeploymentInfo) deploymentInfo;
 
             // For this kind of deployment, RepositoryUrl is a local path.
             var sourceZipFile = zipDeploymentInfo.RepositoryUrl;
@@ -234,20 +244,32 @@ namespace Kudu.Services.Deployment
                 }
 
                 DeleteFilesAndDirsExcept(sourceZipFile, extractTargetDirectory, tracer);
-                FileSystemHelpers.CreateDirectory(extractTargetDirectory);
-                using (var file = info.OpenRead())
-                using (var zip = new ZipArchive(file, ZipArchiveMode.Read))
-                {
-                    zip.Extract(extractTargetDirectory);
-                }
+
+                //var extractTask = Task.Run(() =>
+
+                //{
+                    FileSystemHelpers.CreateDirectory(extractTargetDirectory);
+
+
+                    using (var file = info.OpenRead())
+
+                    using (var zip = new ZipArchive(file, ZipArchiveMode.Read))
+
+                    {
+                        zip.Extract(extractTargetDirectory);
+                    }
+                //});
+
 
                 //await Task.WhenAll(cleanTask, extractTask);
+                //await Task.WhenAll(cleanTask, extractTask);
             }
-            
+
             CommitRepo(repository, zipDeploymentInfo);
         }
-        
-        private async Task LocalZipHandler(IRepository repository, DeploymentInfoBase deploymentInfo, string targetBranch, ILogger logger, ITracer tracer)
+
+        private async Task LocalZipHandler(IRepository repository, DeploymentInfoBase deploymentInfo,
+            string targetBranch, ILogger logger, ITracer tracer)
         {
             if (_settings.RunFromLocalZip() && deploymentInfo is ZipDeploymentInfo)
             {
@@ -260,7 +282,7 @@ namespace Kudu.Services.Deployment
                 await LocalZipFetch(repository, deploymentInfo, targetBranch, logger, tracer);
             }
         }
-         
+
         private void ExtractTriggers(IRepository repository, ZipDeploymentInfo zipDeploymentInfo)
         {
             FileSystemHelpers.EnsureDirectory(zipDeploymentInfo.SyncFunctionsTriggersPath);
@@ -273,27 +295,28 @@ namespace Kudu.Services.Deployment
                     // Only select host.json, proxies.json, or function.json that are from top level directories only
                     // Tested with a zip containing 120k files, and this took 90 msec
                     // on my machine.
-                    .Where(e => e.FullName.Equals(Constants.FunctionsHostConfigFile, StringComparison.OrdinalIgnoreCase) ||
-                                e.FullName.Equals(Constants.ProxyConfigFile, StringComparison.OrdinalIgnoreCase) ||
-                                isFunctionJson(e.FullName));
-   
-                 foreach (var entry in entries)
+                    .Where(e =>
+                        e.FullName.Equals(Constants.FunctionsHostConfigFile, StringComparison.OrdinalIgnoreCase) ||
+                        e.FullName.Equals(Constants.ProxyConfigFile, StringComparison.OrdinalIgnoreCase) ||
+                        isFunctionJson(e.FullName));
+
+                foreach (var entry in entries)
                 {
                     var path = Path.Combine(zipDeploymentInfo.SyncFunctionsTriggersPath, entry.FullName);
                     FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(path));
                     entry.ExtractToFile(path, overwrite: true);
                 }
             }
-             CommitRepo(repository, zipDeploymentInfo);
+
+            CommitRepo(repository, zipDeploymentInfo);
 
             bool isFunctionJson(string fullName)
             {
                 return fullName.EndsWith(Constants.FunctionsConfigFile) &&
                        fullName.Count(c => c == '/' || c == '\\') == 1;
             }
-            
         }
-        
+
         private static void CommitRepo(IRepository repository, ZipDeploymentInfo zipDeploymentInfo)
         {
             // Needed in order for repository.GetChangeSet() to work.
@@ -303,8 +326,8 @@ namespace Kudu.Services.Deployment
             // scenario, deployment pipeline still generates a NullRepository
             repository.Commit(zipDeploymentInfo.Message, zipDeploymentInfo.Author, zipDeploymentInfo.AuthorEmail);
         }
-        
-        
+
+
         private async Task WriteSitePackageZip(ZipDeploymentInfo zipDeploymentInfo, ITracer tracer)
         {
             var filePath = Path.Combine(_environment.SitePackagesPath, zipDeploymentInfo.ZipName);
@@ -323,7 +346,6 @@ namespace Kudu.Services.Deployment
                             formModel = await Request.StreamFile(file);
                         }
                     }
-
                 }
                 else
                 {
@@ -333,7 +355,9 @@ namespace Kudu.Services.Deployment
                     }
                 }
             }
-            DeploymentHelper.PurgeZipsIfNecessary(_environment.SitePackagesPath, tracer, _settings.GetMaxZipPackageCount());
+
+            DeploymentHelper.PurgeZipsIfNecessary(_environment.SitePackagesPath, tracer,
+                _settings.GetMaxZipPackageCount());
         }
 
         private void DeleteFilesAndDirsExcept(string fileToKeep, string dirToKeep, ITracer tracer)
@@ -343,7 +367,7 @@ namespace Kudu.Services.Deployment
             try
             {
                 var files = FileSystemHelpers.GetFiles(_environment.ZipTempPath, "*")
-                .Where(p => !PathUtilityFactory.Instance.PathsEquals(p, fileToKeep));
+                    .Where(p => !PathUtilityFactory.Instance.PathsEquals(p, fileToKeep));
 
                 foreach (var file in files)
                 {

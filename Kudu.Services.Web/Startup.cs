@@ -30,12 +30,8 @@ using Kudu.Services.Diagnostics;
 using Kudu.Services.Performance;
 using Kudu.Services.TunnelServer;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Mvc.Internal;
-using Microsoft.Azure.Web.DataProtection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
-using NLog;
-using NLog.Targets;
 using ILogger = Kudu.Core.Deployment.ILogger;
 
 namespace Kudu.Services.Web
@@ -83,7 +79,6 @@ namespace Kudu.Services.Web
             services.AddMvcCore()
                 .AddRazorPages()
                 .AddAuthorization()
-                .AddFormatterMappings()
                 .AddJsonFormatters()
                 .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
             

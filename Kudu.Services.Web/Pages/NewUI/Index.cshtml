@@ -11,138 +11,161 @@
 }
 
 <style>
-    .bg-grad{
-        background-image: linear-gradient(to right, #06B0BA, #2F3B61);
-    }
+    .bg-grad { background-image: linear-gradient(to right, #06B0BA, #2F3B61); }
 </style>
 
 <script type="text/javascript">
     function clickLink(a) {
         var url1 = a.getAttribute('value');
-        document.cookie = 'ARRAffinity='+document.getElementById("curr-instance")+'; expires=Wed, 1 Jan 2070 13:47:11 UTC; path=/newui';
+        document.cookie =
+            'ARRAffinity=' +
+            document.getElementById("curr-instance") +
+            '; expires=Wed, 1 Jan 2070 13:47:11 UTC; path=/newui';
     }
 </script>
 
 @{
-  //string commitFile = Server.MapPath("~/commit.txt");
-  string commitFile = System.IO.Path.Combine(hostingEnvironment.WebRootPath, "commit.txt");
-  string sha = System.IO.File.Exists(commitFile) ? System.IO.File.ReadAllText(commitFile).Trim() : null;
-  string workerIdHash = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
-  string workerIdShortHash = workerIdHash?.Substring(0,12);
-  var version = Constants.KuduBuild;
-  bool showLearningBanner = deploymentManager.GetResults().Count() == 0;
+    //string commitFile = Server.MapPath("~/commit.txt");
+    var commitFile = System.IO.Path.Combine(hostingEnvironment.WebRootPath, "commit.txt");
+    var sha = System.IO.File.Exists(commitFile) ? System.IO.File.ReadAllText(commitFile).Trim() : null;
+    var workerIdHash = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
+    var workerIdShortHash = workerIdHash?.Substring(0, 12);
+    const string version = Constants.KuduBuild;
+    var showLearningBanner = !deploymentManager.GetResults().Any();
+    var welcomeBannerDisplayVal = showLearningBanner ? "display:block" : "display:none";
+    var lastDeployedDisplayVal = !showLearningBanner ? "display:block" : "display:none";
 }
-            <div class="jumbotron" style="background-color:rgb(244, 245, 247);padding-top:20px;padding-bottom:10px">
-                <div class="row border-between">
-                    <div class="col-md-7">
-                        <div class="row align-middle" style="margin-left:1px">
-                            <h3>Kudu<span style="font-weight:200">Lite</span></h3>@version</div>
-                        <small>Site UpTime: <i class="fas fa-circle" style="color:#26C281;font-size:x-small;margin-right:5px"></i>@Tracing.TraceMiddleware.UpTime.ToString(@"dd\.hh\:mm\:ss") | Site Folder: @PathResolver.ResolveRootPath() | Temp Folder: @System.IO.Path.GetTempPath()</small>
-                        <br> <small onclick="clickLink(this)" id="curr-instance" title="@workerIdHash">Attached to Worker: &nbsp;<i class="fas fa-desktop fa-style"></i>&nbsp;<a href="#">@workerIdShortHash </a>| <i class="fas fa-network-wired fa-style"></i> <a href="#"> Switch Worker</a></small>
-                        </div>
-                    @if(!showLearningBanner)
-                    {
-                        <div class="col-md-5" id="is-deploying-banner" style="display:none">
-                            <div>
-                                <div class="col-md-10 row-fluid">
-                                    <h6 style="font-weight: 300"> Deployment Underway</h6>
-                                    <h6 class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa" id = "deployment-status">...</h6>
-                                </div>
-                                <div class="col-md-2 row-fluid">
-                                    <div class="centering text-center">
-                                        <a class="btn btn-primary btn-sm align-middle" href="#" role="button">Stream Logs</a>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="progress" style="margin-left: 15px; margin-right: 10px">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; background-color: #26C281"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-5" id="just-deployed-banner" style="display:none">
-                            <div>
-                                <div class="col-md-10 row-fluid">
-                                    <h6 style="font-weight: 300"> Deployment Underway</h6>
-                                    <h6 class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa" id = "deployment-status">..</h6>
-                                </div>
-                                <div class="col-md-2 row-fluid">
-                                    <div class="centering text-center">
-                                        <a class="btn btn-primary btn-sm align-middle" href="/api/logstream" role="button">Stream Logs</a>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="progress" style="margin-left: 15px; margin-right: 10px">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; background-color: #26C281"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-5" id="last-deployed-banner">
-                                <div class="col-md-9 row-fluid">
-                                    <h6 style="font-weight: 300;margin-bottom:-10px"> Last Deployment &nbsp;<p class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa" id = "latest-deployment-id"> b5fg7213 <i class="fas fa-check-circle" style="color: #26C281;"></i>&nbsp;</p></h6>
-                                    <div class="row-fluid">
-                                        <small style="color:#42526e"> <i class="fas fa-fingerprint"></i> <span id="latest-deployment-id2">ce76394</span> | <i class="far fa-calendar-alt"></i> <span id="latest-deployment-start-time">7 minutes </span> ago |  <i class="fas fa-clock"></i> <span id="latest-deployment-time-taken">5 Minutes</span> | <i class="fas fa-user-circle" title="Deployed by Sanchit Mehta" id="latest-deployment-deployer"></i> </small>
-                                    </div>
-                                </div>
-                            <div class="col-md-2 row-fluid" style = "margin:0px">
-                                <div class="centering text-center">
-                                    <a class="btn btn-primary btn-sm align-middle" id="latest-deployments-logs-btn" href="#" role="button">View Logs</a>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="col-md-5" >
-                            <div class="container-fluid">     
-                                <div class="col-md-3 row-fluid">
-                                    <a class="btn btn-primary btn-sm" href="#" role="button"><i class="fas fa-cloud-upload-alt"></i>Deploy your first app</a>
-                                </div>
-                                <div class="col-md-3 row-fluid">
-                                    <a class="btn btn-primary btn-sm align-middle bkg-light-gray border-0" href="#" role="button" style="margin-left:-10px"><i class="fab fa-wikipedia-w"></i> Read Kudu Wiki</a>
-                                </div>
-                                <div class="col-md-3 row-fluid">
-                                    <a class="btn btn-primary btn-sm align-middle bkg-light-gray border-0" href="#" role="button" style="margin-left:-10px"> Learn Node <i class="fab fa-node-js"></i> Development</a>
-                                </div>
-                            </div>
-                        </div>
-                    }
+
+<div class="jumbotron" style="background-color: rgb(244, 245, 247); padding-top: 20px; padding-bottom: 10px">
+    <div class="row border-between">
+        <div class="col-md-7">
+            <div class="row align-middle" style="margin-left: 1px">
+                <h3>Kudu<span style="font-weight: 200">Lite</span></h3>@version</div>
+            <small>Site UpTime: <i class="fas fa-circle" style="color: #26C281; font-size: x-small; margin-right: 5px"></i>@Tracing.TraceMiddleware.UpTime.ToString(@"dd\.hh\:mm\:ss") | Site Folder: @PathResolver.ResolveRootPath() | Temp Folder: @System.IO.Path.GetTempPath()</small>
+            <br> <small onclick="clickLink(this)" id="curr-instance" title="@workerIdHash">Attached to Worker: &nbsp;<i class="fas fa-desktop fa-style"></i>&nbsp;<a href="#">@workerIdShortHash </a>| <i class="fas fa-network-wired fa-style"></i> <a href="#"> Switch Worker</a></small>
+        </div>
+        <div class="col-md-5" id="is-deploying-banner" style="display: none">
+            <div>
+                <div class="col-md-10 row-fluid">
+                    <h6 style="font-weight: 300"> Deployment Underway</h6>
+                    <h6 class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa" id="deployment-status">...</h6>
+                </div>
+                <div class="col-md-2 row-fluid">
+                    <div class="centering text-center">
+                        <a class="btn btn-primary btn-sm align-middle" href="#" role="button">Stream Logs</a>
+                    </div>
                 </div>
             </div>
-    <div class="container">
-    <div class="card-deck mb-3 text-center" >
-        <div class="card mb-4 shadow-sm border-0" style="background-color:#f6f6f6">
-            <h6 class="font-weight-normal">App Essentials</h6>
-            <div class="card-body">
-                <ul class="list-unstyled mt-3 mb-4">
-                    <li>App Settings</li>
-                    <li>Browse WWWRoot</li>
-                    <li>System Configuration</li>
-                </ul>
+            <div class="progress" style="margin-left: 15px; margin-right: 10px">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; background-color: #26C281"></div>
             </div>
         </div>
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header">
-                <h6 class="my-0 font-weight-normal">Deployments</h6>
+        <div class="col-md-5" id="just-deployed-banner" style="display: none">
+            <div>
+                <div class="col-md-10 row-fluid">
+                    <h6 style="font-weight: 300"> Deployment Underway</h6>
+                    <h6 class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa" id="deployment-status">..</h6>
+                </div>
+                <div class="col-md-2 row-fluid">
+                    <div class="centering text-center">
+                        <a class="btn btn-primary btn-sm align-middle" href="/api/logstream" role="button">Stream Logs</a>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <ul class="list-unstyled mt-3 mb-4">
-                    <li>List of Deployments</li>
-                    <li>Source control</li>
-                </ul>
+            <div class="progress" style="margin-left: 15px; margin-right: 10px">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; background-color: #26C281"></div>
             </div>
         </div>
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header">
-                <h6 class="my-0 font-weight-normal">Web App Container</h6>
+        <div class="col-md-5" id="last-deployed-banner" style="@lastDeployedDisplayVal">
+            <div class="col-md-9 row-fluid">
+                <h6 style="font-weight: 300; margin-bottom: -10px">
+                    Last Deployment &nbsp;
+                    <p class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa" id="latest-deployment-id"> b5fg7213 <i class="fas fa-check-circle" style="color: #26C281;"></i>&nbsp;</p>
+                </h6>
+                <div class="row-fluid">
+                    <small style="color: #42526e"> <i class="fas fa-fingerprint"></i> <span id="latest-deployment-id2">ce76394</span> | <i class="far fa-calendar-alt"></i> <span id="latest-deployment-start-time">7 minutes </span> ago | <i class="fas fa-clock"></i> <span id="latest-deployment-time-taken">5 Minutes</span> | <i class="fas fa-user-circle" title="Deployed by Sanchit Mehta" id="latest-deployment-deployer"></i> </small>
+                </div>
             </div>
-            <div class="card-body">
-                <ul class="list-unstyled mt-3 mb-4">
-                    <li>Docker Logs</li>
-                    <li>Download as Zip</li>
-                    <li>Process Dump</li>
-                </ul>
+            <div class="col-md-2 row-fluid" style="margin: 0px">
+                <div class="centering text-center">
+                    <a class="btn btn-primary btn-sm align-middle" id="latest-deployments-logs-btn" href="#" role="button">View Logs</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5" id="appsvc-welcome-banner" style="@welcomeBannerDisplayVal">
+            <div class="container" style="height: 100%; width: 100%; display: flex; align-items: center; vertical-align: middle">
+                <div class="row text-center">
+                    <div class="col-sm-12 col-md-4 col-md-offset-0">
+                        <div class="wrapper">
+                            <a class="btn btn-primary btn-sm" href="#" role="button"><i class="fas fa-cloud-upload-alt"></i>Deploy your first app</a>
+                        </div>
+                    </div>
+                    <div class="col-sm-12 col-md-4 col-md-offset-0">
+                        <div class="wrapper">
+                            <a class="btn btn-primary btn-sm align-middle bkg-light-gray border-0" href="#" role="button" style="margin-left: -10px"><i class="fab fa-wikipedia-w"></i> Read Kudu Wiki</a>
+                        </div>
+                    </div>
+                    <div class="col-sm-12 col-md-4 col-md-offset-0">
+                        <div class="wrapper">
+                            <a class="btn btn-primary btn-sm align-middle bkg-light-gray border-0" href="#" role="button" style="margin-left: -10px"> Learn Node <i class="fab fa-node-js"></i> Development</a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+</div>
+<div class="container">
+    <div class="card-deck mb-3 text-center">
+        <div class="card mb-4 shadow-sm border-0" style="background-color: rgb(244, 245, 247)">
+            <div class="container">
+                <div class="row" style="margin: 10px;border-bottom: 1px solid #e3e3e3">
+                    <h6 class="font-weight-normal"><i class="far fa-arrow-alt-circle-right"></i>&nbsp;App Essentials</h6>
+                </div>
+                <div class="row" style="margin: 10px">
+                    <small>
+                    <ul class="list-unstyled" style="text-align: left; line-height: 25px">
+                        <li>App Settings</li>
+                        <li>Browse WWWRoot</li>
+                        <li>System Configuration</li>
+                    </ul>
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="card mb-4 shadow-sm border-0" style="background-color: rgb(244, 245, 247)">
+            <div class="container">
+                <div class="row" style="margin: 10px;border-bottom: 1px solid #e3e3e3">
+                    <h6 class="font-weight-normal"><i class="fas fa-cloud-upload-alt"></i>&nbsp;Deployments</h6>
+                </div>
+                <div class="row" style="margin: 10px">
+                    <small>
+                    <ul class="list-unstyled" style="text-align: left; line-height: 25px">
+                        <li>List of Deployments</li>
+                        <li>Source control Info</li>
+                    </ul>
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="card mb-4 shadow-sm border-0" style="background-color: rgb(244, 245, 247)">
+            <div class="container">
+                <div class="row" style="margin: 10px;border-bottom: 1px solid #e3e3e3">
+                    <h6 class="font-weight-normal"><i class="fab fa-docker"></i>&nbsp;Web App Container</h6>
+                </div>
+                <div class="row" style="margin: 10px">
+                    <small>
+                    <ul class="list-unstyled" style="text-align: left; line-height: 25px">
+                        <li>Current Container Logs</li>
+                        <li>Download All Container Logs</li>
+                        <li>Process Dump</li>
+                    </ul>
+                    </small>
+                </div>
+            </div>
+        </div>
     </div>
+</div>
 <script src="https://code.jquery.com/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
 <script>
     function checkDeployingStatus() {
@@ -151,8 +174,9 @@
             url: "/api/isdeploying",
             type: "GET",
             success: function(data) {
-                console.log("deployment going on" +data["value"]);
+                console.log("deployment going on" + data["value"]);
                 if (data["value"]) {
+                    $("#appsvc-welcome-banner").css("display", "none");
                     $("#last-deployed-banner").css("display", "none");
                     $('#is-deploying-banner').css("display", "block");
                     $.ajax({
@@ -162,7 +186,7 @@
                             console.log("latest deployment data");
                             console.log(data);
                             wasDeploying = true;
-                            $("#deployment-status").html(data["status_text"]+"...");
+                            $("#deployment-status").html(data["status_text"] + "...");
                         },
                         dataType: "json",
                         timeout: 2000
@@ -171,7 +195,6 @@
                     $('#is-deploying-banner').css("display", "none");
                     if (wasDeploying) {
                         UpdateLatestDeploymentStatus();
-                        $("#last-deployed-banner").css("display", "block");
                         wasDeploying = false;
                     }
                 }
@@ -188,57 +211,57 @@
             type: "GET",
             success: function(data) {
                 //$("#latest-deployment-deployer").html(data["deployer"]);
+                if (!data["status"]) {
+                    return;
+                }
+                $("#appsvc-welcome-banner").prop("display", "none");
+                $("#last-deployed-banner").prop("display", "block");
                 if (data["status"] === 4) {
                     $("#latest-deployment-id")
                         .html(data["id"] + "&nbsp;<i class=\"fas fa-check-circle\" style=\"color: #26C281;\"></i>");
                 } else if (data["status"] === 1 || data["status"] === 2) {
-                        $("#latest-deployment-id")
-                            .html(data["id"] + "&nbsp;<i class=\"fas fa-exclamation-circle\" style=\"color: #ff5e57;\"></i>");
-                }else {
                     $("#latest-deployment-id")
-                        .html(data["id"] + "&nbsp;<i class=\"fas fa-exclamation-circle\" style=\"color: #ff5e57;\"></i>");
+                        .html(data["id"] +
+                            "&nbsp;<i class=\"fas fa-exclamation-circle\" style=\"color: #ff5e57;\"></i>");
+                } else {
+                    $("#latest-deployment-id")
+                        .html(data["id"] +
+                            "&nbsp;<i class=\"fas fa-exclamation-circle\" style=\"color: #ff5e57;\"></i>");
                 }
-                
+
                 $("#latest-deployment-id2").html(data["id"]);
-                $("#latest-deployment-time-taken").html(timeSince(Date.parse(data["end_time"]) -Date.parse(data["received_time"])));
-                $("#latest-deployment-start-time").html(timeSince(new Date(Date.now()-Date.parse(data["end_time"]))));
-                $("#latest-deployments-logs-btn").prop("href", "/api/deployments/"+data["id"]+"/log");
+                $("#latest-deployment-time-taken")
+                    .html(timeSince(Date.parse(data["end_time"]) - Date.parse(data["received_time"])));
+                $("#latest-deployment-start-time").html(timeSince(new Date(Date.now() - Date.parse(data["end_time"]))));
+                $("#latest-deployments-logs-btn").prop("href", "/api/deployments/" + data["id"] + "/log");
                 $("#latest-deployment-deployer").prop("title", data["author"]);
             }
         });
     };
-    
+
     UpdateLatestDeploymentStatus();
-    
+
     function timeSince(date) {
-        
         var seconds = Math.floor((date) / 1000);
-        
         var interval = Math.floor(seconds / 31536000);
-        
         if (interval > 1) {
             return interval + " years";
         }
-        
         interval = Math.floor(seconds / 2592000);
         if (interval > 1) {
             return interval + " months";
         }
-        
         interval = Math.floor(seconds / 86400);
-        
+
         if (interval > 1) {
             return interval + " days";
         }
-        
         interval = Math.floor(seconds / 3600);
-        
+
         if (interval > 1) {
             return interval + " hours";
         }
-        
         interval = Math.floor(seconds / 60);
-        
         if (interval > 1) {
             return interval + " minutes";
         }
@@ -246,6 +269,7 @@
     }
 
     setInterval(function() {
-        checkDeployingStatus(); // this will run after every 10 seconds
-    }, 10000);
+            checkDeployingStatus(); // this will run after every 10 seconds
+        },
+        10000);
 </script>

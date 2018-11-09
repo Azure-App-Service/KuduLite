@@ -295,7 +295,7 @@ namespace Kudu.Core.Deployment
             Uri uri,
             bool waitForTempDeploymentCreation)
         {
-            var tracer = traceLevel <= TraceLevel.Off ? NullTracer.Instance : new CascadeTracer(new XmlTracer(environment.TracePath, traceLevel), new ETWTracer(environment.RequestId, "POST"));
+            var tracer = traceLevel <= TraceLevel.Off ? NullTracer.Instance : new CascadeTracer(new XmlTracer(environment.TracePath, traceLevel), new ETWTracer(environment.RequestId, "POST"), new Log4NetTracer());
             var traceFactory = new TracerFactory(() => tracer);
 
             var backgroundTrace = tracer.Step(XmlTracer.BackgroundTrace, new Dictionary<string, string>
