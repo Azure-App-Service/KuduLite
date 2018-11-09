@@ -1,0 +1,115 @@
+﻿@page
+@model Kudu.Services.Web.Pages.JSONViewerModel
+@{
+}    
+<link href="~/Content/Styles/jsonTree.css" rel="stylesheet" />
+<link href="~/Content/Styles/app.css" rel="stylesheet" />
+<link href="~/Content/Styles/reset.css" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css?family=PT+Mono" rel="stylesheet">
+<!--
+JSON Tree Viewer
+http://github.com/summerstyle/jsonTreeViewer
+        
+Copyright 2017 Vera Lobacheva (http://iamvera.com)
+Released under the MIT license (LICENSE.txt)
+-->
+
+<div class="row" style="margin-top: 20px">
+    <div class="col-xs-offset 1 col-xs-11 col-sm-offset-2 col-sm-8 col-md-offset-3 col-md-6">
+        <div class="btn-toolbar" role="toolbar">
+            <div class="btn-group btn-group-justified" role="group">
+                <div class="btn-group" role="group">
+                    <button id="page-back-btn" class="btn btn-primary btn-primary disabled" title="Go Back" onclick="goBack()"><i class="fas fa-arrow-left fa-lg" aria-hidden="true"></i></button>
+                </div>
+                <div class="btn-group" role="group">
+                    <button id="page-next-btn" class="btn btn-primary btn-primary disabled" title="" onclick="goNext()"><i class="fas fa-arrow-right fa-lg" aria-hidden="true"></i></button>
+                </div>
+                <div class="btn-group" role="group">
+                    <button id="toggle-expansion-btn" class="btn btn-primary" title="Expand All" onclick="toggleJSON()"><i class="fas fa-plus fa-lg" aria-hidden="true"></i></button>
+                </div>
+                <div class="btn-group" role="group">
+                    <button id="copy-raw-btn" class="btn btn-primary" title="Copy Raw JSON" onclick="copyRAW()"><i class="fas fa-copy fa-lg" aria-hidden="true"></i></button>
+                </div>
+                <div class="btn-group" role="group">
+                    <button id="api_url" class="btn" title="API URL"><i class="fas fa-copy fa-lg" aria-hidden="true"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- For source JSON -->
+<div class="code" id="source_json" data-header="Source JSON" style="margin-top: 20px">
+    <div id="wrapper">
+    </div>
+</div>
+
+<script src="~/Content/Scripts/jsonTree.js"></script>
+<script src="~/Content/Scripts/jsonTreeViewer.js"></script>
+<script src="~/Content/Scripts/App.js"></script>
+<script>
+    // Get DOM-element for inserting json-tree
+    var tree;
+    var expanded = false;
+    var dataStr = "";
+    var wrapper = document.getElementById("wrapper");
+    function goBack() {
+        window.history.back();
+    }
+    
+    function toggleJSON() {
+        if (!expanded) {
+            $("#toggle-expansion-btn").html("<i class=\"fa fa-minus fa-lg\"></i>");
+            tree.expand();
+            expanded = true;
+        } else {
+            expanded = false;
+            $("#toggle-expansion-btn").html("<i class=\"fa fa-plus fa-lg\"></i>");
+            tree.collapse();
+        }
+    }
+    
+    function copyRAW() {
+        // Create new element
+        var el = document.createElement('textarea');
+        // Set value (string to be copied)
+        el.value = JSON.stringify(dataStr);
+        // Set non-editable to avoid focus and move outside of view
+        el.setAttribute('readonly', '');
+        el.style = {position: 'absolute', left: '-9999px'};
+        document.body.appendChild(el);
+        // Select text inside element
+        el.select();
+        // Copy text to clipboard
+        document.execCommand('copy');
+        // Remove temporary element
+        document.body.removeChild(el);
+    }
+    
+    $.urlParam = function (name) {
+        var results = new RegExp('[\?&]' + name + '=([^&#]*)')
+            .exec(window.location.search);
+
+        return (results !== null) ? results[1] || 0 : false;
+    }
+
+    console.log($.urlParam('view_url'));
+    $("#api_url").html(window.location.hostname+$.urlParam('view_url'));
+    
+    $.ajax({
+        url: $.urlParam('view_url'),
+        type: "GET",
+        success: function(data) {
+            console.log("deployment going on" + data["value"]);
+            dataStr = data;
+            // Create json-tree
+            tree = jsonTree.create(data, wrapper);
+
+            // Expand all (or selected) child nodes of root (optional)
+            tree.expand(function(node) {
+                return node.childNodes.length < 2 || node.label === 'phoneNumbers';
+            });
+        },
+        dataType: "json",
+        timeout: 2000
+    });
+</script>

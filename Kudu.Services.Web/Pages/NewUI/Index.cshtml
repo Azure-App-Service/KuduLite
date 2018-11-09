@@ -77,8 +77,8 @@
             </div>
         </div>
         <div class="col-md-5" id="last-deployed-banner" style="@lastDeployedDisplayVal">
-            <div class="col-md-9 row-fluid">
-                <h6 style="font-weight: 300; margin-bottom: -10px">
+            <div class="col-md-9 row-fluid" style="height:100%">
+                <h6 style="font-weight: 400; margin-bottom: -10px">
                     Last Deployment &nbsp;
                     <p class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa" id="latest-deployment-id"> b5fg7213 <i class="fas fa-check-circle" style="color: #26C281;"></i>&nbsp;</p>
                 </h6>
@@ -125,7 +125,7 @@
                 <div class="row" style="margin: 10px">
                     <small>
                     <ul class="list-unstyled" style="text-align: left; line-height: 25px">
-                        <li>App Settings</li>
+                        <li><a href="/newui/jsonviewer?view_url=/api/settings">App Settings</a></li>
                         <li>Browse WWWRoot</li>
                         <li>System Configuration</li>
                     </ul>
@@ -141,8 +141,8 @@
                 <div class="row" style="margin: 10px">
                     <small>
                     <ul class="list-unstyled" style="text-align: left; line-height: 25px">
-                        <li>List of Deployments</li>
-                        <li>Source control Info</li>
+                        <li><a  href="/newui/jsonviewer?view_url=/api/deployments">List of Deployments</a></li>
+                        <li><a href="/newui/jsonviewer?view_url=/api/scm/info">Source control Info</a></li>
                     </ul>
                     </small>
                 </div>
@@ -156,9 +156,9 @@
                 <div class="row" style="margin: 10px">
                     <small>
                     <ul class="list-unstyled" style="text-align: left; line-height: 25px">
-                        <li>Current Container Logs</li>
-                        <li>Download All Container Logs</li>
-                        <li>Process Dump</li>
+                        <li> <a href="/newui/jsonviewer?view_url=/api/logs/docker">Current Container Logs</a></li>
+                        <li> <a href="/api/logs/docker/zip">Download All Container Logs</a></li>
+                        <li> <a href="#">Process Dump</a></li>
                     </ul>
                     </small>
                 </div>
@@ -233,7 +233,7 @@
                 $("#latest-deployment-time-taken")
                     .html(timeSince(Date.parse(data["end_time"]) - Date.parse(data["received_time"])));
                 $("#latest-deployment-start-time").html(timeSince(new Date(Date.now() - Date.parse(data["end_time"]))));
-                $("#latest-deployments-logs-btn").prop("href", "/api/deployments/" + data["id"] + "/log");
+                $("#latest-deployments-logs-btn").prop("href", "/newui/jsonviewer?view_url=/api/deployments/" + data["id"] + "/log");
                 $("#latest-deployment-deployer").prop("title", data["author"]);
             }
         });

@@ -245,27 +245,21 @@ namespace Kudu.Services.Deployment
 
                 DeleteFilesAndDirsExcept(sourceZipFile, extractTargetDirectory, tracer);
 
-                //var extractTask = Task.Run(() =>
+                FileSystemHelpers.CreateDirectory(extractTargetDirectory);
 
-                //{
-                    FileSystemHelpers.CreateDirectory(extractTargetDirectory);
+                using (var file = info.OpenRead())
 
-
-                    using (var file = info.OpenRead())
-
-                    using (var zip = new ZipArchive(file, ZipArchiveMode.Read))
-
-                    {
-                        zip.Extract(extractTargetDirectory);
-                    }
+                using (var zip = new ZipArchive(file, ZipArchiveMode.Read))
+                {
+                    zip.Extract(extractTargetDirectory);
+                }
                 //});
-
-
                 //await Task.WhenAll(cleanTask, extractTask);
                 //await Task.WhenAll(cleanTask, extractTask);
             }
 
             CommitRepo(repository, zipDeploymentInfo);
+            return Task.CompletedTask;      
         }
 
         private async Task LocalZipHandler(IRepository repository, DeploymentInfoBase deploymentInfo,
