@@ -47,9 +47,9 @@ namespace Kudu.Services.Diagnostics
                     System = new
                     {
                         os_name = osName,
-                        os_build_lab_ex = Microsoft.Win32.Registry.GetValue(
+                        os_build_lab_ex = OSDetector.IsOnWindows()?Microsoft.Win32.Registry.GetValue(
                             @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion",
-                            "BuildLabEx", null),
+                            "BuildLabEx", null):"",
                         cores = Environment.ProcessorCount,
                     }
                 },new JsonSerializerSettings{ ContractResolver = new CamelCasePropertyNamesContractResolver()});
