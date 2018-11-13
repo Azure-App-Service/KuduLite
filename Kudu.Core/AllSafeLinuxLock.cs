@@ -30,19 +30,19 @@ namespace Kudu.Core
                 Exception exception = null;
                 if (FileSystemHelpers.DirectoryExists(locksPath+"/deployment"))
                 {
-                    Console.WriteLine("IsHeld - DirectoryExists");
+                    //Console.WriteLine("IsHeld - DirectoryExists");
                     try
                     {
-                        Console.WriteLine("IsHeld - Trying to read the lock data");
+                        //Console.WriteLine("IsHeld - Trying to read the lock data");
                         var ret = IsLockValid();
-                        Console.WriteLine("IsHeld - IsLockValid returned "+ret);
+                        //Console.WriteLine("IsHeld - IsLockValid returned "+ret);
                         return ret;
                     }
                     catch (Exception ex)
                     {
                         // Exception where file is corrupt
                         // Wait for a second, if the file is being written
-                        Console.WriteLine("IsHeld - There was an Exception - Sleeping for a scond ");
+                        //Console.WriteLine("IsHeld - There was an Exception - Sleeping for a second ");
                         Thread.Sleep(1000);
                         exception = ex;
                         return IsLockValid();
@@ -53,7 +53,7 @@ namespace Kudu.Core
                         // Avoid deadlock by releasing this lock/removing the dir
                         if (exception!=null)
                         {
-                            Console.WriteLine("IsHeld - there were exceptions twice -releasing the lock - ie deleting the lock directory");
+                            //Console.WriteLine("IsHeld - there were exceptions twice -releasing the lock - ie deleting the lock directory");
                             FileSystemHelpers.DeleteDirectorySafe(locksPath+"/deployment");
                         }
                     }
@@ -64,14 +64,14 @@ namespace Kudu.Core
 
         private static bool IsLockValid()
         {
-            Console.WriteLine("IsLockValid - InfoFileExists "+FileSystemHelpers.FileExists(locksPath+"/deployment/info.lock"));
+            //Console.WriteLine("IsLockValid - InfoFileExists "+FileSystemHelpers.FileExists(locksPath+"/deployment/info.lock"));
             if (!FileSystemHelpers.FileExists(locksPath+"/deployment/info.lock")) return false;
             var lockInfo = JObject.Parse(File.ReadAllText(locksPath+"/deployment/info.lock"));
-            Console.WriteLine(lockInfo);
+            //Console.WriteLine(lockInfo);
             var workerId = lockInfo[$"heldByWorker"].ToString();
             var expStr = lockInfo[$"lockExpiry"].ToString();
-            Console.WriteLine("IsLockValid - LockExpiry "+expStr);
-            Console.WriteLine("IsLockValid - HeldByWorker "+workerId);
+            //Console.WriteLine("IsLockValid - LockExpiry "+expStr);
+            //Console.WriteLine("IsLockValid - HeldByWorker "+workerId);
             
             //Should never have null expiry
             if (string.IsNullOrEmpty(expStr))
@@ -83,13 +83,14 @@ namespace Kudu.Core
             
             var exp = Convert.ToDateTime(expStr.ToString());
             
-            if (exp.AddMinutes(5) > DateTime.UtcNow)
+            if (exp > DateTime.UtcNow)
             {
-                Console.WriteLine("IsLockValid - "+DateTime.UtcNow);
-                Console.WriteLine("IsLockValid - Within 5 min expiry");
+                //Console.WriteLine("Expiry Time - "+exp);
+                //Console.WriteLine("IsLockValid - "+DateTime.UtcNow);
+                //Console.WriteLine("IsLockValid - Within 5 min expiry");
                 return true;
             }
-            Console.WriteLine("IsLockValid - Lock is Past expiry - Deleting Lock Dir");
+            //Console.WriteLine("IsLockValid - Lock is Past expiry - Deleting Lock Dir");
             FileSystemHelpers.DeleteDirectorySafe(locksPath+"/deployment");
             return false;
         }
@@ -97,14 +98,14 @@ namespace Kudu.Core
         private static void CreateLockInfoFile(string operationName)
         {
             FileSystemHelpers.CreateDirectory(locksPath+"/deployment");
-            Console.WriteLine("CreatingLockDir - Created Actually");
+            //Console.WriteLine("CreatingLockDir - Created Actually");
             var lockInfo = new LinuxLockInfo();
             lockInfo.heldByPID = Process.GetCurrentProcess().Id;
             lockInfo.heldByTID = Thread.CurrentThread.ManagedThreadId;
             lockInfo.heldByWorker = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
             lockInfo.heldByOp = operationName;
-            lockInfo.lockExpiry = DateTime.Now.AddSeconds(600);
-            Console.WriteLine("CreatingLockDir - LockInfoObj : "+lockInfo);
+            lockInfo.lockExpiry = DateTime.UtcNow.AddSeconds(600);
+            //Console.WriteLine("CreatingLockDir - LockInfoObj : "+lockInfo);
             var json = JsonConvert.SerializeObject(lockInfo);
             FileSystemHelpers.WriteAllText(locksPath+"/deployment/info.lock",json);
         }
@@ -120,11 +121,11 @@ namespace Kudu.Core
                 // If it exists check the expiry
                 if (IsHeld)
                 {
-                    Console.WriteLine("LockOp - Lock Already Held");
+                    //Console.WriteLine("LockOp - Lock Already Held");
                     return false;
                 }
             }
-            Console.WriteLine("LockOp - Creating Lock");
+            //Console.WriteLine("LockOp - Creating Lock");
             CreateLockInfoFile(operationName);
             return true;
         }
@@ -145,14 +146,14 @@ namespace Kudu.Core
         {
             if (FileSystemHelpers.DirectoryExists(locksPath+"/deployment"))
             {
-                Console.WriteLine("Releasing Lock - RemovingDir");
+                //Console.WriteLine("Releasing Lock - RemovingDir");
                 _traceFactory.GetTracer().Trace("Releasing Lock ");
                 FileSystemHelpers.DeleteDirectorySafe(locksPath+"/deployment");
                 
             }
             else
             {
-                Console.WriteLine("ReleasingLock - There is NO LOCK HELD | ERROR | This is Bad");
+                Console.WriteLine("ReleasingLock - There is NO LOCK HELD | ERROR");
             }
         }
         

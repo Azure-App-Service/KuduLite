@@ -1,6 +1,8 @@
 ﻿using System.IO;
 using System.Reflection;
 using System.Xml;
+using log4net;
+using log4net.Config;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 
@@ -10,6 +12,7 @@ namespace Kudu.Services.Web
     {
         public static void Main(string[] args)
         {
+            
             /*
             XmlDocument log4netConfig = new XmlDocument();
             log4netConfig.Load(File.OpenRead("log4net.config"));
@@ -17,6 +20,8 @@ namespace Kudu.Services.Web
                 typeof(log4net.Repository.Hierarchy.Hierarchy));
             log4net.Config.XmlConfigurator.Configure(repo, log4netConfig["log4net"]);
             */
+            var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
+            XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
             CreateWebHostBuilder(args).Build().Run();
         }
 

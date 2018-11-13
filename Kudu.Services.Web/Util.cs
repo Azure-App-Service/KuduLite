@@ -113,7 +113,8 @@ namespace Kudu.Services.Web
             var requestTraceFile = TraceServices.GetRequestTraceFile(httpContext);
             if (level <= TraceLevel.Off || requestTraceFile == null) return NullTracer.Instance;
             var textPath = Path.Combine(environment.TracePath, requestTraceFile);
-            return new CascadeTracer(new XmlTracer(environment.TracePath, level), new TextTracer(textPath, level), new ETWTracer(environment.RequestId, TraceServices.GetHttpMethod(httpContext)), new ConsoleTracer());
+            return new CascadeTracer(new XmlTracer(environment.TracePath, level), 
+                new TextTracer(textPath, level));
         }
 
         public static string GetRequestTraceFile(IServiceProvider serviceProvider)
@@ -186,7 +187,7 @@ namespace Kudu.Services.Web
         public static void EnsureValidDeploymentXmlSettings(IEnvironment environment)
         {
             var path = GetSettingsPath(environment);
-            if (File.Exists(path))
+            if (FileSystemHelpers.FileExists(path))
             {
                 try
                 {
@@ -235,11 +236,12 @@ namespace Kudu.Services.Web
 
         public static void EnsureDotNetCoreEnvironmentVariable(IEnvironment environment)
         {
+            // CORE TODO: Moved to DockerFile 
             // Skip this as it causes huge files to be downloaded to the temp folder
-            SetEnvironmentVariableIfNotYetSet("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "true");
+            // SetEnvironmentVariableIfNotYetSet("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "true");
 
             // Don't download xml comments, as they're large and provide no benefits outside of a dev machine
-            SetEnvironmentVariableIfNotYetSet("NUGET_XMLDOC_MODE", "skip");
+            // SetEnvironmentVariableIfNotYetSet("NUGET_XMLDOC_MODE", "skip");
 
             if (Core.Environment.IsAzureEnvironment())
             {

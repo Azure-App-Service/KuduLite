@@ -1,2 +1,23 @@
 @page
-<iframe src="/wwwroot" frameborder="0" scrolling="no" seamless="seamless" style="display:block; width:100%; height:100vh;"></iframe>
+<div class="row" style="margin-top: 20px;margin-top: 10px">
+    <div class="col-xs-offset 1 col-xs-11 col-sm-offset-2 col-sm-8 col-md-offset-3 col-md-6">
+        <div class="btn-toolbar" role="toolbar">
+            <div class="btn-group btn-group-justified" role="group">
+                <div class="btn-group" role="group">
+                    <button id="page-back-btn" class="btn btn-primary btn-primary" title="Go Back" onclick="goBack()"><i class="fas fa-arrow-left fa-lg" aria-hidden="true"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function goBack() {
+        if (document.getElementById("wwwroot-files-frame").contentWindow.history.length) {
+            $("#page-back-btn").removeClass("disabled");
+            window.history.back();
+        } else {
+            $("#page-back-btn").addClass("disabled");
+        }
+    }
+</script>
+<iframe src="/wwwroot" id="wwwroot-files-frame" frameborder="0" scrolling="no" seamless="seamless" style="display:block; width:100%; height:100vh;"></iframe>

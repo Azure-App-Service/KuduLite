@@ -162,12 +162,10 @@ namespace Kudu.Core.Tracing
         {
             string type;
             attributes.TryGetValue("type", out type);
-
             if (type == "error")
             {
                 return TraceLevel.Error;
             }
-
             string value;
             if (attributes.TryGetValue(TraceLevelKey, out value))
             {
@@ -181,7 +179,6 @@ namespace Kudu.Core.Tracing
                     return TraceLevel.Info;
                 }
             }
-
             return TraceLevel.Verbose;
         }
 

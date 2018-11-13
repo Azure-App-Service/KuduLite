@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Kudu.Contracts.Tracing;
 using Kudu.Core.Infrastructure;
@@ -29,6 +31,9 @@ namespace Kudu.Core.Tracing
         private const string PendingXml = "_pending.xml";
         private static long _salt = 0;
         private static DateTime _lastCleanup = DateTime.MinValue;
+                
+        public static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+        private bool startTagAdded = false;
 
         private readonly static TimeSpan ElapsedThreshold = TimeSpan.FromSeconds(10);
         private readonly static string[] TraceFilters = new[]
@@ -93,6 +98,13 @@ namespace Kudu.Core.Tracing
 
                     // generate trace file name base on attribs
                     _file = GenerateFileName(info);
+                    if (!startTagAdded)
+                    {
+                        log.Debug("@@@StartTrace@@@" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff",
+                                      CultureInfo.InvariantCulture) + "," + ServerConfiguration.GetApplicationName() +
+                                  ",");
+                        startTagAdded = true;
+                    }
                 }
 
                 var strb = new StringBuilder();
@@ -121,6 +133,7 @@ namespace Kudu.Core.Tracing
                 }
 
                 FileSystemHelpers.AppendAllTextToFile(_file, strb.ToString());
+                log.Debug(Regex.Replace(strb.ToString(), @"\t|\n|\r", ""));
                 _infos.Push(info);
                 _isStartElement = true;
 
@@ -141,6 +154,8 @@ namespace Kudu.Core.Tracing
 
         private void WriteEndTrace()
         {
+            bool isOutgoingResponse = false;
+            bool zeroInfos = false;
             try
             {
                 var info = _infos.Pop();
@@ -159,15 +174,19 @@ namespace Kudu.Core.Tracing
                 strb.AppendLine(String.Format("<!-- duration: {0:0}ms -->", elapsed.TotalMilliseconds));
 
                 FileSystemHelpers.AppendAllTextToFile(_file, strb.ToString());
+                log.Debug(Regex.Replace(strb.ToString(), @"\t|\n|\r", ""));
                 _isStartElement = false;
 
                 // adjust filename with statusCode
-                if (info.Title == XmlTracer.OutgoingResponseTrace && _file.EndsWith(PendingXml, StringComparison.OrdinalIgnoreCase))
+                if (info.Title == XmlTracer.OutgoingResponseTrace &&
+                    _file.EndsWith(PendingXml, StringComparison.OrdinalIgnoreCase))
                 {
                     if (!Int32.TryParse(info.Attributes["statusCode"], out _statusCode))
                     {
                         _statusCode = 0;
                     }
+
+                    isOutgoingResponse = true;
                 }
 
                 if (_infos.Count == 0)
@@ -182,7 +201,8 @@ namespace Kudu.Core.Tracing
                         var file = _file;
                         if (_file.EndsWith(PendingXml, StringComparison.OrdinalIgnoreCase))
                         {
-                            file = file.Replace(PendingXml, _statusCode <= 0 ? ".xml" : String.Format("_{0}.xml", _statusCode));
+                            file = file.Replace(PendingXml,
+                                _statusCode <= 0 ? ".xml" : String.Format("_{0}.xml", _statusCode));
                         }
 
                         file = file.Replace(".xml", String.Format("_{0:0}s.xml", elapsed.TotalSeconds));
@@ -190,11 +210,20 @@ namespace Kudu.Core.Tracing
                     }
 
                     _file = null;
+                    zeroInfos = true;
                 }
             }
             catch (Exception ex)
             {
                 WriteUnexpectedException(ex);
+            }
+            finally
+            {
+                if (isOutgoingResponse&&zeroInfos)
+                {
+                    startTagAdded = false;
+                    log.Debug("@@@EndTrace@@@\n\n\n");
+                }
             }
         }
 

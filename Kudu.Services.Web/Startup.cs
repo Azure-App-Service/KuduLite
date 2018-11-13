@@ -11,6 +11,7 @@ using Kudu.Core.Settings;
 using Kudu.Core;
 using System.IO;
 using System.Net.Http.Formatting;
+using System.Reflection;
 using Microsoft.AspNetCore.Http;
 using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
@@ -75,29 +76,53 @@ namespace Kudu.Services.Web
                 options.KeyLengthLimit = 500000;
             });
 
+            Console.WriteLine("\n2 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             services.AddMvcCore()
                 .AddRazorPages()
                 .AddAuthorization()
                 .AddJsonFormatters()
                 .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
-            
+
+            Console.WriteLine("\n3 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             services.AddGZipCompression();
+            Console.WriteLine("\n4 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             services.AddDirectoryBrowser();
+            Console.WriteLine("\n5 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             services.AddDataProtection();
+            Console.WriteLine("\n6 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
+            services.AddLogging(
+                builder =>
+                {
+                    builder.AddFilter("Microsoft", LogLevel.Warning)
+                        .AddFilter("System", LogLevel.Warning)
+                        .AddConsole();
+                });
+
+            Console.WriteLine("\n7 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
 
             var contextAccessor = new HttpContextAccessor();
             this._httpContextAccessor = contextAccessor;
             services.AddSingleton<IHttpContextAccessor>(contextAccessor);
 
+            Console.WriteLine("\n8 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
             KuduWebUtil.EnsureHomeEnvironmentVariable();
+
+            Console.WriteLine("\n9 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             KuduWebUtil.EnsureSiteBitnessEnvironmentVariable();
 
+            Console.WriteLine("\n10 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
             IEnvironment environment = KuduWebUtil.GetEnvironment(_hostingEnvironment);
+
+            Console.WriteLine("\n11 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             _webAppEnvironment = environment;
 
@@ -109,12 +134,17 @@ namespace Kudu.Services.Web
 
             // Add various folders that never change to the process path. All child processes will inherit this
             KuduWebUtil.PrependFoldersToPath(environment);
+            Console.WriteLine("\n13 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             // General
             services.AddSingleton<IServerConfiguration>(serverConfiguration);
 
+            Console.WriteLine("\n14 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
             // CORE TODO Looks like this doesn't ever actually do anything, can refactor out?
             services.AddSingleton<IBuildPropertyProvider>(new BuildPropertyProvider());
+
+            Console.WriteLine("\n15 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
 
             IDeploymentSettingsManager noContextDeploymentsSettingsManager =
@@ -124,9 +154,13 @@ namespace Kudu.Services.Web
             // Per request environment
             services.AddScoped<IEnvironment>(sp => KuduWebUtil.GetEnvironment(_hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>()));
 
+            Console.WriteLine("\n16 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
             services.AddDeployementServices(environment);
-            
-            
+
+            Console.WriteLine("\n17 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
+
             /*
              * CORE TODO all this business around ITracerFactory/ITracer/GetTracer()/
              * ILogger needs serious refactoring:
@@ -158,7 +192,11 @@ namespace Kudu.Services.Web
 
             TraceServices.SetTraceFactory(CreateTracerThunk);
 
+            Console.WriteLine("\n18 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
             services.AddSingleton<IDictionary<string, IOperationLock>>(KuduWebUtil.GetNamedLocks(traceFactory,environment));
+
+            Console.WriteLine("\n19 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             // CORE TODO ShutdownDetector, used by LogStreamManager.
             //var shutdownDetector = new ShutdownDetector();
@@ -170,7 +208,8 @@ namespace Kudu.Services.Web
             services.AddTransient<IAnalytics>(sp => new Analytics(sp.GetRequiredService<IDeploymentSettingsManager>(),
                                                                   sp.GetRequiredService<IServerConfiguration>(),
                                                                   noContextTraceFactory));
-            
+            Console.WriteLine("\n20 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
             // CORE TODO Trace unhandled exceptions
             //AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
             //{
@@ -196,6 +235,7 @@ namespace Kudu.Services.Web
                                                              sp.GetRequiredService<IDeploymentSettingsManager>(),
                                                              sp.GetRequiredService<ITracer>(),
                                                              logStreamManagerLock));
+            Console.WriteLine("\n21 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             // Deployment Service
 
@@ -211,6 +251,8 @@ namespace Kudu.Services.Web
                 sp => KuduWebUtil.GetDeploymentLock(traceFactory,environment).RepositoryFactory = new RepositoryFactory(
                 sp.GetRequiredService<IEnvironment>(), sp.GetRequiredService<IDeploymentSettingsManager>(), sp.GetRequiredService<ITraceFactory>()));
 
+            Console.WriteLine("\n22 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
             // CORE NOTE This was previously wired up in Ninject with .InSingletonScope. I'm not sure how that worked,
             // since it depends on an IEnvironment, which was set up with .PerRequestScope. I have made this per request.
             services.AddScoped<IApplicationLogsReader, ApplicationLogsReader>();
@@ -221,6 +263,8 @@ namespace Kudu.Services.Web
             // Git Servicehook Parsers
             services.AddGitServiceHookParsers();
 
+            Console.WriteLine("\n23 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
             // CORE TODO
             // SiteExtensions
             //kernel.Bind<ISiteExtensionManager>().To<SiteExtensionManager>().InRequestScope();
@@ -230,6 +274,8 @@ namespace Kudu.Services.Web
             //kernel.Bind<IFunctionManager>().To<FunctionManager>().InRequestScope();
 
             services.AddScoped<ICommandExecutor, CommandExecutor>();
+
+            Console.WriteLine("\n24 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             // CORE TODO This stuff should probably go in a separate method
             // (they don't really fit into "ConfigureServices"), and much of it is probably no longer needed
@@ -360,7 +406,7 @@ namespace Kudu.Services.Web
             //GlobalConfiguration.Configuration.Filters.Add(new TraceExceptionFilterAttribute());
 
 
-            // CORE TODO concept of "deprecation" in routes for traces
+            // CORE TODO concept of "deprecation" in routes for traces, Do we need this ?
 
             // Push url
             foreach (var url in new[] { "/git-receive-pack", $"/{configuration.GitServerRoot}/git-receive-pack" })
@@ -380,10 +426,7 @@ namespace Kudu.Services.Web
                 app.Map(url, appBranch => appBranch.RunUploadPackHandler());
             };
 
-            // CORE TODO
-            // Custom GIT repositories, which can be served from any directory that has a git repo
-            //routes.MapHandler<CustomGitRepositoryHandler>(kernel, "git-custom-repository", "git/{*path}", deprecated: false);
-
+            // CORE TODO - Test this
             // Custom GIT repositories, which can be served from any directory that has a git repo
             foreach (var url in new[] { "/git-custom-repository", "/git/{*path}" })
             {
@@ -474,7 +517,7 @@ namespace Kudu.Services.Web
                 routes.MapHttpRouteDual("diagnostics-get-setting", "diagnostics/settings/{key}", new { controller = "Diagnostics", action = "Get" }, new { verb = new HttpMethodRouteConstraint("GET") });
                 routes.MapHttpRouteDual("diagnostics-delete-setting", "diagnostics/settings/{key}", new { controller = "Diagnostics", action = "Delete" }, new { verb = new HttpMethodRouteConstraint("DELETE") });
 
-                // CORE TODO
+                // CORE TODO - Works now , | shutdown logic left
                 // Logs
                 foreach (var url in new[] { "/logstream", "/logstream/{*path}" })
                 {
@@ -561,6 +604,9 @@ namespace Kudu.Services.Web
         {
             //Wait while the data is flushed
             System.Threading.Thread.Sleep(1000);
+            Console.WriteLine("Removing Deployment Locks");
+            FileSystemHelpers.DeleteDirectorySafe("/home/site/locks/deployment");
+            Console.WriteLine("Done!");
         }
     }
 }
