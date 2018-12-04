@@ -53,7 +53,9 @@ Released under the MIT license (LICENSE.txt)
     var dataStr = "";
     var wrapper = document.getElementById("wrapper");
     function goBack() {
-        window.history.back();
+        if (history.length){
+            window.history.back();
+        }
     }
     
     function toggleJSON() {

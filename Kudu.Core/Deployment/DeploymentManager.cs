@@ -805,13 +805,11 @@ namespace Kudu.Core.Deployment
 
             foreach (var id in FileSystemHelpers.GetDirectories(_environment.DeploymentsPath))
             {
-                using (_traceFactory.GetTracer().Step("Processing Deployment Directory "+id)) {
-                    DeployResult result = GetResult(id, activeDeploymentId, isDeploying);
+                DeployResult result = GetResult(id, activeDeploymentId, isDeploying);
 
-                    if (result != null)
-                    {
-                        yield return result;
-                    }
+                if (result != null)
+                {
+                    yield return result;
                 }
             }
         }
@@ -833,12 +831,11 @@ namespace Kudu.Core.Deployment
             {
                 return statusFile;
             }
-            Console.WriteLine("id : "+id+" , isDeploying : "+isDeploying);
             // There's an incomplete deployment, yet nothing is going on, mark this deployment as failed
             // since it probably means something died
             if (!isDeploying)
             {
-                Console.WriteLine("\n\n\n\n\nERRRRORRRRRR\n\n\n\n\n\n");
+                _traceFactory.GetTracer().Step("Deployment Lock Failure");
                 ILogger logger = GetLogger(id);
                 logger.LogUnexpectedError();
                 //_traceFactory.GetTracer().Step("Unexpected Error "+statusFile.Message);
