@@ -1,6 +1,6 @@
 <img src="http://azuredeploy.net/kudu.svg" height="100" width="100">
 
-### Kudu Light
+### Kudu Lite
 
 Kudu Light is the redevelopment of Kudu in .Net Core : the engine behind [git deployments in Azure App Service](https://azure.microsoft.com/en-us/documentation/articles/web-sites-publish-source-control/). It can also run outside of Azure.
 
