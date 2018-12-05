@@ -21,15 +21,12 @@
     ViewData["Title"] = "Kudu Services";
 
     string appServiceVersion = GetAppServiceVersion();
-    Console.WriteLine("\n\n\n\n\nCheck Point 1 inside Razor\n\n\n\n\n");
-    DateTime now = DateTime.Now;
-    Console.WriteLine(now);
+    Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
 }
 
 @functions {
     string GetAppServiceVersion()
     {
-        Console.WriteLine("Getting App Service Version: "+DateTime.Now.ToString("hh.mm.ss.ffffff"));
         Assembly assembly;
         try
         {

@@ -2,7 +2,7 @@
 
 ### Kudu Lite
 
-Kudu Light is the redevelopment of Kudu in .Net Core : the engine behind [git deployments in Azure App Service](https://azure.microsoft.com/en-us/documentation/articles/web-sites-publish-source-control/). It can also run outside of Azure.
+Kudu Lite is the redevelopment of Kudu in .Net Core : the engine behind [git deployments in Azure App Service](https://azure.microsoft.com/en-us/documentation/articles/web-sites-publish-source-control/). It can also run outside of Azure.
 
 ![KuduDebugConsole](https://cloud.githubusercontent.com/assets/6472374/18506877/99d39f24-7a76-11e6-86a7-f3ac62b0199c.png)
 
