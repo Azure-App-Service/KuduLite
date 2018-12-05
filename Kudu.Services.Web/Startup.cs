@@ -75,25 +75,23 @@ namespace Kudu.Services.Web
                 options.ValueCountLimit = 500000;
                 options.KeyLengthLimit = 500000;
             });
-
-            Console.WriteLine("\n2 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+           
+            // Controllers are in a separate project, this ensures this can 
+            //
+            var kuduServicesAssembly = Assembly.Load("Kudu.Services");
 
             services.AddMvcCore()
                 .AddRazorPages()
                 .AddAuthorization()
                 .AddJsonFormatters()
-                .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver());
-
-            Console.WriteLine("\n3 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+                .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver())
+                .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices();            
 
             services.AddGZipCompression();
-            Console.WriteLine("\n4 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             services.AddDirectoryBrowser();
-            Console.WriteLine("\n5 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             services.AddDataProtection();
-            Console.WriteLine("\n6 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             services.AddLogging(
                 builder =>
@@ -103,26 +101,15 @@ namespace Kudu.Services.Web
                         .AddConsole();
                 });
 
-            Console.WriteLine("\n7 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
-
             var contextAccessor = new HttpContextAccessor();
             this._httpContextAccessor = contextAccessor;
             services.AddSingleton<IHttpContextAccessor>(contextAccessor);
 
-            Console.WriteLine("\n8 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
             KuduWebUtil.EnsureHomeEnvironmentVariable();
-
-            Console.WriteLine("\n9 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             KuduWebUtil.EnsureSiteBitnessEnvironmentVariable();
 
-            Console.WriteLine("\n10 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
             IEnvironment environment = KuduWebUtil.GetEnvironment(_hostingEnvironment);
-
-            Console.WriteLine("\n11 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             _webAppEnvironment = environment;
 
@@ -134,18 +121,12 @@ namespace Kudu.Services.Web
 
             // Add various folders that never change to the process path. All child processes will inherit this
             KuduWebUtil.PrependFoldersToPath(environment);
-            Console.WriteLine("\n13 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
+            
             // General
             services.AddSingleton<IServerConfiguration>(serverConfiguration);
 
-            Console.WriteLine("\n14 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
             // CORE TODO Looks like this doesn't ever actually do anything, can refactor out?
             services.AddSingleton<IBuildPropertyProvider>(new BuildPropertyProvider());
-
-            Console.WriteLine("\n15 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
 
             IDeploymentSettingsManager noContextDeploymentsSettingsManager =
                 new DeploymentSettingsManager(new XmlSettings.Settings(KuduWebUtil.GetSettingsPath(environment)));
@@ -154,12 +135,7 @@ namespace Kudu.Services.Web
             // Per request environment
             services.AddScoped<IEnvironment>(sp => KuduWebUtil.GetEnvironment(_hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>()));
 
-            Console.WriteLine("\n16 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
             services.AddDeployementServices(environment);
-
-            Console.WriteLine("\n17 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
 
             /*
              * CORE TODO all this business around ITracerFactory/ITracer/GetTracer()/
@@ -192,11 +168,7 @@ namespace Kudu.Services.Web
 
             TraceServices.SetTraceFactory(CreateTracerThunk);
 
-            Console.WriteLine("\n18 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
             services.AddSingleton<IDictionary<string, IOperationLock>>(KuduWebUtil.GetNamedLocks(traceFactory,environment));
-
-            Console.WriteLine("\n19 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             // CORE TODO ShutdownDetector, used by LogStreamManager.
             //var shutdownDetector = new ShutdownDetector();
@@ -208,8 +180,7 @@ namespace Kudu.Services.Web
             services.AddTransient<IAnalytics>(sp => new Analytics(sp.GetRequiredService<IDeploymentSettingsManager>(),
                                                                   sp.GetRequiredService<IServerConfiguration>(),
                                                                   noContextTraceFactory));
-            Console.WriteLine("\n20 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
+            
             // CORE TODO Trace unhandled exceptions
             //AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
             //{
@@ -235,10 +206,8 @@ namespace Kudu.Services.Web
                                                              sp.GetRequiredService<IDeploymentSettingsManager>(),
                                                              sp.GetRequiredService<ITracer>(),
                                                              logStreamManagerLock));
-            Console.WriteLine("\n21 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
+            
             // Deployment Service
-
             services.AddWebJobsDependencies();
 
             services.AddScoped<ILogger>(sp => KuduWebUtil.GetLogger(sp));
@@ -251,8 +220,6 @@ namespace Kudu.Services.Web
                 sp => KuduWebUtil.GetDeploymentLock(traceFactory,environment).RepositoryFactory = new RepositoryFactory(
                 sp.GetRequiredService<IEnvironment>(), sp.GetRequiredService<IDeploymentSettingsManager>(), sp.GetRequiredService<ITraceFactory>()));
 
-            Console.WriteLine("\n22 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
             // CORE NOTE This was previously wired up in Ninject with .InSingletonScope. I'm not sure how that worked,
             // since it depends on an IEnvironment, which was set up with .PerRequestScope. I have made this per request.
             services.AddScoped<IApplicationLogsReader, ApplicationLogsReader>();
@@ -263,8 +230,6 @@ namespace Kudu.Services.Web
             // Git Servicehook Parsers
             services.AddGitServiceHookParsers();
 
-            Console.WriteLine("\n23 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
             // CORE TODO
             // SiteExtensions
             //kernel.Bind<ISiteExtensionManager>().To<SiteExtensionManager>().InRequestScope();
@@ -274,8 +239,6 @@ namespace Kudu.Services.Web
             //kernel.Bind<IFunctionManager>().To<FunctionManager>().InRequestScope();
 
             services.AddScoped<ICommandExecutor, CommandExecutor>();
-
-            Console.WriteLine("\n24 : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             // CORE TODO This stuff should probably go in a separate method
             // (they don't really fit into "ConfigureServices"), and much of it is probably no longer needed
@@ -342,7 +305,8 @@ namespace Kudu.Services.Web
 
             loggerFactory.AddEventSourceLogger();
             
-            
+            app.UseMvcWithDefaultRoute();
+
             if (_hostingEnvironment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -364,12 +328,11 @@ namespace Kudu.Services.Web
             }));
             
             var containsRelativePath2 = new Func<HttpContext, bool>(i =>
-                i.Request.Path.Value.StartsWith("/Version", StringComparison.OrdinalIgnoreCase));
+                i.Request.Path.Value.StartsWith("/info", StringComparison.OrdinalIgnoreCase));
             
             app.MapWhen(containsRelativePath2, application => application.Run(async context =>
             {
-                //context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                await context.Response.WriteAsync("KuduL:2");
+                await context.Response.WriteAsync("{\"Version\":\""+Constants.KuduBuild+"\"}");
             }));
           
             
@@ -583,13 +546,12 @@ namespace Kudu.Services.Web
         {
             var containsRelativePath = new Func<HttpContext, bool>(i =>
                 i.Request.Path.Value.StartsWith(relativeUrl, StringComparison.OrdinalIgnoreCase));
-            
-            app.MapWhen(containsRelativePath, builder => builder.RunProxy(new ProxyOptions
-            {
+                app.MapWhen(containsRelativePath, builder => builder.RunProxy(new ProxyOptions
+                {
                     Scheme = scheme,
                     Host = host,
                     Port = port
-            }));
+                }));
         }
 
         

@@ -66,8 +66,6 @@ namespace Kudu.Services.Web.Tracing
             {
                 var tracer = TraceServices.GetRequestTracer(httpContext);
                 var error = exception;
-
-                Console.WriteLine("\n\nERRROOOOORRRRR");
                 Console.WriteLine("Exception Message : "+exception.Message);
                 Console.WriteLine("Exception StackTrace : "+exception.StackTrace);
                 //LogErrorRequest(httpContext, error);

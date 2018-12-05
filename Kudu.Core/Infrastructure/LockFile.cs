@@ -24,28 +24,14 @@ namespace Kudu.Core.Infrastructure
         
         public LockFile(string path) 
         {
-            if (!OSDetector.IsOnWindows())
-            {
-                Console.WriteLine("Creating new linux lock");
-                _lock = new WindowsLockFile(path);
-            }
-            else
-            {
-                _lock =  new WindowsLockFile(path);
-            }
+            _lock =  new WindowsLockFile(path);
+            
         }
 
         public LockFile(string path, ITraceFactory traceFactory, bool ensureLock = false)
         {
-            if (!OSDetector.IsOnWindows())
-            {
-                Console.WriteLine("Creating new linux lock");
-                _lock = new WindowsLockFile(path,traceFactory,ensureLock);
-            }
-            else
-            {
-                _lock =  new WindowsLockFile(path,traceFactory,ensureLock);
-            }
+            _lock = new WindowsLockFile(path,traceFactory,ensureLock);
+      
         }
         
         
