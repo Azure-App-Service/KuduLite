@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
     <TieredCompilation>true</TieredCompilation>
   </PropertyGroup>
   <PropertyGroup>
@@ -28,8 +28,8 @@
     <PackageReference Include="log4net" Version="2.0.8" />
     <PackageReference Include="Mercurial.Net" Version="1.1.1.607" />
     <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
-    <PackageReference Include="System.Text.RegularExpressions"/>
-    <PackageReference Include="Microsoft.AspNetCore.Http.Extensions"/>
+    <PackageReference Include="System.Text.RegularExpressions" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" />
     <PackageReference Include="Microsoft.Azure.WebSites.DataProtection" Version="0.1.78-alpha" />
     <PackageReference Include="ncrontab" Version="3.3.0" />
     <PackageReference Include="NuGet.Protocol" Version="4.8.0" />
