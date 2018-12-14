@@ -304,8 +304,6 @@ namespace Kudu.Services.Web
             Console.WriteLine("\nConfigure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             loggerFactory.AddEventSourceLogger();
-            
-            app.UseMvcWithDefaultRoute();
 
             if (_hostingEnvironment.IsDevelopment())
             {
