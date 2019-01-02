@@ -30,7 +30,6 @@
         Assembly assembly;
         try
         {
-            //return "test";
             assembly = Assembly.Load("Microsoft.Web.Hosting, Version=7.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35");
             var fileVersionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location);
             return fileVersionInfo.ProductVersion;
@@ -48,7 +47,6 @@
 </style>
 <div class="container">
     @{
-        //string commitFile = Server.MapPath("~/commit.txt");
         string commitFile = System.IO.Path.Combine(hostingEnvironment.WebRootPath, "commit.txt");
         string sha = System.IO.File.Exists(commitFile) ? System.IO.File.ReadAllText(commitFile).Trim() : null;
         var version = typeof(Kudu.Services.Web.Tracing.TraceMiddleware).Assembly.GetName().Version;
@@ -86,7 +84,6 @@
         </div>
         <div>
             @Kudu.Services.Web.Tracing.TraceMiddleware.UpTime.ToString(@"dd\.hh\:mm\:ss")
-            12345
         </div>
     </div>
     <div class="row">

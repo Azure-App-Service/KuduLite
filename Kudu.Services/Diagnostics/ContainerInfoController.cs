@@ -1,5 +1,7 @@
 using System;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.Tracing;
+using Kudu.Services.Util;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -20,7 +22,6 @@ namespace Kudu.Services.Diagnostics
         /// <summary>
         /// Updates all/particular stat for a container.
         /// Can only be called by an authorized metering service.
-        /// <param name="containerId">ContainerId whose stats are to be purged</param>
         /// </summary>
         /// <param name="data">Valid JSON Object containing the data to be updated</param>
         /// <param name="containerId">ContainerId whose stats are to be updated</param>
@@ -28,10 +29,11 @@ namespace Kudu.Services.Diagnostics
         ///  purged and stats in this request are added</param>
         /// <returns></returns>
         [HttpPost("{containerId=all}/{filterName=all}")]
+        [RestrictToLocalhost]
         public IActionResult UpdateLog(
             [FromBody] JObject data,
-            string containerId,
-            string filterName)
+            [FromRoute] string containerId = "all",
+            [FromRoute] string filterName = "all")
         {
             try
             {
@@ -77,7 +79,8 @@ namespace Kudu.Services.Diagnostics
         /// </summary>
         /// <param name="containerId">ContainerId whose stats are to be purged</param>
         [HttpDelete("{containerId}")]
-        public IActionResult GetLog(string containerId)
+        [RestrictToLocalhost]
+        public IActionResult GetLog([FromRoute] string containerId = "all")
         {
             try
             {
@@ -97,8 +100,10 @@ namespace Kudu.Services.Diagnostics
 
         /// <summary>
         /// Returns a list of containers for a webapp and it's memory/cpu stats.
-        /// This stats can be filtered by giving the api URL as /api/stats/(container-id)/(filter-id)
-        /// <list type="bullet">  
+        /// </summary>
+        /// <para>
+        /// These stats can be filtered by giving the api URL as /api/stats/(container-id)/(filter-id)
+        /// <list type="bullet">    
         ///     <listheader>  
         ///         <term>Possible filters are</term>  
         ///     </listheader>  
@@ -114,16 +119,15 @@ namespace Kudu.Services.Diagnostics
         ///         <term>cpu_stats</term>
         ///         <description>CPU usage statistics</description>
         ///     </item>
-        /// </list>  
-        /// </summary>
+        /// </list>
+        /// </para>
         /// <param name="containerId">ContainerId whose stats are to be retrieved</param>
-        /// <param name="filterName"></param>
+        /// <param name="filterName">Filter for a container whose stats are to be required, if null all for that container 
+        /// are returned</param>
         /// <returns></returns>
-        /// <exception cref="Exception">Filter for a particular containerId are to be retrieved</exception>
         [HttpGet("{containerId=all}/{filterName=all}")]
-        public IActionResult GetLog(string instance,
-            string containerId,
-            string filterName)
+        public IActionResult GetLog([FromRoute] string containerId = "all",
+            [FromRoute] string filterName = "all")
         {
             try
             {

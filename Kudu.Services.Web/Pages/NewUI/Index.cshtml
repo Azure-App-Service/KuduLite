@@ -33,9 +33,6 @@
 </script>
 
 @{
-    //string commitFile = Server.MapPath("~/commit.txt");
-    var commitFile = System.IO.Path.Combine(hostingEnvironment.WebRootPath, "commit.txt");
-    var sha = System.IO.File.Exists(commitFile) ? System.IO.File.ReadAllText(commitFile).Trim() : null;
     var workerIdHash = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
     var workerIdShortHash = workerIdHash?.Substring(0, 12);
     const string version = Constants.KuduBuild;
@@ -76,15 +73,22 @@
             <div class="progress" style="margin-left: 15px; margin-right: 10px">
                 <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; background-color: #26C281"></div>
             </div>
-        </div>
+        </div>     
         <div class="col-md-5" id="just-deployed-banner" style="display: none">
-            <div class="col-md-9 row-fluid">
-                Deployment Successful
-            </div>
-            <div class="col-md-3 row-fluid">
-                <div class="centering text-center">
-                    <h2 style="font-weight: 300"> <i class="fas fa-check-circle" style="color: #26c281"></i></h2>
+            
+            <div class="col-md-10 row-fluid">
+                <h6 style="font-weight: 400; margin-bottom: -10px">
+                    Deployment &nbsp;
+                    <p class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa"> Successful <i class="fas fa-check-circle" style="color: #26C281;"></i>&nbsp;</p>
+                </h6>
+                <div class="row-fluid">
+                    <small style="color: #42526e"> Performing an Overlapped Recycle of your WebApp. Your changes would reflect in <span id="timer2"></span> seconds</small>
                 </div>
+            </div>
+            <div class="col-md-2 row-fluid" style="margin: 0px">
+                <button type="button" class="btn btn-primary btn-sm">
+                    <i class="fas fa-recycle"></i> <span id="timer" class="badge badge-light"></span> Seconds
+                </button>
             </div>
         </div>
         <div class="col-md-5" id="last-deployed-banner" style="@lastDeployedDisplayVal">
@@ -106,18 +110,13 @@
         </div>
         <div class="col-md-5" id="appsvc-welcome-banner" style="@welcomeBannerDisplayVal">
             <div class="container" style="height: 100%; width: 100%; display: flex; align-items: center; vertical-align: middle">
-                <div class="row text-center">
-                    <div class="col-sm-12 col-md-4 col-md-offset-0">
+                <div class="row-fluid">
+                    <div class="col-md-6 text-center">
                         <div class="wrapper">
                             <a class="btn btn-primary btn-sm" href="#" role="button"><i class="fas fa-cloud-upload-alt"></i>Deploy your first app</a>
                         </div>
                     </div>
-                    <div class="col-sm-12 col-md-4 col-md-offset-0">
-                        <div class="wrapper">
-                            <a class="btn btn-primary btn-sm align-middle bkg-light-gray border-0" href="#" role="button" style="margin-left: -10px"><i class="fab fa-wikipedia-w"></i> Read Kudu Wiki</a>
-                        </div>
-                    </div>
-                    <div class="col-sm-12 col-md-4 col-md-offset-0">
+                    <div class="col-sm-12 col-md-6 text-center">
                         <div class="wrapper">
                             <a class="btn btn-primary btn-sm align-middle bkg-light-gray border-0" href="#" role="button" style="margin-left: -10px"> Learn Node <i class="fab fa-node-js"></i> Development</a>
                         </div>
@@ -251,15 +250,14 @@
                 }
                 console.log("API call done "+wasDeploying);
                 $("#appsvc-welcome-banner").css("display", "none");
-
+                $("#just-deployed-banner").css("display", "none");
+                $("#diagnose-btn").css("display","none");
                 if (!wasDeploying) {
                     $("#last-deployed-banner").css("display", "block");
                     if (data["status"] === 4) {
                         $("#latest-deployment-id")
                             .html("Successful &nbsp;<i class=\"fas fa-check-circle\" style=\"color: #26C281;\"></i>")
                             .prop('title', 'Deployment Status');
-                        $("#investigate-deployment")
-                            .html("<i class=\"fab fa-searchengin\"></i> Analyze on AppLens");
                     } else if (data["status"] === 1 || data["status"] === 2) {
                         $("#latest-deployment-id")
                             .html("Pending &nbsp;<i class=\"fas fa-exclamation-circle\" style=\"color: #ff5e57;\"></i>")
@@ -288,14 +286,33 @@
                         "/newui/jsonviewer?view_url=/api/deployments/" + data["id"] + "/log");
 
                     $("#latest-deployment-deployer").prop("title", "Deployed by " + data["author"]);
-                } else {
-                    
+                } else {           
                     $("#just-deployed-banner").css("display", "inline-block");
+                    setTimeout(timer, 1000);
                     wasDeploying = false;
                 }
             }
         });
     };
+
+    var count = 10;
+    function timer()
+    {
+        count=count-1;
+        if (count <= 0)
+        {
+            //clearInterval(counter);
+            console.log("counter overrrrrrrrr ");
+            count = 10;
+            document.getElementById("timer").innerHTML="0"; 
+            document.getElementById("timer2").innerHTML="0"; 
+            setTimeout(UpdateLatestDeploymentStatus, 1000);
+            return;
+        }
+        document.getElementById("timer").innerHTML=count; 
+        document.getElementById("timer2").innerHTML=count; 
+        setTimeout(timer, 1000);
+    }
 
     UpdateLatestDeploymentStatus();
 

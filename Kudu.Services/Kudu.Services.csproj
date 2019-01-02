@@ -32,4 +32,7 @@
   <PropertyGroup>
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
   </PropertyGroup>
+  <PropertyGroup>
+    <DocumentationFile>/opt/Kudu/Kudu.Services.xml</DocumentationFile>
+  </PropertyGroup>
 </Project>
