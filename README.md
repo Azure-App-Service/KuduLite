@@ -6,6 +6,7 @@ KuduLite is the redevelopment/port of Kudu in .Net Core : the engine behind [git
 
 ![KuduDebugConsole](https://cloud.githubusercontent.com/assets/6472374/18506877/99d39f24-7a76-11e6-86a7-f3ac62b0199c.png)
 
+This entrypoint to this engine is Kudu.Services.Web/Startup.cs
 
 ### Documentation
 
