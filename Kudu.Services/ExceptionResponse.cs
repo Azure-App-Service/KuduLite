@@ -1,18 +1,20 @@
 namespace Kudu.Services
 {
-    /// <summary>
-    /// Contract to return JSON Exception response
-    /// when calls are made to the REST APIs
-    /// </summary>
-    public class ExceptionResponse
+    internal class ExceptionResponse
     {
-        string exceptionMessage;
-        string exceptionStackTrace;
+        private string _exceptionMessage;
+        private string _exceptionStackTrace;
 
+        /// <summary>
+        /// Contract to return JSON Exception response
+        /// when calls are made to the REST APIs
+        /// </summary>
+        /// <param name="exceptionMessage"></param>
+        /// <param name="exceptionStackTrace"></param>
         public ExceptionResponse(string exceptionMessage, string exceptionStackTrace)
         {
-            this.exceptionMessage = exceptionMessage;
-            this.exceptionStackTrace = exceptionStackTrace;
+            this._exceptionMessage = exceptionMessage;
+            this._exceptionStackTrace = exceptionStackTrace;
         }
     }
 }
