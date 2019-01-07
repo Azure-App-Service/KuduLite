@@ -31,6 +31,8 @@ namespace Kudu.Services.Web.Tracing
 
         private readonly RequestDelegate _next;
 
+        private const string KuduLiteTrackingHeader = "X_KUDULITE_RESPONSE";
+
         private static readonly Lazy<string> KuduVersion = new Lazy<string>(() =>
         {
             var assembly = Assembly.GetExecutingAssembly();
@@ -44,7 +46,7 @@ namespace Kudu.Services.Web.Tracing
         }
 
         public async Task Invoke(HttpContext context)
-        {
+        { 
             BeginRequest(context);
             try
             {
@@ -55,11 +57,14 @@ namespace Kudu.Services.Web.Tracing
                 await Task.Run(() => LogException(context, ex));
                 ExceptionDispatchInfo.Capture(ex.InnerException ?? ex).Throw();
             }
-
             // At the end of the pipe
             EndRequest(context);
         }
 
+        private static void AddTrackingHeader(HttpContext context)
+        {
+            context.Response.Headers.Add(KuduLiteTrackingHeader,"true");
+        }
 
         private void LogException(HttpContext httpContext, Exception exception)
         {
@@ -80,13 +85,13 @@ namespace Kudu.Services.Web.Tracing
 
         private void BeginRequest(HttpContext httpContext)
         {
-            var httpRequest = httpContext.Request;
-
+            var httpRequest = httpContext.Request; 
+           
             _lastRequestDateTime = DateTime.UtcNow;
 
             /* CORE TODO missing functionality:
              * Disallow GET requests from CSM extensions bridge
-             * Razor dummy extension for vfs - Do we need it for Linux Kudu?
+             * Razor dummy extension for vfs 
              */
 
             // Always trace the startup request.
@@ -154,12 +159,14 @@ namespace Kudu.Services.Web.Tracing
             }
 
             httpContext.Items[_stepKey] = tracer.Step(XmlTracer.IncomingRequestTrace, attribs);
+            
+            AddTrackingHeader(httpContext);
         }
 
         private static void EndRequest(HttpContext httpContext)
         {
             var tracer = TraceServices.GetRequestTracer(httpContext);
-
+            
             LogEndRequest(httpContext);
 
             if (tracer == null || tracer.TraceLevel <= TraceLevel.Off)
