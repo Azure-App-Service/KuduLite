@@ -240,10 +240,10 @@ namespace Kudu.Services.Web
             //EnsureUserProfileDirectory();
 
             //// Skip SSL Certificate Validate
-            if (Environment.SkipSslValidation)
-            {
-                ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
-            }
+            //if (Environment.SkipSslValidation)
+            //{
+            //    ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+            //}
 
             //// Make sure webpages:Enabled is true. Even though we set it in web.config, it could be overwritten by
             //// an Azure AppSetting that's supposed to be for the site only but incidently affects Kudu as well.
