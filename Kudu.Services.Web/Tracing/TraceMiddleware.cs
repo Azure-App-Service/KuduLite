@@ -31,7 +31,7 @@ namespace Kudu.Services.Web.Tracing
 
         private readonly RequestDelegate _next;
 
-        private const string KuduLiteTrackingHeader = "X_KUDULITE_RESPONSE";
+        private const string KuduLiteTrackingHeader = "X-KUDULITE-RESPONSE";
 
         private static readonly Lazy<string> KuduVersion = new Lazy<string>(() =>
         {
