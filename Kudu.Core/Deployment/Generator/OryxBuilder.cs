@@ -46,12 +46,6 @@ namespace Kudu.Core.Deployment.Generator
             {
                 oryxLanguage = "python";
                 runOryxBuild = true;
-
-                if (version.StartsWith("2.7"))
-                {
-                    string virtualEnvName = "antenv2.7";
-                    additionalOptions = string.Format("-p virtualenv_name={0}", virtualEnvName);
-                }
             }
 
             if (runOryxBuild)
