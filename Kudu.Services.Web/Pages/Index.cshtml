@@ -49,7 +49,8 @@
     @{
         string commitFile = System.IO.Path.Combine(hostingEnvironment.WebRootPath, "commit.txt");
         string sha = System.IO.File.Exists(commitFile) ? System.IO.File.ReadAllText(commitFile).Trim() : null;
-        var version = typeof(Kudu.Services.Web.Tracing.TraceMiddleware).Assembly.GetName().Version;
+        //var version = typeof(Kudu.Services.Web.Tracing.TraceMiddleware).Assembly.GetName().Version;
+        var version = Constants.KuduBuild;
     }
     <h3>Environment</h3>
     <div class="row">
@@ -67,17 +68,6 @@
                 }
         </div>
     </div>
-    @if (appServiceVersion != null)
-    {
-        <div class="row">
-            <div class="col-xs-2">
-                <strong>Azure App Service</strong>
-            </div>
-            <div>
-                @GetAppServiceVersion()
-            </div>
-        </div>
-    }
     <div class="row">
         <div class="col-xs-2">
             <strong>Site up time</strong>
@@ -118,6 +108,15 @@
         </li>
         <li>
             <a href="api/logs/docker">Current Docker logs</a> (<a href="api/logs/docker/zip">Download as zip</a>)
+        </li>
+    </ul>
+    <h3>Browse Directory</h3>
+    <ul>
+        <li>
+            <a href="logs">Logs</a>
+        </li>
+        <li>
+            <a href="wwwroot">Site wwwroot</a>
         </li>
     </ul>
     <h3>More information about Kudu can be found on the <a href="https://github.com/projectkudu/kudu/wiki">wiki</a>.</h3>

@@ -97,7 +97,7 @@ namespace Kudu.Services.Web
         }
 
 
-        internal static void SetupFileServer(IApplicationBuilder app, IEnvironment webAppRuntimeEnvironment)
+        internal static void SetupFileServer(IApplicationBuilder app, string fileDirectoryPath, string requestPath)
         {
             // Set up custom content types - associating file extension to MIME type
             var provider = new FileExtensionContentTypeProvider
@@ -114,8 +114,8 @@ namespace Kudu.Services.Web
             app.UseFileServer(new FileServerOptions
             {
                 FileProvider = new PhysicalFileProvider(
-                    webAppRuntimeEnvironment.WebRootPath),
-                RequestPath = "/wwwroot",
+                    fileDirectoryPath),
+                RequestPath = requestPath,
                 EnableDirectoryBrowsing = true,
                 StaticFileOptions = {ContentTypeProvider = provider}
             });
