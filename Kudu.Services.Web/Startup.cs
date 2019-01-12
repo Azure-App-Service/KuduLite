@@ -310,7 +310,6 @@ namespace Kudu.Services.Web
 
             app.MapWhen(containsRelativePath, application => application.Run(async context =>
             {
-                //context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 await context.Response.WriteAsync("Kestrel Running");
             }));
 
@@ -375,8 +374,11 @@ namespace Kudu.Services.Web
                 app.Map(url, appBranch => appBranch.RunCustomGitRepositoryHandler());
             }
 
-            // Sets up the file server to server web app's wwwroot
-            KuduWebUtil.SetupFileServer(app, _webAppRuntimeEnvironment);
+            // Sets up the file server to web app's wwwroot
+            KuduWebUtil.SetupFileServer(app, _webAppRuntimeEnvironment.WebRootPath, "/wwwroot");
+            
+            // Sets up the file server to LogFiles
+            KuduWebUtil.SetupFileServer(app, _webAppRuntimeEnvironment.LogFilesPath, "/logs");
 
             app.UseSwagger();
 
