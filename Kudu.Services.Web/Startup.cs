@@ -305,6 +305,13 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
 
+
+            var webSocketOptions = new WebSocketOptions()
+            {
+                KeepAliveInterval = TimeSpan.FromSeconds(15)
+            };
+            app.UseWebSockets(webSocketOptions);
+
             var containsRelativePath = new Func<HttpContext, bool>(i =>
                 i.Request.Path.Value.StartsWith("/Default", StringComparison.OrdinalIgnoreCase));
 
