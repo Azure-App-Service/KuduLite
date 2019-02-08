@@ -187,7 +187,17 @@ namespace Kudu.Services.Web
         /// <param name="environment"></param>
         internal static void MigrateToNetCorePatch(IEnvironment environment)
         {
-            var gitPostReceiveHookFile = Path.Combine(environment.RepositoryPath, ".git", "hooks", "post-receive");
+	    // Get the repository path:
+            // Use value in the settings.xml file if it is present.
+            string repositoryPath = environment.RepositoryPath;
+            IDeploymentSettingsManager settings = GetDeploymentSettingsManager(environment);
+            if (settings != null)
+            {
+                var settingsRepoPath = DeploymentSettingsExtension.GetRepositoryPath(settings);
+                repositoryPath = Path.Combine(environment.SiteRootPath, settingsRepoPath);
+            }
+
+            var gitPostReceiveHookFile = Path.Combine(repositoryPath, ".git", "hooks", "post-receive");
             if (FileSystemHelpers.FileExists(gitPostReceiveHookFile))
             {
                 var fileText = "";
@@ -203,7 +213,6 @@ namespace Kudu.Services.Web
                 FileSystemHelpers.DeleteFileSafe(Path.Combine(environment.DeploymentToolsPath, "deploy.sh"));
             }
         }
-
 
         internal static void TraceShutdown(IEnvironment environment, IDeploymentSettingsManager settings)
         {
@@ -337,6 +346,46 @@ namespace Kudu.Services.Web
                     ex.ToString());
                 File.Delete(path);
             }
+        }
+
+	/// <summary>
+        /// Get Deploployment settings
+        /// </summary>
+        /// <param name="environment"></param>
+        private static IDeploymentSettingsManager GetDeploymentSettingsManager(IEnvironment environment)
+        {
+            var path = GetSettingsPath(environment);
+            if (!FileSystemHelpers.FileExists(path))
+            {
+                return null;
+            }
+
+            IDeploymentSettingsManager result = null;
+
+            try
+            {
+                var settings = new DeploymentSettingsManager(new XmlSettings.Settings(path));
+                settings.GetValue(SettingsKeys.TraceLevel);
+
+                result = settings;
+            }
+            catch (Exception ex)
+            {
+                DateTime lastWriteTimeUtc = DateTime.MinValue;
+                OperationManager.SafeExecute(() => lastWriteTimeUtc = File.GetLastWriteTimeUtc(path));
+                // trace initialization error
+                KuduEventSource.Log.KuduException(
+                    ServerConfiguration.GetApplicationName(),
+                    "Startup.cs",
+                    string.Empty,
+                    string.Empty,
+                    string.Format("Invalid '{0}' is detected and deleted.  Last updated time was {1}.", path,
+                        lastWriteTimeUtc),
+                    ex.ToString());
+                File.Delete(path);
+            }
+
+            return result;
         }
 
         internal static void PrependFoldersToPath(IEnvironment environment)
