@@ -99,6 +99,10 @@ namespace Kudu.Services.Web
 
         internal static void SetupFileServer(IApplicationBuilder app, string fileDirectoryPath, string requestPath)
         {
+
+            // Create deployment logs directory if it doesn't exist
+            FileSystemHelpers.CreateDirectory(fileDirectoryPath);
+            
             // Set up custom content types - associating file extension to MIME type
             var provider = new FileExtensionContentTypeProvider
             {
@@ -107,6 +111,7 @@ namespace Kudu.Services.Web
                     [".py"] = "text/html",
                     [".env"] = "text/html",
                     [".cshtml"] = "text/html",
+                    [".log"] = "text/html",
                     [".image"] = "image/png"
                 }
             };
@@ -117,7 +122,12 @@ namespace Kudu.Services.Web
                     fileDirectoryPath),
                 RequestPath = requestPath,
                 EnableDirectoryBrowsing = true,
-                StaticFileOptions = {ContentTypeProvider = provider}
+                StaticFileOptions =
+                {
+                    ServeUnknownFileTypes = true,
+                    DefaultContentType = "text/plain",
+                    ContentTypeProvider = provider
+                }
             });
         }
 

@@ -385,7 +385,7 @@ namespace Kudu.Services.Web
             KuduWebUtil.SetupFileServer(app, _webAppRuntimeEnvironment.WebRootPath, "/wwwroot");
             
             // Sets up the file server to LogFiles
-            KuduWebUtil.SetupFileServer(app, _webAppRuntimeEnvironment.LogFilesPath, "/logs");
+            KuduWebUtil.SetupFileServer(app, Path.Combine(_webAppRuntimeEnvironment.LogFilesPath,"kudu","deployment"), "/deploymentlogs");
 
             app.UseSwagger();
 
