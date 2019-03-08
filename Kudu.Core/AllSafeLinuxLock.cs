@@ -19,6 +19,7 @@ namespace Kudu.Core
     {
         private ITraceFactory _traceFactory;
         private static readonly string locksPath = "/home/site/locks";
+	private const int lockTimeout = 1200; //in seconds
         public AllSafeLinuxLock(string path, ITraceFactory traceFactory)
         {
             _traceFactory = traceFactory;
@@ -104,7 +105,7 @@ namespace Kudu.Core
             lockInfo.heldByTID = Thread.CurrentThread.ManagedThreadId;
             lockInfo.heldByWorker = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
             lockInfo.heldByOp = operationName;
-            lockInfo.lockExpiry = DateTime.UtcNow.AddSeconds(600);
+            lockInfo.lockExpiry = DateTime.UtcNow.AddSeconds(lockTimeout);
             //Console.WriteLine("CreatingLockDir - LockInfoObj : "+lockInfo);
             var json = JsonConvert.SerializeObject(lockInfo);
             FileSystemHelpers.WriteAllText(locksPath+"/deployment/info.lock",json);
