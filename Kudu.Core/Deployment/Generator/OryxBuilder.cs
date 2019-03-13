@@ -59,6 +59,11 @@ namespace Kudu.Core.Deployment.Generator
 
                 additionalOptions = string.Format("-p virtualenv_name={0}", virtualEnvName);
             }
+	    else if (framework.StartsWith("DOTNETCORE"))
+	    {
+		oryxLanguage = "dotnet";
+		runOryxBuild = true;
+	    }
 
             if (runOryxBuild)
             {
