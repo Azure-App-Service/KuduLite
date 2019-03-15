@@ -17,6 +17,20 @@ namespace Kudu.Core.Deployment.Generator
         {
             FileLogHelper.Log("In oryx build...");
 
+            bool enableBuildInTemp = false;
+            bool overrideOutFolder = false;
+            string enable_node_zip = System.Environment.GetEnvironmentVariable("ENABLE_NODE_MODULES_ZIP");
+            if (!string.IsNullOrEmpty(enable_node_zip) && enable_node_zip.Equals("true", StringComparison.OrdinalIgnoreCase))
+            {
+                enableBuildInTemp = true;
+            }
+
+            string output_folder_override = System.Environment.GetEnvironmentVariable("OUTPUT_FOLDER_OVERRIDE");
+            if (!string.IsNullOrEmpty(enable_node_zip) )
+            {
+                overrideOutFolder = true;
+            }
+
             // Step 1: Run kudusync
 
             string kuduSyncCommand = string.Format("kudusync -v 50 -f {0} -t {1} -n {2} -p {3} -i \".git;.hg;.deployment;.deploy.sh\"",
@@ -27,7 +41,6 @@ namespace Kudu.Core.Deployment.Generator
                 );
 
             FileLogHelper.Log("Running KuduSync with  " + kuduSyncCommand);
-
             RunCommand(context, kuduSyncCommand, false, "Oryx-Build: Running kudu sync...");
 
             string framework = System.Environment.GetEnvironmentVariable("FRAMEWORK");
@@ -59,11 +72,22 @@ namespace Kudu.Core.Deployment.Generator
 
                 additionalOptions = string.Format("-p virtualenv_name={0}", virtualEnvName);
             }
-	    else if (framework.StartsWith("DOTNETCORE"))
-	    {
-		oryxLanguage = "dotnet";
-		runOryxBuild = true;
-	    }
+            else if (framework.StartsWith("DOTNETCORE"))
+            {
+                oryxLanguage = "dotnet";
+                runOryxBuild = true;
+            }
+
+            string outputPath = context.OutputPath;
+            if (overrideOutFolder)
+            {
+                outputPath = output_folder_override;
+            }
+
+            if (enableBuildInTemp)
+            {
+                additionalOptions+= string.Format(" -i {0}", context.BuildTempPath);
+            }
 
             if (runOryxBuild)
             {
