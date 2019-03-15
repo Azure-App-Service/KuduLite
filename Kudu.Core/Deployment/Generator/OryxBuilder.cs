@@ -107,7 +107,7 @@ namespace Kudu.Core.Deployment.Generator
             {
                 string textToWrite = string.Format("node_modules.zip:{0}/node_modules", context.OutputPath);
                 string pathToWrite = string.Format("{0}/node_modules.txt", output_folder_override);
-                File.WriteAllText(pathToWrite, textToWrite);
+                System.IO.File.WriteAllText(pathToWrite, textToWrite);
             }
 
             return Task.CompletedTask;
