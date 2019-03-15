@@ -95,12 +95,19 @@ namespace Kudu.Core.Deployment.Generator
             {
                 string oryxBuildCommand = string.Format("oryx build {0} -o {1} -l {2} --language-version {3} {4}",
                     context.OutputPath,
-                    context.OutputPath,
+                    outputPath,
                     oryxLanguage,
                     version,
                     additionalOptions);
 
                 RunCommand(context, oryxBuildCommand, false, "Running oryx build...");
+            }
+
+            if (overrideOutFolder)
+            {
+                string textToWrite = string.Format("node_modules.zip:{0}/node_modules", context.OutputPath);
+                string pathToWrite = string.Format("{0}/node_modules.txt", output_folder_override);
+                File.WriteAllText(pathToWrite, textToWrite);
             }
 
             return Task.CompletedTask;
