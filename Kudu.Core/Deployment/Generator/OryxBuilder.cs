@@ -28,7 +28,7 @@ namespace Kudu.Core.Deployment.Generator
             }
 
             string output_folder_override = System.Environment.GetEnvironmentVariable("OUTPUT_FOLDER_OVERRIDE");
-            if (!string.IsNullOrEmpty(enable_node_zip) )
+            if (!string.IsNullOrEmpty(output_folder_override) )
             {
                 overrideOutFolder = true;
             }
