@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Abstractions;
 using System.IO.Compression;
 using Kudu.Contracts.Tracing;
+using Kudu.Core.Helpers;
 using Kudu.Core.Tracing;
 
 namespace Kudu.Core.Infrastructure
@@ -127,12 +128,57 @@ namespace Kudu.Core.Infrastructure
                     }
 
                     using (Stream zipStream = entry.Open(),
-                                  fileStream = fileInfo.Open(FileMode.Create, FileAccess.Write))
+                                  fileStream = fileInfo.Open(FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
                     {
                         zipStream.CopyTo(fileStream);
                     }
 
+                    bool createSymLink = false;
+                    string originalFileName = string.Empty;
+                    if (!OSDetector.IsOnWindows())
+                    {
+                        try
+                        {
+                            using (Stream fs = fileInfo.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                            {
+                                byte[] buffer = new byte[10];
+                                fs.Read(buffer, 0, buffer.Length);
+                                fs.Close();
+
+                                var str = System.Text.Encoding.Default.GetString(buffer);
+                                if (str.StartsWith("../"))
+                                {
+                                    string fullPath = Path.GetFullPath(str);
+                                    if (fullPath.StartsWith(directoryName))
+                                    {
+                                        createSymLink = true;
+                                        originalFileName = fullPath;
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new Exception("Could not identify symlinks in zip file : " + ex.ToString());
+                        }
+                    }
+
                     fileInfo.LastWriteTimeUtc = entry.LastWriteTime.ToUniversalTime().DateTime;
+
+                    if (createSymLink)
+                    {
+                        try
+                        {
+                            fileInfo.Delete();
+
+                            Mono.Unix.UnixFileInfo unixFileInfo = new Mono.Unix.UnixFileInfo(originalFileName);
+                            unixFileInfo.CreateSymbolicLink(path);
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new Exception("Could not create symlinks : " + ex.ToString());
+                        }
+                    }
                 }
             }
         }
