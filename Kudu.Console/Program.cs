@@ -196,6 +196,12 @@ namespace Kudu.Console
                     System.Console.Error.WriteLine(Resources.Log_DeploymentError);
                     return 1;
                 }
+                finally
+                {
+                    System.Console.WriteLine("Deployment Logs : '"+
+                        env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=api/deployments/" + 
+                        gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");
+                }
             }
 
             if (logger.HasErrors)
