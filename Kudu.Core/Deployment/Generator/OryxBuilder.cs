@@ -30,51 +30,18 @@ namespace Kudu.Core.Deployment.Generator
 
             RunCommand(context, kuduSyncCommand, false, "Oryx-Build: Running kudu sync...");
 
-            string framework = System.Environment.GetEnvironmentVariable("FRAMEWORK");
-            string version = System.Environment.GetEnvironmentVariable("FRAMEWORK_VERSION");
-
-            string oryxLanguage = "";
-            string additionalOptions = "";
-            bool runOryxBuild = false;
-
-            if (framework.StartsWith("NODE"))
+            OryxArguments args = new OryxArguments();
+            if (args.RunOryxBuild)
             {
-                oryxLanguage = "nodejs";
-                runOryxBuild = true;
-            }
-            else if (framework.StartsWith("PYTHON"))
-            {
-                oryxLanguage = "python";
-                runOryxBuild = true;
-                string virtualEnvName = "antenv";
+                string buildCommand = args.GenerateOryxBuildCommand(context, RepositoryPath);
+                RunCommand(context, buildCommand, false, "Running oryx build...");
 
-                if (version.StartsWith("3.6"))
+                //
+                // Run express build setups if needed
+                if (args.Flags == BuildFlags.UseExpressBuild)
                 {
-                    virtualEnvName = "antenv3.6";
+                    // TODO
                 }
-                else if (version.StartsWith("2.7"))
-                {
-                    virtualEnvName = "antenv2.7";
-                }
-
-                additionalOptions = string.Format("-p virtualenv_name={0}", virtualEnvName);
-            }
-	    else if (framework.StartsWith("DOTNETCORE"))
-	    {
-		oryxLanguage = "dotnet";
-		runOryxBuild = true;
-	    }
-
-            if (runOryxBuild)
-            {
-                string oryxBuildCommand = string.Format("oryx build {0} -o {1} -l {2} --language-version {3} {4}",
-                    context.OutputPath,
-                    context.OutputPath,
-                    oryxLanguage,
-                    version,
-                    additionalOptions);
-
-                RunCommand(context, oryxBuildCommand, false, "Running oryx build...");
             }
 
             return Task.CompletedTask;
