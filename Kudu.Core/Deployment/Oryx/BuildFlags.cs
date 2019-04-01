@@ -4,30 +4,31 @@ using System.Text;
 
 namespace Kudu.Core.Deployment
 {
-    public enum BuildFlags
+    public enum BuildOptimizationsFlags
     {
-        None = 0,
-        UseTmpDirectory = 1,
-        UseExpressBuild = 2
+        Off,
+        None,
+        CompressModules,
+        UseExpressBuild
     }
 
     public class BuildFlagsHelper
     {
-        public static BuildFlags Parse(string value)
+        public static BuildOptimizationsFlags Parse(string value)
         {
             if (string.IsNullOrEmpty(value))
             {
-                return BuildFlags.None;
+                return BuildOptimizationsFlags.None;
             }
 
             try
             {
-                var result = (BuildFlags)Enum.Parse(typeof(BuildFlags), value);
+                var result = (BuildOptimizationsFlags)Enum.Parse(typeof(BuildOptimizationsFlags), value);
                 return result;
             }
             catch (Exception)
             {
-                return BuildFlags.None;
+                return BuildOptimizationsFlags.None;
             }
         }
     }
