@@ -1,15 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.IO;
 
 namespace Kudu.Core.Deployment.Oryx
 {
     public class ExpressBuilder
     {
-        public void SetupExpressBuilderArtifacts()
+        public static void SetupExpressBuilderArtifacts(string outputPath)
         {
-            // 0. Generate the packagename.txt:
-            // 1. Copy the zip'd output to /home/data/SitePackages
+            //
+            // Generate packagename.txt and packagepath
+            string packagename = "nodemodules.zip:/node_modules";
+            File.WriteAllText("/home/data/SitePackages/packagename.txt", packagename);
+            File.WriteAllText("/home/data/SitePackages/packagepath.txt", outputPath);
         }
     }
 }

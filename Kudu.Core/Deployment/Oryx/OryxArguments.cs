@@ -17,7 +17,7 @@ namespace Kudu.Core.Deployment
 
         public string VirtualEnv { get; private set; }
 
-        public BuildFlags Flags { get; set; }
+        public BuildOptimizationsFlags Flags { get; set; }
 
         public OryxArguments()
         {
@@ -42,11 +42,11 @@ namespace Kudu.Core.Deployment
             RunOryxBuild = true;
             Version = version;
 
-            // Set language specific 
-            SetLanguageOptions();
-
             // Parse Build Flags
             Flags = BuildFlagsHelper.Parse(buildFlags);
+
+            // Set language specific 
+            SetLanguageOptions();
         }
 
         private void SetLanguageOptions()
@@ -64,6 +64,12 @@ namespace Kudu.Core.Deployment
                     return;
 
                 case Framework.NodeJs:
+                    // For node, enable compress option by default
+                    if (Flags == BuildOptimizationsFlags.None)
+                    {
+                        Flags = BuildOptimizationsFlags.CompressModules;
+                    }
+
                     return;
             }
         }
@@ -91,7 +97,7 @@ namespace Kudu.Core.Deployment
             args.AppendFormat("oryx build {0} -o {1}", repositoryPath, context.OutputPath);
 
             // Language
-            switch(Language)
+            switch (Language)
             {
                 case Framework.None:
                     break;
@@ -115,15 +121,30 @@ namespace Kudu.Core.Deployment
             // Build Flags
             switch (Flags)
             {
-                case BuildFlags.None:
+                case BuildOptimizationsFlags.Off:
+                case BuildOptimizationsFlags.None:
                     break;
 
-                case BuildFlags.UseTmpDirectory:
-                    args.AppendFormat(" -i {0}", context.BuildTempPath);
+                case BuildOptimizationsFlags.CompressModules:
+                    AddTempDirectoryOption(args, context.BuildTempPath);
+                    if (Language == Framework.NodeJs)
+                    {
+                        AddNodeCompressOption(args, "tar-gz");
+                    }
+                    else if (Language == Framework.Python)
+                    {
+                        AddPythonCompressOption(args);
+                    }
+
                     break;
 
-                case BuildFlags.UseExpressBuild:
-                    args.AppendFormat(" -i {0} --compress-packages zip", context.BuildTempPath);
+                case BuildOptimizationsFlags.UseExpressBuild:
+                    AddTempDirectoryOption(args, context.BuildTempPath);
+                    if (Language == Framework.NodeJs)
+                    {
+                        AddNodeCompressOption(args, "zip");
+                    }
+
                     break;
             }
 
@@ -140,6 +161,21 @@ namespace Kudu.Core.Deployment
             }
 
             return args.ToString();
+        }
+
+        private static void AddTempDirectoryOption(StringBuilder args, string tempDir)
+        {
+            args.AppendFormat(" -i {0}", tempDir);
+        }
+
+        private static void AddNodeCompressOption(StringBuilder args, string format)
+        {
+            args.AppendFormat(" -p compress_node_modules={0}", format);
+        }
+
+        private static void AddPythonCompressOption(StringBuilder args)
+        {
+            args.AppendFormat(" -p zip_venv_dir");
         }
     }
 }
