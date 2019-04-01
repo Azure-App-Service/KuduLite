@@ -38,9 +38,9 @@ namespace Kudu.Core.Deployment.Generator
 
                 //
                 // Run express build setups if needed
-                if (args.Flags == BuildFlags.UseExpressBuild)
+                if (args.Flags == BuildOptimizationsFlags.UseExpressBuild)
                 {
-                    // TODO
+                    Oryx.ExpressBuilder.SetupExpressBuilderArtifacts(context.OutputPath);
                 }
             }
 
