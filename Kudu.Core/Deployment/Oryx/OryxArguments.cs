@@ -151,7 +151,7 @@ namespace Kudu.Core.Deployment
             // Virtual Env?
             if (!String.IsNullOrEmpty(VirtualEnv))
             {
-                args.AppendFormat(" -p {0}", VirtualEnv);
+                args.AppendFormat(" -p virtualenv_name={0}", VirtualEnv);
             }
 
             // Publish Output?
