@@ -89,12 +89,12 @@ namespace Kudu.Core.Deployment
             VirtualEnv = virtualEnvName;
         }
 
-        public string GenerateOryxBuildCommand(DeploymentContext context, string repositoryPath)
+        public string GenerateOryxBuildCommand(DeploymentContext context)
         {
             StringBuilder args = new StringBuilder();
 
             // Input/Output
-            args.AppendFormat("oryx build {0} -o {1}", repositoryPath, context.OutputPath);
+            args.AppendFormat("oryx build {0} -o {1}", context.OutputPath, context.OutputPath);
 
             // Language
             switch (Language)

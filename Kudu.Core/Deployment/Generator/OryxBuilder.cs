@@ -33,7 +33,7 @@ namespace Kudu.Core.Deployment.Generator
             OryxArguments args = new OryxArguments();
             if (args.RunOryxBuild)
             {
-                string buildCommand = args.GenerateOryxBuildCommand(context, RepositoryPath);
+                string buildCommand = args.GenerateOryxBuildCommand(context);
                 RunCommand(context, buildCommand, false, "Running oryx build...");
 
                 //
