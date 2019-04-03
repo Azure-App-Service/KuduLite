@@ -9,7 +9,7 @@ namespace Kudu.Core.Deployment.Oryx
     {
         public static void SetupExpressBuilderArtifacts(string outputPath)
         {
-            string root = "/home/site/data/SitePackages";
+            string root = "/home/data/SitePackages";
             string packageNameFile = Path.Combine(root, "packagename.txt");
             string packagePathFile = Path.Combine(root, "packagepath.txt");
 
