@@ -9,11 +9,26 @@ namespace Kudu.Core.Deployment.Oryx
     {
         public static void SetupExpressBuilderArtifacts(string outputPath)
         {
+            string root = "/home/site/data/SitePackages";
+            string packageNameFile = Path.Combine(root, "packagename.txt");
+            string packagePathFile = Path.Combine(root, "packagepath.txt");
+
             //
             // Generate packagename.txt and packagepath
             string packagename = "nodemodules.zip:/node_modules";
-            File.WriteAllText("/home/data/SitePackages/packagename.txt", packagename);
-            File.WriteAllText("/home/data/SitePackages/packagepath.txt", outputPath);
+
+            CreateSitePackagesDirectory(root);
+
+            File.WriteAllText(packageNameFile, packagename);
+            File.WriteAllText(packagePathFile, outputPath);
+        }
+
+        private static void CreateSitePackagesDirectory(string path)
+        {
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
         }
     }
 }
