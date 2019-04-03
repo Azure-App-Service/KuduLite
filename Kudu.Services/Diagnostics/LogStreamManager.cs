@@ -47,6 +47,8 @@ namespace Kudu.Services.Performance
         private DateTime _startTime;
         private TimeSpan _timeout;
 
+        private const string volatileLogsPath = "/appsvctmp/volatile/logs/runtime";
+
         // CORE TODO
         //private ShutdownDetector _shutdownDetector;
         //private CancellationTokenRegistration _cancellationTokenRegistration;
@@ -97,8 +99,19 @@ namespace Kudu.Services.Performance
 
             var firstPath = routePath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
 
-            path = FileSystemHelpers.EnsureDirectory(Path.Combine(_logPath, routePath));
+            // Ensure mounted logFiles dir 
 
+            string mountedLogFilesDir = Path.Combine(_logPath, routePath);
+            FileSystemHelpers.EnsureDirectory(mountedLogFilesDir);
+
+            if (shouldMonitiorVolatileLogsPath(mountedLogFilesDir))
+            {
+                path = volatileLogsPath;
+            }
+            else
+            {
+                path = mountedLogFilesDir;
+            }
 
             await WriteInitialMessage(context);
 
@@ -147,6 +160,31 @@ namespace Kudu.Services.Performance
         {
             var msg = String.Format(CultureInfo.CurrentCulture, Resources.LogStream_Welcome, DateTime.UtcNow.ToString("s"), System.Environment.NewLine);
             return context.Response.WriteAsync(msg);
+        }
+        
+        /// <summary>
+        /// Determines if Kudu Should Monitor Mounted Logs directory,
+        /// or the mounted fs logs dir, if kudu
+        /// </summary>
+        /// <returns></returns>
+        private static bool shouldMonitiorVolatileLogsPath(string mountedDirPath)
+        {
+            int count = 0;
+            string dateToday = DateTime.Now.ToString("yyyy_MM_dd");
+
+            if (FileSystemHelpers.DirectoryExists(mountedDirPath))
+            {
+                // if more than two log files present that are generated today, 
+                // use this directory; first file for a date is the marker file
+                foreach (var file in Directory.GetFiles(mountedDirPath, "*", SearchOption.AllDirectories))
+                {
+                    if (file.StartsWith(dateToday) && ++count > 1)
+                    {
+                        break;
+                    }
+                }
+            }
+            return count<=1;
         }
 
         private void Initialize(string path, HttpContext context)
