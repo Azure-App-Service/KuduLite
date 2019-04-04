@@ -15,7 +15,7 @@ namespace Kudu.Core.Deployment.Oryx
 
             //
             // Generate packagename.txt and packagepath
-            string packagename = "nodemodules.zip:/node_modules";
+            string packagename = "node_modules.zip:/node_modules";
 
             CreateSitePackagesDirectory(root);
 
