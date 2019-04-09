@@ -199,7 +199,7 @@ namespace Kudu.Console
                 finally
                 {
                     System.Console.WriteLine("Deployment Logs : '"+
-                        env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=api/deployments/" + 
+                        env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" + 
                         gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");
                 }
             }
