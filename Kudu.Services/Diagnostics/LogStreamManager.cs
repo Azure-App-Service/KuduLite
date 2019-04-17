@@ -132,9 +132,7 @@ namespace Kudu.Services.Performance
                     foreach (string logLine in Tail(reader, 10))
                     {
                         await context.Response.WriteAsync(
-                            string.Format(System.Environment.NewLine, 
-                                logLine, 
-                                System.Environment.NewLine));
+                            string.Format(logLine,System.Environment.NewLine));
                     }
                 }
             }
