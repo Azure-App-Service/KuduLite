@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Tracing;
+using Kudu.Core.Helpers;
 using NuGet.Versioning;
 
 namespace Kudu.Core.Deployment.Generator
@@ -61,11 +62,17 @@ namespace Kudu.Core.Deployment.Generator
             {
                 var fi = new FileInfo(file);
                 string scriptFilePath = null;
-                if (string.Equals(".ps1", fi.Extension, StringComparison.OrdinalIgnoreCase))
+
+                if (OSDetector.IsOnWindows())
                 {
-                    scriptFilePath = string.Format(CultureInfo.InvariantCulture, "PowerShell.exe -ExecutionPolicy RemoteSigned -File \"{0}\"", file);
+                    scriptFilePath = GetWindowsPostBuildFilepath(fi);
                 }
-                else
+                else if (!OSDetector.IsOnWindows())
+                {
+                    scriptFilePath = GetLinuxPostBuildFilepath(fi);
+                }
+
+                if (string.IsNullOrEmpty(scriptFilePath))
                 {
                     scriptFilePath = string.Format(CultureInfo.InvariantCulture, "\"{0}\"", file);
                 }
@@ -195,6 +202,7 @@ namespace Kudu.Core.Deployment.Generator
             {
                 var files = FileSystemHelpers.GetFiles(sf, "*")
                                         .Where(f => f.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase)
+                                            || f.EndsWith(".sh", StringComparison.OrdinalIgnoreCase)
                                             || f.EndsWith(".bat", StringComparison.OrdinalIgnoreCase)
                                             || f.EndsWith(".ps1", StringComparison.OrdinalIgnoreCase)).ToList();
 
@@ -203,6 +211,24 @@ namespace Kudu.Core.Deployment.Generator
             }
 
             return scriptFilesGroupedAndSorted;
+        }
+
+        private string GetLinuxPostBuildFilepath(FileInfo fi)
+        {
+            if (string.Equals(".sh", fi.Extension, StringComparison.OrdinalIgnoreCase))
+            {
+                return string.Format(CultureInfo.InvariantCulture, "sh \"{0}\"", fi.FullName);
+            }
+            return null;
+        }
+
+        private string GetWindowsPostBuildFilepath(FileInfo fi)
+        {
+            if (string.Equals(".ps1", fi.Extension, StringComparison.OrdinalIgnoreCase))
+            {
+                return string.Format(CultureInfo.InvariantCulture, "PowerShell.exe -ExecutionPolicy RemoteSigned -File \"{0}\"", fi.FullName);
+            }
+            return null;
         }
     }
 }
