@@ -65,11 +65,11 @@ namespace Kudu.Core.Deployment.Generator
 
                 if (OSDetector.IsOnWindows())
                 {
-                    scriptFilePath = GetWindowsPostBuildFilepath(fi);
+                    scriptFilePath = GetWindowsPostBuildFilepath(context, fi);
                 }
                 else if (!OSDetector.IsOnWindows())
                 {
-                    scriptFilePath = GetLinuxPostBuildFilepath(fi);
+                    scriptFilePath = GetLinuxPostBuildFilepath(context, fi);
                 }
 
                 if (string.IsNullOrEmpty(scriptFilePath))
@@ -213,16 +213,18 @@ namespace Kudu.Core.Deployment.Generator
             return scriptFilesGroupedAndSorted;
         }
 
-        private string GetLinuxPostBuildFilepath(FileInfo fi)
+        private string GetLinuxPostBuildFilepath(DeploymentContext context, FileInfo fi)
         {
             if (string.Equals(".sh", fi.Extension, StringComparison.OrdinalIgnoreCase))
             {
-                return string.Format(CultureInfo.InvariantCulture, "sh \"{0}\"", fi.FullName);
+                context.Logger.Log("Setting execute permissions for post build script " + fi.FullName);
+                PermissionHelper.Chmod("ugo+x", fi.FullName, Environment, DeploymentSettings, context.Logger);
+                return string.Format(CultureInfo.InvariantCulture, "\"{0}\"", fi.FullName);
             }
             return null;
         }
 
-        private string GetWindowsPostBuildFilepath(FileInfo fi)
+        private string GetWindowsPostBuildFilepath(DeploymentContext context, FileInfo fi)
         {
             if (string.Equals(".ps1", fi.Extension, StringComparison.OrdinalIgnoreCase))
             {
