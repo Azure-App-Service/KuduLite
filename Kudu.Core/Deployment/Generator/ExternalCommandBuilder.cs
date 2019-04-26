@@ -217,7 +217,7 @@ namespace Kudu.Core.Deployment.Generator
         {
             if (string.Equals(".sh", fi.Extension, StringComparison.OrdinalIgnoreCase))
             {
-                context.Logger.Log("Setting execute permissions for post build script " + fi.FullName);
+                context.Logger.Log("Add execute permission for post build script " + fi.FullName);
                 PermissionHelper.Chmod("ugo+x", fi.FullName, Environment, DeploymentSettings, context.Logger);
                 return string.Format(CultureInfo.InvariantCulture, "\"{0}\"", fi.FullName);
             }
@@ -228,6 +228,7 @@ namespace Kudu.Core.Deployment.Generator
         {
             if (string.Equals(".ps1", fi.Extension, StringComparison.OrdinalIgnoreCase))
             {
+                context.Logger.Log("Execute post build script with RemoteSigned policy " + fi.FullName);
                 return string.Format(CultureInfo.InvariantCulture, "PowerShell.exe -ExecutionPolicy RemoteSigned -File \"{0}\"", fi.FullName);
             }
             return null;
