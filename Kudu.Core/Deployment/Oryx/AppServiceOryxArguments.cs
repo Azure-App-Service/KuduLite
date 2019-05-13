@@ -5,27 +5,27 @@ using Kudu.Core.Deployment.Oryx;
 
 namespace Kudu.Core.Deployment
 {
-    public class OryxArguments
+    public class AppServiceOryxArguments : IOryxArguments
     {
         public bool RunOryxBuild { get; set; }
 
-        public Framework Language { get; set; }
-
-        public string Version { get; set; }
-
-        public string PublishFolder { get; set; }
-
-        public string VirtualEnv { get; private set; }
-
         public BuildOptimizationsFlags Flags { get; set; }
 
-        public OryxArguments()
+        private Framework Language { get; set; }
+
+        private string Version { get; set; }
+
+        private string PublishFolder { get; set; }
+
+        private string VirtualEnv { get; set; }
+
+        public AppServiceOryxArguments()
         {
             RunOryxBuild = false;
 
-            string framework = System.Environment.GetEnvironmentVariable("FRAMEWORK");
-            string version = System.Environment.GetEnvironmentVariable("FRAMEWORK_VERSION");
-            string buildFlags = System.Environment.GetEnvironmentVariable("BUILD_FLAGS");
+            string framework = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkSetting);
+            string version = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkVersionSetting);
+            string buildFlags = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.BuildFlagsSetting);
 
             if (string.IsNullOrEmpty(framework) ||
                 string.IsNullOrEmpty(version))
@@ -94,7 +94,7 @@ namespace Kudu.Core.Deployment
             StringBuilder args = new StringBuilder();
 
             // Input/Output
-            args.AppendFormat("oryx build {0} -o {1}", context.OutputPath, context.OutputPath);
+            OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
 
             // Language
             switch (Language)
@@ -103,20 +103,20 @@ namespace Kudu.Core.Deployment
                     break;
 
                 case Framework.NodeJs:
-                    args.AppendFormat(" -l nodejs");
+                    OryxArgumentsHelper.AddLanguage(args, "nodejs");
                     break;
 
                 case Framework.Python:
-                    args.AppendFormat(" -l python");
+                    OryxArgumentsHelper.AddLanguage(args, "python");
                     break;
 
                 case Framework.DotNETCore:
-                    args.AppendFormat(" -l dotnet");
+                    OryxArgumentsHelper.AddLanguage(args, "dotnet");
                     break;
             }
 
             // Version
-            args.AppendFormat(" --language-version {0}", Version);
+            OryxArgumentsHelper.AddLanguageVersion(args, Version);
 
             // Build Flags
             switch (Flags)
@@ -126,23 +126,23 @@ namespace Kudu.Core.Deployment
                     break;
 
                 case BuildOptimizationsFlags.CompressModules:
-                    AddTempDirectoryOption(args, context.BuildTempPath);
+                    OryxArgumentsHelper.AddTempDirectoryOption(args, context.BuildTempPath);
                     if (Language == Framework.NodeJs)
                     {
-                        AddNodeCompressOption(args, "tar-gz");
+                        OryxArgumentsHelper.AddNodeCompressOption(args, "tar-gz");
                     }
                     else if (Language == Framework.Python)
                     {
-                        AddPythonCompressOption(args);
+                        OryxArgumentsHelper.AddPythonCompressOption(args);
                     }
 
                     break;
 
                 case BuildOptimizationsFlags.UseExpressBuild:
-                    AddTempDirectoryOption(args, context.BuildTempPath);
+                    OryxArgumentsHelper.AddTempDirectoryOption(args, context.BuildTempPath);
                     if (Language == Framework.NodeJs)
                     {
-                        AddNodeCompressOption(args, "zip");
+                        OryxArgumentsHelper.AddNodeCompressOption(args, "zip");
                     }
 
                     break;
@@ -151,31 +151,16 @@ namespace Kudu.Core.Deployment
             // Virtual Env?
             if (!String.IsNullOrEmpty(VirtualEnv))
             {
-                args.AppendFormat(" -p virtualenv_name={0}", VirtualEnv);
+                OryxArgumentsHelper.AddPythonVirtualEnv(args, VirtualEnv);
             }
 
             // Publish Output?
             if (!String.IsNullOrEmpty(PublishFolder))
             {
-                args.AppendFormat(" -publishedOutputPath {0}", PublishFolder);
+                OryxArgumentsHelper.AddPublishedOutputPath(args, PublishFolder);
             }
 
             return args.ToString();
-        }
-
-        private static void AddTempDirectoryOption(StringBuilder args, string tempDir)
-        {
-            args.AppendFormat(" -i {0}", tempDir);
-        }
-
-        private static void AddNodeCompressOption(StringBuilder args, string format)
-        {
-            args.AppendFormat(" -p compress_node_modules={0}", format);
-        }
-
-        private static void AddPythonCompressOption(StringBuilder args)
-        {
-            args.AppendFormat(" -p zip_venv_dir");
         }
     }
 }

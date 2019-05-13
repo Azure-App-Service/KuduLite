@@ -1,7 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.IO;
+﻿using System.IO;
+using System.IO.Compression;
+using Kudu.Core.Infrastructure;
 
 namespace Kudu.Core.Deployment.Oryx
 {
@@ -13,14 +12,32 @@ namespace Kudu.Core.Deployment.Oryx
             string packageNameFile = Path.Combine(root, "packagename.txt");
             string packagePathFile = Path.Combine(root, "packagepath.txt");
 
-            //
-            // Generate packagename.txt and packagepath
-            string packagename = "node_modules.zip:/node_modules";
+            CreateSitePackagesDirectory(root);
+
+            if (FunctionAppHelper.LooksLikeFunctionApp())
+            {
+                // For function app express mode
+                SetupFunctionApp(root, packageNameFile, outputPath);
+            }
+            else
+            {
+                // For App service express mode
+                // Generate packagename.txt and packagepath
+                string packagename = "node_modules.zip:/node_modules";
+
+                File.WriteAllText(packageNameFile, packagename);
+                File.WriteAllText(packagePathFile, outputPath);
+            }
+        }
+
+        private static void SetupFunctionApp(string root, string packageNameFile, string outputPath)
+        {
+            string zipAppName = "functionapp.zip";
 
             CreateSitePackagesDirectory(root);
 
-            File.WriteAllText(packageNameFile, packagename);
-            File.WriteAllText(packagePathFile, outputPath);
+            ZipFile.CreateFromDirectory(outputPath, Path.Combine(root, zipAppName));
+            File.WriteAllText(packageNameFile, zipAppName);
         }
 
         private static void CreateSitePackagesDirectory(string path)
