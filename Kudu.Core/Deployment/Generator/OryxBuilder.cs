@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Kudu.Core.Helpers;
 using Kudu.Contracts.Settings;
+using Kudu.Core.Deployment.Oryx;
 
 namespace Kudu.Core.Deployment.Generator
 {
@@ -30,7 +31,7 @@ namespace Kudu.Core.Deployment.Generator
 
             RunCommand(context, kuduSyncCommand, false, "Oryx-Build: Running kudu sync...");
 
-            OryxArguments args = new OryxArguments();
+            IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
             if (args.RunOryxBuild)
             {
                 string buildCommand = args.GenerateOryxBuildCommand(context);
