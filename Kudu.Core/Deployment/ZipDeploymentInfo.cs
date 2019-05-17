@@ -32,5 +32,8 @@ namespace Kudu.Core.Deployment
         
         // This is used if the deployment is Run-From-Zip
         public string ZipName { get; set; }
+
+        // This is used when getting the zipfile from the zipURL
+        public string ZipURL { get; set; }
     }
 }

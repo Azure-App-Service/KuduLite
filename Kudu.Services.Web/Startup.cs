@@ -443,6 +443,9 @@ namespace Kudu.Services.Web
                 routes.MapRoute("zip-push-deploy", "api/zipdeploy",
                     new {controller = "PushDeployment", action = "ZipPushDeploy"},
                     new {verb = new HttpMethodRouteConstraint("POST")});
+                routes.MapRoute("zip-push-deploy-url", "api/zipdeploy",
+                    new {controller = "PushDeployment", action = "ZipPushDeployViaUrl"},
+                    new {verb = new HttpMethodRouteConstraint("PUT")});
                 routes.MapRoute("zip-war-deploy", "api/wardeploy",
                     new {controller = "PushDeployment", action = "WarPushDeploy"},
                     new {verb = new HttpMethodRouteConstraint("POST")});
