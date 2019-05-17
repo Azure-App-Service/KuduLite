@@ -230,19 +230,26 @@ namespace Kudu.Services.Deployment
                     {
                         using (_tracer.Step("Writing zip file from packageUri to {0}", zipFilePath))
                         {
-                            using (var file = System.IO.File.Create(zipFilePath))
+                            using (var httpClient = new HttpClient())
+                            using (var fileStream = new FileStream(zipFilePath,
+                                FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 4096, useAsync: true))
                             {
-                                using (var client = new HttpClient())
+                                var zipUrlRequest = new HttpRequestMessage(HttpMethod.Get, deploymentInfo.ZipURL);
+                                var zipUrlResponse = await httpClient.SendAsync(zipUrlRequest);
+
+                                try
                                 {
-                                    var zipUrlResponse = await client.GetAsync(deploymentInfo.ZipURL);
-                                    if (zipUrlResponse.IsSuccessStatusCode)
-                                    {
-                                        await zipUrlResponse.Content.CopyToAsync(file);
-                                    }
-                                    else
-                                    {
-                                        _tracer.TraceError("Failed to get file from packageUri {0}", deploymentInfo.ZipURL);
-                                    }
+                                    zipUrlResponse.EnsureSuccessStatusCode();
+                                }
+                                catch (HttpRequestException hre)
+                                {
+                                    _tracer.TraceError(hre, "Failed to get file from packageUri {0}", deploymentInfo.ZipURL);
+                                    throw;
+                                }
+
+                                using (var content = await zipUrlResponse.Content.ReadAsStreamAsync())
+                                {
+                                    await content.CopyToAsync(fileStream);
                                 }
                             }
                         }
