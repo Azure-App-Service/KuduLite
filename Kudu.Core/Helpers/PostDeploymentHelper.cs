@@ -699,11 +699,11 @@ namespace Kudu.Core.Helpers
             }
         }
         
-        public static async Task UpdateSiteVersion(ZipDeploymentInfo deploymentInfo, IEnvironment environment, ILogger logger)
+        public static async Task UpdatePackageName(ZipDeploymentInfo deploymentInfo, IEnvironment environment, ILogger logger)
         {
-            var siteVersionPath = Path.Combine(environment.SitePackagesPath, Constants.SiteVersionTxt);
-            logger.Log($"Updating {siteVersionPath} with deployment {deploymentInfo.ZipName}");
-            await FileSystemHelpers.WriteAllTextToFileAsync(siteVersionPath, deploymentInfo.ZipName);
+            var packageNamePath = Path.Combine(environment.SitePackagesPath, Constants.PackageNameTxt);
+            logger.Log($"Updating {packageNamePath} with deployment {deploymentInfo.ZipName}");
+            await FileSystemHelpers.WriteAllTextToFileAsync(packageNamePath, deploymentInfo.ZipName);
         }
     }
 }
