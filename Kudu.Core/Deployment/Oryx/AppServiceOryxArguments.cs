@@ -22,6 +22,7 @@ namespace Kudu.Core.Deployment
         public AppServiceOryxArguments()
         {
             RunOryxBuild = false;
+            SkipKuduSync = false;
 
             string framework = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkSetting);
             string version = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkVersionSetting);
@@ -37,6 +38,11 @@ namespace Kudu.Core.Deployment
             if (Language == Framework.None)
             {
                 return;
+            }
+            else if (Language == Framework.DotNETCore)
+            {
+                // Skip kudu sync for .NET core builds
+                SkipKuduSync = true;
             }
 
             RunOryxBuild = true;
@@ -93,24 +99,30 @@ namespace Kudu.Core.Deployment
         {
             StringBuilder args = new StringBuilder();
 
-            // Input/Output
-            OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
-
             // Language
             switch (Language)
             {
                 case Framework.None:
+                    // Input/Output
+                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
                     break;
 
                 case Framework.NodeJs:
+                    // Input/Output
+                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
+
                     OryxArgumentsHelper.AddLanguage(args, "nodejs");
                     break;
 
                 case Framework.Python:
+                    // Input/Output
+                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
                     OryxArgumentsHelper.AddLanguage(args, "python");
                     break;
 
                 case Framework.DotNETCore:
+                    // Input/Output [For .NET core, the source path is the RepositoryPath]
+                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
                     OryxArgumentsHelper.AddLanguage(args, "dotnet");
                     break;
             }
@@ -162,5 +174,7 @@ namespace Kudu.Core.Deployment
 
             return args.ToString();
         }
+
+        public bool SkipKuduSync { get; set; }
     }
 }

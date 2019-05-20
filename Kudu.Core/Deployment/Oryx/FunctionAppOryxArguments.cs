@@ -9,9 +9,11 @@ namespace Kudu.Core.Deployment.Oryx
         public BuildOptimizationsFlags Flags { get; set; }
 
         private readonly WorkerRuntime FunctionsWorkerRuntime;
+        public bool SkipKuduSync { get; set; }
 
         public FunctionAppOryxArguments()
         {
+            SkipKuduSync = false;
             FunctionsWorkerRuntime = ResolveWorkerRuntime();
             RunOryxBuild = FunctionsWorkerRuntime != WorkerRuntime.None;
             var buildFlags = GetEnvironmentVariableOrNull(OryxBuildConstants.OryxEnvVars.BuildFlagsSetting);

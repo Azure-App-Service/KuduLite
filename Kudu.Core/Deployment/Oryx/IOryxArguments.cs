@@ -10,6 +10,8 @@ namespace Kudu.Core.Deployment.Oryx
 
         BuildOptimizationsFlags Flags { get; set; }
 
+        bool SkipKuduSync { get; set; }
+
         string GenerateOryxBuildCommand(DeploymentContext context);
     }
 }

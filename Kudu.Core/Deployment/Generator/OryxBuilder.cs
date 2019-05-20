@@ -18,20 +18,27 @@ namespace Kudu.Core.Deployment.Generator
         {
             FileLogHelper.Log("In oryx build...");
 
-            // Step 1: Run kudusync
+            // initialize the repository Path for the build
+            context.RepositoryPath = RepositoryPath;
 
-            string kuduSyncCommand = string.Format("kudusync -v 50 -f {0} -t {1} -n {2} -p {3} -i \".git;.hg;.deployment;.deploy.sh\"",
-                RepositoryPath,
-                context.OutputPath,
-                context.NextManifestFilePath,
-                context.PreviousManifestFilePath
-                );
-
-            FileLogHelper.Log("Running KuduSync with  " + kuduSyncCommand);
-
-            RunCommand(context, kuduSyncCommand, false, "Oryx-Build: Running kudu sync...");
-
+            // Initialize Oryx Args.
             IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
+
+            if (!args.SkipKuduSync)
+            {
+                // Step 1: Run kudusync
+                string kuduSyncCommand = string.Format("kudusync -v 50 -f {0} -t {1} -n {2} -p {3} -i \".git;.hg;.deployment;.deploy.sh\"",
+                    RepositoryPath,
+                    context.OutputPath,
+                    context.NextManifestFilePath,
+                    context.PreviousManifestFilePath
+                    );
+
+                FileLogHelper.Log("Running KuduSync with  " + kuduSyncCommand);
+
+                RunCommand(context, kuduSyncCommand, false, "Oryx-Build: Running kudu sync...");
+            }
+           
             if (args.RunOryxBuild)
             {
                 string buildCommand = args.GenerateOryxBuildCommand(context);
