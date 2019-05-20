@@ -67,6 +67,11 @@ namespace Kudu.Core.Deployment
                     return;
 
                 case Framework.DotNETCore:
+                    if (Flags == BuildOptimizationsFlags.None)
+                    {
+                        Flags = BuildOptimizationsFlags.UseTempDirectory;
+                    }
+
                     return;
 
                 case Framework.NodeJs:
@@ -158,18 +163,16 @@ namespace Kudu.Core.Deployment
                     }
 
                     break;
+
+                case BuildOptimizationsFlags.UseTempDirectory:
+                    OryxArgumentsHelper.AddTempDirectoryOption(args, context.BuildTempPath);
+                    break;
             }
 
             // Virtual Env?
             if (!String.IsNullOrEmpty(VirtualEnv))
             {
                 OryxArgumentsHelper.AddPythonVirtualEnv(args, VirtualEnv);
-            }
-
-            // Publish Output?
-            if (!String.IsNullOrEmpty(PublishFolder))
-            {
-                OryxArgumentsHelper.AddPublishedOutputPath(args, PublishFolder);
             }
 
             return args.ToString();
