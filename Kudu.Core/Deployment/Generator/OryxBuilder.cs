@@ -2,6 +2,8 @@
 using Kudu.Core.Helpers;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Deployment.Oryx;
+using Kudu.Core.Infrastructure;
+using System.IO;
 
 namespace Kudu.Core.Deployment.Generator
 {
@@ -41,6 +43,8 @@ namespace Kudu.Core.Deployment.Generator
            
             if (args.RunOryxBuild)
             {
+                PreOryxBuild(context);
+
                 string buildCommand = args.GenerateOryxBuildCommand(context);
                 RunCommand(context, buildCommand, false, "Running oryx build...");
 
@@ -53,6 +57,20 @@ namespace Kudu.Core.Deployment.Generator
             }
 
             return Task.CompletedTask;
+        }
+
+        public static void PreOryxBuild(DeploymentContext context)
+        {
+            if (FunctionAppHelper.LooksLikeFunctionApp())
+            {
+                // We need to delete this directory in order to avoid issues with
+                // reinstalling Python dependencies on a target directory
+                var pythonPackagesDir = Path.Combine(context.OutputPath, ".python_packages");
+                if (Directory.Exists(pythonPackagesDir))
+                {
+                    FileSystemHelpers.DeleteDirectorySafe(pythonPackagesDir);
+                }
+            }
         }
 
         //public override void PostBuild(DeploymentContext context)

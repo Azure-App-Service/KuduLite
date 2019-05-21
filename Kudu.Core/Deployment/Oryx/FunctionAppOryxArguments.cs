@@ -94,20 +94,13 @@ namespace Kudu.Core.Deployment.Oryx
 
         private WorkerRuntime ResolveWorkerRuntime()
         {
-            // Note: FRAMEWORK is not set right now for a Function App. However, we are planning on doing so,
-            // similar to what AppService does. Once we start setting that, this should be the order of preference
-            var functionsWorkerRuntimeStr = GetEnvironmentVariableOrNull(OryxBuildConstants.OryxEnvVars.FrameworkSetting)
-                ?? GetEnvironmentVariableOrNull(OryxBuildConstants.FunctionAppEnvVars.WorkerRuntimeSetting);
-
+            var functionsWorkerRuntimeStr = GetEnvironmentVariableOrNull(OryxBuildConstants.FunctionAppEnvVars.WorkerRuntimeSetting);
             return FunctionAppSupportedWorkerRuntime.ParseWorkerRuntime(functionsWorkerRuntimeStr);
         }
 
         private string ResolveWorkerRuntimeVersion(WorkerRuntime workerRuntime)
         {
-            // Note: FRAMEWORK_VERSION is not set right now for a Function App. However, we are planning on doing so,
-            // similar to what AppService does. Until then, we will always hit the defaults
-            return GetEnvironmentVariableOrNull(OryxBuildConstants.OryxEnvVars.FrameworkVersionSetting)
-                ?? FunctionAppSupportedWorkerRuntime.GetDefaultLanguageVersion(workerRuntime);
+            return FunctionAppSupportedWorkerRuntime.GetDefaultLanguageVersion(workerRuntime);
         }
 
         private string GetEnvironmentVariableOrNull(string environmentVarName)
