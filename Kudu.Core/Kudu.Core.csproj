@@ -27,10 +27,10 @@
     <PackageReference Include="LibGit2Sharp" Version="0.25.2" />
     <PackageReference Include="log4net" Version="2.0.8" />
     <PackageReference Include="Mercurial.Net" Version="1.1.1.607" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
     <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
-     <PackageReference Include="System.Text.RegularExpressions" Version="4.3.0" />	    
-     <PackageReference Include="System.Text.RegularExpressions"/>
-    <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.0.1" />
+    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.2.0" />
     <PackageReference Include="Microsoft.Azure.WebSites.DataProtection" Version="0.1.78-alpha" />
     <PackageReference Include="ncrontab" Version="3.3.0" />
     <PackageReference Include="NuGet.Protocol" Version="4.8.0" />
