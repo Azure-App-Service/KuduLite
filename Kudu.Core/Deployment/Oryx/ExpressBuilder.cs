@@ -33,10 +33,14 @@ namespace Kudu.Core.Deployment.Oryx
         private static void SetupFunctionApp(string root, string packageNameFile, string outputPath)
         {
             string zipAppName = "functionapp.zip";
+            string zipFilePath = Path.Combine(root, zipAppName);
 
-            CreateSitePackagesDirectory(root);
+            if (File.Exists(zipFilePath))
+            {
+                File.Delete(zipFilePath);
+            }
 
-            ZipFile.CreateFromDirectory(outputPath, Path.Combine(root, zipAppName));
+            ZipFile.CreateFromDirectory(outputPath, zipFilePath);
             File.WriteAllText(packageNameFile, zipAppName);
         }
 
