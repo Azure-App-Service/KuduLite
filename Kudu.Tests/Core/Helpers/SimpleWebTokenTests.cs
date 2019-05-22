@@ -12,16 +12,17 @@ namespace Kudu.Tests.Core.Helpers
         public void EncryptShouldThrowIdNoEncryptionKeyDefined()
         {
             // Make sure WEBSITE_AUTH_ENCRYPTION_KEY is empty
-            Environment.SetEnvironmentVariable("WEBSITE_AUTH_ENCRYPTION_KEY", string.Empty);
-
-            try
+            using (new TestScopedEnvironmentVariable(SettingsKeys.AuthEncryptionKey, string.Empty))
             {
-                SimpleWebTokenHelper.Encrypt("value");
-            }
-            catch (Exception ex)
-            {
-                Assert.IsType<InvalidOperationException>(ex);
-                Assert.Contains("WEBSITE_AUTH_ENCRYPTION_KEY", ex.Message);
+                try
+                {
+                    SimpleWebTokenHelper.Encrypt("value");
+                }
+                catch (Exception ex)
+                {
+                    Assert.IsType<InvalidOperationException>(ex);
+                    Assert.Contains(SettingsKeys.AuthEncryptionKey, ex.Message);
+                }
             }
         }
 
@@ -31,13 +32,14 @@ namespace Kudu.Tests.Core.Helpers
         {
             var key = TestHelpers.GenerateKeyBytes();
             var stringKey = TestHelpers.GenerateKeyHexString(key);
-            Environment.SetEnvironmentVariable("WEBSITE_AUTH_ENCRYPTION_KEY", stringKey);
 
-            var encrypted = SimpleWebTokenHelper.Encrypt(valueToEncrypt);
-            var decrypted = SimpleWebTokenHelper.Decrypt(key, encrypted);
-
-            Assert.Matches("(.*)[.](.*)[.](.*)", encrypted);
-            Assert.Equal(valueToEncrypt, decrypted);
+            using (new TestScopedEnvironmentVariable(SettingsKeys.AuthEncryptionKey, stringKey))
+            {
+                var encrypted = SimpleWebTokenHelper.Encrypt(valueToEncrypt);
+                var decrypted = SimpleWebTokenHelper.Decrypt(key, encrypted);
+                Assert.Matches("(.*)[.](.*)[.](.*)", encrypted);
+                Assert.Equal(valueToEncrypt, decrypted);
+            }
         }
 
         [Fact]
@@ -46,12 +48,14 @@ namespace Kudu.Tests.Core.Helpers
             var key = TestHelpers.GenerateKeyBytes();
             var stringKey = TestHelpers.GenerateKeyHexString(key);
             var timeStamp = DateTime.UtcNow;
-            Environment.SetEnvironmentVariable("WEBSITE_AUTH_ENCRYPTION_KEY", stringKey);
 
-            var token = SimpleWebTokenHelper.CreateToken(timeStamp);
-            var decrypted = SimpleWebTokenHelper.Decrypt(key, token);
+            using (new TestScopedEnvironmentVariable(SettingsKeys.AuthEncryptionKey, stringKey))
+            {
+                var token = SimpleWebTokenHelper.CreateToken(timeStamp);
+                var decrypted = SimpleWebTokenHelper.Decrypt(key, token);
 
-            Assert.Equal($"exp={timeStamp.Ticks}", decrypted);
+                Assert.Equal($"exp={timeStamp.Ticks}", decrypted);
+            }
         }
 
         [Fact]
@@ -65,11 +69,13 @@ namespace Kudu.Tests.Core.Helpers
 
             var timeStamp = DateTime.UtcNow.AddHours(1);
 
-            Environment.SetEnvironmentVariable(SettingsKeys.ContainerEncryptionKey, containerEncryptionStringKey);
-            Environment.SetEnvironmentVariable(SettingsKeys.AuthEncryptionKey, websiteAuthEncryptionStringKey);
+            using (new TestScopedEnvironmentVariable(SettingsKeys.ContainerEncryptionKey, containerEncryptionStringKey))
+            using (new TestScopedEnvironmentVariable(SettingsKeys.AuthEncryptionKey, websiteAuthEncryptionStringKey))
+            {
+                var token = SimpleWebTokenHelper.CreateToken(timeStamp, websiteAuthEncryptionKey);
+                Assert.True(SimpleWebTokenHelper.TryValidateToken(token, new SystemClock()));
+            }
 
-            var token = SimpleWebTokenHelper.CreateToken(timeStamp, websiteAuthEncryptionKey);
-            Assert.True(SimpleWebTokenHelper.TryValidateToken(token, new SystemClock()));
         }
 
         [Fact]
@@ -80,18 +86,12 @@ namespace Kudu.Tests.Core.Helpers
 
             var timeStamp = DateTime.UtcNow.AddHours(1);
 
-            Environment.SetEnvironmentVariable(SettingsKeys.ContainerEncryptionKey, string.Empty);
-            Environment.SetEnvironmentVariable(SettingsKeys.AuthEncryptionKey, websiteAuthEncryptionStringKey);
-
-            var token = SimpleWebTokenHelper.CreateToken(timeStamp, websiteAuthEncryptionKey);
-            Assert.True(SimpleWebTokenHelper.TryValidateToken(token, new SystemClock()));
-        }
-
-        public void Dispose()
-        {
-            // Clean up
-            Environment.SetEnvironmentVariable(SettingsKeys.AuthEncryptionKey, string.Empty);
-            Environment.SetEnvironmentVariable(SettingsKeys.ContainerEncryptionKey, string.Empty);
+            using (new TestScopedEnvironmentVariable(SettingsKeys.ContainerEncryptionKey, string.Empty))
+            using (new TestScopedEnvironmentVariable(SettingsKeys.AuthEncryptionKey, websiteAuthEncryptionStringKey))
+            {
+                var token = SimpleWebTokenHelper.CreateToken(timeStamp, websiteAuthEncryptionKey);
+                Assert.True(SimpleWebTokenHelper.TryValidateToken(token, new SystemClock()));
+            }
         }
     }
 }
