@@ -16,7 +16,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kudu.Services.Web", "Kudu.S
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kudu.Console", "Kudu.Console\Kudu.Console.csproj", "{32AE9472-F7C0-4ED8-8D8C-EAB2419F5083}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kudu.Tests", "Kudu.Tests\Kudu.Tests.csproj", "{C667BB81-BD51-4009-9555-1BC7462855B4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Kudu.Tests", "Kudu.Tests\Kudu.Tests.csproj", "{C667BB81-BD51-4009-9555-1BC7462855B4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0DAEEE18-6016-4C38-B9CD-9261C6336486} = {0DAEEE18-6016-4C38-B9CD-9261C6336486}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -91,6 +91,9 @@ namespace Kudu.Services.Web
                 .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices()
                 .AddApiExplorer();
 
+            // Instance authentication and authorization for running in service fabric mesh
+            services.AddInstanceAdminAuthentication();
+            services.AddInstanceAdminAuthorization();
 
             services.AddSwaggerGen(c =>
             {
@@ -448,6 +451,14 @@ namespace Kudu.Services.Web
                     new {verb = new HttpMethodRouteConstraint("PUT")});
                 routes.MapRoute("zip-war-deploy", "api/wardeploy",
                     new {controller = "PushDeployment", action = "WarPushDeploy"},
+                    new {verb = new HttpMethodRouteConstraint("POST")});
+
+                // Instance administration
+                routes.MapRoute("admin-instance-info", "admin/instance/info",
+                    new {controller = "Instance", action = "Info"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapRoute("admin-instance-assign", "admin/instance/assign",
+                    new {controller = "Instance", action = "AssignAsync" },
                     new {verb = new HttpMethodRouteConstraint("POST")});
 
                 // Live Command Line
