@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http.Formatting;
 using System.Reflection;
 using AspNetCore.RouteAnalyzer;
+using Kudu.Contracts;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.SourceControl;
@@ -25,6 +26,7 @@ using Kudu.Services.Performance;
 using Kudu.Services.TunnelServer;
 using Kudu.Services.Web.Infrastructure;
 using Kudu.Services.Web.Tracing;
+using Kudu.Services.LinuxConsumptionInstanceAdmin;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -120,6 +122,8 @@ namespace Kudu.Services.Web
                 });
 
             services.AddSingleton<IHttpContextAccessor>(new HttpContextAccessor());
+            services.AddSingleton<ILinuxConsumptionEnvironment, LinuxConsumptionEnvironment>();
+            services.AddSingleton<ILinuxConsumptionInstanceManager, LinuxConsumptionInstanceManager>();
 
             KuduWebUtil.EnsureHomeEnvironmentVariable();
 
