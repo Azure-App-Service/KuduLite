@@ -25,6 +25,7 @@ namespace Kudu.Core.Deployment.Oryx
 
         internal static class FunctionAppBuildSettings
         {
+            public static readonly string ExpressBuildSetup = "/tmp/build/expressbuild";
             public static readonly string PythonPackagesTargetDir = Path.Combine(".python_packages", "lib", "python3.6", "site-packages");
         }
     }
