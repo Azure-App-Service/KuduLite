@@ -4,6 +4,8 @@ using Kudu.Contracts.Settings;
 using Kudu.Core.Deployment.Oryx;
 using Kudu.Core.Infrastructure;
 using System.IO;
+using System;
+using Kudu.Core.Commands;
 
 namespace Kudu.Core.Deployment.Generator
 {
@@ -52,14 +54,21 @@ namespace Kudu.Core.Deployment.Generator
                 // Run express build setups if needed
                 if (args.Flags == BuildOptimizationsFlags.UseExpressBuild)
                 {
-                    Oryx.ExpressBuilder.SetupExpressBuilderArtifacts(context.OutputPath);
+                    if (FunctionAppHelper.LooksLikeFunctionApp())
+                    {
+                        SetupFunctionAppExpressArtifacts(context);
+                    }
+                    else
+                    {
+                        Oryx.ExpressBuilder.SetupExpressBuilderArtifacts(context.OutputPath);
+                    }
                 }
             }
 
             return Task.CompletedTask;
         }
 
-        public static void PreOryxBuild(DeploymentContext context)
+        private static void PreOryxBuild(DeploymentContext context)
         {
             if (FunctionAppHelper.LooksLikeFunctionApp())
             {
@@ -71,6 +80,36 @@ namespace Kudu.Core.Deployment.Generator
                     FileSystemHelpers.DeleteDirectorySafe(pythonPackagesDir);
                 }
             }
+        }
+
+        private void SetupFunctionAppExpressArtifacts(DeploymentContext context)
+        {
+            string sitePackages = "/home/data/SitePackages";
+            string packageNameFile = Path.Combine(sitePackages, "packagename.txt");
+            string packagePathFile = Path.Combine(sitePackages, "packagepath.txt");
+
+            FileSystemHelpers.EnsureDirectory(sitePackages);
+
+            string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
+            string zipFile = Path.Combine(sitePackages, zipAppName);
+
+            context.Logger.Log("Writing the artifacts to a zip file");
+            var exe = ExternalCommandFactory.BuildExternalCommandExecutable(OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup, sitePackages, context.Logger);
+            try
+            {
+                exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"zip -r {zipFile} .", String.Empty);
+            }
+            catch (Exception)
+            {
+                context.GlobalLogger.LogError();
+                throw;
+            }
+
+            // Just to be sure that we don't keep adding zip files here
+            DeploymentHelper.PurgeZipsIfNecessary(sitePackages, context.Tracer, totalAllowedZips: 3);
+
+            File.WriteAllText(packageNameFile, zipAppName);
+            File.WriteAllText(packagePathFile, sitePackages);
         }
 
         //public override void PostBuild(DeploymentContext context)

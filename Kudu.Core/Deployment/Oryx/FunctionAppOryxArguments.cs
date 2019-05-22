@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using Kudu.Core.Infrastructure;
+using System.IO;
+using System.Text;
 
 namespace Kudu.Core.Deployment.Oryx
 {
@@ -18,13 +20,14 @@ namespace Kudu.Core.Deployment.Oryx
             RunOryxBuild = FunctionsWorkerRuntime != WorkerRuntime.None;
             var buildFlags = GetEnvironmentVariableOrNull(OryxBuildConstants.OryxEnvVars.BuildFlagsSetting);
             Flags = BuildFlagsHelper.Parse(buildFlags);
+            SkipKuduSync = Flags == BuildOptimizationsFlags.UseExpressBuild;
         }
 
         public string GenerateOryxBuildCommand(DeploymentContext context)
         {
             StringBuilder args = new StringBuilder();
 
-            AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
+            AddOryxBuildCommand(args, context, source: context.OutputPath, destination: context.OutputPath);
             AddLanguage(args, FunctionsWorkerRuntime);
             AddLanguageVersion(args, FunctionsWorkerRuntime);
             AddBuildOptimizationFlags(args, context, Flags);
@@ -33,8 +36,22 @@ namespace Kudu.Core.Deployment.Oryx
             return args.ToString();
         }
 
-        private void AddOryxBuildCommand(StringBuilder args, string source, string destination)
+        private void AddOryxBuildCommand(StringBuilder args, DeploymentContext context, string source, string destination)
         {
+            // If it is express build, we don't directly need to write to /home/site/wwwroot
+            // So, we build into a different directory to avoid overlap
+            // Additionally, we didn't run kudusync, and can just build directly from repository path
+            if (Flags == BuildOptimizationsFlags.UseExpressBuild)
+            {
+                source = context.RepositoryPath;
+                destination = OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup;
+                // It is important to clean and recreate the directory to make sure no overwrite occurs
+                if (FileSystemHelpers.DirectoryExists(destination))
+                {
+                    FileSystemHelpers.DeleteDirectorySafe(destination);
+                }
+                FileSystemHelpers.EnsureDirectory(destination);
+            }
             OryxArgumentsHelper.AddOryxBuildCommand(args, source, destination);
         }
 
