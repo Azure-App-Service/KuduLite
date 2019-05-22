@@ -4,6 +4,8 @@ namespace Kudu.Core.Deployment.Oryx
 {
     internal static class OryxBuildConstants
     {
+        internal static readonly string EnableOryxBuild = "ENABLE_ORYX_BUILD";
+
         internal static class OryxEnvVars
         {
             public static readonly string FrameworkSetting = "FRAMEWORK";
