@@ -133,7 +133,33 @@ namespace Kudu.Core.Deployment
             }
 
             // Version
-            OryxArgumentsHelper.AddLanguageVersion(args, Version);
+            switch (Language)
+            {
+                case Framework.None:
+                    break;
+
+                case Framework.NodeJs:
+                case Framework.Python:
+                    OryxArgumentsHelper.AddLanguageVersion(args, Version);
+                    break;
+
+                // work around issue regarding sdk version vs runtime version
+                case Framework.DotNETCore:
+                    if (Version == "1.0")
+                    {
+                        Version = "1.1";
+                    }
+                    else if (Version == "2.0")
+                    {
+                        Version = "2.1";
+                    }
+
+                    OryxArgumentsHelper.AddLanguageVersion(args, Version);
+                    break;
+
+                default:
+                    break;
+            }
 
             // Build Flags
             switch (Flags)
