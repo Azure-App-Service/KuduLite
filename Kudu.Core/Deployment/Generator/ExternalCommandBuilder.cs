@@ -17,6 +17,7 @@ namespace Kudu.Core.Deployment.Generator
     //
     //  ExternalCommandBuilder
     //      CustomBuilder
+    //      OryxBuilder
     //      GeneratorSiteBuilder
     //          BaseBasicBuilder
     //              BasicBuilder

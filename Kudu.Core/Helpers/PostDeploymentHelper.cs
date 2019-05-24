@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Deployment;
 using Kudu.Core.Infrastructure;
@@ -346,6 +347,41 @@ namespace Kudu.Core.Helpers
                       operationId,
                       exception == null ? "successful." : ("failed with " + exception));
             }
+        }
+
+        /// <summary>
+        /// Remove all site workers after cloudbuilt content is uploaded
+        /// </summary>
+        /// <param name="websiteHostname">WEBSITE_HOSTNAME</param>
+        /// <param name="sitename">WEBSITE_SITE_NAME</param>
+        /// <exception cref="ArgumentException">Thrown when RemoveAllWorkers url is malformed.</exception>
+        /// <exception cref="HttpRequestException">Thrown when request to RemoveAllWorkers is not OK.</exception>
+        public static async Task RemoveAllWorkersAsync(string websiteHostname, string sitename)
+        {
+            // Generate URL encoded auth token
+            string websiteAuthEncryptionKey = System.Environment.GetEnvironmentVariable(SettingsKeys.AuthEncryptionKey);
+            DateTime expiry = DateTime.UtcNow.AddMinutes(5);
+            string authToken = SimpleWebTokenHelper.CreateToken(expiry, websiteAuthEncryptionKey.ToKeyBytes());
+            string authTokenEncoded = HttpUtility.UrlEncode(authToken);
+
+            // Generate RemoveAllWorker request URI
+            string baseUrl = $"http://{websiteHostname}/operations/removeworker/{sitename}/allStandard?token={authTokenEncoded}";
+            Uri baseUri = null;
+            if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out baseUri))
+            {
+                throw new ArgumentException($"Malformed URI is used in RemoveAllWorkers");
+            }
+            Trace(TraceEventType.Information, "Calling RemoveAllWorkers to refresh the function app");
+
+            // Initiate GET request
+            using (var client = HttpClientFactory())
+            using (var response = await client.GetAsync(baseUri))
+            {
+                response.EnsureSuccessStatusCode();
+                Trace(TraceEventType.Information, "RemoveAllWorkers, statusCode = {0}", response.StatusCode);
+            }
+            
+            return;
         }
 
         private static void VerifyEnvironments()
