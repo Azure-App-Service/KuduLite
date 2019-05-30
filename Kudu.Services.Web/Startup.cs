@@ -456,10 +456,10 @@ namespace Kudu.Services.Web
 
                 // Instance administration
                 routes.MapRoute("admin-instance-info", "admin/instance/info",
-                    new {controller = "LinuxConsumptionInstanceAdminController", action = "Info"},
+                    new {controller = "LinuxConsumptionInstanceAdmin", action = "Info"},
                     new {verb = new HttpMethodRouteConstraint("GET")});
                 routes.MapRoute("admin-instance-assign", "admin/instance/assign",
-                    new {controller = "LinuxConsumptionInstanceAdminController", action = "AssignAsync" },
+                    new {controller = "LinuxConsumptionInstanceAdmin", action = "AssignAsync" },
                     new {verb = new HttpMethodRouteConstraint("POST")});
 
                 // Live Command Line
