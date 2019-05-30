@@ -5,6 +5,17 @@ namespace Kudu
 {
     public static class Constants
     {
+        //Scan functionality files
+        public const string ScanLockFile = "scan.lock";
+        public static string ScanStatusFile = "status.json";
+        public static string ScanLogFile = "scan_log.log";
+        public static string ScanFolderName = "Scan_";
+        public static string MaxScans = "2";
+        public static string ScanDir = "C:\\Users\\t-puvasu\\Desktop\\Demo-App\\nodejs-docs-hello-world";
+        public static string ScriptPath = "C:\\Users\\t-puvasu\\Desktop\\Scripts\\scan.bat";
+        public static string ScanCommand = ScriptPath+" "+ScanDir;
+
+
         public const string WebRoot = "wwwroot";
         public const string MappedSite = "/_app";
         public const string RepositoryPath = "repository";

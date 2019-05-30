@@ -7,6 +7,7 @@ using System.Net.Http.Formatting;
 using System.Reflection;
 using AspNetCore.RouteAnalyzer;
 using Kudu.Contracts.Infrastructure;
+using Kudu.Contracts.Scan;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.SourceControl;
 using Kudu.Contracts.Tracing;
@@ -15,6 +16,7 @@ using Kudu.Core.Commands;
 using Kudu.Core.Deployment;
 using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.Scan;
 using Kudu.Core.Settings;
 using Kudu.Core.SourceControl;
 using Kudu.Core.SSHKey;
@@ -22,6 +24,7 @@ using Kudu.Core.Tracing;
 using Kudu.Services.Diagnostics;
 using Kudu.Services.GitServer;
 using Kudu.Services.Performance;
+using Kudu.Services.Scan;
 using Kudu.Services.TunnelServer;
 using Kudu.Services.Web.Infrastructure;
 using Kudu.Services.Web.Tracing;
@@ -212,6 +215,8 @@ namespace Kudu.Services.Web
             services.AddScoped<IDeploymentManager, DeploymentManager>();
             
             services.AddScoped<IFetchDeploymentManager, FetchDeploymentManager>();
+
+            services.AddScoped<IScanManager, ScanManager>();
             
             services.AddScoped<ISSHKeyManager, SSHKeyManager>();
 
@@ -480,8 +485,23 @@ namespace Kudu.Services.Web
                     new {controller = "Deployment", action = "IsDeploying"},
                     new {verb = new HttpMethodRouteConstraint("GET")});
 
+                // Initiate Scan 
+                routes.MapRoute("start-clamscan", "api/startscan/{timeout}",
+                    new { controller = "Scan", action = "ExecuteScan" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
+
+                //Get scan status
+                routes.MapRoute("get-scan-status", "/api/scan/{scanId}/track",
+                    new { controller = "Scan", action = "GetScanStatus" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
+
+                //Get scan result
+                routes.MapRoute("get-scan-result", "/api/scan/{scanId}/result",
+                    new { controller = "Scan", action = "GetScanFile" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
+
                 // SSHKey
-                routes.MapHttpRouteDual("get-sshkey", "api/sshkey",
+                routes.MapHttpRouteDual("get-sshkey", "api/sshkey2",
                     new {controller = "SSHKey", action = "GetPublicKey"},
                     new {verb = new HttpMethodRouteConstraint("GET")});
                 routes.MapHttpRouteDual("put-sshkey", "api/sshkey",
