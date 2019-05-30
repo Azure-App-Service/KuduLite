@@ -10,7 +10,7 @@ using Kudu.Services.Infrastructure.Authorization;
 namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 {
     /// <summary>
-    /// InstanceController is mainly responsible for integrating KuduLite with Azure Functions.
+    /// It is mainly responsible for integrating KuduLite with Azure Functions Linux Consumption Plan.
     /// There are two endpoints we need to provide in order to propagate container information and perform specialization.
     /// </summary>
     public class LinuxConsumptionInstanceAdminController : Controller
@@ -28,7 +28,8 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         }
 
         /// <summary>
-        /// A healthcheck endpoint
+        /// A healthcheck endpoint which will be call after the container is established.
+        /// This endpoint is accessible by Antares DataRole only. KuduLite users are prohibited.
         /// </summary>
         /// <returns>Expect 200 when current service is up and running</returns>
         [HttpGet]
@@ -39,8 +40,8 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         }
 
         /// <summary>
-        /// A specialization endpoint.
-        /// It sets the current service's site name, site id and environment variables when it is called.
+        /// A specialization endpoint. It sets the current service's site name, site id and environment variables.
+        /// This endpoint is accessible by Antares DataRole only. KuduLite users are prohibited.
         /// </summary>
         /// <param name="encryptedAssignmentContext">Encrypted content which contains HostAssignmentContext</param>
         /// <returns>Expect 202 when receives the first call, otherwise, returns 409</returns>

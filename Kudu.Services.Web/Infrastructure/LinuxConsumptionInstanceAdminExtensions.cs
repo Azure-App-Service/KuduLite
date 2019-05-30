@@ -13,7 +13,7 @@ namespace Kudu.Services.Web.Infrastructure
     {
         /// <summary>
         /// In Linux consumption, we are running the KuduLite instance in a Service Fabric Mesh container.
-        /// We want to add an admin role (Antares Controller) in authentication.
+        /// We want to introduce an Antares Datarole in authentication.
         /// </summary>
         /// <param name="services">Dependency injection to application service</param>
         /// <returns>Service</returns>
@@ -27,7 +27,7 @@ namespace Kudu.Services.Web.Infrastructure
 
         /// <summary>
         /// In Linux consumption, we are running the KuduLite instance in a Service Fabric Mesh container.
-        /// We want to introduce AdminAuthLevel policy to restrict admin/instance/assign access.
+        /// We want to introduce AdminAuthLevel policy to restrict instance admin endpoint access.
         /// </summary>
         /// <param name="services">Dependency injection to application service</param>
         /// <returns>Service</returns>
