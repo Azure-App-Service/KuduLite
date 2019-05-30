@@ -7,13 +7,13 @@ using Kudu.Contracts.Settings;
 using System.Collections.Generic;
 using Kudu.Services.Infrastructure.Authorization;
 
-namespace Kudu.Services.InstanceAdmin
+namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 {
     /// <summary>
     /// InstanceController is mainly responsible for integrating KuduLite with Azure Functions.
     /// There are two endpoints we need to provide in order to propagate container information and perform specialization.
     /// </summary>
-    public class InstanceController : Controller
+    public class LinuxConsumptionInstanceAdminController : Controller
     {
         private readonly IDeploymentSettingsManager _settingsManager;
 
@@ -22,7 +22,7 @@ namespace Kudu.Services.InstanceAdmin
         /// namely, Functionapp on Linux Consumption Plan.
         /// </summary>
         /// <param name="settingsManager">Allow instance assignment to change application setting</param>
-        public InstanceController(IDeploymentSettingsManager settingsManager)
+        public LinuxConsumptionInstanceAdminController(IDeploymentSettingsManager settingsManager)
         {
             _settingsManager = settingsManager;
         }
