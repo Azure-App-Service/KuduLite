@@ -30,12 +30,6 @@ namespace Kudu.Services.Web
         /// </summary>
         private static void InitializeProcess()
         {
-            if (!OSDetector.IsOnWindows())
-            {
-                // Linux containers always start in placeholder mode
-                System.Environment.SetEnvironmentVariable(SettingsKeys.PlaceholderMode, "1");
-            }
-
             // Ensure that the WEBSITE_AUTH_ENCRYPTION_KEY is propagated to machine decryption key.
             string authEncryptionKey = System.Environment.GetEnvironmentVariable(SettingsKeys.AuthEncryptionKey);
             string machineDecryptionKey = System.Environment.GetEnvironmentVariable(SettingsKeys.MachineDecryptionKey);
