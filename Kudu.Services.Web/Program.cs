@@ -15,7 +15,6 @@ namespace Kudu.Services.Web
         {
             var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
             XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
-            InitializeProcess();
             CreateWebHostBuilder(args).Build().Run();
         }
 
@@ -23,20 +22,5 @@ namespace Kudu.Services.Web
             WebHost.CreateDefaultBuilder(args)
                 .UseKestrel(options => { options.Limits.MaxRequestBodySize = null; })
                 .UseStartup<Startup>();
-
-        /// <summary>
-        /// Perform any process level initialization that needs to happen BEFORE
-        /// the WebHost is initialized.
-        /// </summary>
-        private static void InitializeProcess()
-        {
-            // Ensure that the WEBSITE_AUTH_ENCRYPTION_KEY is propagated to machine decryption key.
-            string authEncryptionKey = System.Environment.GetEnvironmentVariable(SettingsKeys.AuthEncryptionKey);
-            string machineDecryptionKey = System.Environment.GetEnvironmentVariable(SettingsKeys.MachineDecryptionKey);
-            if (authEncryptionKey != null && machineDecryptionKey == null)
-            {
-                System.Environment.SetEnvironmentVariable(SettingsKeys.MachineDecryptionKey, authEncryptionKey);
-            }
-        }
     }
 }
