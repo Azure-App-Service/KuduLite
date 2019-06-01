@@ -49,7 +49,5 @@
         // Antares container specific settings
         public const string AuthEncryptionKey = "WEBSITE_AUTH_ENCRYPTION_KEY";
         public const string ContainerEncryptionKey = "CONTAINER_ENCRYPTION_KEY";
-        public const string MachineDecryptionKey = "MACHINEKEY_DecryptionKey";
-        public const string PlaceholderMode = "WEBSITE_PLACEHOLDER_MODE";
     }
 }
