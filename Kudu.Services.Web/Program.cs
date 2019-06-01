@@ -1,7 +1,5 @@
 ﻿using System.IO;
 using System.Reflection;
-using Kudu.Contracts.Settings;
-using Kudu.Core.Helpers;
 using log4net;
 using log4net.Config;
 using Microsoft.AspNetCore;

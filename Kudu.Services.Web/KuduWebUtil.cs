@@ -14,6 +14,8 @@ using Kudu.Core.Infrastructure;
 using Kudu.Core.Settings;
 using Kudu.Core.Tracing;
 using Kudu.Services.Infrastructure;
+using Kudu.Services.Infrastructure.Authorization;
+using Kudu.Services.Infrastructure.Authentication;
 using Kudu.Services.Web.Tracing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -21,6 +23,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.Authorization;
 using Environment = Kudu.Core.Environment;
 
 namespace Kudu.Services.Web
@@ -508,6 +511,31 @@ namespace Kudu.Services.Web
         internal static string GetSettingsPath(IEnvironment environment)
         {
             return Path.Combine(environment.DeploymentsPath, Constants.DeploySettingsPath);
+        }
+
+        internal static IServiceCollection AddLinuxConsumptionAuthentication(this IServiceCollection services)
+        {
+            services.AddAuthentication()
+                .AddArmToken();
+
+            return services;
+        }
+
+        /// <summary>
+        /// In Linux consumption, we are running the KuduLite instance in a Service Fabric Mesh container.
+        /// We want to introduce AdminAuthLevel policy to restrict instance admin endpoint access.
+        /// </summary>
+        /// <param name="services">Dependency injection to application service</param>
+        /// <returns>Service</returns>
+        internal static IServiceCollection AddLinuxConsumptionAuthorization(this IServiceCollection services)
+        {
+            services.AddAuthorization(o =>
+            {
+                o.AddInstanceAdminPolicies();
+            });
+
+            services.AddSingleton<IAuthorizationHandler, AuthLevelAuthorizationHandler>();
+            return services;
         }
     }
 }
