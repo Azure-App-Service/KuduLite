@@ -32,6 +32,11 @@ namespace Kudu.Core.Deployment
         public ILogger GlobalLogger { get; set; }
 
         /// <summary>
+        /// Repository Path
+        /// </summary>
+        public string RepositoryPath { get; set; }
+
+        /// <summary>
         /// The output path.
         /// </summary>
         public string OutputPath { get; set; }
