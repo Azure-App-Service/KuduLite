@@ -126,7 +126,7 @@ namespace Kudu.Services.Performance
 
             if (_logFiles != null)
             {
-                NotifyClientWithLineBreak("Starting Log Tail -n 10 of exisitng logs ----", context);
+                NotifyClientWithLineBreak("Starting Log Tail -n 10 of existing logs ----", context);
 
                 foreach (string log in _logFiles.Keys)
                 {
@@ -149,7 +149,7 @@ namespace Kudu.Services.Performance
                     }
                     await context.Response.WriteAsync(System.Environment.NewLine);
                 }
-                NotifyClientWithLineBreak("Ending Log Tail of exisitng logs ---", context);
+                NotifyClientWithLineBreak("Ending Log Tail of existing logs ---", context);
             }
             else
             {
@@ -251,7 +251,7 @@ namespace Kudu.Services.Performance
                 // use this directory; first file for a date is the marker file
                 foreach (var file in Directory.GetFiles(mountedDirPath, "*", SearchOption.AllDirectories))
                 {
-                    if (file.StartsWith(dateToday) && ++count > 1)
+                    if (file.Contains(dateToday) && ++count > 1)
                     {
                         break;
                     }
