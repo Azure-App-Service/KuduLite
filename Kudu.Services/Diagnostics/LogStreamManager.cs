@@ -48,6 +48,8 @@ namespace Kudu.Services.Performance
 
         private const string volatileLogsPath = "/appsvctmp/volatile/logs/runtime";
 
+        private const string volatileLogsPath = "/appsvctmp/volatile/logs/runtime";
+
         // CORE TODO
         //private ShutdownDetector _shutdownDetector;
         //private CancellationTokenRegistration _cancellationTokenRegistration;
@@ -99,7 +101,6 @@ namespace Kudu.Services.Performance
             var firstPath = routePath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
 
             // Ensure mounted logFiles dir 
-
             string mountedLogFilesDir = Path.Combine(_logPath, routePath);
 
             FileSystemHelpers.EnsureDirectory(mountedLogFilesDir);

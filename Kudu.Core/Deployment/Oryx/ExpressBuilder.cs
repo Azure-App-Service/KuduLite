@@ -16,7 +16,7 @@ namespace Kudu.Core.Deployment.Oryx
             // For App service express mode
             // Generate packagename.txt and packagepath
             string packagename = "node_modules.zip:/node_modules";
-
+          
             File.WriteAllText(packageNameFile, packagename);
             File.WriteAllText(packagePathFile, outputPath);
         }
