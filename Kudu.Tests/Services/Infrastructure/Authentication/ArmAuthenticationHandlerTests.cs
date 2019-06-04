@@ -13,6 +13,8 @@ using Kudu.Tests;
 
 namespace Kudu.Tests.Services.Infrastructure.Authentication
 {
+    // The following 'Collection' attribute is used for disabling parallel testing
+    // Some of the tests require changing the system environment variables, which is not thread safe.
     [Collection("MockedEnvironmentVariablesCollection")]
     public class ArmAuthenticationHandlerTests
     {

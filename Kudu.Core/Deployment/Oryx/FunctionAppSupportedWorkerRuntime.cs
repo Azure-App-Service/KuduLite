@@ -14,7 +14,11 @@ namespace Kudu.Core.Deployment.Oryx
     {
         public static WorkerRuntime ParseWorkerRuntime(string value)
         {
-            if (value.StartsWith("NODE", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrEmpty(value))
+            {
+                return WorkerRuntime.None;
+            }
+            else if (value.StartsWith("NODE", StringComparison.OrdinalIgnoreCase))
             {
                 return WorkerRuntime.Node;
             }

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Kudu.Core.Deployment.Oryx
 {
-    class LinuxConsumptionFunctionAppOryxArguments : FunctionAppOryxArguments
+    public class LinuxConsumptionFunctionAppOryxArguments : FunctionAppOryxArguments
     {
         public LinuxConsumptionFunctionAppOryxArguments() : base()
         {

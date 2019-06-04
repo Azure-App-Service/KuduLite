@@ -2,7 +2,7 @@
 
 namespace Kudu.Core.Deployment.Oryx
 {
-    class OryxArgumentsFactory
+    public class OryxArgumentsFactory
     {
         public static IOryxArguments CreateOryxArguments()
         {
