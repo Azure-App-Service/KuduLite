@@ -37,7 +37,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         /// </summary>
         /// <returns>Expect 200 when current service is up and running</returns>
         [HttpGet]
-        [Authorize(Policy = AuthPolicyNames.AdminAuthLevel)]
+        //[Authorize(Policy = AuthPolicyNames.AdminAuthLevel)]
         public IActionResult Info()
         {
             return Ok(_instanceManager.GetInstanceInfo());
@@ -50,7 +50,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         /// <param name="encryptedAssignmentContext">Encrypted content which contains HostAssignmentContext</param>
         /// <returns>Expect 202 when receives the first call, otherwise, returns 409</returns>
         [HttpPost]
-        [Authorize(Policy = AuthPolicyNames.AdminAuthLevel)]
+        //[Authorize(Policy = AuthPolicyNames.AdminAuthLevel)]
         public async Task<IActionResult> AssignAsync([FromBody] EncryptedHostAssignmentContext encryptedAssignmentContext)
         {
             var containerKey = System.Environment.GetEnvironmentVariable(SettingsKeys.ContainerEncryptionKey);
