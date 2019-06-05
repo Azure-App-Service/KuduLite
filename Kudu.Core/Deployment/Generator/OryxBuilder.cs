@@ -20,7 +20,7 @@ namespace Kudu.Core.Deployment.Generator
         {
         }
 
-        public override async Task Build(DeploymentContext context)
+        public override Task Build(DeploymentContext context)
         {
             FileLogHelper.Log("In oryx build...");
 
@@ -70,10 +70,10 @@ namespace Kudu.Core.Deployment.Generator
             // Detect if package upload is necessary for server side build
             if (FunctionAppHelper.HasScmRunFromPackage() && FunctionAppHelper.LooksLikeFunctionApp())
             {
-                await SetupLinuxConsumptionFunctionAppDeployment(context);
+                SetupLinuxConsumptionFunctionAppDeployment(context).Wait();
             }
 
-            return;
+            return Task.CompletedTask;
         }
 
         private static void PreOryxBuild(DeploymentContext context)
