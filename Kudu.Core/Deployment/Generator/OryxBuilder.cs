@@ -135,7 +135,7 @@ namespace Kudu.Core.Deployment.Generator
         /// <param name="context"></param>
         private async Task SetupLinuxConsumptionFunctionAppDeployment(DeploymentContext context)
         {
-            string sas = DeploymentSettings.GetValue(SettingsKeys.ScmRunFromPackage);
+            string sas = System.Environment.GetEnvironmentVariable(Constants.ScmRunFromPackage);
             string builtFolder = context.RepositoryPath;
             string packageFolder = Environment.DeploymentsPath;
             string packageFileName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";

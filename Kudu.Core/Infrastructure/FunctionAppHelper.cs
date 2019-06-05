@@ -13,7 +13,7 @@ namespace Kudu.Core.Infrastructure
 
         public static bool HasScmRunFromPackage()
         {
-            return !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(SettingsKeys.ScmRunFromPackage));
+            return !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.ScmRunFromPackage));
         }
 
         public static bool IsCSharpFunctionFromProjectFile(string projectPath)
