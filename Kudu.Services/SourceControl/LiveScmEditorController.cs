@@ -534,7 +534,7 @@ namespace Kudu.Services.SourceControl
             public QueryParameters(HttpRequest request)
             {
                 // CORE TODO make sure .Query has the same semantics as the old .QueryString (null, empty, etc.)
-                Message = request.Query["Message"].ToString() ?? String.Format("Committing update from request {0}", new Uri(request.GetDisplayUrl()).AbsolutePath);
+                Message = request.Query["Message"].ToString() ?? String.Format("Committing update from request {0}", new Uri(request.GetSanitizedDisplayUrl()).AbsolutePath);
                 NoDeploy = GetBooleanValue(request.Query["NoDeploy"].ToString());
             }
 

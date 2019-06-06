@@ -363,7 +363,7 @@ namespace Kudu.Core
 
                 // GetLeftPart(Authority) returns the https://www.example.com of any Uri
                 var displayUrl = _httpContextAccessor?.HttpContext?.Request?.GetDisplayUrl();
-                var url = displayUrl == null ? null : new Uri(displayUrl).GetLeftPart(UriPartial.Authority);
+                var url = displayUrl == null ? null : new Uri(ScmSiteUrlHelper.SanitizeUrl(displayUrl)).GetLeftPart(UriPartial.Authority);
                 if (string.IsNullOrEmpty(url))
                 {
                     // if call is not done in Request context (eg. in BGThread), fall back to %host%

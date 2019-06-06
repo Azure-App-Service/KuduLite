@@ -33,7 +33,7 @@ namespace Kudu.Services.Infrastructure
 
         public static Uri GetRequestUri(HttpRequest request)
         {
-            return GetRequestUriInternal(new Uri(request.GetDisplayUrl()), request.Headers[DisguisedHostHeaderName]);
+            return GetRequestUriInternal(new Uri(request.GetSanitizedDisplayUrl()), request.Headers[DisguisedHostHeaderName]);
         }
 
         private static Uri GetRequestUriInternal(Uri uri, string disguisedHostValue)

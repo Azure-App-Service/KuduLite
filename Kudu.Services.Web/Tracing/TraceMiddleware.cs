@@ -240,13 +240,13 @@ namespace Kudu.Services.Web.Tracing
 
         private static string GetRawUrl(HttpRequest request)
         {
-            var uri = new Uri(request.GetDisplayUrl());
+            var uri = new Uri(request.GetSanitizedDisplayUrl());
             return uri.PathAndQuery;
         }
 
         private static string GetHostUrl(HttpRequest request)
         {
-            var uri = new Uri(request.GetDisplayUrl());
+            var uri = new Uri(request.GetSanitizedDisplayUrl());
             return uri.Host;
         }
 

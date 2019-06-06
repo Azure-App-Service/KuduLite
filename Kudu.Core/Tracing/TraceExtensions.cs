@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using Kudu.Contracts.Tracing;
+using Kudu.Core.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Primitives;
@@ -155,7 +156,7 @@ namespace Kudu.Core.Tracing
                 return true;
             }
 
-            return !String.Equals(new Uri(request.GetDisplayUrl()).Host, refererUri.Host, StringComparison.OrdinalIgnoreCase);
+            return !String.Equals(new Uri(ScmSiteUrlHelper.SanitizeUrl(request.GetDisplayUrl())).Host, refererUri.Host, StringComparison.OrdinalIgnoreCase);
         }
 
         private static TraceLevel GetTraceLevel(IDictionary<string, string> attributes)

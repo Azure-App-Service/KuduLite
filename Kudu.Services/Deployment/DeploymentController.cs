@@ -145,7 +145,7 @@ namespace Kudu.Services.Deployment
 
                                     // e.g if final url is "https://kudutry.scm.azurewebsites.net/api/deployments/ef52ec67fc9574e726955a9cbaf7bcba791e4e95/log"
                                     // deploymentUri should be "https://kudutry.scm.azurewebsites.net/api/deployments/ef52ec67fc9574e726955a9cbaf7bcba791e4e95"
-                                    Uri deploymentUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(Request), new Uri(Request.GetDisplayUrl()).AbsolutePath);
+                                    Uri deploymentUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(Request), new Uri(Request.GetSanitizedDisplayUrl()).AbsolutePath);
                                     deployResult.Url = deploymentUri;
                                     deployResult.LogUrl = kUriHelper.MakeRelative(deploymentUri, "log");
 
@@ -427,7 +427,7 @@ namespace Kudu.Services.Deployment
                     foreach (var entry in deployments)
                     {
                         if (!entry.HasDetails) continue;
-                        Uri baseUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(Request), new Uri(Request.GetDisplayUrl()).AbsolutePath);
+                        Uri baseUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(Request), new Uri(Request.GetSanitizedDisplayUrl()).AbsolutePath);
                         entry.DetailsUrl = kUriHelper.MakeRelative(baseUri, entry.Id);
                     }
 
@@ -481,7 +481,7 @@ namespace Kudu.Services.Deployment
                 DeployResult pending;
                 if (IsLatestPendingDeployment(ref id, out pending))
                 {
-                    Response.GetTypedHeaders().Location = new Uri(Request.GetDisplayUrl());
+                    Response.GetTypedHeaders().Location = new Uri(Request.GetSanitizedDisplayUrl());
                     return Accepted(ArmUtils.AddEnvelopeOnArmRequest(pending, Request));
                 }
 
@@ -494,7 +494,7 @@ namespace Kudu.Services.Deployment
                                                                        id));
                 }
 
-                Uri baseUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(Request), new Uri(Request.GetDisplayUrl()).AbsolutePath);
+                Uri baseUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(Request), new Uri(Request.GetSanitizedDisplayUrl()).AbsolutePath);
                 result.Url = baseUri;
                 result.LogUrl = kUriHelper.MakeRelative(baseUri, "log");
 
@@ -579,7 +579,7 @@ namespace Kudu.Services.Deployment
 
         private EntityTagHeaderValue GetCurrentEtag(HttpRequest request)
         {
-            return new EntityTagHeaderValue(String.Format("\"{0:x}\"", new Uri(request.GetDisplayUrl()).PathAndQuery.GetHashCode() ^ _status.LastModifiedTime.Ticks));
+            return new EntityTagHeaderValue(String.Format("\"{0:x}\"", new Uri(request.GetSanitizedDisplayUrl()).PathAndQuery.GetHashCode() ^ _status.LastModifiedTime.Ticks));
         }
 
         private static bool EtagEquals(HttpRequest request, EntityTagHeaderValue currentEtag)
@@ -599,7 +599,7 @@ namespace Kudu.Services.Deployment
         {
             foreach (var result in _deploymentManager.GetResults())
             {
-                Uri baseUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(request), new Uri(Request.GetDisplayUrl()).AbsolutePath);
+                Uri baseUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(request), new Uri(Request.GetSanitizedDisplayUrl()).AbsolutePath);
                 result.Url = kUriHelper.MakeRelative(baseUri, result.Id);
                 result.LogUrl = kUriHelper.MakeRelative(baseUri, result.Id + "/log");
                 yield return result;

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using Kudu.Contracts.Infrastructure;
+using Kudu.Services.Infrastructure;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -64,7 +65,7 @@ namespace Kudu.Services.Arm
             // In Azure ARM requests, the referrer is the current id
             //Uri referrer = request.Headers.Referrer;
             Uri referrer = new Uri(request.Headers["Referer"].ToString()); // NOT MISSPELLED, https://en.wikipedia.org/wiki/HTTP_referer
-            armEntry.Id = referrer != null ? referrer.AbsolutePath : new Uri(request.GetDisplayUrl()).AbsolutePath;
+            armEntry.Id = referrer != null ? referrer.AbsolutePath : new Uri(request.GetSanitizedDisplayUrl()).AbsolutePath;
 
             // If we're generating a child object, append the child name
             if (isChild)

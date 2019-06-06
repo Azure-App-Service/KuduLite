@@ -12,6 +12,7 @@ using Kudu.Core.Tracing;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using Kudu.Core.Helpers;
 
 namespace Kudu.Core.Jobs
 {
@@ -521,7 +522,7 @@ namespace Kudu.Core.Jobs
                     return _lastKnownAppBaseUrlPrefix;
                 }
 
-                var requestUrl = new Uri(context.Request.GetDisplayUrl());
+                var requestUrl = new Uri(ScmSiteUrlHelper.SanitizeUrl(context.Request.GetDisplayUrl()));
 
                 _lastKnownAppBaseUrlPrefix = requestUrl.GetLeftPart(UriPartial.Authority);
                 return _lastKnownAppBaseUrlPrefix;
