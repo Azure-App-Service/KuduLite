@@ -96,7 +96,7 @@ namespace Kudu.Services.Web
             // Add middleware for Linux Consumption authentication and authorization
             // when KuduLIte is running in service fabric mesh
             services.AddLinuxConsumptionAuthentication();
-            services.AddLinuxConsumptionAuthorization();
+            services.AddLinuxConsumptionAuthorization(_webAppRuntimeEnvironment);
 
             services.AddSwaggerGen(c =>
             {

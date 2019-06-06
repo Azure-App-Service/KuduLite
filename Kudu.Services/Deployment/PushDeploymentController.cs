@@ -17,6 +17,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Newtonsoft.Json.Linq;
 using System.Net.Http;
+using Microsoft.AspNetCore.Authorization;
+using Kudu.Services.Infrastructure.Authorization;
 
 namespace Kudu.Services.Deployment
 {
@@ -49,6 +51,7 @@ namespace Kudu.Services.Deployment
         [HttpPost]
         [DisableRequestSizeLimit]
         [DisableFormValueModelBinding]
+        [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
         public async Task<IActionResult> ZipPushDeploy(
             [FromQuery] bool isAsync = false,
             [FromQuery] string author = null,
@@ -96,6 +99,7 @@ namespace Kudu.Services.Deployment
         }
 
         [HttpPut]
+        [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
         public async Task<IActionResult> ZipPushDeployViaUrl(
             [FromBody] JObject requestJson,
             [FromQuery] bool isAsync = false,

@@ -527,11 +527,11 @@ namespace Kudu.Services.Web
         /// </summary>
         /// <param name="services">Dependency injection to application service</param>
         /// <returns>Service</returns>
-        internal static IServiceCollection AddLinuxConsumptionAuthorization(this IServiceCollection services)
+        internal static IServiceCollection AddLinuxConsumptionAuthorization(this IServiceCollection services, IEnvironment environment)
         {
             services.AddAuthorization(o =>
             {
-                o.AddInstanceAdminPolicies();
+                o.AddInstanceAdminPolicies(environment);
             });
 
             services.AddSingleton<IAuthorizationHandler, AuthLevelAuthorizationHandler>();

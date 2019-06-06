@@ -30,5 +30,6 @@
         string RequestId { get; }               // e.g. x-arr-log-id or x-ms-request-id header value
         string KuduConsoleFullPath { get; }     // e.g. KuduConsole/kudu.dll
         string SitePackagesPath { get; }        // e.g. /data/SitePackages
+        bool IsOnLinuxConsumption { get; }      // e.g. True on Linux Consumption. False on App Service.
     }
 }
