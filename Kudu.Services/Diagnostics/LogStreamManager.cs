@@ -48,8 +48,6 @@ namespace Kudu.Services.Performance
 
         private const string volatileLogsPath = "/appsvctmp/volatile/logs/runtime";
 
-        private const string volatileLogsPath = "/appsvctmp/volatile/logs/runtime";
-
         // CORE TODO
         //private ShutdownDetector _shutdownDetector;
         //private CancellationTokenRegistration _cancellationTokenRegistration;
