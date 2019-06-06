@@ -1,7 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Kudu.Contracts.Scan
@@ -13,13 +11,15 @@ namespace Kudu.Contracts.Scan
             String mainScanDirPath,
             String timestamp);
 
-        Task<JObject> GetScanStatus(
+        Task<ScanStatusResult> GetScanStatus(
             String scanId,
             String mainScanDirPath);
 
-        Task<String> GetScanResultFile(
+        Task<ScanReport> GetScanResultFile(
             String scanId,
             String mainScanDirPath);
-    }
+
+        IEnumerable<ScanOverviewResult> GetResults(String mainScanDir);
+     }
 }
 

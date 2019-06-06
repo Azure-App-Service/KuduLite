@@ -3,19 +3,16 @@ using Kudu.Contracts.Scan;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
 using Kudu.Core.Commands;
-using Kudu.Core.Deployment;
 using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Tracing;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -29,6 +26,7 @@ namespace Kudu.Core.Scan
         private readonly IOperationLock _scanLock;
         private ExternalCommandFactory _externalCommandFactory = null;
         private IEnvironment _environment;
+        private static readonly string DATE_TIME_FORMAT = "yyyy-MM-dd_HH-mm-ssZ";
 
         public ScanManager(ICommandExecutor commandExecutor, ITracer tracer, IDictionary<string, IOperationLock> namedLocks, IEnvironment environment, IDeploymentSettingsManager settings)
         {
@@ -43,21 +41,112 @@ namespace Kudu.Core.Scan
         private static void UpdateScanStatus(String folderPath,ScanStatus status)
         {
             String filePath = Path.Combine(folderPath, Constants.ScanStatusFile);
-            JObject obj = ReadScanStatusFile("", "", Constants.ScanStatusFile, folderPath);
-            ScanStatusResult scr = new ScanStatusResult();
+            ScanStatusResult obj = ReadScanStatusFile("", "", Constants.ScanStatusFile, folderPath);
 
             //Create new Scan Id if file is empty
             //else get existing scan Id
-            if(obj == null || obj["id"] == null)
+            if(obj == null || obj.Id == null)
             {
-                scr.Id = DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ");
+                obj = new ScanStatusResult();
+                obj.Id = DateTime.UtcNow.ToString(DATE_TIME_FORMAT);
             }
-            else
-                scr.Id = (String)obj["id"];
-
+            
             //Update status of the scan
-            scr.Status = status;
-            File.WriteAllText(filePath, JsonConvert.SerializeObject(scr));
+            obj.Status = status;
+            File.WriteAllText(filePath, JsonConvert.SerializeObject(obj));
+
+        }
+
+        private Boolean CheckModifications(String mainScanDirPath)
+        {
+            //Create path of manifest file
+            string manifestFilePath = Path.Combine(mainScanDirPath, Constants.ScanManifest);
+
+            //Check if manifest file exists
+            //This means atleast 1 previous scan has been done
+            if (FileSystemHelpers.FileExists(manifestFilePath))
+            {
+                using (FileStream file = System.IO.File.OpenRead(manifestFilePath))
+                {
+                    using (StreamReader sr = new StreamReader(file))
+                    {
+                        JsonSerializer serializer = new JsonSerializer();
+
+                        //Read the manifest file into JSON object
+                        JObject obj = (JObject)serializer.Deserialize(sr, typeof(JObject));
+
+                        //Check for modifications
+                        return IsFolderModified(obj, Constants.ScanDir);
+                    }
+
+                }
+            }
+
+            //This is the first scan
+            //Return true
+            return true;
+            
+        }
+
+        private Boolean IsFolderModified(JObject fileObj,string directoryPath)
+        {
+            //Fetch all files in this directory
+            string[] filePaths = FileSystemHelpers.GetFiles(directoryPath,"*");
+
+            foreach(string filePath in filePaths)
+            {
+                //If manifest does not contain an entry for this file
+                //It means the file was newly added
+                //We need to scan as this is a modification
+                if (!fileObj.ContainsKey(filePath))
+                {
+                    return true;
+                }
+                //Modified time in manifest
+                String lastModTime = (string)fileObj[filePath];
+                //Current modified time
+                String currModTime = FileSystemHelpers.GetDirectoryLastWriteTimeUtc(filePath).ToString();
+
+                //If they are different
+                //It means file has been modified after last scan
+                if (!currModTime.Equals(lastModTime))
+                    return true;
+            }
+
+            //Fetch all the child directories of this directory
+            string[] direcPaths = FileSystemHelpers.GetDirectories(directoryPath);
+
+            //Do recursive comparison of all files in the child directories
+            foreach(string direcPath in direcPaths)
+            {
+                if (IsFolderModified(fileObj, direcPath))
+                    return true;
+            }
+
+            //No modifications found
+            return false;
+        }
+
+        private void ModifyManifestFile(JObject fileObj, string directoryPath)
+        {
+            //Get all files in this directory
+            string[] filePaths = FileSystemHelpers.GetFiles(directoryPath, "*");
+
+            foreach (string filePath in filePaths)
+            {
+                //Get last modified timestamp of this file
+                String timeString = FileSystemHelpers.GetDirectoryLastWriteTimeUtc(filePath).ToString();
+                //Add it as an entry into the manifest
+                fileObj.Add(filePath, timeString);
+            }
+
+            //Get all child directories of this directory
+            string[] direcPaths = FileSystemHelpers.GetDirectories(directoryPath);
+            //Do a recursive call to add files of child directories to manifest
+            foreach (string direcPath in direcPaths)
+            {
+                ModifyManifestFile(fileObj, direcPath);                 
+            }
 
         }
 
@@ -67,21 +156,35 @@ namespace Kudu.Core.Scan
             {
                 String folderPath = Path.Combine(mainScanDirPath, Constants.ScanFolderName + timestamp);
                 String filePath = Path.Combine(folderPath, Constants.ScanStatusFile);
-                ScanStatusResult scr = null;
+                Boolean hasFileModifcations = true;
 
                 //Create unique scan folder and scan status file
                 _scanLock.LockOperation(() =>
                 {
-                    //Create uniue scan directory for current scan
-                    FileSystemHelpers.CreateDirectory(folderPath);
-                    Console.WriteLine("Unique scan directory created");
+                    //Check if files are modified
+                    if (CheckModifications(mainScanDirPath))
+                    {
+                        //Create uniue scan directory for current scan
+                        FileSystemHelpers.CreateDirectory(folderPath);
+                        Console.WriteLine("Unique scan directory created");
 
-                    //Create scan status file inside folder
-                    FileSystemHelpers.CreateFile(filePath).Close();
+                        //Create scan status file inside folder
+                        FileSystemHelpers.CreateFile(filePath).Close();
 
-                    UpdateScanStatus(folderPath, ScanStatus.Starting);
+                        UpdateScanStatus(folderPath, ScanStatus.Starting);
+                    }
+                    else
+                    {
+                        hasFileModifcations = false;
+                    }
+                    
 
                 }, "Creating unique scan folder", TimeSpan.Zero);
+
+                if (!hasFileModifcations)
+                {
+                    return ScanRequestResult.NoFileModifications;
+                }
 
                 //Start Backgorund Scan
                 using (var timeoutCancellationTokenSource = new CancellationTokenSource())
@@ -91,9 +194,22 @@ namespace Kudu.Core.Scan
                     //Wait till scan task completes or the timeout goes off
                     if (await Task.WhenAny(successfullyScanned, Task.Delay(Int32.Parse(timeout), timeoutCancellationTokenSource.Token)) == successfullyScanned)
                     {
+                        Console.WriteLine("No Timeout!!");
                         //If scan task completes before timeout
                         //Delete excess scan folders, just keep the maximum number allowed
                         await deletePastScans(mainScanDirPath);
+
+                        //Create new Manifest file containing the modified timestamps
+                        String manifestPath = Path.Combine(mainScanDirPath, Constants.ScanManifest);
+                        if (FileSystemHelpers.FileExists(manifestPath))
+                        {
+                            FileSystemHelpers.DeleteFileSafe(manifestPath);
+                        }
+                        JObject manifestObj = new JObject();
+
+                        //Write to the manifest with new timestamps of the modified file
+                        ModifyManifestFile(manifestObj, Constants.ScanDir);
+                        File.WriteAllText(manifestPath, JsonConvert.SerializeObject(manifestObj));
 
                         return successfullyScanned.Result
                         ? ScanRequestResult.RunningAynschronously
@@ -101,6 +217,7 @@ namespace Kudu.Core.Scan
                     }
                     else
                     {
+                        Console.WriteLine("Timeout!!");
                         //Timeout went off before scan task completion
                         //Cancel scan task
                         timeoutCancellationTokenSource.Cancel();
@@ -118,35 +235,7 @@ namespace Kudu.Core.Scan
                 }
 
                 
-                
-
-                /*return successfullyScanned
-                    ? ScanRequestResult.RunningAynschronously
-                    : ScanRequestResult.AsyncScanFailed;*/
             }
-
-            /*using (_tracer.Step("Start scan in the background"))
-            {
-            String folderPath = Path.Combine(mainScanDirPath, Constants.ScanFolderName + timestamp);
-
-                //Create unique scan folder
-                _scanLock.LockOperation(() =>
-                {
-                    FileSystemHelpers.CreateDirectory(folderPath);
-                    Console.WriteLine("Unique scan directory created");
-                },"Creating unique scan folder",TimeSpan.Zero);
-
-            var successfullyScanned = false;
-            //Start Backgorund Scan
-            successfullyScanned = await PerformBackgroundScan(_tracer, requestUri, _scanLock, _commandExecutor, folderPath);
-
-            //Delete all scan folders, just keep the maximum number allowed
-            await deletePastScans(mainScanDirPath);
-
-            return successfullyScanned
-                ? ScanRequestResult.RunningAynschronously
-                : ScanRequestResult.AsyncScanFailed;
-        }*/
 
         }
 
@@ -177,9 +266,9 @@ namespace Kudu.Core.Scan
 
         }
 
-        public async Task<JObject> GetScanStatus(String scanId,String mainScanDirPath)
+        public async Task<ScanStatusResult> GetScanStatus(String scanId,String mainScanDirPath)
         {
-            JObject obj = null;
+            ScanStatusResult obj = null;
             await Task.Run(() =>
             {
                 obj = ReadScanStatusFile(scanId, mainScanDirPath, Constants.ScanStatusFile,null);
@@ -188,24 +277,36 @@ namespace Kudu.Core.Scan
                 return obj;
         }
 
-        public async Task<String> GetScanResultFile(String scanId,String mainScanDirPath)
+        public async Task<ScanReport> GetScanResultFile(String scanId,String mainScanDirPath)
         {
             //JObject statusRes = await GetScanStatus(scanId, mainScanDirPath);
-            String text = null;
+            ScanReport report = null;
             //Run task to read the result file
             await Task.Run(() =>
             {
-                String path = Path.Combine(mainScanDirPath, Constants.ScanFolderName + scanId, Constants.ScanLogFile);
-                text = FileSystemHelpers.ReadAllTextFromFile(path);
+                String report_path = Path.Combine(mainScanDirPath, Constants.ScanFolderName + scanId, Constants.ScanLogFile);
+                ScanStatusResult scr = ReadScanStatusFile(scanId, mainScanDirPath, Constants.ScanStatusFile, null);
+                report = new ScanReport();
+                report.Id = scr.Id;
+                report.Timestamp = DateTime.ParseExact(scr.Id,DATE_TIME_FORMAT, System.Globalization.CultureInfo.InvariantCulture).ToUniversalTime();
+                String text = "Report file not yet generated. The scan might be still running, please check the status";
+
+                if (FileSystemHelpers.FileExists(report_path))
+                {
+                    text = FileSystemHelpers.ReadAllTextFromFile(report_path);
+                }
+
+                report.Report = text;
+                
             });
 
-            //All the contents of the file in plain text
-                return text;
+            //All the contents of the file and the timestamp
+                return report;
         }
 
-        private static JObject ReadScanStatusFile(String scanId, String mainScanDirPath, String fileName,String folderName)
+        private static ScanStatusResult ReadScanStatusFile(String scanId, String mainScanDirPath, String fileName,String folderName)
         {
-            JObject obj = null;
+            ScanStatusResult obj = null;
             String readPath = Path.Combine(mainScanDirPath, Constants.ScanFolderName + scanId, fileName);
 
             //Give preference to folderName if given
@@ -214,20 +315,24 @@ namespace Kudu.Core.Scan
                 readPath = Path.Combine(folderName, fileName);
             }
 
-            //Read json file and deserialize into JObject
-            using (FileStream file = System.IO.File.OpenRead(readPath))
+            //Check if scan status file has been formed
+            if (FileSystemHelpers.FileExists(readPath))
             {
-                using (StreamReader sr = new StreamReader(file))
+                //Read json file and deserialize into JObject
+                using (FileStream file = System.IO.File.OpenRead(readPath))
                 {
-                    JsonSerializer serializer = new JsonSerializer();
-                    obj = (JObject)serializer.Deserialize(sr, typeof(JObject));
-                }
+                    using (StreamReader sr = new StreamReader(file))
+                    {
+                        JsonSerializer serializer = new JsonSerializer();
+                        obj = (ScanStatusResult)serializer.Deserialize(sr, typeof(ScanStatusResult));
+                    }
 
+                }
             }
+           
             return obj;
         }
 
-      //  private static 
         public static async Task<bool> PerformBackgroundScan(ITracer _tracer, IOperationLock _scanLock, String folderPath,ExternalCommandFactory _externalCommandFactory,IEnvironment _environment,CancellationToken token)
         {
 
@@ -235,85 +340,103 @@ namespace Kudu.Core.Scan
 
             await Task.Run(() =>
             {
-               
-                    _scanLock.LockOperation(() =>
+
+                _scanLock.LockOperation(() =>
+                {
+
+                    String filePath = Path.Combine(folderPath, Constants.ScanStatusFile);
+
+
+                    String logFilePath = Path.Combine(folderPath, Constants.ScanLogFile);
+                    Console.WriteLine("Starting Command Executor:" + Constants.ScanCommand + " " + logFilePath);
+
+                    UpdateScanStatus(folderPath, ScanStatus.Executing);
+
+                    Console.WriteLine("Before process start");
+
+                    var escapedArgs = Constants.ScanCommand + " " + logFilePath;
+                    Process _executingProcess = new Process()
                     {
-                        
-                        String filePath = Path.Combine(folderPath,Constants.ScanStatusFile);
-
-                        Console.WriteLine("Starting Command Executor");
-                        String logFilePath = Path.Combine(folderPath, Constants.ScanLogFile);
-
-                        UpdateScanStatus(folderPath, ScanStatus.Executing);
-
-                        // Create executable process and run script
-                        Executable exe = _externalCommandFactory.BuildExternalCommandExecutable("", _environment.WebRootPath, NullLogger.Instance);
-                        Process _executingProcess = exe.CreateProcess(Constants.ScanCommand + " " + logFilePath);
-
-                        _executingProcess.Start();
-                        _executingProcess.BeginErrorReadLine();
-                        _executingProcess.BeginOutputReadLine();
-
-                        //Check if process is completing before timeout
-                        while (!_executingProcess.HasExited)
+                        StartInfo = new ProcessStartInfo
                         {
-                            //Process still running, but timeout is done
-                            if (token.IsCancellationRequested)
-                            {
-
-                                //Kill process
-                                _executingProcess.CancelErrorRead();
-                                _executingProcess.CancelOutputRead();
-                                _executingProcess.Kill(includesChildren: true,_tracer);
-
-                                //Wait for process to be completely killed
-                                _executingProcess.WaitForExit();
-                                successfulScan = false;
-                                Console.WriteLine("Token Cancellation requested! Terminating process! Time: "+ DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ"));
-
-                                //Update status file
-                                UpdateScanStatus(folderPath, ScanStatus.Failed);
-                                break;
-                            }
+                            FileName = "/bin/bash",
+                            Arguments = "-c \"" + escapedArgs + "\"",
+                            RedirectStandardOutput = true,
+                            UseShellExecute = false,
+                            CreateNoWindow = true,
                         }
+                    };
+                    _executingProcess.Start();
 
-                        
-                        Console.WriteLine("Done with Command Executor");
-
-                        //Update status file with success
-                        if (successfulScan)
+                    Console.WriteLine("Process exit:" + _executingProcess.HasExited);
+                    //Check if process is completing before timeout
+                    while (!_executingProcess.HasExited)
+                    {
+                        //Process still running, but timeout is done
+                        if (token.IsCancellationRequested)
                         {
-                            UpdateScanStatus(folderPath, ScanStatus.Success);
-                        }
-                       
 
-                    }, "Performing continuous scan", TimeSpan.Zero);
-               
-                
-              
+                            Console.WriteLine("Cancel Requested Inside!!");
+                            //Kill process
+                            _executingProcess.Kill(true, _tracer);
+                            Console.WriteLine("After Kill!!");
+                            //Wait for process to be completely killed
+                            _executingProcess.WaitForExit();
+                            successfulScan = false;
+                            Console.WriteLine("Token Cancellation requested! Terminating process! Time: " + DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ"));
+
+                            //Update status file
+                            UpdateScanStatus(folderPath, ScanStatus.TimeoutFailure);
+                            break;
+                        }
+                    }
+
+
+                    Console.WriteLine("Done with Command Executor");
+
+                    //Update status file with success
+                    if (successfulScan)
+                    {
+                        UpdateScanStatus(folderPath, ScanStatus.Success);
+                    }
+
+
+                }, "Performing continuous scan", TimeSpan.Zero);
+
+
+
             });
 
             return successfulScan;
-            /*var deploymentTask = Task.Run(() =>
-            {
-                using (_tracer.Step("ScanService.ExecuteScan"))
-                {
-                    CommandResult result = null;
-                    try
-                    {
-                            _scanLock.LockOperationAsync(() =>
-                        {
-                            result = _commandExecutor.ExecuteCommand("C:\\Users\\t-puvasu\\Desktop\\Scripts\\scan.bat", "");
-                            // return Ok(result);
-                        }, "Performing scan", TimeSpan.MaxValue);
-                            //  return Ok();
-                    }
-                    catch(LockOperationException e)
-                    {
-
-                    }
-                }
-            });*/
+           
         }
+
+        public IEnumerable<ScanOverviewResult> GetResults(String mainScanDir)
+        {
+           // ITracer tracer = _tracer.GetTracer();
+           /* using (_tracer.Step("ScanManager.GetResults"))
+            {*/
+                IEnumerable<ScanOverviewResult> results = EnumerateResults(mainScanDir).OrderByDescending(t => t.Status.Id).ToList();
+                return results;
+                //return PurgeAndGetDeployments();
+           /* }*/
+        }
+
+        private IEnumerable<ScanOverviewResult> EnumerateResults(String mainScanDir)
+        {
+            if (FileSystemHelpers.DirectoryExists(mainScanDir))
+            {
+                
+                foreach (String scanFolderPath in FileSystemHelpers.GetDirectories(mainScanDir))
+                {
+                    ScanOverviewResult result = new ScanOverviewResult();
+                    ScanStatusResult scanStatus = ReadScanStatusFile("", "", Constants.ScanStatusFile, scanFolderPath);
+                    result.Status = scanStatus;
+
+                    yield return result;
+                }
+            }
+        }
+
     }
 }

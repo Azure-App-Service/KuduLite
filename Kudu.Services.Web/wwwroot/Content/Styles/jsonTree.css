@@ -66,6 +66,7 @@
 .jsontree_value_string {
     color: #025900;
     font-weight: bold;
+    white-space: pre-line;
 }
 .jsontree_value_number {
     color: #000E59;

@@ -11,9 +11,11 @@ namespace Kudu
         public static string ScanLogFile = "scan_log.log";
         public static string ScanFolderName = "Scan_";
         public static string MaxScans = "2";
-        public static string ScanDir = "C:\\Users\\t-puvasu\\Desktop\\Demo-App\\nodejs-docs-hello-world";
-        public static string ScriptPath = "C:\\Users\\t-puvasu\\Desktop\\Scripts\\scan.bat";
+        public static string ScanDir = "/home/site/wwwroot";
+        public static string ScriptPath = "/custom_scripts/daily_scan_script.sh";
         public static string ScanCommand = ScriptPath+" "+ScanDir;
+        public static string ScanTimeOut = "500000";
+        public static string ScanManifest = "modified_times.json";
 
 
         public const string WebRoot = "wwwroot";
