@@ -22,7 +22,7 @@ namespace Kudu.Core.Deployment.Generator
             _environment = environment;
         }
 
-        public ISiteBuilder CreateBuilder(ITracer tracer, ILogger logger, IDeploymentSettingsManager settings, IRepository repository)
+        public ISiteBuilder CreateBuilder(ITracer tracer, ILogger logger, IDeploymentSettingsManager settings, IRepository repository, bool? isForcedBuild)
         {
             string repositoryRoot = repository.RepositoryPath;
 
@@ -57,7 +57,7 @@ namespace Kudu.Core.Deployment.Generator
                 return new RunFromZipSiteBuilder();
             }
             
-            if (!settings.DoBuildDuringDeployment())
+            if (isForcedBuild ?? !settings.DoBuildDuringDeployment())
             {
                 var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
                 return new BasicBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);

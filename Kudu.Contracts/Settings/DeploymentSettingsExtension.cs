@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.SourceControl;
+using Kudu.Core.Deployment;
 
 namespace Kudu.Contracts.Settings
 {

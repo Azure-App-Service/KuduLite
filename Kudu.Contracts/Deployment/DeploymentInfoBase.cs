@@ -28,6 +28,10 @@ namespace Kudu.Core.Deployment
         public FetchDelegate Fetch { get; set; }
         public bool AllowDeploymentWhileScmDisabled { get; set; }
 
+        // If this value is set true/false, will override SCM_DO_BUILD_DURING_DEPLOYMENT
+        // If it is null, will obey the setting in SCM_DO_BUILD_DURING_DEPLOYMENT
+        public bool? ForceBuild { get; set; }
+
         // Optional.
         // Path of the directory to be deployed to. The path should be relative to the wwwroot directory.
         // Example: "webapps/ROOT"
