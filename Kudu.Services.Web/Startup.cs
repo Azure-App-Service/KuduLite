@@ -93,11 +93,6 @@ namespace Kudu.Services.Web
                 .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices()
                 .AddApiExplorer();
 
-            // Add middleware for Linux Consumption authentication and authorization
-            // when KuduLIte is running in service fabric mesh
-            services.AddLinuxConsumptionAuthentication();
-            services.AddLinuxConsumptionAuthorization();
-
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new Info {Title = "Kudu API Docs"});
@@ -141,6 +136,11 @@ namespace Kudu.Services.Web
 
             // Add various folders that never change to the process path. All child processes will inherit this
             KuduWebUtil.PrependFoldersToPath(environment);
+
+            // Add middleware for Linux Consumption authentication and authorization
+            // when KuduLIte is running in service fabric mesh
+            services.AddLinuxConsumptionAuthentication();
+            services.AddLinuxConsumptionAuthorization(environment);
 
             // General
             services.AddSingleton<IServerConfiguration>(ServerConfiguration);

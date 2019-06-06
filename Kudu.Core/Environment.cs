@@ -120,7 +120,7 @@ namespace Kudu.Core
             _siteExtensionSettingsPath = Path.Combine(SiteRootPath, Constants.SiteExtensionsCachePath);
             _diagnosticsPath = Path.Combine(SiteRootPath, Constants.DiagnosticsPath);
             _locksPath = Path.Combine(SiteRootPath, Constants.LocksPath);
-            
+
             if (OSDetector.IsOnWindows())
             {
                 _sshKeyPath = Path.Combine(rootPath, Constants.SSHKeyPath);
@@ -152,7 +152,7 @@ namespace Kudu.Core
                 _jobsBinariesPath = Path.Combine(_webRootPath, userDefinedWebJobRoot);
             }
             _sitePackagesPath = Path.Combine(_dataPath, Constants.SitePackages);
-            
+
             RequestId = !string.IsNullOrEmpty(requestId) ? requestId : Guid.Empty.ToString();
 
             _httpContextAccessor = httpContextAccessor;
@@ -343,7 +343,7 @@ namespace Kudu.Core
                 return this.WebRootPath;
             }
         }
-        
+
         public string SitePackagesPath
         {
             get

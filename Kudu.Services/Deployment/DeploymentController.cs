@@ -29,9 +29,12 @@ using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using Kudu.Services.Zip;
 using System.IO.Compression;
+using Microsoft.AspNetCore.Authorization;
+using Kudu.Services.Infrastructure.Authorization;
 
 namespace Kudu.Services.Deployment
 {
+    [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
     public class DeploymentController : Controller
     {
         private static DeploymentsCacheItem _cachedDeployments = DeploymentsCacheItem.None;

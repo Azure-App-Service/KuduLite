@@ -17,9 +17,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Newtonsoft.Json.Linq;
 using System.Net.Http;
+using Microsoft.AspNetCore.Authorization;
+using Kudu.Services.Infrastructure.Authorization;
 
 namespace Kudu.Services.Deployment
 {
+    [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
     public class PushDeploymentController : Controller
     {
         private const string DefaultDeployer = "Push-Deployer";
