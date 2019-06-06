@@ -34,6 +34,7 @@ using Kudu.Services.Infrastructure.Authorization;
 
 namespace Kudu.Services.Deployment
 {
+    [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
     public class DeploymentController : Controller
     {
         private static DeploymentsCacheItem _cachedDeployments = DeploymentsCacheItem.None;
@@ -72,7 +73,6 @@ namespace Kudu.Services.Deployment
         /// </summary>
         /// <param name="id">id of the deployment to delete</param>
         [HttpDelete]
-        [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
         public IActionResult Delete(string id)
         {
             IActionResult result = Ok();
@@ -107,7 +107,6 @@ namespace Kudu.Services.Deployment
 
         
         [HttpGet]
-        [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
         public IActionResult IsDeploying()
         {
             return Json(new Dictionary<string,bool>(){{"value" , _deploymentLock.IsHeld}});
@@ -119,7 +118,6 @@ namespace Kudu.Services.Deployment
         /// </summary>
         /// <param name="id">id of the deployment to redeploy</param>
         [HttpPut]
-        [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
         public async Task<IActionResult> Deploy(string id = null)
         {
             JObject jsonContent = GetJsonContent();
@@ -373,7 +371,6 @@ namespace Kudu.Services.Deployment
         /// </summary>
         /// <returns></returns>
         [HttpGet]
-        [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
         public IActionResult GetDeployResults()
         {
             IActionResult result;
@@ -423,7 +420,6 @@ namespace Kudu.Services.Deployment
         /// <param name="id">id of the deployment</param>
         /// <returns></returns>
         [HttpGet]
-        [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
         public IActionResult GetLogEntry(string id)
         {
             using (_tracer.Step("DeploymentService.GetLogEntry"))
@@ -454,7 +450,6 @@ namespace Kudu.Services.Deployment
         /// <param name="logId">id of the log entry</param>
         /// <returns></returns>
         [HttpGet]
-        [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
         public IActionResult GetLogEntryDetails(string id, string logId)
         {
             using (_tracer.Step("DeploymentService.GetLogEntryDetails"))
@@ -482,7 +477,6 @@ namespace Kudu.Services.Deployment
         /// <param name="id">id of the deployment</param>
         /// <returns></returns>
         [HttpGet]
-        [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
         public IActionResult GetResult(string id)
         {
             using (_tracer.Step("DeploymentService.GetResult"))
@@ -549,7 +543,6 @@ namespace Kudu.Services.Deployment
         /// </summary>
         /// <returns></returns>
         [HttpGet]
-        [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
         public IActionResult GetDeploymentScript()
         {
             using (_tracer.Step("DeploymentService.GetDeploymentScript"))

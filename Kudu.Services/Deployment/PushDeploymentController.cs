@@ -22,6 +22,7 @@ using Kudu.Services.Infrastructure.Authorization;
 
 namespace Kudu.Services.Deployment
 {
+    [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
     public class PushDeploymentController : Controller
     {
         private const string DefaultDeployer = "Push-Deployer";
@@ -51,7 +52,6 @@ namespace Kudu.Services.Deployment
         [HttpPost]
         [DisableRequestSizeLimit]
         [DisableFormValueModelBinding]
-        [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
         public async Task<IActionResult> ZipPushDeploy(
             [FromQuery] bool isAsync = false,
             [FromQuery] string author = null,
@@ -99,7 +99,6 @@ namespace Kudu.Services.Deployment
         }
 
         [HttpPut]
-        [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
         public async Task<IActionResult> ZipPushDeployViaUrl(
             [FromBody] JObject requestJson,
             [FromQuery] bool isAsync = false,
