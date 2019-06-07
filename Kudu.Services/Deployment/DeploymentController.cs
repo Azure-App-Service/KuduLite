@@ -29,8 +29,6 @@ using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using Kudu.Services.Zip;
 using System.IO.Compression;
-using Microsoft.AspNetCore.Authorization;
-using Kudu.Services.Infrastructure.Authorization;
 
 namespace Kudu.Services.Deployment
 {
