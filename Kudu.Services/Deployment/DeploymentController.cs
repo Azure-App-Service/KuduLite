@@ -34,7 +34,6 @@ using Kudu.Services.Infrastructure.Authorization;
 
 namespace Kudu.Services.Deployment
 {
-    [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
     public class DeploymentController : Controller
     {
         private static DeploymentsCacheItem _cachedDeployments = DeploymentsCacheItem.None;

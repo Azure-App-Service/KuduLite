@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Authorization;
+using Kudu.Services.Infrastructure.Authorization;
+using Microsoft.Extensions.Primitives;
 
 namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 {
@@ -21,6 +24,10 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 
         private readonly RequestDelegate _next;
         private readonly PathString[] _whitelistedPathString;
+        private const string DisguisedHostHeader = "DISGUISED-HOST";
+        private const string HostHeader = "HOST";
+        private const string ForwardedProtocolHeader = "X-Forwarded-Proto";
+        private const string AuthorizationPolicy = AuthPolicyNames.LinuxConsumptionRestriction;
 
         /// <summary>
         /// Filter out unnecessary routes for Linux Consumption
@@ -40,9 +47,33 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         /// Detect if a route matches any of whitelisted prefixes
         /// </summary>
         /// <param name="context">Http request context</param>
+        /// <param name="authService">Authorization service for each request</param>
         /// <returns>Response be set to 404 if the route is not whitelisted</returns>
-        public async Task Invoke(HttpContext context)
+        public async Task Invoke(HttpContext context, IAuthorizationService authService = null)
         {
+            // Step 1: if disguise host exists, replace the request header HOST to disguise header
+            if (context.Request.Headers.TryGetValue(DisguisedHostHeader, out StringValues value))
+            {
+                context.Request.Headers[HostHeader] = value;
+            }
+
+            if (context.Request.Headers.TryGetValue(ForwardedProtocolHeader, out value))
+            {
+                context.Request.Scheme = value;
+            }
+
+            // Step 2: check if the request matches authorization policy
+            if (authService != null)
+            {
+                var authResult = await authService.AuthorizeAsync(context.User, AuthorizationPolicy);
+                if (!authResult.Succeeded)
+                {
+                    context.Response.StatusCode = 401;
+                    return;
+                }
+            }
+
+            // Step 3: check if the request endpoint is enabled in Linux Consumption
             if (!IsRouteWhitelisted(context.Request.Path))
             {
                 context.Response.StatusCode = 404;

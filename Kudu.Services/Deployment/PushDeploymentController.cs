@@ -22,7 +22,6 @@ using Kudu.Services.Infrastructure.Authorization;
 
 namespace Kudu.Services.Deployment
 {
-    [Authorize(AuthPolicyNames.LinuxConsumptionRestriction)]
     public class PushDeploymentController : Controller
     {
         private const string DefaultDeployer = "Push-Deployer";
