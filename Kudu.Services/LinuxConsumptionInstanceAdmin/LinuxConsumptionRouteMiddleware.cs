@@ -81,11 +81,14 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                 return;
             }
 
-            AuthorizationResult authorizeResult = await authorizationService.AuthorizeAsync(authenticateResult.Principal, AuthorizationPolicy);
-            if (!authorizeResult.Succeeded)
+            if (authorizationService != null)
             {
-                context.Response.StatusCode = 401;
-                return;
+                AuthorizationResult authorizeResult = await authorizationService.AuthorizeAsync(authenticateResult.Principal, AuthorizationPolicy);
+                if (!authorizeResult.Succeeded)
+                {
+                    context.Response.StatusCode = 401;
+                    return;
+                }
             }
 
             await _next.Invoke(context);
