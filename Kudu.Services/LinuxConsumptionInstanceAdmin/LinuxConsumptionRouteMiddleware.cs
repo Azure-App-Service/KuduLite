@@ -1,12 +1,9 @@
-﻿using Microsoft.AspNetCore.Http;
-using System.Threading.Tasks;
-using System.Text.RegularExpressions;
+﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
-using Kudu.Services.Infrastructure.Authorization;
 using Microsoft.Extensions.Primitives;
-using Microsoft.AspNetCore.Authorization.Policy;
-using Microsoft.AspNetCore.Authentication;
+using Kudu.Services.Infrastructure.Authorization;
 using Kudu.Services.Infrastructure.Authentication;
 
 namespace Kudu.Services.LinuxConsumptionInstanceAdmin
