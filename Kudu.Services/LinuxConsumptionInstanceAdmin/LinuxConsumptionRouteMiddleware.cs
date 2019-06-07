@@ -2,8 +2,12 @@
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
 using Kudu.Services.Infrastructure.Authorization;
 using Microsoft.Extensions.Primitives;
+using Microsoft.AspNetCore.Authorization.Policy;
+using Microsoft.AspNetCore.Authentication;
+using Kudu.Services.Infrastructure.Authentication;
 
 namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 {
@@ -47,9 +51,9 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         /// Detect if a route matches any of whitelisted prefixes
         /// </summary>
         /// <param name="context">Http request context</param>
-        /// <param name="authService">Authorization service for each request</param>
+        /// <param name="authorizationService">Authorization service for each request</param>
         /// <returns>Response be set to 404 if the route is not whitelisted</returns>
-        public async Task Invoke(HttpContext context, IAuthorizationService authService = null)
+        public async Task Invoke(HttpContext context, IAuthorizationService authorizationService = null)
         {
             // Step 1: if disguise host exists, replace the request header HOST to disguise header
             if (context.Request.Headers.TryGetValue(DisguisedHostHeader, out StringValues value))
@@ -62,21 +66,25 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                 context.Request.Scheme = value;
             }
 
-            // Step 2: check if the request matches authorization policy
-            if (authService != null)
-            {
-                var authResult = await authService.AuthorizeAsync(context.User, AuthorizationPolicy);
-                if (!authResult.Succeeded)
-                {
-                    context.Response.StatusCode = 401;
-                    return;
-                }
-            }
-
-            // Step 3: check if the request endpoint is enabled in Linux Consumption
+            // Step 2: check if the request endpoint is enabled in Linux Consumption
             if (!IsRouteWhitelisted(context.Request.Path))
             {
                 context.Response.StatusCode = 404;
+                return;
+            }
+
+            // Step 3: check if the request matches authorization policy
+            AuthenticateResult authenticateResult = await context.AuthenticateAsync(ArmAuthenticationDefaults.AuthenticationScheme);
+            if (!authenticateResult.Succeeded)
+            {
+                context.Response.StatusCode = 401;
+                return;
+            }
+
+            AuthorizationResult authorizeResult = await authorizationService.AuthorizeAsync(authenticateResult.Principal, AuthorizationPolicy);
+            if (!authorizeResult.Succeeded)
+            {
+                context.Response.StatusCode = 401;
                 return;
             }
 
