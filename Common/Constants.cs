@@ -105,6 +105,8 @@ namespace Kudu
         public const string SiteAuthEncryptionKey = "WEBSITE_AUTH_ENCRYPTION_KEY";
         public const string HttpHost = "HTTP_HOST";
         public const string WebSiteSwapSlotName = "WEBSITE_SWAP_SLOTNAME";
+        public const string AzureWebsiteInstanceId = "WEBSITE_INSTANCE_ID";
+        public const string ContainerName = "CONTAINER_NAME";
 
         public const string Function = "function";
         public const string Functions = "functions";

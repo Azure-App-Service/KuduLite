@@ -399,6 +399,15 @@ namespace Kudu.Services.Web
 
             app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "Kudu API Docs"); });
 
+            // If running on Linux Consumption, only expose
+            // admin/instance/*
+            // api/zipdeploy
+            // api/deployments/*
+            if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
+            {
+                app.UseMiddleware<LinuxConsumptionRouteMiddleware>();
+            }
+
             app.UseMvc(routes =>
             {
                 Console.WriteLine(@"Setting Up Routes : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));

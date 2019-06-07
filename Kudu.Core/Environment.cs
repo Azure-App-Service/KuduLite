@@ -385,6 +385,16 @@ namespace Kudu.Core
             private set;
         }
 
+        public bool IsOnLinuxConsumption
+        {
+            get
+            {
+                bool isOnAppService = !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId));
+                bool isOnLinuxContainer = !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.ContainerName));
+                return isOnLinuxContainer && !isOnAppService;
+            }
+        }
+
         public string KuduConsoleFullPath { get; }
 
         public static bool IsAzureEnvironment()
