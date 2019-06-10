@@ -31,6 +31,8 @@ namespace Kudu.Services.Web.Tracing
 
         private readonly RequestDelegate _next;
 
+        private readonly IKuduEventGenerator _kuduEventGenerator;
+
         private const string KuduLiteTrackingHeader = "X-KUDULITE-RESPONSE";
 
         private static readonly Lazy<string> KuduVersion = new Lazy<string>(() =>
@@ -215,7 +217,7 @@ namespace Kudu.Services.Web.Tracing
                 var requestId = (string) httpContext.Items[Constants.RequestIdHeader];
                 var requestTime = (DateTime) httpContext.Items[Constants.RequestDateTimeUtc];
                 var latencyInMilliseconds = (long) (DateTime.UtcNow - requestTime).TotalMilliseconds;
-                KuduEventSource.Log.ApiEvent(
+                KuduEventGenerator.Log().ApiEvent(
                     ServerConfiguration.GetApplicationName(),
                     "OnEndRequest",
                     GetRawUrl(request),
@@ -305,7 +307,7 @@ namespace Kudu.Services.Web.Tracing
                     var requestId = (string) httpContext.Items[Constants.RequestIdHeader];
                     var assembly = Assembly.GetExecutingAssembly();
                     var fvi = FileVersionInfo.GetVersionInfo(assembly.Location);
-                    KuduEventSource.Log.GenericEvent(
+                    KuduEventGenerator.Log().GenericEvent(
                         ServerConfiguration.GetApplicationName(),
                         string.Format("StartupRequest pid:{0}, domain:{1}", Process.GetCurrentProcess().Id,
                             AppDomain.CurrentDomain.Id),
@@ -327,7 +329,7 @@ namespace Kudu.Services.Web.Tracing
 
             OperationManager.SafeExecute(() =>
             {
-                KuduEventSource.Log.GenericEvent(
+                KuduEventGenerator.Log().GenericEvent(
                     ServerConfiguration.GetApplicationName(),
                     string.Format("Heartbeat pid:{0}, domain:{1}", Process.GetCurrentProcess().Id,
                         AppDomain.CurrentDomain.Id),
@@ -346,7 +348,7 @@ namespace Kudu.Services.Web.Tracing
                 var requestId = request.GetRequestId() ?? Guid.NewGuid().ToString();
                 httpContext.Items[Constants.RequestIdHeader] = requestId;
                 httpContext.Items[Constants.RequestDateTimeUtc] = DateTime.UtcNow;
-                KuduEventSource.Log.ApiEvent(
+                KuduEventGenerator.Log().ApiEvent(
                     ServerConfiguration.GetApplicationName(),
                     "OnBeginRequest",
                     GetRawUrl(request),
