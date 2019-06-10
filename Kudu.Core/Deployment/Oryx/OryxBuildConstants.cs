@@ -20,7 +20,7 @@ namespace Kudu.Core.Deployment.Oryx
 
         internal static class FunctionAppWorkerRuntimeDefaults
         {
-            public static readonly string Node = "10.14.1";
+            public static readonly string Node = "8.15";
             public static readonly string Python = "3.6";
             public static readonly string Dotnet = "2.2";
         }
