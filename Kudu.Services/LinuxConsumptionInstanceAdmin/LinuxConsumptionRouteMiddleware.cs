@@ -63,14 +63,10 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             //         if disguist host does not exist, check and replace ~1 with regex
             if (context.Request.Headers.TryGetValue(DisguisedHostHeader, out StringValues value))
             {
-                Console.WriteLine("[LinuxConsumptionRoute] Converting HOST {0} to DISGUISED-HOST {1}.",
-                    context.Request.Headers[HostHeader],
-                    context.Request.Headers[DisguisedHostHeader]);
                 context.Request.Headers[HostHeader] = value;
             }
             else
             {
-                Console.WriteLine("[LinuxConsumptionRoute] Failed to find DISGUISED-HOST for {0}, using Regex replacement.", context.Request.Headers[HostHeader]);
                 context.Request.Host = new HostString(SanitizeScmUrl(context.Request.Headers[HostHeader][0]));
             }
 
