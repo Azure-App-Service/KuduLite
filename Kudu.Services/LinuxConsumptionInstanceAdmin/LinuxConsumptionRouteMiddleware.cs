@@ -18,11 +18,9 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
     /// </summary>
     public class LinuxConsumptionRouteMiddleware
     {
-        /// <summary>
-        /// A list of route prefixes which allows to be accessed
-        /// </summary>
-        public static readonly HashSet<string> Whitelist = new HashSet<string>
+        private static readonly HashSet<string> Whitelist = new HashSet<string>
         {
+            HomePageRoute,
             "/api/zipdeploy",
             "/admin/instance",
             "/deployments",
@@ -36,6 +34,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         private const string AuthorizationPolicy = AuthPolicyNames.LinuxConsumptionRestriction;
 
         private static Regex malformedScmHostnameRegex = new Regex(@"^~\d+");
+        private static string HomePageRoute = "/";
 
         /// <summary>
         /// Filter out unnecessary routes for Linux Consumption
@@ -82,6 +81,13 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                 return;
             }
 
+            // Step 3: check if it is homepage route, always return 200
+            if (IsHomePageRoute(context.Request.Path))
+            {
+                context.Response.StatusCode = 200;
+                return;
+            }
+
             // Step 3: check if the request matches authorization policy
             AuthenticateResult authenticateResult = await context.AuthenticateAsync(ArmAuthenticationDefaults.AuthenticationScheme);
             if (!authenticateResult.Succeeded)
@@ -106,6 +112,11 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         private bool IsRouteWhitelisted(PathString routePath)
         {
             return _whitelistedPathString.Any((ps) => routePath.StartsWithSegments(ps));
+        }
+
+        private bool IsHomePageRoute(PathString routePath)
+        {
+            return routePath.ToString() == "/";
         }
 
         private static string SanitizeScmUrl(string malformedUrl)
