@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Kudu.Services.Infrastructure.Authorization;
 using Kudu.Services.Infrastructure.Authentication;
+using System;
+using System.Text.RegularExpressions;
 
 namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 {
@@ -33,6 +35,8 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         private const string ForwardedProtocolHeader = "X-Forwarded-Proto";
         private const string AuthorizationPolicy = AuthPolicyNames.LinuxConsumptionRestriction;
 
+        private static Regex malformedScmHostnameRegex = new Regex(@"^~\d+");
+
         /// <summary>
         /// Filter out unnecessary routes for Linux Consumption
         /// </summary>
@@ -55,10 +59,19 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         /// <returns>Response be set to 404 if the route is not whitelisted</returns>
         public async Task Invoke(HttpContext context, IAuthorizationService authorizationService = null)
         {
-            // Step 1: if disguise host exists, replace the request header HOST to disguise header
+            // Step 1: if disguise host exists, replace the request header HOST to DISGUISED-HOST
+            //         if disguist host does not exist, check and replace ~1 with regex
             if (context.Request.Headers.TryGetValue(DisguisedHostHeader, out StringValues value))
             {
+                Console.WriteLine("[LinuxConsumptionRoute] Converting HOST {0} to DISGUISED-HOST {1}.",
+                    context.Request.Headers[HostHeader],
+                    context.Request.Headers[DisguisedHostHeader]);
                 context.Request.Headers[HostHeader] = value;
+            }
+            else
+            {
+                Console.WriteLine("[LinuxConsumptionRoute] Failed to find DISGUISED-HOST for {0}, using Regex replacement.", context.Request.Headers[HostHeader]);
+                context.Request.Host = new HostString(SanitizeScmUrl(context.Request.Headers[HostHeader][0]));
             }
 
             if (context.Request.Headers.TryGetValue(ForwardedProtocolHeader, out value))
@@ -97,6 +110,16 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         private bool IsRouteWhitelisted(PathString routePath)
         {
             return _whitelistedPathString.Any((ps) => routePath.StartsWithSegments(ps));
+        }
+
+        private static string SanitizeScmUrl(string malformedUrl)
+        {
+            if (string.IsNullOrEmpty(malformedUrl))
+            {
+                return malformedUrl;
+            }
+
+            return malformedScmHostnameRegex.Replace(malformedUrl, string.Empty, 1);
         }
     }
 
