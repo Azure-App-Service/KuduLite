@@ -313,6 +313,10 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
 
+            if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
+            {
+                app.UseLinuxConsumptionRouteMiddleware();
+            }
 
             var webSocketOptions = new WebSocketOptions()
             {
@@ -343,11 +347,6 @@ namespace Kudu.Services.Web
                 i.Request.Path.Value.StartsWith("/AppServiceTunnel/Tunnel.ashx", StringComparison.OrdinalIgnoreCase));
 
             app.MapWhen(containsRelativePath3, builder => builder.UseMiddleware<DebugExtensionMiddleware>());
-
-            if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
-            {
-                app.UseLinuxConsumptionRouteMiddleware();
-            }
 
             app.UseTraceMiddleware();
 
