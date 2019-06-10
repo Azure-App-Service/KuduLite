@@ -13,6 +13,7 @@ using Kudu.Tests;
 
 namespace Kudu.Tests.Services.Infrastructure.Authentication
 {
+    [Collection("MockedEnvironmentVariablesCollection")]
     public class ArmAuthenticationHandlerTests
     {
         private static DefaultHttpContext GetContext()

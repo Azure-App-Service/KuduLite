@@ -6,6 +6,7 @@ using Xunit;
 
 namespace Kudu.Tests.Services
 {
+    [Collection("MockedEnvironmentVariablesCollection")]
     public class EnvironmentTests
     {
         [Fact]

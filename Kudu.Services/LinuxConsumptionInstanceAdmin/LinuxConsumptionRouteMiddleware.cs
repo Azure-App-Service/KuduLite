@@ -1,7 +1,10 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+﻿using System.Linq;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Kudu.Services.Infrastructure.Authorization;
 using Kudu.Services.Infrastructure.Authentication;
@@ -16,7 +19,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         /// <summary>
         /// A list of route prefixes which allows to be accessed
         /// </summary>
-        public static readonly string[] Whitelist = new string[]
+        public static readonly HashSet<string> Whitelist = new HashSet<string>
         {
             "/api/zipdeploy",
             "/admin/instance",
@@ -24,7 +27,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         };
 
         private readonly RequestDelegate _next;
-        private readonly PathString[] _whitelistedPathString;
+        private readonly HashSet<PathString> _whitelistedPathString;
         private const string DisguisedHostHeader = "DISGUISED-HOST";
         private const string HostHeader = "HOST";
         private const string ForwardedProtocolHeader = "X-Forwarded-Proto";
@@ -37,10 +40,10 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         public LinuxConsumptionRouteMiddleware(RequestDelegate next)
         {
             _next = next;
-            _whitelistedPathString = new PathString[Whitelist.Length];
-            for (int i = 0; i < _whitelistedPathString.Length; i++)
+            _whitelistedPathString = new HashSet<PathString>(Whitelist.Count);
+            foreach (string pathString in Whitelist)
             {
-                _whitelistedPathString[i] = new PathString(Whitelist[i]);
+                _whitelistedPathString.Add(new PathString(pathString));
             }
         }
 
@@ -93,14 +96,18 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 
         private bool IsRouteWhitelisted(PathString routePath)
         {
-            for (int i = 0; i < _whitelistedPathString.Length; i++)
-            {
-                if (routePath.StartsWithSegments(_whitelistedPathString[i]))
-                {
-                    return true;
-                }
-            }
-            return false;
+            return _whitelistedPathString.Any((ps) => routePath.StartsWithSegments(ps));
+        }
+    }
+
+    /// <summary>
+    /// Extension wrapper for using Linux Consumption Route Middleware
+    /// </summary>
+    public static class LinuxConsumptionRouteMiddlewareExtension
+    {
+        public static IApplicationBuilder UseLinuxConsumptionRouteMiddleware(this IApplicationBuilder builder)
+        {
+            return builder.UseMiddleware<LinuxConsumptionRouteMiddleware>();
         }
     }
 }

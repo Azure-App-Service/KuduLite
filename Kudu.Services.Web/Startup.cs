@@ -344,6 +344,11 @@ namespace Kudu.Services.Web
 
             app.MapWhen(containsRelativePath3, builder => builder.UseMiddleware<DebugExtensionMiddleware>());
 
+            if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
+            {
+                app.UseLinuxConsumptionRouteMiddleware();
+            }
+
             app.UseTraceMiddleware();
 
             applicationLifetime.ApplicationStopping.Register(OnShutdown);
@@ -398,11 +403,6 @@ namespace Kudu.Services.Web
             app.UseSwagger();
 
             app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "Kudu API Docs"); });
-
-            if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
-            {
-                app.UseMiddleware<LinuxConsumptionRouteMiddleware>();
-            }
 
             app.UseMvc(routes =>
             {

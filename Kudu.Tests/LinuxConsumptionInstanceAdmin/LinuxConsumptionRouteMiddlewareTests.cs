@@ -11,6 +11,7 @@ using Kudu.Services.Infrastructure.Authorization;
 
 namespace Kudu.Tests.LinuxConsumptionInstanceAdmin
 {
+    [Collection("MockedEnvironmentVariablesCollection")]
     public class LinuxConsumptionRouteMiddlewareTests
     {
         private LinuxConsumptionRouteMiddleware _middleware;
