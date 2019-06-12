@@ -25,7 +25,7 @@ namespace Kudu.Core.Tracing
         public string route = string.Empty;
         public string userAgent = string.Empty;
         public string requestId = string.Empty;
-        public string buildVersion = string.Empty;
+        public string buildVersion = Constants.KuduBuild;
         public string address = string.Empty;
         public string verb = string.Empty;
         public int statusCode = 0;

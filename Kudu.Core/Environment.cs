@@ -436,7 +436,7 @@ namespace Kudu.Core
         {
             get
             {
-                return System.Environment.GetEnvironmentVariable(EnvironmentSettingNames.ContainerName)?.ToLowerInvariant();
+                return System.Environment.GetEnvironmentVariable(Constants.ContainerName)?.ToLowerInvariant();
             }
         }
 
@@ -444,7 +444,7 @@ namespace Kudu.Core
         {
             get
             {
-                return System.Environment.GetEnvironmentVariable(EnvironmentSettingNames.WebSiteHomeStampName)?.ToLowerInvariant();
+                return System.Environment.GetEnvironmentVariable(Constants.WebSiteHomeStampName)?.ToLowerInvariant();
             }
         }
 
@@ -452,7 +452,7 @@ namespace Kudu.Core
         {
             get
             {
-                return System.Environment.GetEnvironmentVariable(EnvironmentSettingNames.WebSiteStampDeploymentId)?.ToLowerInvariant();
+                return System.Environment.GetEnvironmentVariable(Constants.WebSiteStampDeploymentId)?.ToLowerInvariant();
             }
         }
 
