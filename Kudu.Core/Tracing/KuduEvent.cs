@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using System.Text;
 
 namespace Kudu.Core.Tracing
 {
     class KuduEvent
     {
+        public int level = (int)EventLevel.Informational;
         public string siteName = string.Empty;
         public string projectType = string.Empty;
         public string result = string.Empty;
@@ -33,7 +35,7 @@ namespace Kudu.Core.Tracing
 
         public override string ToString()
         {
-            return $"{siteName},{projectType},{result},{NormalizeString(error)},{deploymentDurationInMilliseconds},{siteMode},{scmType},{vsProjectId}," +
+            return $"{level},{siteName},{projectType},{result},{NormalizeString(error)},{deploymentDurationInMilliseconds},{siteMode},{scmType},{vsProjectId}," +
                 $"{jobName},{scriptExtension},{jobType},{trigger},{method},{path},{NormalizeString(Message)},{NormalizeString(exception)}," +
                 $"{route},{userAgent},{requestId},{buildVersion},{address},{verb},{statusCode},{latencyInMilliseconds}";
         }

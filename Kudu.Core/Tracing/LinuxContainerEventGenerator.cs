@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.Tracing;
 using System.IO;
 using Kudu.Core.Settings;
 
@@ -51,6 +52,7 @@ namespace Kudu.Core.Tracing
         {
             KuduEvent kuduEvent = new KuduEvent
             {
+                level = (int)EventLevel.Warning,
                 siteName = siteName,
                 method = method,
                 path = path,
@@ -66,6 +68,7 @@ namespace Kudu.Core.Tracing
         {
             KuduEvent kuduEvent = new KuduEvent
             {
+                level = (int)EventLevel.Warning,
                 siteName = siteName,
                 route = route,
                 userAgent = userAgent,
