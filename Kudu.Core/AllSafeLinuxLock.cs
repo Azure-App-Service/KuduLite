@@ -103,7 +103,7 @@ namespace Kudu.Core
             var lockInfo = new LinuxLockInfo();
             lockInfo.heldByPID = Process.GetCurrentProcess().Id;
             lockInfo.heldByTID = Thread.CurrentThread.ManagedThreadId;
-            lockInfo.heldByWorker = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
+            lockInfo.heldByWorker = System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId);
             lockInfo.heldByOp = operationName;
             lockInfo.lockExpiry = DateTime.UtcNow.AddSeconds(lockTimeout);
             //Console.WriteLine("CreatingLockDir - LockInfoObj : "+lockInfo);

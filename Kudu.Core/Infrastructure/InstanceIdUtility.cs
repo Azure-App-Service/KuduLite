@@ -26,7 +26,7 @@ namespace Kudu.Core.Infrastructure
                 return;
             }
 
-            string instanceId = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
+            string instanceId = System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId);
             if (String.IsNullOrEmpty(instanceId))
             {
                 instanceId = System.Environment.MachineName;

@@ -90,7 +90,7 @@ namespace Kudu.Core.Helpers
         // WEBSITE_INSTANCE_ID not null or empty
         public static bool IsAzureEnvironment()
         {
-            return !String.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID"));
+            return !String.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId));
         }
         
         // WEBSITE_HOME_STAMPNAME = waws-prod-bay-001
