@@ -118,6 +118,7 @@ namespace Kudu
         public const string FunctionsPortal = "FunctionsPortal";
         public const string FunctionKeyNewFormat = "~0.7";
         public const string FunctionRunTimeVersion = "FUNCTIONS_EXTENSION_VERSION";
+        public const string ScmRunFromPackage = "SCM_RUN_FROM_PACKAGE";
         public const string WebSiteSku = "WEBSITE_SKU";
         public const string WebSiteElasticScaleEnabled = "WEBSITE_ELASTIC_SCALING_ENABLED";
         public const string DynamicSku = "Dynamic";

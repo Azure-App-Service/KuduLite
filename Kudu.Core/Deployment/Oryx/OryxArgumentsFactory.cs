@@ -2,13 +2,18 @@
 
 namespace Kudu.Core.Deployment.Oryx
 {
-    class OryxArgumentsFactory
+    public class OryxArgumentsFactory
     {
         public static IOryxArguments CreateOryxArguments()
         {
             if (FunctionAppHelper.LooksLikeFunctionApp())
             {
-                return new FunctionAppOryxArguments();
+                if (FunctionAppHelper.HasScmRunFromPackage())
+                {
+                    return new LinuxConsumptionFunctionAppOryxArguments();
+                } else {
+                    return new FunctionAppOryxArguments();
+                }
             }
             return new AppServiceOryxArguments();
         }

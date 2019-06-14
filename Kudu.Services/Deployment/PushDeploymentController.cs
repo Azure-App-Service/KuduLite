@@ -214,8 +214,8 @@ namespace Kudu.Services.Deployment
             {
                 using (_tracer.Step("Writing zip file to {0}", zipFilePath))
                 {
-                    if (context.Request.ContentType.Contains("multipart/form-data",
-                        StringComparison.OrdinalIgnoreCase))
+                    if (!string.IsNullOrEmpty(context.Request.ContentType) &&
+                        context.Request.ContentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                     {
                         FormValueProvider formModel;
                         using (_tracer.Step("Writing zip file to {0}", zipFilePath))

@@ -30,6 +30,7 @@ namespace Kudu.Tests.LinuxConsumptionInstanceAdmin
             _containerEncryptionKey = TestHelpers.GenerateKeyBytes();
             _environmentVariables = new Dictionary<string, string>
             {
+                { Constants.ContainerName, "linux_consumption_container_name" },
                 { SettingsKeys.AuthEncryptionKey, TestHelpers.GenerateKeyHexString(_websiteAuthEncryptionKey) },
                 { SettingsKeys.ContainerEncryptionKey, TestHelpers.GenerateKeyHexString(_containerEncryptionKey) }
             };
@@ -94,14 +95,14 @@ namespace Kudu.Tests.LinuxConsumptionInstanceAdmin
         }
 
         [Fact]
-        public void HomepageRouteNotFound()
+        public void HomepageRouteFound()
         {
             using (new TestScopedEnvironmentVariable(_environmentVariables))
             {
                 HttpContext httpContext = GenerateHttpContext(DateTime.UtcNow.AddDays(1));
                 httpContext.Request.Path = "/";
                 _middleware.Invoke(httpContext).Wait();
-                Assert.Equal<int>(404, httpContext.Response.StatusCode);
+                Assert.Equal<int>(200, httpContext.Response.StatusCode);
             }
         }
 

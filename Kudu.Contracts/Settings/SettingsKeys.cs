@@ -49,6 +49,7 @@
         // Antares container specific settings
         public const string PlaceholderMode = "WEBSITE_PLACEHOLDER_MODE";
         public const string ContainerReady = "WEBSITE_CONTAINER_READY";
+        public const string WebsiteHostname = "WEBSITE_HOSTNAME";
         public const string AuthEncryptionKey = "WEBSITE_AUTH_ENCRYPTION_KEY";
         public const string ContainerEncryptionKey = "CONTAINER_ENCRYPTION_KEY";
     }

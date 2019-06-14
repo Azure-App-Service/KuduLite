@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Kudu.Contracts.Settings;
+using System;
 using System.Linq;
 
 namespace Kudu.Core.Infrastructure
@@ -8,6 +9,11 @@ namespace Kudu.Core.Infrastructure
         public static bool LooksLikeFunctionApp()
         {
             return !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.FunctionRunTimeVersion));
+        }
+
+        public static bool HasScmRunFromPackage()
+        {
+            return !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.ScmRunFromPackage));
         }
 
         public static bool IsCSharpFunctionFromProjectFile(string projectPath)

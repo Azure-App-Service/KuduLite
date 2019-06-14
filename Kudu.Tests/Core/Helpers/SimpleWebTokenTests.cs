@@ -6,6 +6,8 @@ using Kudu.Contracts.Settings;
 
 namespace Kudu.Tests.Core.Helpers
 {
+    // The following 'Collection' attribute is used for disabling parallel testing
+    // Some of the tests require changing the system environment variables, which is not thread safe.
     [Collection("MockedEnvironmentVariablesCollection")]
     public class SimpleWebTokenTests
     {

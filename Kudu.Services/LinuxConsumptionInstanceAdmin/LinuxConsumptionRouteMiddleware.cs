@@ -20,7 +20,6 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
     {
         private static readonly HashSet<string> Whitelist = new HashSet<string>
         {
-            HomePageRoute,
             "/api/zipdeploy",
             "/admin/instance",
             "/deployments",
@@ -66,7 +65,8 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             }
             else
             {
-                context.Request.Host = new HostString(SanitizeScmUrl(context.Request.Headers[HostHeader][0]));
+                context.Request.Host = new HostString(SanitizeScmUrl(
+                    context.Request.Headers[HostHeader].FirstOrDefault()));
             }
 
             if (context.Request.Headers.TryGetValue(ForwardedProtocolHeader, out value))
@@ -74,17 +74,17 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                 context.Request.Scheme = value;
             }
 
-            // Step 2: check if the request endpoint is enabled in Linux Consumption
-            if (!IsRouteWhitelisted(context.Request.Path))
-            {
-                context.Response.StatusCode = 404;
-                return;
-            }
-
-            // Step 3: check if it is homepage route, always return 200
+            // Step 2: check if it is homepage route, always return 200
             if (IsHomePageRoute(context.Request.Path))
             {
                 context.Response.StatusCode = 200;
+                return;
+            }
+
+            // Step 3: check if the request endpoint is enabled in Linux Consumption
+            if (!IsRouteWhitelisted(context.Request.Path))
+            {
+                context.Response.StatusCode = 404;
                 return;
             }
 
@@ -116,7 +116,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 
         private bool IsHomePageRoute(PathString routePath)
         {
-            return routePath.ToString() == "/";
+            return routePath.ToString() == HomePageRoute;
         }
 
         private static string SanitizeScmUrl(string malformedUrl)
