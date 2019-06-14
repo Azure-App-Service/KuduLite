@@ -399,7 +399,7 @@ namespace Kudu.Core
 
         public static bool IsAzureEnvironment()
         {
-            return !String.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID"));
+            return !String.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId));
         }
 
         public static bool SkipSslValidation
