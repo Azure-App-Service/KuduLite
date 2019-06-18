@@ -23,7 +23,7 @@ namespace Kudu.Core.Tracing
                 projectType = projectType,
                 result = result,
                 error = error,
-                deploymentDurationInMilliseconds = deploymentDurationInMilliseconds.ToString(),
+                deploymentDurationInMilliseconds = deploymentDurationInMilliseconds,
                 siteMode = siteMode,
                 scmType = scmType,
                 vsProjectId = vsProjectId
@@ -81,13 +81,15 @@ namespace Kudu.Core.Tracing
 
         public void KuduSiteExtensionEvent(string siteName, string method, string path, string result, string deploymentDurationInMilliseconds, string Message)
         {
+            long duration = 0;
+            long.TryParse(deploymentDurationInMilliseconds, out duration);
             KuduEvent kuduEvent = new KuduEvent
             {
                 siteName = siteName,
                 method = method,
                 path = path,
                 result = result,
-                deploymentDurationInMilliseconds = deploymentDurationInMilliseconds,
+                deploymentDurationInMilliseconds = duration,
                 Message = Message
             };
 

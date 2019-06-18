@@ -12,7 +12,7 @@ namespace Kudu.Core.Tracing
         public string projectType = string.Empty;
         public string result = string.Empty;
         public string error = string.Empty;
-        public string deploymentDurationInMilliseconds = string.Empty;
+        public long deploymentDurationInMilliseconds = 0;
         public string siteMode = string.Empty;
         public string scmType = string.Empty;
         public string vsProjectId = string.Empty;
