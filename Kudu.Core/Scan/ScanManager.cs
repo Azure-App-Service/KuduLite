@@ -197,7 +197,7 @@ namespace Kudu.Core.Scan
                         Console.WriteLine("No Timeout!!");
                         //If scan task completes before timeout
                         //Delete excess scan folders, just keep the maximum number allowed
-                        await deletePastScans(mainScanDirPath);
+                        await DeletePastScans(mainScanDirPath);
 
                         //Create new Manifest file containing the modified timestamps
                         String manifestPath = Path.Combine(mainScanDirPath, Constants.ScanManifest);
@@ -210,6 +210,34 @@ namespace Kudu.Core.Scan
                         //Write to the manifest with new timestamps of the modified file
                         ModifyManifestFile(manifestObj, Constants.ScanDir);
                         File.WriteAllText(manifestPath, JsonConvert.SerializeObject(manifestObj));
+
+                        //Create common log file for azure monitor
+                        String aggrLogPath = Path.Combine(mainScanDirPath, Constants.AggregrateScanResults);
+                        if (!FileSystemHelpers.FileExists(aggrLogPath))
+                        {
+                            FileSystemHelpers.CreateFile(aggrLogPath);
+                        }
+
+                        String currLogPath = Path.Combine(folderPath, Constants.ScanLogFile);
+                        Boolean summaryStart = false;
+                        if (FileSystemHelpers.FileExists(currLogPath))
+                        {
+                            StreamReader file = new StreamReader(currLogPath);
+                            string line;
+                            File.AppendAllText(aggrLogPath, "------- NEW SCAN REPORT -------" + '\n');
+                            while ((line = file.ReadLine()) != null)
+                            {
+                                if (line.Contains("FOUND") || summaryStart || line.Contains("SCAN SUMMARY"))
+                                {
+                                    if(line.Contains("SCAN SUMMARY"))
+                                    {
+                                        summaryStart = true;
+                                    }
+                                    File.AppendAllText(aggrLogPath, line+'\n');
+                                }
+                                //else if(summaryStart || )
+                            }
+                        }
 
                         return successfullyScanned.Result
                         ? ScanRequestResult.RunningAynschronously
@@ -227,7 +255,7 @@ namespace Kudu.Core.Scan
                         await successfullyScanned;
                        
                         //Delete excess scan folders, just keep the maximum number allowed
-                        await deletePastScans(mainScanDirPath);
+                        await DeletePastScans(mainScanDirPath);
 
                         return ScanRequestResult.AsyncScanFailed;
                         
@@ -239,7 +267,7 @@ namespace Kudu.Core.Scan
 
         }
 
-        public static async Task deletePastScans(String mainDirectory)
+        public static async Task DeletePastScans(String mainDirectory)
         {
             //Run task to delete unwanted previous scans
             await Task.Run(() =>

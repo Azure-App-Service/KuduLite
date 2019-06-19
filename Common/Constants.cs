@@ -16,6 +16,9 @@ namespace Kudu
         public static string ScanCommand = ScriptPath+" "+ScanDir;
         public static string ScanTimeOut = "500000";
         public static string ScanManifest = "modified_times.json";
+        public static string AggregrateScanResults = "aggregrate_scans.log";
+        public static string NoModifiedFiles = "No files modified since last scan";
+        public static string LastScanMsg = "Check reults of last scan";
 
 
         public const string WebRoot = "wwwroot";

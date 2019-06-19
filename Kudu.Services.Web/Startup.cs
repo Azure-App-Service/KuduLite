@@ -486,10 +486,10 @@ namespace Kudu.Services.Web
                     new {verb = new HttpMethodRouteConstraint("GET")});
 
                 // Initiate Scan 
-                routes.MapRoute("start-clamscan-timeout", "api/startscan/{timeout}",
+                routes.MapRoute("start-clamscan-timeout", "api/scan/start/{timeout}",
                     new { controller = "Scan", action = "ExecuteScan" },
                     new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapRoute("start-clamscan", "api/startscan",
+                routes.MapRoute("start-clamscan", "api/scan/start/",
                     new { controller = "Scan", action = "ExecuteScan" },
                     new { verb = new HttpMethodRouteConstraint("GET") });
 
@@ -509,7 +509,7 @@ namespace Kudu.Services.Web
                     new { verb = new HttpMethodRouteConstraint("GET") });
 
                 // SSHKey
-                routes.MapHttpRouteDual("get-sshkey", "api/sshkey2",
+                routes.MapHttpRouteDual("get-sshkey", "api/sshkey",
                     new {controller = "SSHKey", action = "GetPublicKey"},
                     new {verb = new HttpMethodRouteConstraint("GET")});
                 routes.MapHttpRouteDual("put-sshkey", "api/sshkey",

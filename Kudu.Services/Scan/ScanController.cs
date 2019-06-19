@@ -55,8 +55,8 @@ namespace Kudu.Services.Scan
             {
                 //Create URL
                 obj = new ScanUrl(
-                "No files modified since last scan",
-                 "Check reults of last scan", timestamp);
+                Constants.NoModifiedFiles,
+                 Constants.LastScanMsg, timestamp);
             }
             else
             {
