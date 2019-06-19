@@ -85,8 +85,15 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                     Dictionary<string, string> newSettings = FunctionAppSpecializationHelper.HandleLinuxConsumption(key, value);
                     foreach (KeyValuePair<string, string> newSetting in newSettings)
                     {
-                        System.Environment.SetEnvironmentVariable(newSetting.Key, newSetting.Value);
-                        _settingsManager.SetValue(newSetting.Key, newSetting.Value);
+                        if (System.Environment.GetEnvironmentVariable(newSetting.Key) == null)
+                        {
+                            System.Environment.SetEnvironmentVariable(newSetting.Key, newSetting.Value);
+                        }
+
+                        if (_settingsManager.GetValue(newSetting.Key) == null)
+                        {
+                            _settingsManager.SetValue(newSetting.Key, newSetting.Value);
+                        }
                     }
                 }
             }
