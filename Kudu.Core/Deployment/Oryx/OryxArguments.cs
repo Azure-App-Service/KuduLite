@@ -71,6 +71,9 @@ namespace Kudu.Core.Deployment
                     }
 
                     return;
+
+                case Framework.PHP:
+                    return;
             }
         }
 
@@ -103,20 +106,24 @@ namespace Kudu.Core.Deployment
                     break;
 
                 case Framework.NodeJs:
-                    args.AppendFormat(" -l nodejs");
+                    args.AppendFormat(" --platform nodejs");
                     break;
 
                 case Framework.Python:
-                    args.AppendFormat(" -l python");
+                    args.AppendFormat(" --platform python");
                     break;
 
                 case Framework.DotNETCore:
-                    args.AppendFormat(" -l dotnet");
+                    args.AppendFormat(" --platform dotnet");
+                    break;
+
+                case Framework.PHP:
+                    args.AppendFormat(" --platform php");
                     break;
             }
 
             // Version
-            args.AppendFormat(" --language-version {0}", Version);
+            args.AppendFormat(" --platform-version {0}", Version);
 
             // Build Flags
             switch (Flags)

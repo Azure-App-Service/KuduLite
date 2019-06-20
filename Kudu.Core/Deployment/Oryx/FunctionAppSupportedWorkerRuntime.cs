@@ -7,7 +7,8 @@ namespace Kudu.Core.Deployment.Oryx
         None,
         Node,
         Python,
-        DotNet
+        DotNet,
+        PHP
     }
 
     public class FunctionAppSupportedWorkerRuntime
@@ -30,6 +31,10 @@ namespace Kudu.Core.Deployment.Oryx
             {
                 return WorkerRuntime.DotNet;
             }
+            else if (value.StartsWith("PHP", StringComparison.OrdinalIgnoreCase))
+            {
+                return WorkerRuntime.PHP;
+            }
 
             return WorkerRuntime.None;
         }
@@ -46,6 +51,9 @@ namespace Kudu.Core.Deployment.Oryx
 
                 case WorkerRuntime.Python:
                     return OryxBuildConstants.FunctionAppWorkerRuntimeDefaults.Python;
+
+                case WorkerRuntime.PHP:
+                    return OryxBuildConstants.FunctionAppWorkerRuntimeDefaults.PHP;
 
                 default:
                     return "";
