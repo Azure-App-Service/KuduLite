@@ -19,7 +19,7 @@ namespace Kudu.Services {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -376,6 +376,15 @@ namespace Kudu.Services {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Check reults of last scan.
+        /// </summary>
+        internal static string LastScanMsg {
+            get {
+                return ResourceManager.GetString("LastScanMsg", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to {0}{1}  The application was terminated.{0}.
         /// </summary>
         internal static string LogStream_AppShutdown {
@@ -417,6 +426,15 @@ namespace Kudu.Services {
         internal static string LogStream_Welcome {
             get {
                 return ResourceManager.GetString("LogStream_Welcome", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No files modified since last scan.
+        /// </summary>
+        internal static string NoScanModifiedFiles {
+            get {
+                return ResourceManager.GetString("NoScanModifiedFiles", resourceCulture);
             }
         }
         

@@ -14,12 +14,9 @@ namespace Kudu
         public static string ScanDir = "/home/site/wwwroot";
         public static string ScriptPath = "/custom_scripts/daily_scan_script.sh";
         public static string ScanCommand = ScriptPath+" "+ScanDir;
-        public static string ScanTimeOut = "500000";
+        public static string ScanTimeOutMillSec = "500000";
         public static string ScanManifest = "modified_times.json";
         public static string AggregrateScanResults = "aggregrate_scans.log";
-        public static string NoModifiedFiles = "No files modified since last scan";
-        public static string LastScanMsg = "Check reults of last scan";
-
 
         public const string WebRoot = "wwwroot";
         public const string MappedSite = "/_app";

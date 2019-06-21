@@ -40,7 +40,7 @@ namespace Kudu.Services.Scan
             IActionResult finalResult;
             if (timeout == null || timeout.Length == 0)
             {
-                timeout = Constants.ScanTimeOut;
+                timeout = Constants.ScanTimeOutMillSec;
             }
 
 
@@ -55,8 +55,8 @@ namespace Kudu.Services.Scan
             {
                 //Create URL
                 obj = new ScanUrl(
-                Constants.NoModifiedFiles,
-                 Constants.LastScanMsg, timestamp);
+                Resources.NoScanModifiedFiles,
+                 Resources.LastScanMsg, timestamp);
             }
             else
             {

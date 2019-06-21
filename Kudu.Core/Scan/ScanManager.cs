@@ -164,7 +164,7 @@ namespace Kudu.Core.Scan
                     //Check if files are modified
                     if (CheckModifications(mainScanDirPath))
                     {
-                        //Create uniue scan directory for current scan
+                        //Create unique scan directory for current scan
                         FileSystemHelpers.CreateDirectory(folderPath);
                         Console.WriteLine("Unique scan directory created");
 
@@ -211,31 +211,30 @@ namespace Kudu.Core.Scan
                         ModifyManifestFile(manifestObj, Constants.ScanDir);
                         File.WriteAllText(manifestPath, JsonConvert.SerializeObject(manifestObj));
 
-                        //Create common log file for azure monitor
+                        //Path to common log file for azure monitor
                         String aggrLogPath = Path.Combine(mainScanDirPath, Constants.AggregrateScanResults);
-                        if (!FileSystemHelpers.FileExists(aggrLogPath))
-                        {
-                            FileSystemHelpers.CreateFile(aggrLogPath);
-                        }
 
+                        //This checks if result scan log is formed
+                        //If yes, it will append necessary logs to the aggregrate log file
+                        //Current appended logs will be "Scanned files","Infected files", and details of infected files
                         String currLogPath = Path.Combine(folderPath, Constants.ScanLogFile);
-                        Boolean summaryStart = false;
                         if (FileSystemHelpers.FileExists(currLogPath))
                         {
                             StreamReader file = new StreamReader(currLogPath);
                             string line;
-                            File.AppendAllText(aggrLogPath, "------- NEW SCAN REPORT -------" + '\n');
                             while ((line = file.ReadLine()) != null)
                             {
-                                if (line.Contains("FOUND") || summaryStart || line.Contains("SCAN SUMMARY"))
+                                if (line.Contains("FOUND") || line.Contains("Infected files") || line.Contains("Scanned files"))
                                 {
-                                    if(line.Contains("SCAN SUMMARY"))
+                                    //logType 0 means this log line represents details of infected files
+                                    String logType = "0";
+                                    if (line.Contains("Infected files") || line.Contains("Scanned files"))
                                     {
-                                        summaryStart = true;
+                                        //logType 1 means this log line represents total number of scanned or infected files
+                                        logType = "1";
                                     }
-                                    File.AppendAllText(aggrLogPath, line+'\n');
+                                    FileSystemHelpers.AppendAllTextToFile(aggrLogPath, DateTime.UtcNow.ToString(@"M/d/yyyy hh:mm:ss tt") + "," + timestamp + "," + logType + "," + line + '\n');
                                 }
-                                //else if(summaryStart || )
                             }
                         }
 

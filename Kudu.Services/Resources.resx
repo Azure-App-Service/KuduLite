@@ -315,4 +315,10 @@
   <data name="Vso_Synchronizing" xml:space="preserve">
     <value>Synchronizing changes from VSTS ...</value>
   </data>
+  <data name="LastScanMsg" xml:space="preserve">
+    <value>Check reults of last scan</value>
+  </data>
+  <data name="NoScanModifiedFiles" xml:space="preserve">
+    <value>No files modified since last scan</value>
+  </data>
 </root>
