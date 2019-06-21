@@ -17,7 +17,7 @@ namespace Kudu.Contracts.Scan
         [SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes", Justification = "to provide ARM spceific name")]
         string INamedObject.Name { get { return Id; } }
 
-        [JsonIgnore]
+        [JsonProperty(PropertyName = "id")]
         public String Id { get; set; }
 
         public ScanUrl(string trackingURL, string resultURL, string id)
