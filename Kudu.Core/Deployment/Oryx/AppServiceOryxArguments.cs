@@ -82,6 +82,9 @@ namespace Kudu.Core.Deployment
                     }
 
                     return;
+
+                case Framework.PHP:
+                    return;
             }
         }
 
@@ -115,7 +118,6 @@ namespace Kudu.Core.Deployment
                 case Framework.NodeJs:
                     // Input/Output
                     OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
-
                     OryxArgumentsHelper.AddLanguage(args, "nodejs");
                     break;
 
@@ -130,6 +132,12 @@ namespace Kudu.Core.Deployment
                     OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
                     OryxArgumentsHelper.AddLanguage(args, "dotnet");
                     break;
+
+                case Framework.PHP:
+                    // Input/Output
+                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
+                    OryxArgumentsHelper.AddLanguage(args, "php");
+                    break;
             }
 
             // Version
@@ -137,7 +145,7 @@ namespace Kudu.Core.Deployment
             {
                 case Framework.None:
                     break;
-
+                case Framework.PHP:
                 case Framework.NodeJs:
                 case Framework.Python:
                     OryxArgumentsHelper.AddLanguageVersion(args, Version);

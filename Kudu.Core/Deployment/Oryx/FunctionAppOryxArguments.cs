@@ -70,6 +70,10 @@ namespace Kudu.Core.Deployment.Oryx
                 case WorkerRuntime.Python:
                     OryxArgumentsHelper.AddLanguage(args, "python");
                     break;
+
+                case WorkerRuntime.PHP:
+                    OryxArgumentsHelper.AddLanguage(args, "php");
+                    break;
             }
         }
 
