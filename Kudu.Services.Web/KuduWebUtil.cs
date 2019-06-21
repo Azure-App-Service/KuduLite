@@ -546,5 +546,10 @@ namespace Kudu.Services.Web
             services.AddSingleton<IAuthorizationHandler, AuthLevelAuthorizationHandler>();
             return services;
         }
+
+        internal static string GetWebSSHProxyPort()
+        {
+            return System.Environment.GetEnvironmentVariable(Constants.WebSiteSwapSlotName) ?? Constants.WebSSHReverseProxyDefaultPort;
+        }
     }
 }
