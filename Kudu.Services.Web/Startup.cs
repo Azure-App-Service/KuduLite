@@ -500,7 +500,7 @@ namespace Kudu.Services.Web
 
                 //Get unique scan result
                 routes.MapRoute("get-scan-result", "/api/scan/{scanId}/result",
-                    new { controller = "Scan", action = "GetScanFile" },
+                    new { controller = "Scan", action = "GetScanLog" },
                     new { verb = new HttpMethodRouteConstraint("GET") });
 
                 //Get all scan result

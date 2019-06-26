@@ -150,11 +150,11 @@ namespace Kudu.Core.Scan
 
         }
 
-        public async Task<ScanRequestResult> StartScan(String timeout,String mainScanDirPath,String timestamp)
+        public async Task<ScanRequestResult> StartScan(String timeout,String mainScanDirPath,String id)
         {
             using (_tracer.Step("Start scan in the background"))
             {
-                String folderPath = Path.Combine(mainScanDirPath, Constants.ScanFolderName + timestamp);
+                String folderPath = Path.Combine(mainScanDirPath, Constants.ScanFolderName + id);
                 String filePath = Path.Combine(folderPath, Constants.ScanStatusFile);
                 Boolean hasFileModifcations = true;
 
@@ -166,7 +166,7 @@ namespace Kudu.Core.Scan
                     {
                         //Create unique scan directory for current scan
                         FileSystemHelpers.CreateDirectory(folderPath);
-                        Console.WriteLine("Unique scan directory created");
+                        _tracer.Trace("Unique scan directory created for scan {0}", id);
 
                         //Create scan status file inside folder
                         FileSystemHelpers.CreateFile(filePath).Close();
@@ -189,15 +189,14 @@ namespace Kudu.Core.Scan
                 //Start Backgorund Scan
                 using (var timeoutCancellationTokenSource = new CancellationTokenSource())
                 {
-                    var successfullyScanned = PerformBackgroundScan(_tracer, _scanLock, folderPath, _externalCommandFactory,_environment,timeoutCancellationTokenSource.Token);
+                    var successfullyScanned = PerformBackgroundScan(_tracer, _scanLock, folderPath, timeoutCancellationTokenSource.Token,id);
 
                     //Wait till scan task completes or the timeout goes off
                     if (await Task.WhenAny(successfullyScanned, Task.Delay(Int32.Parse(timeout), timeoutCancellationTokenSource.Token)) == successfullyScanned)
                     {
-                        Console.WriteLine("No Timeout!!");
                         //If scan task completes before timeout
                         //Delete excess scan folders, just keep the maximum number allowed
-                        await DeletePastScans(mainScanDirPath);
+                        await DeletePastScans(mainScanDirPath, _tracer);
 
                         //Create new Manifest file containing the modified timestamps
                         String manifestPath = Path.Combine(mainScanDirPath, Constants.ScanManifest);
@@ -233,7 +232,7 @@ namespace Kudu.Core.Scan
                                         //logType 1 means this log line represents total number of scanned or infected files
                                         logType = "1";
                                     }
-                                    FileSystemHelpers.AppendAllTextToFile(aggrLogPath, DateTime.UtcNow.ToString(@"M/d/yyyy hh:mm:ss tt") + "," + timestamp + "," + logType + "," + line + '\n');
+                                    FileSystemHelpers.AppendAllTextToFile(aggrLogPath, DateTime.UtcNow.ToString(@"M/d/yyyy hh:mm:ss tt") + "," + id + "," + logType + "," + line + '\n');
                                 }
                             }
                         }
@@ -244,7 +243,6 @@ namespace Kudu.Core.Scan
                     }
                     else
                     {
-                        Console.WriteLine("Timeout!!");
                         //Timeout went off before scan task completion
                         //Cancel scan task
                         timeoutCancellationTokenSource.Cancel();
@@ -254,7 +252,7 @@ namespace Kudu.Core.Scan
                         await successfullyScanned;
                        
                         //Delete excess scan folders, just keep the maximum number allowed
-                        await DeletePastScans(mainScanDirPath);
+                        await DeletePastScans(mainScanDirPath, _tracer);
 
                         return ScanRequestResult.AsyncScanFailed;
                         
@@ -266,7 +264,7 @@ namespace Kudu.Core.Scan
 
         }
 
-        public static async Task DeletePastScans(String mainDirectory)
+        public static async Task DeletePastScans(String mainDirectory, ITracer _tracer)
         {
             //Run task to delete unwanted previous scans
             await Task.Run(() =>
@@ -285,8 +283,8 @@ namespace Kudu.Core.Scan
                     for (int i = subDirs.Length - 1; diff > 0; diff--, i--)
                     {
                         //Delete oldest directories till we only have max number and no more than that
-                        Console.WriteLine("Delete Folder:" + subDirs[i].FullName);
                         subDirs[i].Delete(true);
+                        _tracer.Trace("Deleted scan record folder {0}",subDirs[i].FullName);
                     }
                 }
             });
@@ -360,7 +358,7 @@ namespace Kudu.Core.Scan
             return obj;
         }
 
-        public static async Task<bool> PerformBackgroundScan(ITracer _tracer, IOperationLock _scanLock, String folderPath,ExternalCommandFactory _externalCommandFactory,IEnvironment _environment,CancellationToken token)
+        public static async Task<bool> PerformBackgroundScan(ITracer _tracer, IOperationLock _scanLock, String folderPath,CancellationToken token, String scanId)
         {
 
             var successfulScan = true;
@@ -375,12 +373,10 @@ namespace Kudu.Core.Scan
 
 
                     String logFilePath = Path.Combine(folderPath, Constants.ScanLogFile);
-                    Console.WriteLine("Starting Command Executor:" + Constants.ScanCommand + " " + logFilePath);
+                    _tracer.Trace("Starting Scan {0}, ScanCommand: {1}, LogFile: {2}",scanId,Constants.ScanCommand,logFilePath);
 
                     UpdateScanStatus(folderPath, ScanStatus.Executing);
-
-                    Console.WriteLine("Before process start");
-
+                    
                     var escapedArgs = Constants.ScanCommand + " " + logFilePath;
                     Process _executingProcess = new Process()
                     {
@@ -395,7 +391,6 @@ namespace Kudu.Core.Scan
                     };
                     _executingProcess.Start();
 
-                    Console.WriteLine("Process exit:" + _executingProcess.HasExited);
                     //Check if process is completing before timeout
                     while (!_executingProcess.HasExited)
                     {
@@ -403,14 +398,12 @@ namespace Kudu.Core.Scan
                         if (token.IsCancellationRequested)
                         {
 
-                            Console.WriteLine("Cancel Requested Inside!!");
                             //Kill process
                             _executingProcess.Kill(true, _tracer);
-                            Console.WriteLine("After Kill!!");
                             //Wait for process to be completely killed
                             _executingProcess.WaitForExit();
                             successfulScan = false;
-                            Console.WriteLine("Token Cancellation requested! Terminating process! Time: " + DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ"));
+                            _tracer.Trace("Scan {0} has timed out at {1}", scanId, DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ"));
 
                             //Update status file
                             UpdateScanStatus(folderPath, ScanStatus.TimeoutFailure);
@@ -418,13 +411,20 @@ namespace Kudu.Core.Scan
                         }
                     }
 
-
-                    Console.WriteLine("Done with Command Executor");
-
                     //Update status file with success
                     if (successfulScan)
                     {
-                        UpdateScanStatus(folderPath, ScanStatus.Success);
+                        //Check if process terminated with errors
+                        if(_executingProcess.ExitCode != 0)
+                        {
+                            UpdateScanStatus(folderPath, ScanStatus.Failed);
+                            _tracer.Trace("Scan {0} has terminated with exit code {1}. More info found in {2}", scanId, _executingProcess.ExitCode, logFilePath);
+                        }
+                        else
+                        {
+                            UpdateScanStatus(folderPath, ScanStatus.Success);
+                            _tracer.Trace("Scan {0} is Successful", scanId);
+                        }
                     }
 
 

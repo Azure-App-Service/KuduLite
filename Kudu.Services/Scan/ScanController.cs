@@ -37,7 +37,7 @@ namespace Kudu.Services.Scan
         [HttpGet]
         public IActionResult ExecuteScan(string timeout)
         {
-            IActionResult finalResult;
+
             if (timeout == null || timeout.Length == 0)
             {
                 timeout = Constants.ScanTimeOutMillSec;
@@ -45,25 +45,20 @@ namespace Kudu.Services.Scan
 
 
             //Start sync scanning
-            String timestamp = DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ");
-            var result = _scanManager.StartScan(timeout, mainScanDirPath, timestamp);
-            // Console.WriteLine("Running Asynchronously Track URL:"+ String.Format("/api/scan/track/{0}", timestamp));
+            String id = DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ");
+            var result = _scanManager.StartScan(timeout, mainScanDirPath, id);
             ScanUrl obj;
 
             //Check if files were modified after last scan
             if (result.IsCompleted && result.Result == ScanRequestResult.NoFileModifications)
             {
                 //Create URL
-                obj = new ScanUrl(
-                Resources.NoScanModifiedFiles,
-                 Resources.LastScanMsg, timestamp);
+                obj = new ScanUrl(Resources.NoScanModifiedFiles, Resources.LastScanMsg, id);
             }
             else
             {
                 //Create URL
-                obj = new ScanUrl(
-                    UriHelper.GetRequestUri(Request).Authority + String.Format("/api/scan/{0}/track", timestamp),
-                    getResultURL(timestamp), timestamp);
+                obj = new ScanUrl(UriHelper.GetRequestUri(Request).Authority + String.Format("/api/scan/{0}/track", id), getResultURL(id), id);
             }
 
 
@@ -72,9 +67,9 @@ namespace Kudu.Services.Scan
 
         }
 
-        private string getResultURL(string timestamp)
+        private string getResultURL(string id)
         {
-            return UriHelper.GetRequestUri(Request).Authority + String.Format("/api/scan/{0}/result", timestamp);
+            return UriHelper.GetRequestUri(Request).Authority + String.Format("/api/scan/{0}/result", id);
         }
 
         public IActionResult GetScanResults()
@@ -108,7 +103,7 @@ namespace Kudu.Services.Scan
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetScanFile(String scanId)
+        public async Task<IActionResult> GetScanLog(String scanId)
         {
             using (_tracer.Step("ScanController.getScanStatus"))
             {
