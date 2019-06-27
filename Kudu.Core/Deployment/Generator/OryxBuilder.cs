@@ -48,7 +48,7 @@ namespace Kudu.Core.Deployment.Generator
             if (args.RunOryxBuild)
             {
                 PreOryxBuild(context);
-                
+
                 string buildCommand = args.GenerateOryxBuildCommand(context);
                 RunCommand(context, buildCommand, false, "Running oryx build...");
 
@@ -99,20 +99,41 @@ namespace Kudu.Core.Deployment.Generator
             FileSystemHelpers.EnsureDirectory(sitePackages);
 
             string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
-            PackageArtifactFromFolder(context, OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup, sitePackages, zipAppName, zipQuota:3);
+            PackageArtifactFromFolder(context, OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup,
+                sitePackages, zipAppName, BuildArtifactType.Zip, OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildMaxFiles);
 
             File.WriteAllText(packageNameFile, zipAppName);
             File.WriteAllText(packagePathFile, sitePackages);
         }
 
-        private string PackageArtifactFromFolder(DeploymentContext context, string srcDirectory, string destDirectory, string destFilename, int zipQuota = 0)
+        /// <summary>
+        /// Package every files and sub directories from a source folder
+        /// </summary>
+        /// <param name="context">The deployment context in current scope</param>
+        /// <param name="srcDirectory">The source directory to be packed</param>
+        /// <param name="artifactDirectory">The destination directory to eject the build artifact</param>
+        /// <param name="artifactFilename">The filename of the build artifact</param>
+        /// <param name="artifactType">The method for packing the artifact</param>
+        /// <param name="numBuildArtifacts">The number of temporary artifacts should be hold in the destination directory</param>
+        /// <returns></returns>
+        private string PackageArtifactFromFolder(DeploymentContext context, string srcDirectory, string artifactDirectory, string artifactFilename, BuildArtifactType artifactType, int numBuildArtifacts = 0)
         {
-            context.Logger.Log("Writing the artifacts to a zip file");
-            string zipFile = Path.Combine(destDirectory, destFilename);
-            var exe = ExternalCommandFactory.BuildExternalCommandExecutable(srcDirectory, destDirectory, context.Logger);
+            context.Logger.Log($"Writing the artifacts to a {artifactType.ToString()} file");
+            string file = Path.Combine(artifactDirectory, artifactFilename);
+            var exe = ExternalCommandFactory.BuildExternalCommandExecutable(srcDirectory, artifactDirectory, context.Logger);
             try
             {
-                exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"zip -r {zipFile} .", String.Empty);
+                switch(artifactType)
+                {
+                    case BuildArtifactType.Zip:
+                        exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"zip -r {file} .");
+                        break;
+                    case BuildArtifactType.Squashfs:
+                        exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"mksquashfs . {file} -noappend");
+                        break;
+                    default:
+                        throw new ArgumentException($"Received unknown file extension {artifactType.ToString()}");
+                }
             }
             catch (Exception)
             {
@@ -120,13 +141,13 @@ namespace Kudu.Core.Deployment.Generator
                 throw;
             }
 
-            // Just to be sure that we don't keep adding zip files here
-            if (zipQuota > 0)
+            // Just to be sure that we don't keep adding build artifacts here
+            if (numBuildArtifacts > 0)
             {
-                DeploymentHelper.PurgeZipsIfNecessary(destDirectory, context.Tracer, totalAllowedZips: zipQuota);
+                DeploymentHelper.PurgeBuildArtifactsIfNecessary(artifactDirectory, artifactType, context.Tracer, numBuildArtifacts);
             }
 
-            return zipFile;
+            return file;
         }
 
         /// <summary>
@@ -138,10 +159,11 @@ namespace Kudu.Core.Deployment.Generator
             string sas = System.Environment.GetEnvironmentVariable(Constants.ScmRunFromPackage);
             string builtFolder = context.RepositoryPath;
             string packageFolder = Environment.DeploymentsPath;
-            string packageFileName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
+            string packageFileName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.squashfs";
 
             // Package built content from oryx build artifact
-            string filePath = PackageArtifactFromFolder(context, builtFolder, packageFolder, packageFileName);
+            string filePath = PackageArtifactFromFolder(context, builtFolder, packageFolder, packageFileName, BuildArtifactType.Squashfs, 
+                OryxBuildConstants.FunctionAppBuildSettings.ConsumptionBuildMaxFiles);
 
             // Upload from DeploymentsPath
             await UploadLinuxConsumptionFunctionAppBuiltContent(context, sas, filePath);
