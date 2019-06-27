@@ -10,6 +10,7 @@ using Kudu.Core.Infrastructure;
 using Microsoft.Win32;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using Kudu.Core.Settings;
 
 namespace Kudu.Core
 {
@@ -427,6 +428,31 @@ namespace Kudu.Core
                 }
 
                 return skipSslValidation == "1";
+            }
+        }
+
+
+        public static string ContainerName
+        {
+            get
+            {
+                return System.Environment.GetEnvironmentVariable(Constants.ContainerName)?.ToLowerInvariant();
+            }
+        }
+
+        public static string StampName
+        {
+            get
+            {
+                return System.Environment.GetEnvironmentVariable(Constants.WebSiteHomeStampName)?.ToLowerInvariant();
+            }
+        }
+
+        public static string TenantId
+        {
+            get
+            {
+                return System.Environment.GetEnvironmentVariable(Constants.WebSiteStampDeploymentId)?.ToLowerInvariant();
             }
         }
 

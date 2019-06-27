@@ -133,8 +133,11 @@ namespace Kudu
         public const string PackageNameTxt = "packagename.txt";
         public const string KuduBuild = "1.0.0.6";
 
-        // WebSSH PORT
         public const string WebSSHReverseProxyPortEnvVar = "KUDU_WEBSSH_PORT";
         public const string WebSSHReverseProxyDefaultPort = "3000";
+
+        public const string LinuxLogEventStreamName = "MS_KUDU_LOGS";
+        public const string WebSiteHomeStampName = "WEBSITE_HOME_STAMPNAME";
+        public const string WebSiteStampDeploymentId = "WEBSITE_STAMP_DEPLOYMENT_ID";
     }
 }
