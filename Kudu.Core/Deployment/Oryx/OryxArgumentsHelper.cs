@@ -13,12 +13,12 @@ namespace Kudu.Core.Deployment.Oryx
 
         internal static void AddLanguage(StringBuilder args, string language)
         {
-            args.AppendFormat(" -l {0}", language);
+            args.AppendFormat(" --platform {0}", language);
         }
 
         internal static void AddLanguageVersion(StringBuilder args, string languageVer)
         {
-            args.AppendFormat(" --language-version {0}", languageVer);
+            args.AppendFormat(" --platform-version {0}", languageVer);
         }
 
         internal static void AddTempDirectoryOption(StringBuilder args, string tempDir)
