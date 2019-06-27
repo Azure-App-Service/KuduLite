@@ -137,7 +137,6 @@ namespace Kudu
         public const string WebSSHReverseProxyDefaultPort = "3000";
 
         public const string LinuxLogEventStreamName = "MS_KUDU_LOGS";
-        public const string ContainerName = "CONTAINER_NAME";
         public const string WebSiteHomeStampName = "WEBSITE_HOME_STAMPNAME";
         public const string WebSiteStampDeploymentId = "WEBSITE_STAMP_DEPLOYMENT_ID";
     }
