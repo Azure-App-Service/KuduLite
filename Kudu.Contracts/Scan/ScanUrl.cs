@@ -20,11 +20,15 @@ namespace Kudu.Contracts.Scan
         [JsonProperty(PropertyName = "id")]
         public String Id { get; set; }
 
-        public ScanUrl(string trackingURL, string resultURL, string id)
+        [JsonProperty(PropertyName = "message")]
+        public String Message { get; set; }
+
+        public ScanUrl(string trackingURL, string resultURL, string id, string msg)
         {
             TrackingURL = trackingURL;
             ResultURL = resultURL;
             Id = id;
+            Message = msg;
         }
     }
 }

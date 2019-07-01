@@ -53,12 +53,12 @@ namespace Kudu.Services.Scan
             if (result.IsCompleted && result.Result == ScanRequestResult.NoFileModifications)
             {
                 //Create URL
-                obj = new ScanUrl(Resources.NoScanModifiedFiles, Resources.LastScanMsg, id);
+                obj = new ScanUrl(null, null, id, Resources.NoScanModifiedFiles+" "+ Resources.LastScanMsg);
             }
             else
             {
                 //Create URL
-                obj = new ScanUrl(UriHelper.GetRequestUri(Request).Authority + String.Format("/api/scan/{0}/track", id), getResultURL(id), id);
+                obj = new ScanUrl(UriHelper.GetRequestUri(Request).Authority + String.Format("/api/scan/{0}/track", id), getResultURL(id), id,"");
             }
 
 
