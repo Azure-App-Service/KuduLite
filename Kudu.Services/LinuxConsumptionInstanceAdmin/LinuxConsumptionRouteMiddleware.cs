@@ -10,6 +10,11 @@ using Kudu.Services.Infrastructure.Authorization;
 using Kudu.Services.Infrastructure.Authentication;
 using System;
 using System.Text.RegularExpressions;
+using Kudu.Core.Tracing;
+using Kudu.Core.Infrastructure;
+using Kudu.Contracts.Settings;
+using Kudu.Services.Infrastructure;
+using Microsoft.AspNetCore.Http.Extensions;
 
 namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 {
@@ -57,6 +62,8 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         /// <returns>Response be set to 404 if the route is not whitelisted</returns>
         public async Task Invoke(HttpContext context, IAuthorizationService authorizationService = null)
         {
+            DateTime requestTime = DateTime.UtcNow;
+
             // Step 1: if disguise host exists, replace the request header HOST to DISGUISED-HOST
             //         if disguist host does not exist, check and replace ~1 with regex
             if (context.Request.Headers.TryGetValue(DisguisedHostHeader, out StringValues value))
@@ -78,6 +85,15 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             if (IsHomePageRoute(context.Request.Path))
             {
                 context.Response.StatusCode = 200;
+                KuduEventGenerator.Log().ApiEvent(
+                    ServerConfiguration.GetApplicationName(),
+                    "LinuxConsumptionEndpoint",
+                    context.Request.GetEncodedPathAndQuery(),
+                    context.Request.Method,
+                    System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
+                    context.Response.StatusCode,
+                    (DateTime.UtcNow - requestTime).Milliseconds,
+                    context.Request.GetUserAgent());
                 return;
             }
 
@@ -85,23 +101,50 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             if (!IsRouteWhitelisted(context.Request.Path))
             {
                 context.Response.StatusCode = 404;
+                KuduEventGenerator.Log().ApiEvent(
+                    ServerConfiguration.GetApplicationName(),
+                    "BlacklistedLinuxConsumptionEndpoint",
+                    context.Request.GetEncodedPathAndQuery(),
+                    context.Request.Method,
+                    System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
+                    context.Response.StatusCode,
+                    (DateTime.UtcNow - requestTime).Milliseconds,
+                    context.Request.GetUserAgent());
                 return;
             }
 
-            // Step 3: check if the request matches authorization policy
-            AuthenticateResult authenticateResult = await context.AuthenticateAsync(ArmAuthenticationDefaults.AuthenticationScheme);
-            if (!authenticateResult.Succeeded)
+            // Step 4: check if the request matches authorization policy
+            AuthenticateResult authenticationResult = await context.AuthenticateAsync(ArmAuthenticationDefaults.AuthenticationScheme);
+            if (!authenticationResult.Succeeded)
             {
                 context.Response.StatusCode = 401;
+                KuduEventGenerator.Log().ApiEvent(
+                    ServerConfiguration.GetApplicationName(),
+                    "UnauthenticatedLinuxConsumptionEndpoint",
+                    context.Request.GetEncodedPathAndQuery(),
+                    context.Request.Method,
+                    System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
+                    context.Response.StatusCode,
+                    (DateTime.UtcNow - requestTime).Milliseconds,
+                    context.Request.GetUserAgent());
                 return;
             }
 
             if (authorizationService != null)
             {
-                AuthorizationResult authorizeResult = await authorizationService.AuthorizeAsync(authenticateResult.Principal, AuthorizationPolicy);
-                if (!authorizeResult.Succeeded)
+                AuthorizationResult endpointAuthorization = await authorizationService.AuthorizeAsync(authenticationResult.Principal, AuthorizationPolicy);
+                if (!endpointAuthorization.Succeeded)
                 {
                     context.Response.StatusCode = 401;
+                    KuduEventGenerator.Log().ApiEvent(
+                        ServerConfiguration.GetApplicationName(),
+                        "UnauthorizedLinuxConsumptionEndpoint",
+                        context.Request.GetEncodedPathAndQuery(),
+                        context.Request.Method,
+                        System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
+                        context.Response.StatusCode,
+                        (DateTime.UtcNow - requestTime).Milliseconds,
+                        context.Request.GetUserAgent());
                     return;
                 }
             }
