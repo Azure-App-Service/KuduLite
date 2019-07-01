@@ -93,8 +93,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                     System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
                     context.Response.StatusCode,
                     (DateTime.UtcNow - requestTime).Milliseconds,
-                    context.Request.GetUserAgent()
-                );
+                    context.Request.GetUserAgent());
                 return;
             }
 
@@ -110,14 +109,13 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                     System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
                     context.Response.StatusCode,
                     (DateTime.UtcNow - requestTime).Milliseconds,
-                    context.Request.GetUserAgent()
-                );
+                    context.Request.GetUserAgent());
                 return;
             }
 
             // Step 4: check if the request matches authorization policy
-            AuthenticateResult authenticateResult = await context.AuthenticateAsync(ArmAuthenticationDefaults.AuthenticationScheme);
-            if (!authenticateResult.Succeeded)
+            AuthenticateResult authenticationResult = await context.AuthenticateAsync(ArmAuthenticationDefaults.AuthenticationScheme);
+            if (!authenticationResult.Succeeded)
             {
                 context.Response.StatusCode = 401;
                 KuduEventGenerator.Log().ApiEvent(
@@ -128,15 +126,14 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                     System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
                     context.Response.StatusCode,
                     (DateTime.UtcNow - requestTime).Milliseconds,
-                    context.Request.GetUserAgent()
-                );
+                    context.Request.GetUserAgent());
                 return;
             }
 
             if (authorizationService != null)
             {
-                AuthorizationResult authorizeResult = await authorizationService.AuthorizeAsync(authenticateResult.Principal, AuthorizationPolicy);
-                if (!authorizeResult.Succeeded)
+                AuthorizationResult endpointAuthorization = await authorizationService.AuthorizeAsync(authenticationResult.Principal, AuthorizationPolicy);
+                if (!endpointAuthorization.Succeeded)
                 {
                     context.Response.StatusCode = 401;
                     KuduEventGenerator.Log().ApiEvent(
@@ -147,8 +144,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                         System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
                         context.Response.StatusCode,
                         (DateTime.UtcNow - requestTime).Milliseconds,
-                        context.Request.GetUserAgent()
-                    );
+                        context.Request.GetUserAgent());
                     return;
                 }
             }
