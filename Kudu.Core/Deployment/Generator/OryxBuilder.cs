@@ -99,7 +99,23 @@ namespace Kudu.Core.Deployment.Generator
             FileSystemHelpers.EnsureDirectory(sitePackages);
 
             string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
-            PackageArtifactFromFolder(context, OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup, sitePackages, zipAppName, zipQuota:3);
+            string createdZip = PackageArtifactFromFolder(context, OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup,
+                OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup, zipAppName, zipQuota: -1);
+
+            var copyExe = ExternalCommandFactory.BuildExternalCommandExecutable(OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup, sitePackages, context.Logger);
+            var copyToPath = Path.Combine(sitePackages, zipAppName);
+            try
+            {
+                copyExe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"cp {createdZip} {copyToPath}");
+            }
+            catch (Exception)
+            {
+                context.GlobalLogger.LogError();
+                throw;
+            }
+
+            // Gotta remove the old zips
+            DeploymentHelper.PurgeZipsIfNecessary(sitePackages, context.Tracer, totalAllowedZips: 2);
 
             File.WriteAllText(packageNameFile, zipAppName);
             File.WriteAllText(packagePathFile, sitePackages);
@@ -112,7 +128,7 @@ namespace Kudu.Core.Deployment.Generator
             var exe = ExternalCommandFactory.BuildExternalCommandExecutable(srcDirectory, destDirectory, context.Logger);
             try
             {
-                exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"zip -r {zipFile} .", String.Empty);
+                exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"zip -r -0 -q {zipFile} .", String.Empty);
             }
             catch (Exception)
             {
