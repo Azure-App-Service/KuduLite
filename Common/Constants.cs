@@ -17,6 +17,7 @@ namespace Kudu
         public static string ScanTimeOutMillSec = "500000";
         public static string ScanManifest = "modified_times.json";
         public static string AggregrateScanResults = "aggregrate_scans.log";
+        public static string TempScanFile = "temp_scan_monitor";
 
         public const string WebRoot = "wwwroot";
         public const string MappedSite = "/_app";

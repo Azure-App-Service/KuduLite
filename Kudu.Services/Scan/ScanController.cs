@@ -17,18 +17,15 @@ namespace Kudu.Services.Scan
 {
     public class ScanController : Controller
     {
-        private readonly ICommandExecutor _commandExecutor;
+
         private readonly ITracer _tracer;
-        private readonly IOperationLock _scanLock;
         private readonly IScanManager _scanManager;
         private IEnvironment _webAppRuntimeEnvironment;
-        String mainScanDirPath = null;
+        string mainScanDirPath = null;
 
-        public ScanController(ICommandExecutor commandExecutor, ITracer tracer, IDictionary<string, IOperationLock> namedLocks, IScanManager scanManager, IEnvironment webAppRuntimeEnvironment)
+        public ScanController(ITracer tracer, IScanManager scanManager, IEnvironment webAppRuntimeEnvironment)
         {
-            _commandExecutor = commandExecutor;
             _tracer = tracer;
-            _scanLock = namedLocks["deployment"];
             _scanManager = scanManager;
             _webAppRuntimeEnvironment = webAppRuntimeEnvironment;
             mainScanDirPath = Path.Combine(_webAppRuntimeEnvironment.LogFilesPath, "kudu", "scan");
@@ -72,6 +69,7 @@ namespace Kudu.Services.Scan
             return UriHelper.GetRequestUri(Request).Authority + String.Format("/api/scan/{0}/result", id);
         }
 
+        [HttpGet]
         public IActionResult GetScanResults()
         {
             IActionResult result;
@@ -96,7 +94,9 @@ namespace Kudu.Services.Scan
             {
                 var obj = await _scanManager.GetScanStatus(scanId, mainScanDirPath);
                 if (obj == null)
+                {
                     return BadRequest();
+                }
                 return Ok(obj);
 
             }
@@ -109,13 +109,20 @@ namespace Kudu.Services.Scan
             {
                 var obj = await _scanManager.GetScanResultFile(scanId, mainScanDirPath);
                 if (obj == null)
+                {
                     return BadRequest();
+                }
                 return Ok(ArmUtils.AddEnvelopeOnArmRequest(obj, Request));
 
             }
         }
 
-
+        [HttpDelete]
+        public void StopScan()
+        {
+            _scanManager.StopScan(mainScanDirPath);
+        }
+        
     }
 
 

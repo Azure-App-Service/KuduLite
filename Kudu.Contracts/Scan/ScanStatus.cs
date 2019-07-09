@@ -6,6 +6,7 @@
         Executing,
         Failed,
         TimeoutFailure,
-        Success
+        Success,
+        ForceStopped
     }
 }

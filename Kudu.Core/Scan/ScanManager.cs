@@ -24,18 +24,14 @@ namespace Kudu.Core.Scan
         private readonly ICommandExecutor _commandExecutor;
         private readonly ITracer _tracer;
         private readonly IOperationLock _scanLock;
-        private ExternalCommandFactory _externalCommandFactory = null;
-        private IEnvironment _environment;
         private static readonly string DATE_TIME_FORMAT = "yyyy-MM-dd_HH-mm-ssZ";
+       // private string tempScanFilePath = null;
 
-        public ScanManager(ICommandExecutor commandExecutor, ITracer tracer, IDictionary<string, IOperationLock> namedLocks, IEnvironment environment, IDeploymentSettingsManager settings)
+        public ScanManager(ICommandExecutor commandExecutor, ITracer tracer, IDictionary<string, IOperationLock> namedLocks)
         {
-            var repositoryPath = environment.RootPath;
             _commandExecutor = commandExecutor;
             _tracer = tracer;
             _scanLock = namedLocks["deployment"];
-            _externalCommandFactory = new ExternalCommandFactory(environment, settings, repositoryPath); 
-            _environment = environment;
         }
 
         private static void UpdateScanStatus(String folderPath,ScanStatus status)
@@ -171,10 +167,16 @@ namespace Kudu.Core.Scan
                         //Create scan status file inside folder
                         FileSystemHelpers.CreateFile(filePath).Close();
 
+                        //Create temp file to check if scan is still running
+                        string tempScanFilePath = GetTempScanFilePath(mainScanDirPath);
+                        tempScanFilePath = Path.Combine(mainScanDirPath, Constants.TempScanFile);
+                        FileSystemHelpers.CreateFile(tempScanFilePath).Close();
+
                         UpdateScanStatus(folderPath, ScanStatus.Starting);
                     }
                     else
                     {
+                        
                         hasFileModifcations = false;
                     }
                     
@@ -189,7 +191,7 @@ namespace Kudu.Core.Scan
                 //Start Backgorund Scan
                 using (var timeoutCancellationTokenSource = new CancellationTokenSource())
                 {
-                    var successfullyScanned = PerformBackgroundScan(_tracer, _scanLock, folderPath, timeoutCancellationTokenSource.Token,id);
+                    var successfullyScanned = PerformBackgroundScan(_tracer, _scanLock, folderPath, timeoutCancellationTokenSource.Token,id,mainScanDirPath);
 
                     //Wait till scan task completes or the timeout goes off
                     if (await Task.WhenAny(successfullyScanned, Task.Delay(Int32.Parse(timeout), timeoutCancellationTokenSource.Token)) == successfullyScanned)
@@ -358,7 +360,22 @@ namespace Kudu.Core.Scan
             return obj;
         }
 
-        public static async Task<bool> PerformBackgroundScan(ITracer _tracer, IOperationLock _scanLock, String folderPath,CancellationToken token, String scanId)
+        public void StopScan(String mainScanDirPath)
+        {
+            string tempScanFilePath = GetTempScanFilePath(mainScanDirPath);
+            if (tempScanFilePath != null && FileSystemHelpers.FileExists(tempScanFilePath))
+            {
+                FileSystemHelpers.DeleteFileSafe(tempScanFilePath);
+                _tracer.Trace("Scan is being stopped. Deleted temp scan file at {0}",tempScanFilePath);
+            }
+        }
+
+        private string GetTempScanFilePath(String mainScanDirPath)
+        {
+            return Path.Combine(mainScanDirPath, Constants.TempScanFile);
+        }
+
+        public async Task<bool> PerformBackgroundScan(ITracer _tracer, IOperationLock _scanLock, String folderPath,CancellationToken token, String scanId, String mainScanDirPath)
         {
 
             var successfulScan = true;
@@ -369,7 +386,7 @@ namespace Kudu.Core.Scan
                 _scanLock.LockOperation(() =>
                 {
 
-                    String filePath = Path.Combine(folderPath, Constants.ScanStatusFile);
+                    String statusFilePath = Path.Combine(folderPath, Constants.ScanStatusFile);
 
 
                     String logFilePath = Path.Combine(folderPath, Constants.ScanLogFile);
@@ -391,25 +408,40 @@ namespace Kudu.Core.Scan
                     };
                     _executingProcess.Start();
 
+                    string tempScanFilePath = GetTempScanFilePath(mainScanDirPath);
                     //Check if process is completing before timeout
                     while (!_executingProcess.HasExited)
                     {
                         //Process still running, but timeout is done
-                        if (token.IsCancellationRequested)
+                        //Or Process is still running but scan has been stopped by user
+                        if (token.IsCancellationRequested || (tempScanFilePath != null && !FileSystemHelpers.FileExists(tempScanFilePath)))
                         {
-
                             //Kill process
                             _executingProcess.Kill(true, _tracer);
                             //Wait for process to be completely killed
                             _executingProcess.WaitForExit();
                             successfulScan = false;
-                            _tracer.Trace("Scan {0} has timed out at {1}", scanId, DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ"));
+                            if (token.IsCancellationRequested)
+                            {
+                                _tracer.Trace("Scan {0} has timed out at {1}", scanId, DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ"));
 
-                            //Update status file
-                            UpdateScanStatus(folderPath, ScanStatus.TimeoutFailure);
+                                //Update status file
+                                UpdateScanStatus(folderPath, ScanStatus.TimeoutFailure);
+                            }
+                            else
+                            {
+                                _tracer.Trace("Scan {0} has been force stopped at {1}", scanId, DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ"));
+
+                                //Update status file
+                                UpdateScanStatus(folderPath, ScanStatus.ForceStopped);
+                            }
+                            
                             break;
                         }
                     }
+
+                    //Clean up the temp file
+                    StopScan(mainScanDirPath);
 
                     //Update status file with success
                     if (successfulScan)
@@ -440,13 +472,8 @@ namespace Kudu.Core.Scan
 
         public IEnumerable<ScanOverviewResult> GetResults(String mainScanDir)
         {
-           // ITracer tracer = _tracer.GetTracer();
-           /* using (_tracer.Step("ScanManager.GetResults"))
-            {*/
                 IEnumerable<ScanOverviewResult> results = EnumerateResults(mainScanDir).OrderByDescending(t => t.Status.Id).ToList();
                 return results;
-                //return PurgeAndGetDeployments();
-           /* }*/
         }
 
         private IEnumerable<ScanOverviewResult> EnumerateResults(String mainScanDir)

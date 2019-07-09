@@ -508,6 +508,11 @@ namespace Kudu.Services.Web
                     new { controller = "Scan", action = "GetScanResults" },
                     new { verb = new HttpMethodRouteConstraint("GET") });
 
+                //Stop scan
+                routes.MapRoute("stop-scan", "/api/scan/stop",
+                    new { controller = "Scan", action = "StopScan" },
+                    new { verb = new HttpMethodRouteConstraint("DELETE") });
+
                 // SSHKey
                 routes.MapHttpRouteDual("get-sshkey", "api/sshkey",
                     new {controller = "SSHKey", action = "GetPublicKey"},
