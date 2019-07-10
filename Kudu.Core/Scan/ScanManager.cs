@@ -313,18 +313,23 @@ namespace Kudu.Core.Scan
             {
                 String report_path = Path.Combine(mainScanDirPath, Constants.ScanFolderName + scanId, Constants.ScanLogFile);
                 ScanStatusResult scr = ReadScanStatusFile(scanId, mainScanDirPath, Constants.ScanStatusFile, null);
-                report = new ScanReport();
-                report.Id = scr.Id;
-                report.Timestamp = DateTime.ParseExact(scr.Id,DATE_TIME_FORMAT, System.Globalization.CultureInfo.InvariantCulture).ToUniversalTime();
-                String text = "Report file not yet generated. The scan might be still running, please check the status";
 
-                if (FileSystemHelpers.FileExists(report_path))
+                //Proceed only if this scan has actually been conducted
+                //Handling possibility of user entering invalid scanId and breaking the application
+                if(scr != null)
                 {
-                    text = FileSystemHelpers.ReadAllTextFromFile(report_path);
-                }
+                    report = new ScanReport();
+                    report.Id = scr.Id;
+                    report.Timestamp = DateTime.ParseExact(scr.Id, DATE_TIME_FORMAT, System.Globalization.CultureInfo.InvariantCulture).ToUniversalTime();
+                    String text = "Report file not yet generated. The scan might be still running, please check the status";
 
-                report.Report = text;
-                
+                    if (FileSystemHelpers.FileExists(report_path))
+                    {
+                        text = FileSystemHelpers.ReadAllTextFromFile(report_path);
+                    }
+
+                    report.Report = text;
+                }
             });
 
             //All the contents of the file and the timestamp
