@@ -154,6 +154,11 @@ namespace Kudu.Core.Scan
                 String filePath = Path.Combine(folderPath, Constants.ScanStatusFile);
                 Boolean hasFileModifcations = true;
 
+                if (_scanLock.IsHeld)
+                {
+                    return ScanRequestResult.ScanAlreadyInProgress;
+                }
+
                 //Create unique scan folder and scan status file
                 _scanLock.LockOperation(() =>
                 {

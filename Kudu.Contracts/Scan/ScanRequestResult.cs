@@ -6,6 +6,7 @@
         RanSynchronously,
         Pending,
         AsyncScanFailed,
-        NoFileModifications
+        NoFileModifications,
+        ScanAlreadyInProgress
     }
 }

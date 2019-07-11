@@ -52,6 +52,11 @@ namespace Kudu.Services.Scan
                 //Create URL
                 obj = new ScanUrl(null, null, id, Resources.NoScanModifiedFiles+" "+ Resources.LastScanMsg);
             }
+            else if(result.IsCompleted && result.Result == ScanRequestResult.ScanAlreadyInProgress)
+            {
+                //Create URL
+                obj = new ScanUrl(null, null, id, Resources.ScanInProgress);
+            }
             else
             {
                 //Create URL

@@ -383,7 +383,7 @@ namespace Kudu.Services {
                 return ResourceManager.GetString("LastScanMsg", resourceCulture);
             }
         }
-        
+               
         /// <summary>
         ///   Looks up a localized string similar to {0}{1}  The application was terminated.{0}.
         /// </summary>
@@ -552,6 +552,15 @@ namespace Kudu.Services {
         internal static string ReceivingChanges {
             get {
                 return ResourceManager.GetString("ReceivingChanges", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Scan is already in progress..
+        /// </summary>
+        internal static string ScanInProgress {
+            get {
+                return ResourceManager.GetString("ScanInProgress", resourceCulture);
             }
         }
         
