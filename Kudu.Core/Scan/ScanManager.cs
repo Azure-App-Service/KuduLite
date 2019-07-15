@@ -85,35 +85,41 @@ namespace Kudu.Core.Scan
             //Fetch all files in this directory
             string[] filePaths = FileSystemHelpers.GetFiles(directoryPath,"*");
 
-            foreach(string filePath in filePaths)
+            if(filePaths != null)
             {
-            Console.WriteLine(filePath);
-                //If manifest does not contain an entry for this file
-                //It means the file was newly added
-                //We need to scan as this is a modification
-                if (!fileObj.ContainsKey(filePath))
+                foreach (string filePath in filePaths)
                 {
-                    return true;
-                }
-                //Modified time in manifest
-                String lastModTime = (string)fileObj[filePath];
-                //Current modified time
-                String currModTime = FileSystemHelpers.GetDirectoryLastWriteTimeUtc(filePath).ToString();
+                    //If manifest does not contain an entry for this file
+                    //It means the file was newly added
+                    //We need to scan as this is a modification
+                    if (!fileObj.ContainsKey(filePath))
+                    {
+                        return true;
+                    }
+                    //Modified time in manifest
+                    String lastModTime = (string)fileObj[filePath];
+                    //Current modified time
+                    String currModTime = FileSystemHelpers.GetDirectoryLastWriteTimeUtc(filePath).ToString();
 
-                //If they are different
-                //It means file has been modified after last scan
-                if (!currModTime.Equals(lastModTime))
-                    return true;
+                    //If they are different
+                    //It means file has been modified after last scan
+                    if (!currModTime.Equals(lastModTime))
+                        return true;
+                }
             }
+            
 
             //Fetch all the child directories of this directory
             string[] direcPaths = FileSystemHelpers.GetDirectories(directoryPath);
 
-            //Do recursive comparison of all files in the child directories
-            foreach(string direcPath in direcPaths)
+            if(direcPaths != null)
             {
-                if (IsFolderModified(fileObj, direcPath))
-                    return true;
+                //Do recursive comparison of all files in the child directories
+                foreach (string direcPath in direcPaths)
+                {
+                    if (IsFolderModified(fileObj, direcPath))
+                        return true;
+                }
             }
 
             //No modifications found
@@ -143,7 +149,7 @@ namespace Kudu.Core.Scan
 
         }
 
-        public async Task<ScanRequestResult> StartScan(String timeout,String mainScanDirPath,String id)
+        public async Task<ScanRequestResult> StartScan(String timeout,String mainScanDirPath,String id, String host)
         {
             using (_tracer.Step("Start scan in the background"))
             {
@@ -178,7 +184,6 @@ namespace Kudu.Core.Scan
                     }
                     else
                     {
-
                         hasFileModifcations = false;
                     }
 
@@ -229,14 +234,14 @@ namespace Kudu.Core.Scan
                             {
                                 if (line.Contains("FOUND") || line.Contains("Infected files") || line.Contains("Scanned files"))
                                 {
-                                    //logType 0 means this log line represents details of infected files
-                                    String logType = "0";
+                                    //logType "Infected" means this log line represents details of infected files
+                                    String logType = "Infected";
                                     if (line.Contains("Infected files") || line.Contains("Scanned files"))
                                     {
-                                        //logType 1 means this log line represents total number of scanned or infected files
-                                        logType = "1";
+                                        //logType "Info" means this log line represents total number of scanned or infected files
+                                        logType = "Info";
                                     }
-                                    FileSystemHelpers.AppendAllTextToFile(aggrLogPath, DateTime.UtcNow.ToString(@"M/d/yyyy hh:mm:ss tt") + "," + id + "," + logType + "," + line + '\n');
+                                    FileSystemHelpers.AppendAllTextToFile(aggrLogPath, DateTime.UtcNow.ToString(@"M/d/yyyy hh:mm:ss tt") + "," + id + "," + logType + "," + host + "," + line + '\n');
                                 }
                             }
                         }

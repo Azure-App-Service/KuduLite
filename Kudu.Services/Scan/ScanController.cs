@@ -40,10 +40,9 @@ namespace Kudu.Services.Scan
                 timeout = Constants.ScanTimeOutMillSec;
             }
 
-
-            //Start sync scanning
+            //Start async scanning
             String id = DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ");
-            var result = _scanManager.StartScan(timeout, mainScanDirPath, id);
+            var result = _scanManager.StartScan(timeout, mainScanDirPath, id, Request.Headers["Host"]);
             ScanUrl obj;
 
             //Check if files were modified after last scan
@@ -60,7 +59,7 @@ namespace Kudu.Services.Scan
             else
             {
                 //Create URL
-                obj = new ScanUrl(UriHelper.GetRequestUri(Request).Authority + String.Format("/api/scan/{0}/track", id), getResultURL(id), id,"");
+                obj = new ScanUrl(_webAppRuntimeEnvironment.AppBaseUrlPrefix + String.Format("/api/scan/{0}/track", id), getResultURL(id), id,"");
             }
 
 
@@ -71,7 +70,7 @@ namespace Kudu.Services.Scan
 
         private string getResultURL(string id)
         {
-            return UriHelper.GetRequestUri(Request).Authority + String.Format("/api/scan/{0}/result", id);
+            return _webAppRuntimeEnvironment.AppBaseUrlPrefix + String.Format("/api/scan/{0}/result", id);
         }
 
         [HttpGet]

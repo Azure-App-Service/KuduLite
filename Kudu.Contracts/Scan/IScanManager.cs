@@ -9,7 +9,8 @@ namespace Kudu.Contracts.Scan
         Task<ScanRequestResult> StartScan(
             String timeout,
             String mainScanDirPath,
-            String id);
+            String id,
+            String host);
 
         Task<ScanStatusResult> GetScanStatus(
             String scanId,
