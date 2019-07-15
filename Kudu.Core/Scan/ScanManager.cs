@@ -87,6 +87,7 @@ namespace Kudu.Core.Scan
 
             foreach(string filePath in filePaths)
             {
+            Console.WriteLine(filePath);
                 //If manifest does not contain an entry for this file
                 //It means the file was newly added
                 //We need to scan as this is a modification
