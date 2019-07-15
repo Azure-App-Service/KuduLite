@@ -8,7 +8,7 @@ namespace Kudu.Contracts.Scan
     public class ScanReport : INamedObject
     {
         [JsonProperty(PropertyName = "report")]
-        public String Report { get; set; }
+        public ScanDetail Report { get; set; }
 
         [JsonIgnore]
         [SuppressMessage("Microsoft.Design", "CA1033:InterfaceMethodsShouldBeCallableByChildTypes", Justification = "to provide ARM spceific name")]

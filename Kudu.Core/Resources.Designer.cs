@@ -19,7 +19,7 @@ namespace Kudu.Core {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -75,6 +75,15 @@ namespace Kudu.Core {
         internal static string Deployment_UnknownValue {
             get {
                 return ResourceManager.GetString("Deployment_UnknownValue", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Deployment Underway.
+        /// </summary>
+        internal static string DeploymentLockOccMsg {
+            get {
+                return ResourceManager.GetString("DeploymentLockOccMsg", resourceCulture);
             }
         }
         
@@ -390,6 +399,15 @@ namespace Kudu.Core {
         internal static string ReceivingChanges {
             get {
                 return ResourceManager.GetString("ReceivingChanges", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Scan Underway.
+        /// </summary>
+        internal static string ScanUnderwayMsg {
+            get {
+                return ResourceManager.GetString("ScanUnderwayMsg", resourceCulture);
             }
         }
         

@@ -1,9 +1,7 @@
 ﻿using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Scan;
-using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
 using Kudu.Core.Commands;
-using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Tracing;
 using Newtonsoft.Json;
@@ -21,17 +19,15 @@ namespace Kudu.Core.Scan
     public class ScanManager : IScanManager
     {
 
-        private readonly ICommandExecutor _commandExecutor;
         private readonly ITracer _tracer;
-        private readonly IOperationLock _scanLock;
+        private readonly AllSafeLinuxLock _scanLock;
         private static readonly string DATE_TIME_FORMAT = "yyyy-MM-dd_HH-mm-ssZ";
        // private string tempScanFilePath = null;
 
-        public ScanManager(ICommandExecutor commandExecutor, ITracer tracer, IDictionary<string, IOperationLock> namedLocks)
+        public ScanManager(ITracer tracer, IDictionary<string, IOperationLock> namedLocks)
         {
-            _commandExecutor = commandExecutor;
             _tracer = tracer;
-            _scanLock = namedLocks["deployment"];
+            _scanLock = (AllSafeLinuxLock) namedLocks["deployment"];
         }
 
         private static void UpdateScanStatus(String folderPath,ScanStatus status)
@@ -181,10 +177,10 @@ namespace Kudu.Core.Scan
                     }
                     else
                     {
-                        
+
                         hasFileModifcations = false;
                     }
-                    
+
 
                 }, "Creating unique scan folder", TimeSpan.Zero);
 
@@ -323,22 +319,71 @@ namespace Kudu.Core.Scan
                 //Handling possibility of user entering invalid scanId and breaking the application
                 if(scr != null)
                 {
-                    report = new ScanReport();
-                    report.Id = scr.Id;
-                    report.Timestamp = DateTime.ParseExact(scr.Id, DATE_TIME_FORMAT, System.Globalization.CultureInfo.InvariantCulture).ToUniversalTime();
-                    String text = "Report file not yet generated. The scan might be still running, please check the status";
-
-                    if (FileSystemHelpers.FileExists(report_path))
+                    report = new ScanReport
                     {
-                        text = FileSystemHelpers.ReadAllTextFromFile(report_path);
-                    }
-
-                    report.Report = text;
+                        Id = scr.Id,
+                        Timestamp = DateTime.ParseExact(scr.Id, DATE_TIME_FORMAT, System.Globalization.CultureInfo.InvariantCulture).ToUniversalTime(),
+                        Report = GetScanParsedLogs(report_path)
+                    };
                 }
             });
 
             //All the contents of the file and the timestamp
                 return report;
+        }
+
+        private ScanDetail GetScanParsedLogs(string currLogPath)
+        {
+            ScanDetail result = null;
+            if (FileSystemHelpers.FileExists(currLogPath))
+            {
+                result = new ScanDetail();
+                StreamReader file = new StreamReader(currLogPath);
+                string line;
+                while ((line = file.ReadLine()) != null)
+                {
+                    if (line.Contains("FOUND"))
+                    {
+                        List<InfectedFileObject> infectedList = result.InfectedFiles;
+                        if(infectedList == null)
+                        {
+                            infectedList = new List<InfectedFileObject>();
+                            result.InfectedFiles = infectedList;
+                        }
+                        int separatorIndex = line.IndexOf(":");
+                        int endIndex = line.IndexOf("FOUND");
+                        string name = line.Substring(0, separatorIndex);
+                        string infection = line.Substring(separatorIndex + 1, endIndex - separatorIndex - 1).Trim();
+
+                        InfectedFileObject obj = new InfectedFileObject(name, infection);
+                        infectedList.Add(obj);                        
+                    }
+                    else if(line.Contains("Infected files"))
+                    {
+                        result.TotalInfected = line.Substring(line.IndexOf(":") + 1).Trim();
+                    }
+                    else if(line.Contains("Scanned files"))
+                    {
+                        result.TotalScanned = line.Substring(line.IndexOf(":") + 1).Trim();
+                    }
+                    else if (line.Contains(": OK"))
+                    {
+                        List<string> safeList = result.SafeFiles;
+                        if (safeList == null)
+                        {
+                            safeList = new List<string>();
+                            result.SafeFiles = safeList;
+                        }
+                        safeList.Add(line.Substring(0, line.IndexOf(":")));
+                    }
+                    else if (line.Contains("Time"))
+                    {
+                        result.TimeTaken = line.Substring(line.IndexOf(":") + 1, line.IndexOf("sec") - line.IndexOf(":") - 1).Trim();
+                    }
+                }
+            }
+
+            return result;
         }
 
         private static ScanStatusResult ReadScanStatusFile(String scanId, String mainScanDirPath, String fileName,String folderName)
@@ -385,7 +430,7 @@ namespace Kudu.Core.Scan
             return Path.Combine(mainScanDirPath, Constants.TempScanFile);
         }
 
-        public async Task<bool> PerformBackgroundScan(ITracer _tracer, IOperationLock _scanLock, String folderPath,CancellationToken token, String scanId, String mainScanDirPath)
+        public async Task<bool> PerformBackgroundScan(ITracer _tracer, AllSafeLinuxLock _scanLock, String folderPath,CancellationToken token, String scanId, String mainScanDirPath)
         {
 
             var successfulScan = true;
@@ -395,15 +440,16 @@ namespace Kudu.Core.Scan
 
                 _scanLock.LockOperation(() =>
                 {
+                    _scanLock.SetLockMsg(Resources.ScanUnderwayMsg);
 
                     String statusFilePath = Path.Combine(folderPath, Constants.ScanStatusFile);
 
 
                     String logFilePath = Path.Combine(folderPath, Constants.ScanLogFile);
-                    _tracer.Trace("Starting Scan {0}, ScanCommand: {1}, LogFile: {2}",scanId,Constants.ScanCommand,logFilePath);
+                    _tracer.Trace("Starting Scan {0}, ScanCommand: {1}, LogFile: {2}", scanId, Constants.ScanCommand, logFilePath);
 
                     UpdateScanStatus(folderPath, ScanStatus.Executing);
-                    
+
                     var escapedArgs = Constants.ScanCommand + " " + logFilePath;
                     Process _executingProcess = new Process()
                     {
@@ -445,7 +491,7 @@ namespace Kudu.Core.Scan
                                 //Update status file
                                 UpdateScanStatus(folderPath, ScanStatus.ForceStopped);
                             }
-                            
+
                             break;
                         }
                     }
@@ -457,7 +503,7 @@ namespace Kudu.Core.Scan
                     if (successfulScan)
                     {
                         //Check if process terminated with errors
-                        if(_executingProcess.ExitCode != 0)
+                        if (_executingProcess.ExitCode != 0)
                         {
                             UpdateScanStatus(folderPath, ScanStatus.Failed);
                             _tracer.Trace("Scan {0} has terminated with exit code {1}. More info found in {2}", scanId, _executingProcess.ExitCode, logFilePath);
@@ -472,7 +518,7 @@ namespace Kudu.Core.Scan
 
                 }, "Performing continuous scan", TimeSpan.Zero);
 
-
+                _scanLock.SetLockMsg("");
 
             });
 
