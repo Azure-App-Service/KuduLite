@@ -99,8 +99,23 @@ namespace Kudu.Core.Deployment.Generator
             FileSystemHelpers.EnsureDirectory(sitePackages);
 
             string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
-            PackageArtifactFromFolder(context, OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup,
-                sitePackages, zipAppName, BuildArtifactType.Zip, OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildMaxFiles);
+            string createdZip = PackageArtifactFromFolder(context, OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup,
+                OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup, zipAppName, BuildArtifactType.Zip, numBuildArtifacts: -1);
+
+            var copyExe = ExternalCommandFactory.BuildExternalCommandExecutable(OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup, sitePackages, context.Logger);
+            var copyToPath = Path.Combine(sitePackages, zipAppName);
+            try
+            {
+                copyExe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"cp {createdZip} {copyToPath}");
+            }
+            catch (Exception)
+            {
+                context.GlobalLogger.LogError();
+                throw;
+            }
+
+            // Gotta remove the old zips
+            DeploymentHelper.PurgeBuildArtifactsIfNecessary(sitePackages, BuildArtifactType.Zip, context.Tracer, totalAllowedFiles: 2);
 
             File.WriteAllText(packageNameFile, zipAppName);
             File.WriteAllText(packagePathFile, sitePackages);
@@ -126,7 +141,7 @@ namespace Kudu.Core.Deployment.Generator
                 switch(artifactType)
                 {
                     case BuildArtifactType.Zip:
-                        exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"zip -r {file} .");
+                        exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"zip -r -0 -q {file} .");
                         break;
                     case BuildArtifactType.Squashfs:
                         exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"mksquashfs . {file} -noappend");
