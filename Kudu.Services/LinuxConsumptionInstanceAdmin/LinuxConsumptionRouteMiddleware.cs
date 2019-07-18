@@ -39,6 +39,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 
         private static Regex malformedScmHostnameRegex = new Regex(@"^~\d+");
         private static string HomePageRoute = "/";
+        private static string FaviconRoute = "/favicon.ico";
 
         /// <summary>
         /// Filter out unnecessary routes for Linux Consumption
@@ -81,8 +82,8 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                 context.Request.Scheme = value;
             }
 
-            // Step 2: check if it is homepage route, always return 200
-            if (IsHomePageRoute(context.Request.Path))
+            // Step 2: check if it is homepage route or favicon route, always return 200
+            if (IsHomePageRoute(context.Request.Path) || IsFavIconRoute(context.Request.Path))
             {
                 context.Response.StatusCode = 200;
                 KuduEventGenerator.Log().ApiEvent(
@@ -160,6 +161,11 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         private bool IsHomePageRoute(PathString routePath)
         {
             return routePath.ToString() == HomePageRoute;
+        }
+
+        private bool IsFavIconRoute(PathString routePath)
+        {
+            return routePath.ToString() == FaviconRoute;
         }
 
         private static string SanitizeScmUrl(string malformedUrl)
