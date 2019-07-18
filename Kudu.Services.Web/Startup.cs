@@ -486,9 +486,6 @@ namespace Kudu.Services.Web
                     new {verb = new HttpMethodRouteConstraint("GET")});
 
                 // Initiate Scan 
-                routes.MapRoute("start-clamscan-timeout", "api/scan/start/{timeout}",
-                    new { controller = "Scan", action = "ExecuteScan" },
-                    new { verb = new HttpMethodRouteConstraint("GET") });
                 routes.MapRoute("start-clamscan", "api/scan/start/",
                     new { controller = "Scan", action = "ExecuteScan" },
                     new { verb = new HttpMethodRouteConstraint("GET") });

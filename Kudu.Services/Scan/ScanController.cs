@@ -32,7 +32,7 @@ namespace Kudu.Services.Scan
         }
 
         [HttpGet]
-        public IActionResult ExecuteScan(string timeout)
+        public IActionResult ExecuteScan([FromQuery] string timeout)
         {
 
             if (timeout == null || timeout.Length == 0)
