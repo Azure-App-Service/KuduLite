@@ -315,4 +315,13 @@
   <data name="Vso_Synchronizing" xml:space="preserve">
     <value>Synchronizing changes from VSTS ...</value>
   </data>
+  <data name="LastScanMsg" xml:space="preserve">
+    <value>Check results of last scan</value>
+  </data>
+  <data name="NoScanModifiedFiles" xml:space="preserve">
+    <value>No files modified since last scan</value>
+  </data>
+  <data name="ScanInProgress" xml:space="preserve">
+    <value>Something is blocking the scan. It might be that a scan is already in progress or a deployment is underway.</value>
+  </data>
 </root>

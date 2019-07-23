@@ -129,7 +129,12 @@ namespace Kudu.Core
             else
             {
                 // in linux, rootPath is "/home", while .ssh folder need to under "/home/{user}"
-                _sshKeyPath = Path.Combine(rootPath, System.Environment.GetEnvironmentVariable("KUDU_RUN_USER"), Constants.SSHKeyPath);
+                string path2 = System.Environment.GetEnvironmentVariable("KUDU_RUN_USER");
+                if(path2 == null || path2.Equals(""))
+                {
+                    path2 = "root";
+                }
+                _sshKeyPath = Path.Combine(rootPath, path2, Constants.SSHKeyPath);
             }
             _scriptPath = Path.Combine(binPath, Constants.ScriptsPath);
             _nodeModulesPath = Path.Combine(binPath, Constants.NodeModulesPath);

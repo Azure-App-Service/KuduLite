@@ -120,6 +120,9 @@
   <data name="Copied" xml:space="preserve">
     <value>Copied '{0}'.</value>
   </data>
+  <data name="DeploymentLockOccMsg" xml:space="preserve">
+    <value>Deployment Underway</value>
+  </data>
   <data name="Deployment_UnknownValue" xml:space="preserve">
     <value>N/A</value>
   </data>
@@ -227,6 +230,9 @@
   </data>
   <data name="ReceivingChanges" xml:space="preserve">
     <value>Receiving changes.</value>
+  </data>
+  <data name="ScanUnderwayMsg" xml:space="preserve">
+    <value>Scan Underway</value>
   </data>
   <data name="Status_BuildingAndDeploying" xml:space="preserve">
     <value>Building and Deploying '{0}'.</value>

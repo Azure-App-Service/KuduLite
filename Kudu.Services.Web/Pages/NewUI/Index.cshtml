@@ -61,7 +61,7 @@
         <div class="col-md-5" id="is-deploying-banner" style="display: none">
             <div>
                 <div class="col-md-10 row-fluid">
-                    <h6 style="font-weight: 300"> Deployment Underway</h6>
+                    <h6 id="lock_msg" style="font-weight: 300"></h6>
                     <h6 class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa" id="deployment-status">...</h6>
                 </div>
                 <div class="col-md-2 row-fluid">
@@ -147,6 +147,12 @@
                             <li>
                                 <a href="/newui/logs">Browse Logs Dir</a>
                             </li>
+                            <li>
+                                <a href="/newui/jsonviewer?view_url=/api/scan/start">Scan file system</a>
+                            </li>
+                            <li>
+                                <a href="/newui/jsonviewer?view_url=/api/scan/results">Get All Scans</a>
+                            </li>
                         </ul>
                     </small>
                 </div>
@@ -205,7 +211,9 @@
             type: "GET",
             success: function(data) {
                 console.log("deployment going on" + data["value"]);
-                if (data["value"]) {
+                //document.getElementById("lock_msg").innerHTML = data["msg"]
+                $('#lock_msg').text(data["msg"]);
+                if (data["value"] == 'True') {
                     $("#appsvc-welcome-banner").css("display", "none");
                     $("#last-deployed-banner").css("display", "none");
                     $("#just-deployed-banner").css("display", "none");
