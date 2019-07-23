@@ -19,7 +19,7 @@ namespace Kudu.Core
     {
         private ITraceFactory _traceFactory;
         private static readonly string locksPath = "/home/site/locks";
-	    private const int lockTimeout = 1200; //in seconds
+	private const int lockTimeout = 1200; //in seconds
         private string defaultMsg = Resources.DeploymentLockOccMsg;
         private string Msg;
         public AllSafeLinuxLock(string path, ITraceFactory traceFactory)
