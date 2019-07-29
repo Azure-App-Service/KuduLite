@@ -50,74 +50,9 @@ namespace Kudu.Services.Editor
 
         protected override Task<IActionResult> CreateItemGetResponse(FileSystemInfoBase info, string localFilePath)
         {
-            // CORE TODO File() apparently has built in support for range requests and etags. From a cursory glance
-            // that renders bascially all of commented implementation belowthis obsolete. Will need checking to ensure proper behavior.
             var fileStream = GetFileReadStream(localFilePath);
             return Task.FromResult(
                 (IActionResult)File(fileStream, MediaTypeMap.GetMediaType(info.Extension).ToString(), info.LastWriteTime, CreateEntityTag(info)));
-
-            /*
-            // Get current etag
-            EntityTagHeaderValue currentEtag = CreateEntityTag(info);
-            DateTime lastModified = info.LastWriteTimeUtc;
-
-            // Check whether we have a range request (taking If-Range condition into account)
-            bool isRangeRequest = IsRangeRequest(currentEtag);
-
-            // Check whether we have a conditional If-None-Match request
-            // Unless it is a range request (see RFC2616 sec 14.35.2 Range Retrieval Requests)
-            if (!isRangeRequest && IsIfNoneMatchRequest(currentEtag))
-            {
-                Response.SetEntityTagHeader(currentEtag, lastModified);
-                return Task.FromResult((IActionResult)StatusCode(StatusCodes.Status304NotModified)));
-            }
-
-            // Generate file response
-            Stream fileStream = null;
-            try
-            {
-                fileStream = GetFileReadStream(localFilePath);
-                MediaTypeHeaderValue mediaType = MediaTypeMap.GetMediaType(info.Extension);
-                HttpResponseMessage successFileResponse = Request.CreateResponse(isRangeRequest ? HttpStatusCode.PartialContent : HttpStatusCode.OK);
-
-                if (isRangeRequest)
-                {
-                    successFileResponse.Content = new ByteRangeStreamContent(fileStream, Request.Headers.Range, mediaType, BufferSize);
-                }
-                else
-                {
-                    successFileResponse.Content = new StreamContent(fileStream, BufferSize);
-                    successFileResponse.Content.Headers.ContentType = mediaType;
-                }
-
-                // Set etag for the file
-                successFileResponse.SetEntityTagHeader(currentEtag, lastModified);
-                return Task.FromResult(successFileResponse);
-            }
-            catch (InvalidByteRangeException invalidByteRangeException)
-            {
-                // The range request had no overlap with the current extend of the resource so generate a 416 (Requested Range Not Satisfiable)
-                // including a Content-Range header with the current size.
-                Tracer.TraceError(invalidByteRangeException);
-                HttpResponseMessage invalidByteRangeResponse = Request.CreateErrorResponse(invalidByteRangeException);
-                if (fileStream != null)
-                {
-                    fileStream.Close();
-                }
-                return Task.FromResult(invalidByteRangeResponse);
-            }
-            catch (Exception ex)
-            {
-                // Could not read the file
-                Tracer.TraceError(ex);
-                HttpResponseMessage errorResponse = Request.CreateErrorResponse(HttpStatusCode.NotFound, ex);
-                if (fileStream != null)
-                {
-                    fileStream.Close();
-                }
-                return Task.FromResult(errorResponse);
-            }
-            */
         }
 
         protected override async Task<IActionResult> CreateItemPutResponse(FileSystemInfoBase info, string localFilePath, bool itemExists)
@@ -132,7 +67,6 @@ namespace Kudu.Services.Editor
                 EntityTagHeaderValue currentEtag = CreateEntityTag(info);
 
                 // Existing resources require an etag to be updated.
-                // CORE TODO Moved to Microsoft.Net.Http.Headers, double check semantics (null, empty string etc.)
                 if (requestHeaders.IfMatch == null)
                 {
                     return StatusCode(StatusCodes.Status412PreconditionFailed, Resources.VfsController_MissingIfMatch);

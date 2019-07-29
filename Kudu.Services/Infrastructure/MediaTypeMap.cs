@@ -56,6 +56,7 @@ namespace Kudu.Services.Infrastructure
             var dictionary = new ConcurrentDictionary<string, MediaTypeHeaderValue>(StringComparer.OrdinalIgnoreCase);
             dictionary.TryAdd(".js", MediaTypeHeaderValue.Parse("application/javascript"));
             dictionary.TryAdd(".json", MediaTypeHeaderValue.Parse("application/json"));
+            dictionary.TryAdd(".log", MediaTypeHeaderValue.Parse("text/plain"));
 
             // Add media type for markdown
             dictionary.TryAdd(".md", MediaTypeHeaderValue.Parse("text/plain"));
