@@ -22,20 +22,10 @@ namespace Kudu.Core.Helpers
             Dictionary<string, string> toBeUpdatedEnv = new Dictionary<string, string>();
             if (envKey == OryxBuildConstants.FunctionAppEnvVars.WorkerRuntimeSetting)
             {
-                HandleFunctionWorkerRuntime(toBeUpdatedEnv, envValue);
+                toBeUpdatedEnv.Add(SettingsKeys.DoBuildDuringDeployment, "true");
+                toBeUpdatedEnv.Add(OryxBuildConstants.EnableOryxBuild, "true");
             }
             return toBeUpdatedEnv;
-        }
-
-        private static void HandleFunctionWorkerRuntime(IDictionary<string, string> result, string workerRuntime)
-        {
-            if (workerRuntime == "python")
-            {
-                result.Add(SettingsKeys.DoBuildDuringDeployment, "true");
-                result.Add(OryxBuildConstants.EnableOryxBuild, "true");
-                result.Add(OryxBuildConstants.OryxEnvVars.FrameworkSetting, "PYTHON");
-                result.Add(OryxBuildConstants.OryxEnvVars.FrameworkVersionSetting, "3.6");
-            }
         }
     }
 }
