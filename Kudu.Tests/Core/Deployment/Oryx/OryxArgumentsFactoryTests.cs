@@ -6,6 +6,7 @@ using Xunit;
 
 namespace Kudu.Tests.Core.Deployment.Oryx
 {
+    [Collection("MockedEnvironmentVariablesCollection")]
     public class OryxArgumentsFactoryTests
     {
         [Fact]
@@ -140,7 +141,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
             {
                 IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
                 string command = args.GenerateOryxBuildCommand(deploymentContext);
-                Assert.Equal(@"oryx build outputpath -o outputpath -l python --language-version 3.6 -i buildtemppath -p packagedir=.python_packages\lib\python3.6\site-packages", command);
+                Assert.Equal(@"oryx build outputpath -o outputpath --platform python --platform-version 3.6 -i buildtemppath -p packagedir=.python_packages\lib\python3.6\site-packages", command);
             }
         }
     }
