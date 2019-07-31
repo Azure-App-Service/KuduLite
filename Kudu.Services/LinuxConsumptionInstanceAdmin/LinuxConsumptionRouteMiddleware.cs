@@ -86,12 +86,14 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             if (IsHomePageRoute(context.Request.Path) || IsFavIconRoute(context.Request.Path))
             {
                 context.Response.StatusCode = 200;
+                await context.Response.WriteAsync(
+                    "Please use Visual Studio Code or Azure Functions Core Tool to deploy your Azure Function Apps in Linux Consumption");
                 KuduEventGenerator.Log().ApiEvent(
                     ServerConfiguration.GetApplicationName(),
                     "LinuxConsumptionEndpoint",
                     context.Request.GetEncodedPathAndQuery(),
                     context.Request.Method,
-                    System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
+                    GetRequestId(context),
                     context.Response.StatusCode,
                     (DateTime.UtcNow - requestTime).Milliseconds,
                     context.Request.GetUserAgent());
@@ -107,7 +109,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                     "BlacklistedLinuxConsumptionEndpoint",
                     context.Request.GetEncodedPathAndQuery(),
                     context.Request.Method,
-                    System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
+                    GetRequestId(context),
                     context.Response.StatusCode,
                     (DateTime.UtcNow - requestTime).Milliseconds,
                     context.Request.GetUserAgent());
@@ -124,7 +126,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                     "UnauthenticatedLinuxConsumptionEndpoint",
                     context.Request.GetEncodedPathAndQuery(),
                     context.Request.Method,
-                    System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
+                    GetRequestId(context),
                     context.Response.StatusCode,
                     (DateTime.UtcNow - requestTime).Milliseconds,
                     context.Request.GetUserAgent());
@@ -142,7 +144,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                         "UnauthorizedLinuxConsumptionEndpoint",
                         context.Request.GetEncodedPathAndQuery(),
                         context.Request.Method,
-                        System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
+                        GetRequestId(context),
                         context.Response.StatusCode,
                         (DateTime.UtcNow - requestTime).Milliseconds,
                         context.Request.GetUserAgent());
@@ -151,6 +153,17 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             }
 
             await _next.Invoke(context);
+        }
+
+        private string GetRequestId(HttpContext context)
+        {
+            StringValues requestId;
+            context.Request.Headers.TryGetValue(Constants.ArrLogIdHeader, out requestId);
+            if (requestId == StringValues.Empty)
+            {
+                context.Request.Headers.TryGetValue(Constants.RequestIdHeader, out requestId);
+            }
+            return requestId == StringValues.Empty ? Guid.Empty.ToString() : requestId.ToString();
         }
 
         private bool IsRouteWhitelisted(PathString routePath)

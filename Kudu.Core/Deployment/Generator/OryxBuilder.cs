@@ -8,6 +8,7 @@ using Kudu.Core.Infrastructure;
 using Kudu.Core.Helpers;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Deployment.Oryx;
+using Kudu.Core.Tracing;
 
 namespace Kudu.Core.Deployment.Generator
 {
@@ -50,9 +51,17 @@ namespace Kudu.Core.Deployment.Generator
                 PreOryxBuild(context);
 
                 string buildCommand = args.GenerateOryxBuildCommand(context);
-                RunCommand(context, buildCommand, false, "Running oryx build...");
 
-                //
+                try
+                {
+                    RunCommand(context, buildCommand, false, "Running oryx build...");
+                    EmitKuduLog("OryxBuildStage='{0}' OryxBuildResult='{1}'", buildCommand, "SUCCEEDED");
+                } catch
+                {
+                    EmitKuduLog("OryxBuildStage='{0}' OryxBuildResult='{1}'", buildCommand, "FAILED");
+                    throw;
+                }
+
                 // Run express build setups if needed
                 if (args.Flags == BuildOptimizationsFlags.UseExpressBuild)
                 {
@@ -149,10 +158,12 @@ namespace Kudu.Core.Deployment.Generator
                     default:
                         throw new ArgumentException($"Received unknown file extension {artifactType.ToString()}");
                 }
+                EmitKuduLog("OryxBuildStage='Package Built Artifact {0}' OryxBuildResult='{1}'", file, "SUCCEEDED");
             }
             catch (Exception)
             {
                 context.GlobalLogger.LogError();
+                EmitKuduLog("OryxBuildStage='Package Built Artifact {0}' OryxBuildResult='{1}'", file, "FAILED");
                 throw;
             }
 
@@ -218,10 +229,12 @@ namespace Kudu.Core.Deployment.Generator
             try
             {
                 await blob.UploadFromFileAsync(filePath);
+                EmitKuduLog("OryxBuildStage='{0}' OryxBuildResult='{1}'", "Upload Built Artifact", "SUCCEEDED");
             } catch (StorageException se)
             {
                 context.Logger.Log($"Failed to upload because Azure Storage responds {se.RequestInformation.HttpStatusCode}.");
                 context.Logger.Log(se.Message);
+                EmitKuduLog("OryxBuildStage='{0}' OryxBuildResult='{1}'", "Upload Built Artifact", "FAILED");
                 throw new DeploymentFailedException(se);
             }
         }
@@ -239,17 +252,31 @@ namespace Kudu.Core.Deployment.Generator
                 {
                     await PostDeploymentHelper.RemoveAllWorkersAsync(webSiteHostName, sitename);
                 }, retries: 3, delayBeforeRetry: 2000);
+                EmitKuduLog("OryxBuildStage='Restart Function Host Worker {0}' OryxBuildResult='{1}'", sitename, "SUCCEEDED");
             }
             catch (ArgumentException ae)
             {
                 context.Logger.Log($"Reset all workers has malformed webSiteHostName or sitename {ae.Message}");
+                EmitKuduLog("OryxBuildStage='Restart Function Host Worker {0}' OryxBuildResult='{1}'", sitename, "FAILED");
                 throw new DeploymentFailedException(ae);
             }
             catch (HttpRequestException hre)
             {
                 context.Logger.Log($"Reset all workers endpoint responded with {hre.Message}");
+                EmitKuduLog("OryxBuildStage='Restart Function Host Worker {0}' OryxBuildResult='{1}'", sitename, "FAILED");
                 throw new DeploymentFailedException(hre);
             }
+        }
+
+        private void EmitKuduLog(string format, params string[] args)
+        {
+            KuduEventGenerator.Log().GenericEvent(
+                ServerConfiguration.GetApplicationName(),
+                string.Format(format, args),
+                Guid.Empty.ToString(),
+                string.Empty,
+                string.Empty,
+                string.Empty);
         }
     }
 }
