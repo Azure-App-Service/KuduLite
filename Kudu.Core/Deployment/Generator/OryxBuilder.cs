@@ -172,7 +172,7 @@ namespace Kudu.Core.Deployment.Generator
         private async Task SetupLinuxConsumptionFunctionAppDeployment(DeploymentContext context)
         {
             string sas = System.Environment.GetEnvironmentVariable(Constants.ScmRunFromPackage);
-            string builtFolder = context.RepositoryPath;
+            string builtFolder = context.OutputPath;
             string packageFolder = Environment.DeploymentsPath;
             string packageFileName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.squashfs";
 
