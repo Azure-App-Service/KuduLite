@@ -145,7 +145,7 @@ namespace Kudu
         public const string Extensions = "extensions";
         public const string SitePackages = "SitePackages";
         public const string PackageNameTxt = "packagename.txt";
-        public const string KuduBuild = "1.0.0.6";
+        public const string KuduBuild = "1.0.0.7";
 
         public const string WebSSHReverseProxyPortEnvVar = "KUDU_WEBSSH_PORT";
         public const string WebSSHReverseProxyDefaultPort = "3000";

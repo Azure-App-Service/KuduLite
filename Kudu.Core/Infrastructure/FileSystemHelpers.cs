@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Abstractions;
@@ -373,6 +374,28 @@ namespace Kudu.Core.Infrastructure
             {
                 if (!ignoreErrors) throw;
             }
+        }
+
+        public static void CreateRelativeSymlinks(string source, string destination, TimeSpan timeout)
+        {
+            string directory = FileSystemHelpers.GetDirectoryName(source);
+            string cmd = String.Format("cd {0}; timeout {1}s  ln -s {2} {3}", directory, timeout.TotalSeconds, destination, source);
+            var escapedArgs = cmd.Replace("\"", "\\\"");
+
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    FileName = "/bin/bash",
+                    Arguments = $"-c \"{escapedArgs}\""
+                }
+            };
+            process.Start();
+            process.WaitForExit();
         }
 
         private static void DeleteFileSystemInfo(FileSystemInfoBase fileSystemInfo, bool ignoreErrors)

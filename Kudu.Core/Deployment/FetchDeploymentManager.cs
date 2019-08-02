@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
@@ -125,7 +126,6 @@ namespace Kudu.Core.Deployment
                     }
 
                     await PerformDeployment(deployInfo);
-                    Console.WriteLine("\n\n\n\n Perform deployment Over\n\n\n");
                     return FetchDeploymentRequestResult.RanSynchronously;
                 }, "Performing continuous deployment", TimeSpan.Zero);
             }
