@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.IO;
 
 namespace Kudu.Core.Deployment.Oryx
@@ -13,12 +11,12 @@ namespace Kudu.Core.Deployment.Oryx
             string packageNameFile = Path.Combine(root, "packagename.txt");
             string packagePathFile = Path.Combine(root, "packagepath.txt");
 
-            //
-            // Generate packagename.txt and packagepath
-            string packagename = "node_modules.zip:/node_modules";
-
             CreateSitePackagesDirectory(root);
 
+            // For App service express mode
+            // Generate packagename.txt and packagepath
+            string packagename = "node_modules.zip:/node_modules";
+          
             File.WriteAllText(packageNameFile, packagename);
             File.WriteAllText(packagePathFile, outputPath);
         }

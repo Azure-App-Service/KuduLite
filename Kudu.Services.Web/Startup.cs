@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http.Formatting;
 using System.Reflection;
 using AspNetCore.RouteAnalyzer;
+using Kudu.Contracts;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Scan;
 using Kudu.Contracts.Settings;
@@ -28,6 +29,7 @@ using Kudu.Services.Scan;
 using Kudu.Services.TunnelServer;
 using Kudu.Services.Web.Infrastructure;
 using Kudu.Services.Web.Tracing;
+using Kudu.Services.LinuxConsumptionInstanceAdmin;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -94,7 +96,6 @@ namespace Kudu.Services.Web
                 .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices()
                 .AddApiExplorer();
 
-
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new Info {Title = "Kudu API Docs"});
@@ -119,6 +120,8 @@ namespace Kudu.Services.Web
                 });
 
             services.AddSingleton<IHttpContextAccessor>(new HttpContextAccessor());
+            services.AddSingleton<ILinuxConsumptionEnvironment, LinuxConsumptionEnvironment>();
+            services.AddSingleton<ILinuxConsumptionInstanceManager, LinuxConsumptionInstanceManager>();
 
             KuduWebUtil.EnsureHomeEnvironmentVariable();
 
@@ -136,6 +139,11 @@ namespace Kudu.Services.Web
 
             // Add various folders that never change to the process path. All child processes will inherit this
             KuduWebUtil.PrependFoldersToPath(environment);
+
+            // Add middleware for Linux Consumption authentication and authorization
+            // when KuduLIte is running in service fabric mesh
+            services.AddLinuxConsumptionAuthentication();
+            services.AddLinuxConsumptionAuthorization(environment);
 
             // General
             services.AddSingleton<IServerConfiguration>(ServerConfiguration);
@@ -310,6 +318,10 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
 
+            if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
+            {
+                app.UseLinuxConsumptionRouteMiddleware();
+            }
 
             var webSocketOptions = new WebSocketOptions()
             {
@@ -347,7 +359,7 @@ namespace Kudu.Services.Web
 
             app.UseStaticFiles();
 
-            ProxyRequestIfRelativeUrlMatches(@"/webssh", "http", "127.0.0.1", "3000", app);
+            ProxyRequestIfRelativeUrlMatches(@"/webssh", "http", "127.0.0.1", KuduWebUtil.GetWebSSHProxyPort() , app);
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 
@@ -448,8 +460,19 @@ namespace Kudu.Services.Web
                 routes.MapRoute("zip-push-deploy", "api/zipdeploy",
                     new {controller = "PushDeployment", action = "ZipPushDeploy"},
                     new {verb = new HttpMethodRouteConstraint("POST")});
+                routes.MapRoute("zip-push-deploy-url", "api/zipdeploy",
+                    new {controller = "PushDeployment", action = "ZipPushDeployViaUrl"},
+                    new {verb = new HttpMethodRouteConstraint("PUT")});
                 routes.MapRoute("zip-war-deploy", "api/wardeploy",
                     new {controller = "PushDeployment", action = "WarPushDeploy"},
+                    new {verb = new HttpMethodRouteConstraint("POST")});
+
+                // Support Linux Consumption Function app on Service Fabric Mesh
+                routes.MapRoute("admin-instance-info", "admin/instance/info",
+                    new {controller = "LinuxConsumptionInstanceAdmin", action = "Info"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapRoute("admin-instance-assign", "admin/instance/assign",
+                    new {controller = "LinuxConsumptionInstanceAdmin", action = "AssignAsync" },
                     new {verb = new HttpMethodRouteConstraint("POST")});
 
                 // Live Command Line

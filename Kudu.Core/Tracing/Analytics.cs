@@ -23,7 +23,7 @@ namespace Kudu.Core.Tracing
 
         public void ProjectDeployed(string projectType, string result, string error, long deploymentDurationInMilliseconds, string siteMode, string vsProjectId = "")
         {
-            KuduEventSource.Log.ProjectDeployed(
+            KuduEventGenerator.Log().ProjectDeployed(
                 _serverConfiguration.ApplicationName,
                 NullToEmptyString(projectType),
                 NullToEmptyString(result),
@@ -36,7 +36,7 @@ namespace Kudu.Core.Tracing
 
         public void JobStarted(string jobName, string scriptExtension, string jobType, string siteMode, string error, string trigger)
         {
-            KuduEventSource.Log.WebJobStarted(
+            KuduEventGenerator.Log().WebJobStarted(
                 _serverConfiguration.ApplicationName,
                 NullToEmptyString(jobName),
                 NullToEmptyString(scriptExtension),
@@ -48,7 +48,7 @@ namespace Kudu.Core.Tracing
 
         public void JobEvent(string jobName, string message, string jobType, string error)
         {
-            KuduEventSource.Log.WebJobEvent(
+            KuduEventGenerator.Log().WebJobEvent(
                 _serverConfiguration.ApplicationName,
                 NullToEmptyString(jobName),
                 NullToEmptyString(message),
@@ -66,7 +66,7 @@ namespace Kudu.Core.Tracing
                     return;
                 }
 
-                KuduEventSource.Log.KuduException(
+                KuduEventGenerator.Log().KuduException(
                     _serverConfiguration.ApplicationName,
                     string.Empty,
                     string.Empty,
@@ -86,7 +86,7 @@ namespace Kudu.Core.Tracing
                     return;
                 }
 
-                KuduEventSource.Log.KuduException(
+                KuduEventGenerator.Log().KuduException(
                     _serverConfiguration.ApplicationName,
                     NullToEmptyString(method),
                     NullToEmptyString(path),
@@ -106,7 +106,7 @@ namespace Kudu.Core.Tracing
                 return;
             }
 
-            KuduEventSource.Log.DeprecatedApiUsed(
+            KuduEventGenerator.Log().DeprecatedApiUsed(
                 _serverConfiguration.ApplicationName,
                 NullToEmptyString(route),
                 NullToEmptyString(userAgent),
@@ -118,7 +118,7 @@ namespace Kudu.Core.Tracing
 
         public void SiteExtensionEvent(string method, string path, string result, string deploymentDurationInMilliseconds, string message)
         {
-            KuduEventSource.Log.KuduSiteExtensionEvent(
+            KuduEventGenerator.Log().KuduSiteExtensionEvent(
                 _serverConfiguration.ApplicationName,
                 NullToEmptyString(method),
                 NullToEmptyString(path),

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Kudu.Contracts.Tracing;
+using Kudu.Core.Deployment.Oryx;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
@@ -52,13 +53,14 @@ namespace Kudu.Core.Deployment
             return false;
         }
         
-        public static void PurgeZipsIfNecessary(string sitePackagesPath, ITracer tracer, int totalAllowedZips)
+        public static void PurgeBuildArtifactsIfNecessary(string sitePackagesPath, BuildArtifactType fileExtension, ITracer tracer, int totalAllowedFiles)
         {
-            IEnumerable<string> zipFiles = FileSystemHelpers.GetFiles(sitePackagesPath, "*.zip");
-            if (zipFiles.Count() > totalAllowedZips)
+            string extension = fileExtension.ToString().ToLowerInvariant();
+            IEnumerable<string> fileNames = FileSystemHelpers.GetFiles(sitePackagesPath, $"*.{extension}");
+            if (fileNames.Count() > totalAllowedFiles)
             {
                 // Order the files in descending order of the modified date and remove the last (N - allowed zip files).
-                var fileNamesToDelete = zipFiles.OrderByDescending(fileName => FileSystemHelpers.GetLastWriteTimeUtc(fileName)).Skip(totalAllowedZips);
+                var fileNamesToDelete = fileNames.OrderByDescending(fileName => FileSystemHelpers.GetLastWriteTimeUtc(fileName)).Skip(totalAllowedFiles);
                 foreach (var fileName in fileNamesToDelete)
                 {
                     using (tracer.Step("Deleting outdated zip file {0}", fileName))

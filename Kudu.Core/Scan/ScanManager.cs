@@ -183,7 +183,6 @@ namespace Kudu.Core.Scan
                         string tempScanFilePath = GetTempScanFilePath(mainScanDirPath);
                         tempScanFilePath = Path.Combine(mainScanDirPath, Constants.TempScanFile);
                         FileSystemHelpers.CreateFile(tempScanFilePath).Close();
-
                         UpdateScanStatus(folderPath, ScanStatus.Starting,id);
                     }
                     else

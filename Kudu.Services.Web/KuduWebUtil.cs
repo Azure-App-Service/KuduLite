@@ -14,6 +14,8 @@ using Kudu.Core.Infrastructure;
 using Kudu.Core.Settings;
 using Kudu.Core.Tracing;
 using Kudu.Services.Infrastructure;
+using Kudu.Services.Infrastructure.Authorization;
+using Kudu.Services.Infrastructure.Authentication;
 using Kudu.Services.Web.Tracing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -21,6 +23,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.Authorization;
 using Environment = Kudu.Core.Environment;
 
 namespace Kudu.Services.Web
@@ -210,11 +213,20 @@ namespace Kudu.Services.Web
             var gitPostReceiveHookFile = Path.Combine(repositoryPath, ".git", "hooks", "post-receive");
             if (FileSystemHelpers.FileExists(gitPostReceiveHookFile))
             {
-                var fileText = "";
-                if ((fileText = FileSystemHelpers.ReadAllText(gitPostReceiveHookFile)).Contains("/usr/bin/mono"))
+                var fileText = FileSystemHelpers.ReadAllText(gitPostReceiveHookFile);
+                var isRunningOnAzure = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID") != null;
+                if (fileText.Contains("/usr/bin/mono"))
                 {
-                    FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("/usr/bin/mono", "dotnet"));
+                    if(isRunningOnAzure)
+                    {
+                        FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("/usr/bin/mono", "benv dotnet=2.2 dotnet"));
+                    }
                 }
+                else if(!fileText.Contains("benv") && fileText.Contains("dotnet") && isRunningOnAzure)
+                {
+                    FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("dotnet", "benv dotnet=2.2 dotnet"));
+                }
+                
             }
 
             if (FileSystemHelpers.DirectoryExists(Path.Combine(environment.RootPath, ".mono"))
@@ -508,6 +520,36 @@ namespace Kudu.Services.Web
         internal static string GetSettingsPath(IEnvironment environment)
         {
             return Path.Combine(environment.DeploymentsPath, Constants.DeploySettingsPath);
+        }
+
+        internal static IServiceCollection AddLinuxConsumptionAuthentication(this IServiceCollection services)
+        {
+            services.AddAuthentication()
+                .AddArmToken();
+
+            return services;
+        }
+
+        /// <summary>
+        /// In Linux consumption, we are running the KuduLite instance in a Service Fabric Mesh container.
+        /// We want to introduce AdminAuthLevel policy to restrict instance admin endpoint access.
+        /// </summary>
+        /// <param name="services">Dependency injection to application service</param>
+        /// <returns>Service</returns>
+        internal static IServiceCollection AddLinuxConsumptionAuthorization(this IServiceCollection services, IEnvironment environment)
+        {
+            services.AddAuthorization(o =>
+            {
+                o.AddInstanceAdminPolicies(environment);
+            });
+
+            services.AddSingleton<IAuthorizationHandler, AuthLevelAuthorizationHandler>();
+            return services;
+        }
+
+        internal static string GetWebSSHProxyPort()
+        {
+            return System.Environment.GetEnvironmentVariable(Constants.WebSiteSwapSlotName) ?? Constants.WebSSHReverseProxyDefaultPort;
         }
     }
 }

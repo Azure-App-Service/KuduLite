@@ -696,7 +696,7 @@ namespace Kudu.Core.Deployment
                         
                         if (_settings.RunFromLocalZip() && deploymentInfo is ZipDeploymentInfo)
                         {
-                            await PostDeploymentHelper.UpdateSiteVersion(deploymentInfo as ZipDeploymentInfo, _environment, logger);
+                            await PostDeploymentHelper.UpdatePackageName(deploymentInfo as ZipDeploymentInfo, _environment, logger);
                         }
 
                         FinishDeployment(id, deployStep);

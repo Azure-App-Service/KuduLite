@@ -33,7 +33,7 @@
 </script>
 
 @{
-    var workerIdHash = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
+    var workerIdHash = System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId);
     var workerIdShortHash = workerIdHash?.Substring(0, 12);
     const string version = Constants.KuduBuild;
     var showLearningBanner = !deploymentManager.GetResults().Any();
@@ -211,7 +211,6 @@
             type: "GET",
             success: function(data) {
                 console.log("deployment going on" + data["value"]);
-
                 $('#lock_msg').text(data["msg"]);
                 if (data["value"] == 'True') {
                     $("#appsvc-welcome-banner").css("display", "none");

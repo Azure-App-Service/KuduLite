@@ -8,6 +8,7 @@ using Kudu.Contracts.Tracing;
 using Kudu.Contracts.Settings;
 using Kudu.Core;
 using Kudu.Core.Deployment;
+using Kudu.Core.Deployment.Oryx;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Tracing;
 using Kudu.Services.Infrastructure;
@@ -15,6 +16,8 @@ using Kudu.Core.SourceControl;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Newtonsoft.Json.Linq;
+using System.Net.Http;
 
 namespace Kudu.Services.Deployment
 {
@@ -71,7 +74,8 @@ namespace Kudu.Services.Deployment
                     DoFullBuildByDefault = false,
                     Author = author,
                     AuthorEmail = authorEmail,
-                    Message = message
+                    Message = message,
+                    ZipURL = null
                 };
 
                 if (_settings.RunFromLocalZip())
@@ -88,6 +92,41 @@ namespace Kudu.Services.Deployment
 
                 ;
 
+                return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
+            }
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> ZipPushDeployViaUrl(
+            [FromBody] JObject requestJson,
+            [FromQuery] bool isAsync = false,
+            [FromQuery] string author = null,
+            [FromQuery] string authorEmail = null,
+            [FromQuery] string deployer = DefaultDeployer,
+            [FromQuery] string message = DefaultMessage)
+        {
+            using (_tracer.Step("ZipPushDeployViaUrl"))
+            {
+                string zipUrl = GetZipURLFromJSON(requestJson);
+
+                var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
+                {
+                    AllowDeploymentWhileScmDisabled = true,
+                    Deployer = deployer,
+                    IsContinuous = false,
+                    AllowDeferredDeployment = false,
+                    IsReusable = false,
+                    TargetChangeset =
+                        DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed zip file"),
+                    CommitId = null,
+                    RepositoryType = RepositoryType.None,
+                    Fetch = LocalZipHandler,
+                    DoFullBuildByDefault = false,
+                    Author = author,
+                    AuthorEmail = authorEmail,
+                    Message = message,
+                    ZipURL = zipUrl,
+                };
                 return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
             }
         }
@@ -130,13 +169,39 @@ namespace Kudu.Services.Deployment
                     DoFullBuildByDefault = false,
                     Author = author,
                     AuthorEmail = authorEmail,
-                    Message = message
+                    Message = message,
+                    ZipURL = null
                 };
-
                 return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
             }
         }
 
+        private string GetZipURLFromJSON(JObject requestObject)
+        {
+            using (_tracer.Step("Reading the zip URL from the request JSON"))
+            {
+                try
+                {
+                    string packageUri = requestObject.Value<string>("packageUri");
+                    if (string.IsNullOrEmpty(packageUri))
+                    {
+                        throw new ArgumentException("Request body does not contain packageUri");
+                    }
+
+                    Uri zipUri = null;
+                    if (!Uri.TryCreate(packageUri, UriKind.Absolute, out zipUri))
+                    {
+                        throw new ArgumentException("Malformed packageUri");
+                    }
+                    return packageUri;
+                }
+                catch (Exception ex)
+                {
+                    _tracer.TraceError(ex, "Error reading the URL from the JSON {0}", requestObject.ToString());
+                    throw;
+                }
+            }
+        }
 
         private async Task<IActionResult> PushDeployAsync(ZipDeploymentInfo deploymentInfo, bool isAsync,
             HttpContext context)
@@ -150,8 +215,8 @@ namespace Kudu.Services.Deployment
             {
                 using (_tracer.Step("Writing zip file to {0}", zipFilePath))
                 {
-                    if (context.Request.ContentType.Contains("multipart/form-data",
-                        StringComparison.OrdinalIgnoreCase))
+                    if (!string.IsNullOrEmpty(context.Request.ContentType) &&
+                        context.Request.ContentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                     {
                         FormValueProvider formModel;
                         using (_tracer.Step("Writing zip file to {0}", zipFilePath))
@@ -159,6 +224,34 @@ namespace Kudu.Services.Deployment
                             using (var file = System.IO.File.Create(zipFilePath))
                             {
                                 formModel = await Request.StreamFile(file);
+                            }
+                        }
+                    }
+                    else if (deploymentInfo.ZipURL != null)
+                    {
+                        using (_tracer.Step("Writing zip file from packageUri to {0}", zipFilePath))
+                        {
+                            using (var httpClient = new HttpClient())
+                            using (var fileStream = new FileStream(zipFilePath,
+                                FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 4096, useAsync: true))
+                            {
+                                var zipUrlRequest = new HttpRequestMessage(HttpMethod.Get, deploymentInfo.ZipURL);
+                                var zipUrlResponse = await httpClient.SendAsync(zipUrlRequest);
+
+                                try
+                                {
+                                    zipUrlResponse.EnsureSuccessStatusCode();
+                                }
+                                catch (HttpRequestException hre)
+                                {
+                                    _tracer.TraceError(hre, "Failed to get file from packageUri {0}", deploymentInfo.ZipURL);
+                                    throw;
+                                }
+
+                                using (var content = await zipUrlResponse.Content.ReadAsStreamAsync())
+                                {
+                                    await content.CopyToAsync(fileStream);
+                                }
                             }
                         }
                     }
@@ -350,8 +443,8 @@ namespace Kudu.Services.Deployment
                 }
             }
 
-            DeploymentHelper.PurgeZipsIfNecessary(_environment.SitePackagesPath, tracer,
-                _settings.GetMaxZipPackageCount());
+            DeploymentHelper.PurgeBuildArtifactsIfNecessary(_environment.SitePackagesPath, BuildArtifactType.Zip,
+                tracer, _settings.GetMaxZipPackageCount());
         }
 
         private void DeleteFilesAndDirsExcept(string fileToKeep, string dirToKeep, ITracer tracer)

@@ -119,6 +119,8 @@ namespace Kudu
         public const string SiteAuthEncryptionKey = "WEBSITE_AUTH_ENCRYPTION_KEY";
         public const string HttpHost = "HTTP_HOST";
         public const string WebSiteSwapSlotName = "WEBSITE_SWAP_SLOTNAME";
+        public const string AzureWebsiteInstanceId = "WEBSITE_INSTANCE_ID";
+        public const string ContainerName = "CONTAINER_NAME";
 
         public const string Function = "function";
         public const string Functions = "functions";
@@ -130,6 +132,7 @@ namespace Kudu
         public const string FunctionsPortal = "FunctionsPortal";
         public const string FunctionKeyNewFormat = "~0.7";
         public const string FunctionRunTimeVersion = "FUNCTIONS_EXTENSION_VERSION";
+        public const string ScmRunFromPackage = "SCM_RUN_FROM_PACKAGE";
         public const string WebSiteSku = "WEBSITE_SKU";
         public const string WebSiteElasticScaleEnabled = "WEBSITE_ELASTIC_SCALING_ENABLED";
         public const string DynamicSku = "Dynamic";
@@ -141,8 +144,14 @@ namespace Kudu
         public const string DurableTask = "durableTask";
         public const string Extensions = "extensions";
         public const string SitePackages = "SitePackages";
-        public const string SiteVersionTxt = "siteversion.txt";
         public const string PackageNameTxt = "packagename.txt";
         public const string KuduBuild = "1.0.0.6";
+
+        public const string WebSSHReverseProxyPortEnvVar = "KUDU_WEBSSH_PORT";
+        public const string WebSSHReverseProxyDefaultPort = "3000";
+
+        public const string LinuxLogEventStreamName = "MS_KUDU_LOGS";
+        public const string WebSiteHomeStampName = "WEBSITE_HOME_STAMPNAME";
+        public const string WebSiteStampDeploymentId = "WEBSITE_STAMP_DEPLOYMENT_ID";
     }
 }
