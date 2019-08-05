@@ -30,7 +30,7 @@ namespace Kudu.Core.Scan
             _scanLock = (AllSafeLinuxLock) namedLocks["deployment"];
         }
 
-        private static void UpdateScanStatus(String folderPath,ScanStatus status)
+        private static void UpdateScanStatus(String folderPath,ScanStatus status,String Id)
         {
             String filePath = Path.Combine(folderPath, Constants.ScanStatusFile);
             ScanStatusResult obj = ReadScanStatusFile("", "", Constants.ScanStatusFile, folderPath);
@@ -40,7 +40,11 @@ namespace Kudu.Core.Scan
             if(obj == null || obj.Id == null)
             {
                 obj = new ScanStatusResult();
-                obj.Id = DateTime.UtcNow.ToString(DATE_TIME_FORMAT);
+                if(Id == null)
+                {
+                    Id = DateTime.UtcNow.ToString(DATE_TIME_FORMAT); 
+                }
+                obj.Id = Id;
             }
             
             //Update status of the scan
@@ -180,7 +184,7 @@ namespace Kudu.Core.Scan
                         tempScanFilePath = Path.Combine(mainScanDirPath, Constants.TempScanFile);
                         FileSystemHelpers.CreateFile(tempScanFilePath).Close();
 
-                        UpdateScanStatus(folderPath, ScanStatus.Starting);
+                        UpdateScanStatus(folderPath, ScanStatus.Starting,id);
                     }
                     else
                     {
@@ -454,7 +458,7 @@ namespace Kudu.Core.Scan
                     String logFilePath = Path.Combine(folderPath, Constants.ScanLogFile);
                     _tracer.Trace("Starting Scan {0}, ScanCommand: {1}, LogFile: {2}", scanId, Constants.ScanCommand, logFilePath);
 
-                    UpdateScanStatus(folderPath, ScanStatus.Executing);
+                    UpdateScanStatus(folderPath, ScanStatus.Executing, null);
 
                     var escapedArgs = Constants.ScanCommand + " " + logFilePath;
                     Process _executingProcess = new Process()
@@ -488,14 +492,14 @@ namespace Kudu.Core.Scan
                                 _tracer.Trace("Scan {0} has timed out at {1}", scanId, DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ"));
 
                                 //Update status file
-                                UpdateScanStatus(folderPath, ScanStatus.TimeoutFailure);
+                                UpdateScanStatus(folderPath, ScanStatus.TimeoutFailure, null);
                             }
                             else
                             {
                                 _tracer.Trace("Scan {0} has been force stopped at {1}", scanId, DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ"));
 
                                 //Update status file
-                                UpdateScanStatus(folderPath, ScanStatus.ForceStopped);
+                                UpdateScanStatus(folderPath, ScanStatus.ForceStopped, null);
                             }
 
                             break;
@@ -511,12 +515,12 @@ namespace Kudu.Core.Scan
                         //Check if process terminated with errors
                         if (_executingProcess.ExitCode != 0)
                         {
-                            UpdateScanStatus(folderPath, ScanStatus.Failed);
+                            UpdateScanStatus(folderPath, ScanStatus.Failed, null);
                             _tracer.Trace("Scan {0} has terminated with exit code {1}. More info found in {2}", scanId, _executingProcess.ExitCode, logFilePath);
                         }
                         else
                         {
-                            UpdateScanStatus(folderPath, ScanStatus.Success);
+                            UpdateScanStatus(folderPath, ScanStatus.Success, null);
                             _tracer.Trace("Scan {0} is Successful", scanId);
                         }
                     }
