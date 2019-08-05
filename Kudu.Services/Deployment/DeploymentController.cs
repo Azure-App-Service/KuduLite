@@ -106,7 +106,13 @@ namespace Kudu.Services.Deployment
         [HttpGet]
         public IActionResult IsDeploying()
         {
-            return Json(new Dictionary<string, string>() { { "value", _deploymentLock.IsHeld.ToString() }, { "msg", _deploymentLock.GetLockMsg() } });
+            string msg = "";
+            if (_deploymentLock.IsHeld)
+            {
+                msg = _deploymentLock.GetLockMsg();
+            }
+
+            return Json(new Dictionary<string, string>() { { "value", _deploymentLock.IsHeld.ToString() }, { "msg", msg } });
         }
         
         
