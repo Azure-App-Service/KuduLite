@@ -14,7 +14,7 @@ namespace Kudu
         public static string ScanDir = "/home/site/wwwroot";
         public static string ScriptPath = "/custom_scripts/daily_scan_script.sh";
         public static string ScanCommand = ScriptPath+" "+ScanDir;
-        public static string ScanTimeOutMillSec = "500000";
+        public static string ScanTimeOutMillSec = "1200000";    // 20 mins
         public static string ScanManifest = "modified_times.json";
         public static string AggregrateScanResults = "aggregrate_scans.log";
         public static string TempScanFile = "temp_scan_monitor";

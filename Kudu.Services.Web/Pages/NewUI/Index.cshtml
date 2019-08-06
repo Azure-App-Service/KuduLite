@@ -211,7 +211,7 @@
             type: "GET",
             success: function(data) {
                 console.log("deployment going on" + data["value"]);
-                //document.getElementById("lock_msg").innerHTML = data["msg"]
+
                 $('#lock_msg').text(data["msg"]);
                 if (data["value"] == 'True') {
                     $("#appsvc-welcome-banner").css("display", "none");
