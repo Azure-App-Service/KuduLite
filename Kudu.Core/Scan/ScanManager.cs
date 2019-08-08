@@ -153,7 +153,7 @@ namespace Kudu.Core.Scan
 
         }
 
-        public async Task<ScanRequestResult> StartScan(String timeout,String mainScanDirPath,String id, String host)
+        public async Task<ScanRequestResult> StartScan(String timeout,String mainScanDirPath,String id, String host, Boolean checkModified)
         {
             using (_tracer.Step("Start scan in the background"))
             {
@@ -169,6 +169,18 @@ namespace Kudu.Core.Scan
                 //Create unique scan folder and scan status file
                 _scanLock.LockOperation(() =>
                 {
+                    //This means user wants to start a scan without checking for file changes after previous scan
+                    //Delete the manifest file containing last updated timestamps of files
+                    //This will force a scan to start irrespective of changes made to files
+                    if (!checkModified)
+                    {
+                        String manifestPath = Path.Combine(mainScanDirPath, Constants.ScanManifest);
+                        if (FileSystemHelpers.FileExists(manifestPath))
+                        {
+                            FileSystemHelpers.DeleteFileSafe(manifestPath);
+                        }
+                    }
+
                     //Check if files are modified
                     if (CheckModifications(mainScanDirPath))
                     {

@@ -32,7 +32,7 @@ namespace Kudu.Services.Scan
         }
 
         [HttpGet]
-        public IActionResult ExecuteScan([FromQuery] string timeout)
+        public IActionResult ExecuteScan([FromQuery] string timeout,[FromQuery] Boolean checkModified = true)
         {
 
             if (timeout == null || timeout.Length == 0)
@@ -40,9 +40,14 @@ namespace Kudu.Services.Scan
                 timeout = Constants.ScanTimeOutMillSec;
             }
 
+            if(checkModified == null)
+            {
+                checkModified = true;
+            }
+
             //Start async scanning
             String id = DateTime.UtcNow.ToString("yyy-MM-dd_HH-mm-ssZ");
-            var result = _scanManager.StartScan(timeout, mainScanDirPath, id, Request.Headers["Host"]);
+            var result = _scanManager.StartScan(timeout, mainScanDirPath, id, Request.Headers["Host"],checkModified);
             ScanUrl obj;
 
             //Check if files were modified after last scan
