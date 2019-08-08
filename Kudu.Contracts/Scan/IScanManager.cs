@@ -10,7 +10,8 @@ namespace Kudu.Contracts.Scan
             String timeout,
             String mainScanDirPath,
             String id,
-            String host);
+            String host,
+            Boolean checkModified);
 
         Task<ScanStatusResult> GetScanStatus(
             String scanId,
