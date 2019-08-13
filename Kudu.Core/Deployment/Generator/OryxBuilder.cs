@@ -183,6 +183,9 @@ namespace Kudu.Core.Deployment.Generator
             // Upload from DeploymentsPath
             await UploadLinuxConsumptionFunctionAppBuiltContent(context, sas, filePath);
 
+            // Clean up local built content
+            FileSystemHelpers.DeleteDirectoryContentsSafe(context.OutputPath);
+
             // Remove Linux consumption plan functionapp workers for the site
             await RemoveLinuxConsumptionFunctionAppWorkers(context);
         }
