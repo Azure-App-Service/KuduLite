@@ -103,7 +103,7 @@ namespace Kudu.Services.Performance
 
             FileSystemHelpers.EnsureDirectory(mountedLogFilesDir);
 
-            if (shouldMonitiorMountedLogsPath(mountedLogFilesDir))
+            if (ShouldMonitiorMountedLogsPath(mountedLogFilesDir))
             {
                 path = mountedLogFilesDir;
             }
@@ -127,33 +127,43 @@ namespace Kudu.Services.Performance
             {
                 NotifyClientWithLineBreak("Starting Log Tail -n 10 of existing logs ----", context);
 
-                foreach (string log in _logFiles.Keys)
+                try
                 {
-                    var reader = new StreamReader(log, Encoding.ASCII);
 
-                    var vfsPath = GetFileVfsPath(log);
 
-                    var printLine = log + " " + (!string.IsNullOrEmpty(vfsPath) ? " (" + vfsPath + ")" : "");
-
-                    NotifyClientWithLineBreak(String.Format(
-                                CultureInfo.CurrentCulture,
-                                printLine,
-                                DateTime.UtcNow.ToString("s"),
-                                System.Environment.NewLine),context);
-
-                    foreach (string logLine in Tail(reader, 10))
+                    foreach (string log in _logFiles.Keys)
                     {
-                        await context.Response.WriteAsync(logLine);
+
+                        var reader = new StreamReader(log, Encoding.ASCII);
+
+                        var vfsPath = GetFileVfsPath(log);
+
+                        var printLine = log + " " + (!string.IsNullOrEmpty(vfsPath) ? " (" + vfsPath + ")" : "");
+
+                        NotifyClientWithLineBreak(String.Format(
+                                    CultureInfo.CurrentCulture,
+                                    printLine,
+                                    DateTime.UtcNow.ToString("s"),
+                                    System.Environment.NewLine), context);
+
+                        foreach (string logLine in Tail(reader, 10))
+                        {
+                            await context.Response.WriteAsync(logLine);
+                            await context.Response.WriteAsync(System.Environment.NewLine);
+                        }
                         await context.Response.WriteAsync(System.Environment.NewLine);
                     }
-                    await context.Response.WriteAsync(System.Environment.NewLine);
                 }
+                catch (Exception)
+                {
+                    // best effort to get tail logs
+                }
+
                 NotifyClientWithLineBreak("Ending Log Tail of existing logs ---", context);
             }
             else
             {
                 _tracer.TraceError("LogStream: No pervious logfiles");
-                Console.WriteLine("LogStream: No pervious logfiles");
             }
 
             NotifyClientWithLineBreak("Starting Live Log Stream ---", context);
@@ -239,7 +249,7 @@ namespace Kudu.Services.Performance
         /// or the mounted fs logs dir, if kudu
         /// </summary>
         /// <returns></returns>
-        private static bool shouldMonitiorMountedLogsPath(string mountedDirPath)
+        private static bool ShouldMonitiorMountedLogsPath(string mountedDirPath)
         {
             int count = 0;
             string dateToday = DateTime.Now.ToString("yyyy_MM_dd");
