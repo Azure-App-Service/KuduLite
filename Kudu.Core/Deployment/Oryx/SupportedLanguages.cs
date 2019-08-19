@@ -9,7 +9,8 @@ namespace Kudu.Core.Deployment.Oryx
         None,
         NodeJs,
         Python,
-        DotNETCore
+        DotNETCore,
+        PHP
     }
 
     public class SupportedFrameworks
@@ -27,6 +28,10 @@ namespace Kudu.Core.Deployment.Oryx
             else if (value.StartsWith("DOTNETCORE", StringComparison.OrdinalIgnoreCase))
             {
                 return Framework.DotNETCore;
+            }
+            else if (value.StartsWith("PHP", StringComparison.OrdinalIgnoreCase))
+            {
+                return Framework.PHP;
             }
 
             return Framework.None;

@@ -42,7 +42,7 @@ namespace Kudu.Services.Deployment
         private readonly IDeploymentStatusManager _status;
         private readonly IDeploymentSettingsManager _settings;
         private readonly ITracer _tracer;
-        private readonly IOperationLock _deploymentLock;
+        private readonly AllSafeLinuxLock _deploymentLock;
         private readonly IRepositoryFactory _repositoryFactory;
 
         public DeploymentController(ITracer tracer,
@@ -61,7 +61,7 @@ namespace Kudu.Services.Deployment
             _deploymentManager = deploymentManager;
             _status = status;
             _settings = settings;
-            _deploymentLock = namedLocks["deployment"];
+            _deploymentLock = (AllSafeLinuxLock) namedLocks["deployment"];
             _repositoryFactory = repositoryFactory;
         }
 
@@ -106,7 +106,13 @@ namespace Kudu.Services.Deployment
         [HttpGet]
         public IActionResult IsDeploying()
         {
-            return Json(new Dictionary<string,bool>(){{"value" , _deploymentLock.IsHeld}});
+            string msg = "";
+            if (_deploymentLock.IsHeld)
+            {
+                msg = _deploymentLock.GetLockMsg();
+            }
+
+            return Json(new Dictionary<string, string>() { { "value", _deploymentLock.IsHeld.ToString() }, { "msg", msg } });
         }
         
         

@@ -4,13 +4,13 @@ using System.Text;
 
 namespace Kudu.Core.Deployment.Oryx
 {
-    class FunctionAppOryxArguments : IOryxArguments
+    public class FunctionAppOryxArguments : IOryxArguments
     {
         public bool RunOryxBuild { get; set; }
 
         public BuildOptimizationsFlags Flags { get; set; }
 
-        private readonly WorkerRuntime FunctionsWorkerRuntime;
+        protected readonly WorkerRuntime FunctionsWorkerRuntime;
         public bool SkipKuduSync { get; set; }
 
         public FunctionAppOryxArguments()
@@ -23,7 +23,7 @@ namespace Kudu.Core.Deployment.Oryx
             SkipKuduSync = Flags == BuildOptimizationsFlags.UseExpressBuild;
         }
 
-        public string GenerateOryxBuildCommand(DeploymentContext context)
+        public virtual string GenerateOryxBuildCommand(DeploymentContext context)
         {
             StringBuilder args = new StringBuilder();
 
@@ -36,7 +36,7 @@ namespace Kudu.Core.Deployment.Oryx
             return args.ToString();
         }
 
-        private void AddOryxBuildCommand(StringBuilder args, DeploymentContext context, string source, string destination)
+        protected void AddOryxBuildCommand(StringBuilder args, DeploymentContext context, string source, string destination)
         {
             // If it is express build, we don't directly need to write to /home/site/wwwroot
             // So, we build into a different directory to avoid overlap
@@ -55,7 +55,7 @@ namespace Kudu.Core.Deployment.Oryx
             OryxArgumentsHelper.AddOryxBuildCommand(args, source, destination);
         }
 
-        private void AddLanguage(StringBuilder args, WorkerRuntime workerRuntime)
+        protected void AddLanguage(StringBuilder args, WorkerRuntime workerRuntime)
         {
             switch (workerRuntime)
             {
@@ -70,10 +70,14 @@ namespace Kudu.Core.Deployment.Oryx
                 case WorkerRuntime.Python:
                     OryxArgumentsHelper.AddLanguage(args, "python");
                     break;
+
+                case WorkerRuntime.PHP:
+                    OryxArgumentsHelper.AddLanguage(args, "php");
+                    break;
             }
         }
 
-        private void AddLanguageVersion(StringBuilder args, WorkerRuntime workerRuntime)
+        protected void AddLanguageVersion(StringBuilder args, WorkerRuntime workerRuntime)
         {
             var workerVersion = ResolveWorkerRuntimeVersion(FunctionsWorkerRuntime);
             if (!string.IsNullOrEmpty(workerVersion))
@@ -82,7 +86,7 @@ namespace Kudu.Core.Deployment.Oryx
             }
         }
 
-        private void AddBuildOptimizationFlags(StringBuilder args, DeploymentContext context, BuildOptimizationsFlags optimizationFlags)
+        protected void AddBuildOptimizationFlags(StringBuilder args, DeploymentContext context, BuildOptimizationsFlags optimizationFlags)
         {
             switch (Flags)
             {
@@ -99,7 +103,7 @@ namespace Kudu.Core.Deployment.Oryx
             }
         }
 
-        private void AddWorkerRuntimeArgs(StringBuilder args, WorkerRuntime workerRuntime)
+        protected void AddWorkerRuntimeArgs(StringBuilder args, WorkerRuntime workerRuntime)
         {
             switch (workerRuntime)
             {

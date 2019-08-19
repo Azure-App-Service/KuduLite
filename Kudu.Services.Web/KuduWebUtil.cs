@@ -213,11 +213,20 @@ namespace Kudu.Services.Web
             var gitPostReceiveHookFile = Path.Combine(repositoryPath, ".git", "hooks", "post-receive");
             if (FileSystemHelpers.FileExists(gitPostReceiveHookFile))
             {
-                var fileText = "";
-                if ((fileText = FileSystemHelpers.ReadAllText(gitPostReceiveHookFile)).Contains("/usr/bin/mono"))
+                var fileText = FileSystemHelpers.ReadAllText(gitPostReceiveHookFile);
+                var isRunningOnAzure = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID") != null;
+                if (fileText.Contains("/usr/bin/mono"))
                 {
-                    FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("/usr/bin/mono", "dotnet"));
+                    if(isRunningOnAzure)
+                    {
+                        FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("/usr/bin/mono", "benv dotnet=2.2 dotnet"));
+                    }
                 }
+                else if(!fileText.Contains("benv") && fileText.Contains("dotnet") && isRunningOnAzure)
+                {
+                    FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("dotnet", "benv dotnet=2.2 dotnet"));
+                }
+                
             }
 
             if (FileSystemHelpers.DirectoryExists(Path.Combine(environment.RootPath, ".mono"))
@@ -527,15 +536,20 @@ namespace Kudu.Services.Web
         /// </summary>
         /// <param name="services">Dependency injection to application service</param>
         /// <returns>Service</returns>
-        internal static IServiceCollection AddLinuxConsumptionAuthorization(this IServiceCollection services)
+        internal static IServiceCollection AddLinuxConsumptionAuthorization(this IServiceCollection services, IEnvironment environment)
         {
             services.AddAuthorization(o =>
             {
-                o.AddInstanceAdminPolicies();
+                o.AddInstanceAdminPolicies(environment);
             });
 
             services.AddSingleton<IAuthorizationHandler, AuthLevelAuthorizationHandler>();
             return services;
+        }
+
+        internal static string GetWebSSHProxyPort()
+        {
+            return System.Environment.GetEnvironmentVariable(Constants.WebSiteSwapSlotName) ?? Constants.WebSSHReverseProxyDefaultPort;
         }
     }
 }

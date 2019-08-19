@@ -20,6 +20,8 @@ namespace Kudu.Core
         private ITraceFactory _traceFactory;
         private static readonly string locksPath = "/home/site/locks";
 	private const int lockTimeout = 1200; //in seconds
+        private string defaultMsg = Resources.DeploymentLockOccMsg;
+        private string Msg;
         public AllSafeLinuxLock(string path, ITraceFactory traceFactory)
         {
             _traceFactory = traceFactory;
@@ -103,7 +105,7 @@ namespace Kudu.Core
             var lockInfo = new LinuxLockInfo();
             lockInfo.heldByPID = Process.GetCurrentProcess().Id;
             lockInfo.heldByTID = Thread.CurrentThread.ManagedThreadId;
-            lockInfo.heldByWorker = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
+            lockInfo.heldByWorker = System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId);
             lockInfo.heldByOp = operationName;
             lockInfo.lockExpiry = DateTime.UtcNow.AddSeconds(lockTimeout);
             //Console.WriteLine("CreatingLockDir - LockInfoObj : "+lockInfo);
@@ -157,7 +159,24 @@ namespace Kudu.Core
                 Console.WriteLine("ReleasingLock - There is NO LOCK HELD | ERROR");
             }
         }
-        
+
+        public string GetLockMsg()
+        {
+            //throw new NotImplementedException();
+            if(Msg == null || "".Equals(Msg))
+            {
+                return defaultMsg;
+            }
+
+            return Msg;
+        }
+
+        public void SetLockMsg(string msg)
+        {
+            this.Msg = msg;
+            
+        }
+
         private class LinuxLockInfo
         {
             public DateTime lockExpiry;

@@ -8,6 +8,7 @@ using Kudu.Contracts.Tracing;
 using Kudu.Contracts.Settings;
 using Kudu.Core;
 using Kudu.Core.Deployment;
+using Kudu.Core.Deployment.Oryx;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Tracing;
 using Kudu.Services.Infrastructure;
@@ -214,8 +215,8 @@ namespace Kudu.Services.Deployment
             {
                 using (_tracer.Step("Writing zip file to {0}", zipFilePath))
                 {
-                    if (context.Request.ContentType.Contains("multipart/form-data",
-                        StringComparison.OrdinalIgnoreCase))
+                    if (!string.IsNullOrEmpty(context.Request.ContentType) &&
+                        context.Request.ContentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                     {
                         FormValueProvider formModel;
                         using (_tracer.Step("Writing zip file to {0}", zipFilePath))
@@ -442,8 +443,8 @@ namespace Kudu.Services.Deployment
                 }
             }
 
-            DeploymentHelper.PurgeZipsIfNecessary(_environment.SitePackagesPath, tracer,
-                _settings.GetMaxZipPackageCount());
+            DeploymentHelper.PurgeBuildArtifactsIfNecessary(_environment.SitePackagesPath, BuildArtifactType.Zip,
+                tracer, _settings.GetMaxZipPackageCount());
         }
 
         private void DeleteFilesAndDirsExcept(string fileToKeep, string dirToKeep, ITracer tracer)

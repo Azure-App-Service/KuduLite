@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Kudu.Core.Deployment.Oryx
 {
-    interface IOryxArguments
+    public interface IOryxArguments
     {
         bool RunOryxBuild { get; set; }
 

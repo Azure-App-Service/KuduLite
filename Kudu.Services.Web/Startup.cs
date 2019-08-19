@@ -8,6 +8,7 @@ using System.Reflection;
 using AspNetCore.RouteAnalyzer;
 using Kudu.Contracts;
 using Kudu.Contracts.Infrastructure;
+using Kudu.Contracts.Scan;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.SourceControl;
 using Kudu.Contracts.Tracing;
@@ -16,6 +17,7 @@ using Kudu.Core.Commands;
 using Kudu.Core.Deployment;
 using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.Scan;
 using Kudu.Core.Settings;
 using Kudu.Core.SourceControl;
 using Kudu.Core.SSHKey;
@@ -23,6 +25,7 @@ using Kudu.Core.Tracing;
 using Kudu.Services.Diagnostics;
 using Kudu.Services.GitServer;
 using Kudu.Services.Performance;
+using Kudu.Services.Scan;
 using Kudu.Services.TunnelServer;
 using Kudu.Services.Web.Infrastructure;
 using Kudu.Services.Web.Tracing;
@@ -93,11 +96,6 @@ namespace Kudu.Services.Web
                 .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices()
                 .AddApiExplorer();
 
-            // Add middleware for Linux Consumption authentication and authorization
-            // when KuduLIte is running in service fabric mesh
-            services.AddLinuxConsumptionAuthentication();
-            services.AddLinuxConsumptionAuthorization();
-
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new Info {Title = "Kudu API Docs"});
@@ -141,6 +139,11 @@ namespace Kudu.Services.Web
 
             // Add various folders that never change to the process path. All child processes will inherit this
             KuduWebUtil.PrependFoldersToPath(environment);
+
+            // Add middleware for Linux Consumption authentication and authorization
+            // when KuduLIte is running in service fabric mesh
+            services.AddLinuxConsumptionAuthentication();
+            services.AddLinuxConsumptionAuthorization(environment);
 
             // General
             services.AddSingleton<IServerConfiguration>(ServerConfiguration);
@@ -220,6 +223,8 @@ namespace Kudu.Services.Web
             services.AddScoped<IDeploymentManager, DeploymentManager>();
             
             services.AddScoped<IFetchDeploymentManager, FetchDeploymentManager>();
+
+            services.AddScoped<IScanManager, ScanManager>();
             
             services.AddScoped<ISSHKeyManager, SSHKeyManager>();
 
@@ -313,6 +318,10 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
 
+            if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
+            {
+                app.UseLinuxConsumptionRouteMiddleware();
+            }
 
             var webSocketOptions = new WebSocketOptions()
             {
@@ -350,7 +359,7 @@ namespace Kudu.Services.Web
 
             app.UseStaticFiles();
 
-            ProxyRequestIfRelativeUrlMatches(@"/webssh", "http", "127.0.0.1", "3000", app);
+            ProxyRequestIfRelativeUrlMatches(@"/webssh", "http", "127.0.0.1", KuduWebUtil.GetWebSSHProxyPort() , app);
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 
@@ -498,6 +507,31 @@ namespace Kudu.Services.Web
                 routes.MapRoute("is-deployment-underway", "api/isdeploying",
                     new {controller = "Deployment", action = "IsDeploying"},
                     new {verb = new HttpMethodRouteConstraint("GET")});
+
+                // Initiate Scan 
+                routes.MapRoute("start-clamscan", "api/scan/start/",
+                    new { controller = "Scan", action = "ExecuteScan" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
+
+                //Get scan status
+                routes.MapRoute("get-scan-status", "/api/scan/{scanId}/track",
+                    new { controller = "Scan", action = "GetScanStatus" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
+
+                //Get unique scan result
+                routes.MapRoute("get-scan-result", "/api/scan/{scanId}/result",
+                    new { controller = "Scan", action = "GetScanLog" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
+
+                //Get all scan result
+                routes.MapRoute("get-all-scan-result", "/api/scan/results",
+                    new { controller = "Scan", action = "GetScanResults" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
+
+                //Stop scan
+                routes.MapRoute("stop-scan", "/api/scan/stop",
+                    new { controller = "Scan", action = "StopScan" },
+                    new { verb = new HttpMethodRouteConstraint("DELETE") });
 
                 // SSHKey
                 routes.MapHttpRouteDual("get-sshkey", "api/sshkey",

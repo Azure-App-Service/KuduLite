@@ -6,6 +6,9 @@ using Kudu.Contracts.Settings;
 
 namespace Kudu.Tests.Core.Helpers
 {
+    // The following 'Collection' attribute is used for disabling parallel testing
+    // Some of the tests require changing the system environment variables, which is not thread safe.
+    [Collection("MockedEnvironmentVariablesCollection")]
     public class SimpleWebTokenTests
     {
         [Fact]
@@ -67,7 +70,7 @@ namespace Kudu.Tests.Core.Helpers
             var websiteAuthEncryptionKey = TestHelpers.GenerateKeyBytes();
             var websiteAuthEncryptionStringKey = TestHelpers.GenerateKeyHexString(websiteAuthEncryptionKey);
 
-            var timeStamp = DateTime.UtcNow.AddHours(1);
+            var timeStamp = DateTime.UtcNow.AddDays(1);
 
             using (new TestScopedEnvironmentVariable(SettingsKeys.ContainerEncryptionKey, containerEncryptionStringKey))
             using (new TestScopedEnvironmentVariable(SettingsKeys.AuthEncryptionKey, websiteAuthEncryptionStringKey))
@@ -75,7 +78,6 @@ namespace Kudu.Tests.Core.Helpers
                 var token = SimpleWebTokenHelper.CreateToken(timeStamp, websiteAuthEncryptionKey);
                 Assert.True(SimpleWebTokenHelper.TryValidateToken(token, new SystemClock()));
             }
-
         }
 
         [Fact]

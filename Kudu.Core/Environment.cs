@@ -10,6 +10,7 @@ using Kudu.Core.Infrastructure;
 using Microsoft.Win32;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using Kudu.Core.Settings;
 
 namespace Kudu.Core
 {
@@ -120,7 +121,7 @@ namespace Kudu.Core
             _siteExtensionSettingsPath = Path.Combine(SiteRootPath, Constants.SiteExtensionsCachePath);
             _diagnosticsPath = Path.Combine(SiteRootPath, Constants.DiagnosticsPath);
             _locksPath = Path.Combine(SiteRootPath, Constants.LocksPath);
-            
+
             if (OSDetector.IsOnWindows())
             {
                 _sshKeyPath = Path.Combine(rootPath, Constants.SSHKeyPath);
@@ -128,7 +129,12 @@ namespace Kudu.Core
             else
             {
                 // in linux, rootPath is "/home", while .ssh folder need to under "/home/{user}"
-                _sshKeyPath = Path.Combine(rootPath, System.Environment.GetEnvironmentVariable("KUDU_RUN_USER"), Constants.SSHKeyPath);
+                string path2 = System.Environment.GetEnvironmentVariable("KUDU_RUN_USER");
+                if(path2 == null || path2.Equals(""))
+                {
+                    path2 = "root";
+                }
+                _sshKeyPath = Path.Combine(rootPath, path2, Constants.SSHKeyPath);
             }
             _scriptPath = Path.Combine(binPath, Constants.ScriptsPath);
             _nodeModulesPath = Path.Combine(binPath, Constants.NodeModulesPath);
@@ -152,7 +158,7 @@ namespace Kudu.Core
                 _jobsBinariesPath = Path.Combine(_webRootPath, userDefinedWebJobRoot);
             }
             _sitePackagesPath = Path.Combine(_dataPath, Constants.SitePackages);
-            
+
             RequestId = !string.IsNullOrEmpty(requestId) ? requestId : Guid.Empty.ToString();
 
             _httpContextAccessor = httpContextAccessor;
@@ -343,7 +349,7 @@ namespace Kudu.Core
                 return this.WebRootPath;
             }
         }
-        
+
         public string SitePackagesPath
         {
             get
@@ -385,11 +391,21 @@ namespace Kudu.Core
             private set;
         }
 
+        public bool IsOnLinuxConsumption
+        {
+            get
+            {
+                bool isOnAppService = !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId));
+                bool isOnLinuxContainer = !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.ContainerName));
+                return isOnLinuxContainer && !isOnAppService;
+            }
+        }
+
         public string KuduConsoleFullPath { get; }
 
         public static bool IsAzureEnvironment()
         {
-            return !String.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID"));
+            return !String.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId));
         }
 
         public static bool SkipSslValidation
@@ -417,6 +433,31 @@ namespace Kudu.Core
                 }
 
                 return skipSslValidation == "1";
+            }
+        }
+
+
+        public static string ContainerName
+        {
+            get
+            {
+                return System.Environment.GetEnvironmentVariable(Constants.ContainerName)?.ToLowerInvariant();
+            }
+        }
+
+        public static string StampName
+        {
+            get
+            {
+                return System.Environment.GetEnvironmentVariable(Constants.WebSiteHomeStampName)?.ToLowerInvariant();
+            }
+        }
+
+        public static string TenantId
+        {
+            get
+            {
+                return System.Environment.GetEnvironmentVariable(Constants.WebSiteStampDeploymentId)?.ToLowerInvariant();
             }
         }
 
