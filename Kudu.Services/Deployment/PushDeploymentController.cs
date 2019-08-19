@@ -18,6 +18,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Newtonsoft.Json.Linq;
 using System.Net.Http;
+using System.Collections.Generic;
+using Kudu.Core.Helpers;
+using System.Threading;
+using System.Collections;
 
 namespace Kudu.Services.Deployment
 {
@@ -344,11 +348,12 @@ namespace Kudu.Services.Deployment
 
                 using (var zip = new ZipArchive(file, ZipArchiveMode.Read))
                 {
-                    zip.Extract(extractTargetDirectory);
+                    deploymentInfo.repositorySymlinks = zip.Extract(extractTargetDirectory);
+
+                    CreateZipSymlinks(deploymentInfo.repositorySymlinks, extractTargetDirectory);
+
+                    PermissionHelper.ChmodRecursive("777", extractTargetDirectory, tracer, TimeSpan.FromMinutes(1));
                 }
-                //});
-                //await Task.WhenAll(cleanTask, extractTask);
-                //await Task.WhenAll(cleanTask, extractTask);
             }
 
             CommitRepo(repository, zipDeploymentInfo);
@@ -414,6 +419,18 @@ namespace Kudu.Services.Deployment
             repository.Commit(zipDeploymentInfo.Message, zipDeploymentInfo.Author, zipDeploymentInfo.AuthorEmail);
         }
 
+        private static void CreateZipSymlinks(IDictionary<string, string> symLinks, string extractTargetDirectory)
+        {
+            if (!OSDetector.IsOnWindows() && symLinks != null)
+            {
+                foreach (var symlinkPair in symLinks)
+                {
+                    string symLinkFilePath = Path.Combine(extractTargetDirectory, symlinkPair.Key);
+                    FileSystemHelpers.EnsureDirectory(FileSystemHelpers.GetDirectoryName(Path.Combine(extractTargetDirectory, symlinkPair.Key)));
+                    FileSystemHelpers.CreateRelativeSymlinks(symLinkFilePath, symlinkPair.Value, TimeSpan.FromSeconds(5));
+                }
+            }
+        }
 
         private async Task WriteSitePackageZip(ZipDeploymentInfo zipDeploymentInfo, ITracer tracer)
         {

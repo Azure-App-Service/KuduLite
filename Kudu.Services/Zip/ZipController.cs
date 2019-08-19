@@ -11,6 +11,8 @@ using Microsoft.Extensions.Logging;
 using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.Helpers;
+using System.Threading;
 
 namespace Kudu.Services.Zip
 {
@@ -18,9 +20,14 @@ namespace Kudu.Services.Zip
     // of good reusable logic in there. We could consider extracting a more basic base class from it.
     public class ZipController : VfsControllerBase
     {
+        private ITracer _tracer;
+        private IEnvironment _environment;
         public ZipController(ITracer tracer, IEnvironment environment)
             : base(tracer, environment, environment.RootPath)
         {
+            _tracer = tracer;
+            _environment = environment;
+
         }
 
         protected override Task<IActionResult> CreateDirectoryGetResponse(DirectoryInfoBase info, string localFilePath)
@@ -70,7 +77,7 @@ namespace Kudu.Services.Zip
         {
             var zipArchive = new ZipArchive(Request.Body, ZipArchiveMode.Read);
             zipArchive.Extract(localFilePath);
-
+            PermissionHelper.ChmodRecursive("777", localFilePath, _tracer, TimeSpan.FromSeconds(30));
             return Task.FromResult((IActionResult)Ok());
         }
 

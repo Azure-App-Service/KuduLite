@@ -75,7 +75,7 @@ namespace Kudu.Services.Web
         public void ConfigureServices(IServiceCollection services)
         {
             Console.WriteLine(@"Configure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-
+            FileSystemHelpers.DeleteDirectorySafe("/home/site/locks/deployment");
             services.Configure<FormOptions>(options =>
             {
                 options.MultipartBodyLengthLimit = 52428800;
