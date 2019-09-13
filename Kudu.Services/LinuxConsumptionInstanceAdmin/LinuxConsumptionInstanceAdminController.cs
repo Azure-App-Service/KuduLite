@@ -56,14 +56,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             var containerKey = System.Environment.GetEnvironmentVariable(SettingsKeys.ContainerEncryptionKey);
             var assignmentContext = encryptedAssignmentContext.Decrypt(containerKey);
 
-            // before starting the assignment we want to perform as much
-            // up front validation on the context as possible
-            string error = await _instanceManager.ValidateContext(assignmentContext);
-            if (error != null)
-            {
-                return StatusCode(StatusCodes.Status400BadRequest, error);
-            }
-
+            // We don't need to do validation on run_from_package zip, scm site on Linux Consumption should always be on
             var assignmentResult = _instanceManager.StartAssignment(assignmentContext);
 
             // modify app settings from environment variables (for all start with "APPSETTING_")
