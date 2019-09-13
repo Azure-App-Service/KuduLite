@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Kudu.Contracts.Tracing;
+using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Deployment.Oryx;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.SourceControl;

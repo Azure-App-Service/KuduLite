@@ -29,6 +29,7 @@ namespace Kudu.Core.Deployment.Oryx
         internal static class FunctionAppBuildSettings
         {
             public static readonly string ExpressBuildSetup = "/tmp/build/expressbuild";
+            public static readonly string LinuxConsumptionArtifactName = "functionappartifact.squashfs";
             public static readonly string PythonPackagesTargetDir = Path.Combine(".python_packages", "lib", "python3.6", "site-packages");
 
             // Determine how many built files should be kept in the container

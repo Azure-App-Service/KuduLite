@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
 using Kudu.Core.Infrastructure;
@@ -66,7 +67,7 @@ namespace Kudu.Core.Deployment.Generator
             string enableOryxBuild = System.Environment.GetEnvironmentVariable("ENABLE_ORYX_BUILD");
             if (!string.IsNullOrEmpty(enableOryxBuild))
             {
-                if (enableOryxBuild.Equals("true", StringComparison.OrdinalIgnoreCase))
+                if (StringUtils.IsTrueLike(enableOryxBuild))
                 {
                     return new OryxBuilder(_environment, settings, _propertyProvider, repositoryRoot);
                 }
