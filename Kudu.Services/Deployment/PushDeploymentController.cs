@@ -301,7 +301,7 @@ namespace Kudu.Services.Deployment
                 case FetchDeploymentRequestResult.ConflictDeploymentInProgress:
                     return StatusCode(StatusCodes.Status409Conflict, Resources.Error_DeploymentInProgress);
                 case FetchDeploymentRequestResult.ConflictRunFromRemoteZipConfigured:
-                    return StatusCode(StatusCodes.Status409Conflict, Resources.Error_AutoSwapDeploymentOngoing);
+                    return StatusCode(StatusCodes.Status409Conflict, Resources.Error_RunFromRemoteZipConfigured);
                 default:
                     return BadRequest();
             }
