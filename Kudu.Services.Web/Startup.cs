@@ -318,7 +318,7 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
 
-             app.UseKubeMiddleware();
+            app.UseKubeMiddleware();
 
             if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
             {
