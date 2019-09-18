@@ -318,6 +318,8 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
 
+             app.UseKubeMiddleware();
+
             if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
             {
                 app.UseLinuxConsumptionRouteMiddleware();

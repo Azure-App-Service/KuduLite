@@ -2,7 +2,7 @@
 {
     public interface IEnvironment
     {
-        string RootPath { get; }                // e.g. /
+        string RootPath { get; set; }                // e.g. /
         string SiteRootPath { get; }            // e.g. /site
         string RepositoryPath { get; set; }     // e.g. /site/repository
         string WebRootPath { get; }             // e.g. /site/wwwroot
@@ -31,5 +31,6 @@
         string KuduConsoleFullPath { get; }     // e.g. KuduConsole/kudu.dll
         string SitePackagesPath { get; }        // e.g. /data/SitePackages
         bool IsOnLinuxConsumption { get; }      // e.g. True on Linux Consumption. False on App Service.
+        bool IsOnK8 { get; }      
     }
 }

@@ -230,7 +230,7 @@ namespace Kudu.Core
         public string RootPath
         {
             get;
-            private set;
+            set;
         }
 
         public string SiteRootPath
@@ -460,6 +460,8 @@ namespace Kudu.Core
                 return System.Environment.GetEnvironmentVariable(Constants.WebSiteStampDeploymentId)?.ToLowerInvariant();
             }
         }
+
+        public bool IsOnK8 => true;
 
         public static string GetFreeSpaceHtml(string path)
         {
