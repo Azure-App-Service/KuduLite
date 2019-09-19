@@ -43,10 +43,15 @@ namespace Kudu.Core.Tracing
                 strb.Append(DateTime.UtcNow.ToString("s"));
                 strb.Append(GetIndentation(depth + 1));
                 strb.Append(value);
-
-                using (StreamWriter writer = new StreamWriter(FileSystemHelpers.OpenFile(_logFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)))
+                try
                 {
-                    writer.WriteLine(strb.ToString());
+                    using (StreamWriter writer = new StreamWriter(FileSystemHelpers.OpenFile(_logFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)))
+                    {
+                        writer.WriteLine(strb.ToString());
+                    }
+                } catch(Exception)
+                {
+
                 }
             }
 
