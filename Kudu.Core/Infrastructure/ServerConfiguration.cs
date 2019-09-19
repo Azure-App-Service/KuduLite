@@ -6,6 +6,8 @@ namespace Kudu.Core.Infrastructure
     {
         private string _applicationName;
 
+        private string gitRoot = "";
+
         public string ApplicationName
         {
             get
@@ -22,12 +24,19 @@ namespace Kudu.Core.Infrastructure
         {
             get
             {
+                if(!String.IsNullOrEmpty(gitRoot))
+                {
+                    return gitRoot;
+                }
+
                 if (String.IsNullOrEmpty(ApplicationName))
                 {
                     return "git";
                 }
                 return ApplicationName + ".git";
             }
+
+            set { gitRoot = value; }
         }
 
         public static string GetApplicationName()

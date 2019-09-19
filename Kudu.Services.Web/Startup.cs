@@ -146,7 +146,7 @@ namespace Kudu.Services.Web
             services.AddLinuxConsumptionAuthorization(environment);
 
             // General
-            services.AddSingleton<IServerConfiguration>(ServerConfiguration);
+            services.AddScoped<IServerConfiguration, ServerConfiguration>();
 
             // CORE TODO Looks like this doesn't ever actually do anything, can refactor out?
             services.AddSingleton<IBuildPropertyProvider>(new BuildPropertyProvider());
@@ -318,7 +318,7 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
 
-            app.UseKubeMiddleware();
+             app.UseKubeMiddleware();
 
             if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
             {
@@ -375,12 +375,17 @@ namespace Kudu.Services.Web
 
             // CORE TODO concept of "deprecation" in routes for traces, Do we need this for linux ?
 
-            // Push url
-            foreach (var url in new[] {"/git-receive-pack", $"/{configuration.GitServerRoot}/git-receive-pack"})
-            {
-                app.Map(url, appBranch => appBranch.RunReceivePackHandler());
-            }
 
+            app.MapWhen(
+                c => c.Request.Path.ToString().EndsWith("/git-receive-pack", StringComparison.OrdinalIgnoreCase),
+                appBranch => appBranch.RunReceivePackHandler());
+
+            app.MapWhen(
+                c => c.Request.Path.ToString().EndsWith("/git-upload-pack", StringComparison.OrdinalIgnoreCase),
+                appBranch => appBranch.RunUploadPackHandler());
+            //app.MapWhen("/{repository}/git-upload-pack", appBranch => appBranch.RunUploadPackHandler());
+
+            // Push url
             // Fetch hook
             app.Map("/deploy", appBranch => appBranch.RunFetchHandler());
 
@@ -389,16 +394,7 @@ namespace Kudu.Services.Web
 
 
             // Clone url
-            foreach (var url in new[] {"/git-upload-pack", $"/{configuration.GitServerRoot}/git-upload-pack"})
-            {
-                app.Map(url, appBranch => appBranch.RunUploadPackHandler());
-            }
-
             // Custom GIT repositories, which can be served from any directory that has a git repo
-            foreach (var url in new[] {"/git-custom-repository", "/git/{*path}"})
-            {
-                app.Map(url, appBranch => appBranch.RunCustomGitRepositoryHandler());
-            }
 
             // Sets up the file server to web app's wwwroot
             KuduWebUtil.SetupFileServer(app, _webAppRuntimeEnvironment.WebRootPath, "/wwwroot");
@@ -421,7 +417,7 @@ namespace Kudu.Services.Web
 
                 // Git Service
                 routes.MapRoute("git-info-refs-root", "info/refs", new {controller = "InfoRefs", action = "Execute"});
-                routes.MapRoute("git-info-refs", configuration.GitServerRoot + "/info/refs",
+                routes.MapRoute("git-info-refs", "{repository}" + "/info/refs",
                     new {controller = "InfoRefs", action = "Execute"});
 
                 // Scm (deployment repository)

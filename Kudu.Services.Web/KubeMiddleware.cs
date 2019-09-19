@@ -44,25 +44,32 @@ namespace Kudu.Services.Web
         /// <param name="context">Http request context</param>
         /// <param name="authorizationService">Authorization service for each request</param>
         /// <returns>Response be set to 404 if the route is not whitelisted</returns>
-        public async Task Invoke(HttpContext context, IEnvironment environment)
+        public async Task Invoke(HttpContext context, IEnvironment environment, IServerConfiguration serverConfig)
         {
             if (IsGitRoute(context.Request.Path))
             {
                 string[] pathParts = context.Request.Path.ToString().Split("/");
 
-                if (pathParts != null && pathParts.Length != 0)
+                if (pathParts != null && pathParts.Length >= 1)
                 {
-                    string appName = pathParts[pathParts.Length - 1];
+                    string appName = pathParts[1];
                     appName = appName.Trim().Replace(".git", "");
-                    if(!FileSystemHelpers.DirectoryExists("/home/apps/"+appName))
+                    if(!FileSystemHelpers.DirectoryExists("/home/apps" + appName))
                     {
-                        context.Response.StatusCode = 500;
-                        await context.Response.WriteAsync("repo does not exist", Encoding.UTF8);
+                        context.Response.StatusCode = 404;
+                        await context.Response.WriteAsync("The repository does not exist", Encoding.UTF8);
                         return;
                     }
                     else
                     {
-                        environment.RootPath = "/home/apps/"+appName;
+                        serverConfig.GitServerRoot = appName + ".git";
+                        environment.RepositoryPath = "/home/apps/" + appName + "/site/repository";
+                        environment.RootPath = "/home/apps/" + appName;
+                        environment.SiteRootPath = "/home/apps/"+appName+"/site";
+                        environment.WebRootPath = "/home/apps/" + appName + "/site/wwwroot";
+                        environment.DeploymentsPath = "/home/apps/" + appName + "/site/deployments";
+                        environment.LocksPath = "/home/apps/" + appName + "/site/deployments";
+
                     }
                 }
             }
@@ -70,7 +77,12 @@ namespace Kudu.Services.Web
         }
         private bool IsGitRoute(PathString routePath)
         {
-            return routePath.ToString().EndsWith(".git");
+            string[] pathParts = routePath.ToString().Split("/");
+            if (pathParts != null && pathParts.Length >= 1)
+            {
+                return pathParts[1].EndsWith(".git");
+            }
+            return false;
         }
     }
      
