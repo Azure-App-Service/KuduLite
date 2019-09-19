@@ -25,7 +25,7 @@ namespace Kudu.Core.Deployment.Generator
 
         public ISiteBuilder CreateBuilder(ITracer tracer, ILogger logger, IDeploymentSettingsManager settings, IRepository repository)
         {
-            string repositoryRoot = repository.RepositoryPath;
+            string repositoryRoot = _environment.RepositoryPath;
 
             // Use the cached vs projects file finder for: a. better performance, b. ignoring solutions/projects under node_modules
             var fileFinder = new CachedVsProjectsFileFinder(repository);

@@ -48,7 +48,7 @@ namespace Kudu.Core.Deployment.Generator
 
                 FileLogHelper.Log("Running KuduSync with  " + kuduSyncCommand);
 
-                RunCommand(context, kuduSyncCommand, false, "Oryx-Build: Running kudu sync...");
+                //RunCommand(context, kuduSyncCommand, false, "Oryx-Build: Running kudu sync...");
             }
 
             if (args.RunOryxBuild)
