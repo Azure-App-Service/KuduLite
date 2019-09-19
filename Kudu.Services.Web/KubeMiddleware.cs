@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Kudu.Core;
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
+using Kudu.Core.Helpers;
 
 namespace Kudu.Services.Web
 {
@@ -50,11 +51,24 @@ namespace Kudu.Services.Web
             {
                 string[] pathParts = context.Request.Path.ToString().Split("/");
 
+                string homeDir = "";
+                string siteRepoDir = "";
+                if (OSDetector.IsOnWindows())
+                {
+                    homeDir = "F:\\repos\\apps\\";
+                    siteRepoDir = "\\site\\repository";
+                }
+                else
+                {
+                    homeDir = "/home/apps/";
+                    siteRepoDir = "/site/repository";
+                }
+
                 if (pathParts != null && pathParts.Length >= 1)
                 {
                     string appName = pathParts[1];
                     appName = appName.Trim().Replace(".git", "");
-                    if(!FileSystemHelpers.DirectoryExists("/home/apps/" + appName))
+                    if(!FileSystemHelpers.DirectoryExists(homeDir + appName))
                     {
                         context.Response.StatusCode = 404;
                         await context.Response.WriteAsync("The repository does not exist", Encoding.UTF8);
@@ -63,7 +77,7 @@ namespace Kudu.Services.Web
                     else
                     {
                         serverConfig.GitServerRoot = appName + ".git";
-                        environment.RepositoryPath = "/home/apps/" + appName + "/site/repository";
+                        environment.RepositoryPath = homeDir + appName + siteRepoDir;
                     }
                 }
             }
