@@ -122,7 +122,7 @@ namespace Kudu.Core.Deployment
 
                 case Framework.NodeJs:
                     // Input/Output
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
+                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.RepositoryPath.Replace("repository","wwwroot"));
                     OryxArgumentsHelper.AddLanguage(args, "nodejs");
                     break;
 
