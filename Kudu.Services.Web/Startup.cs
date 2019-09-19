@@ -416,7 +416,6 @@ namespace Kudu.Services.Web
                     template: "{controller}/{action=Index}/{id?}");
 
                 // Git Service
-                routes.MapRoute("git-info-refs-root", "info/refs", new {controller = "InfoRefs", action = "Execute"});
                 routes.MapRoute("git-info-refs", "{repository}" + "/info/refs",
                     new {controller = "InfoRefs", action = "Execute"});
 
