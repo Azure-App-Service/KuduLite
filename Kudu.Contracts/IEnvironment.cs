@@ -2,15 +2,15 @@
 {
     public interface IEnvironment
     {
-        string RootPath { get; set; }                // e.g. /
-        string SiteRootPath { get; set; }            // e.g. /site
+        string RootPath { get; }                // e.g. /
+        string SiteRootPath { get; }            // e.g. /site
         string RepositoryPath { get; set; }     // e.g. /site/repository
-        string WebRootPath { get; set; }             // e.g. /site/wwwroot
-        string DeploymentsPath { get; set; }         // e.g. /site/deployments
-        string DeploymentToolsPath { get; set; }     // e.g. /site/deployments/tools
+        string WebRootPath { get; }             // e.g. /site/wwwroot
+        string DeploymentsPath { get;  }         // e.g. /site/deployments
+        string DeploymentToolsPath { get;  }     // e.g. /site/deployments/tools
         string SiteExtensionSettingsPath { get; }     // e.g. /site/siteextensions
-        string DiagnosticsPath { get; set; }         // e.g. /site/diagnostics
-        string LocksPath { get; set; }               // e.g. /site/locks
+        string DiagnosticsPath { get; }         // e.g. /site/diagnostics
+        string LocksPath { get; }               // e.g. /site/locks
         string SSHKeyPath { get; }
         string TempPath { get; }
         string ZipTempPath { get; }             // e.g. ${TempPath}/zipdeploy

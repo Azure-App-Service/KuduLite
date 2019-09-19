@@ -64,12 +64,6 @@ namespace Kudu.Services.Web
                     {
                         serverConfig.GitServerRoot = appName + ".git";
                         environment.RepositoryPath = "/home/apps/" + appName + "/site/repository";
-                        environment.RootPath = "/home/apps/" + appName;
-                        environment.SiteRootPath = "/home/apps/"+appName+"/site";
-                        environment.WebRootPath = "/home/apps/" + appName + "/site/wwwroot";
-                        environment.DeploymentsPath = "/home/apps/" + appName + "/site/deployments";
-                        environment.LocksPath = "/home/apps/" + appName + "/site/deployments";
-
                     }
                 }
             }

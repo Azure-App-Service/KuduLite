@@ -463,12 +463,6 @@ namespace Kudu.Core
 
         public bool IsOnK8 => true;
 
-        string IEnvironment.SiteRootPath { get; set; }
-        string IEnvironment.WebRootPath { get; set; }
-        string IEnvironment.DeploymentsPath { get; set; }
-        string IEnvironment.DeploymentToolsPath { get; set; }
-        string IEnvironment.DiagnosticsPath { get; set; }
-        string IEnvironment.LocksPath { get; set; }
         public static string GetFreeSpaceHtml(string path)
         {
             try
