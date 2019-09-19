@@ -54,7 +54,7 @@ namespace Kudu.Services.Web
                 {
                     string appName = pathParts[1];
                     appName = appName.Trim().Replace(".git", "");
-                    if(!FileSystemHelpers.DirectoryExists("/home/apps" + appName))
+                    if(!FileSystemHelpers.DirectoryExists("/home/apps/" + appName))
                     {
                         context.Response.StatusCode = 404;
                         await context.Response.WriteAsync("The repository does not exist", Encoding.UTF8);
