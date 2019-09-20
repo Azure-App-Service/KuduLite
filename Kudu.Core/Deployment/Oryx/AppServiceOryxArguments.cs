@@ -201,7 +201,7 @@ namespace Kudu.Core.Deployment
                     }
                     else if (Language == Framework.Python)
                     {
-                        OryxArgumentsHelper.AddPythonCompressOption(args);
+                        OryxArgumentsHelper.AddPythonCompressOption(args, "tar-gz");
                     }
 
                     break;
@@ -211,6 +211,10 @@ namespace Kudu.Core.Deployment
                     if (Language == Framework.NodeJs)
                     {
                         OryxArgumentsHelper.AddNodeCompressOption(args, "zip");
+                    }
+                    else if (Language == Framework.Python)
+                    {
+                        OryxArgumentsHelper.AddPythonCompressOption(args, "zip");
                     }
 
                     break;
