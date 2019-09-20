@@ -11,13 +11,13 @@ namespace Kudu.Core.Deployment
 
         public BuildOptimizationsFlags Flags { get; set; }
 
-        private Framework Language { get; set; }
+        public Framework Language { get; set; }
 
-        private string Version { get; set; }
+        public string Version { get; set; }
 
-        private string PublishFolder { get; set; }
+        public string PublishFolder { get; set; }
 
-        private string VirtualEnv { get; set; }
+        public string VirtualEnv { get; set; }
 
         public AppServiceOryxArguments()
         {
@@ -230,5 +230,6 @@ namespace Kudu.Core.Deployment
         }
 
         public bool SkipKuduSync { get; set; }
+
     }
 }

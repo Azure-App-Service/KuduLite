@@ -1,48 +1,132 @@
-﻿using Kudu.Core.SourceControl;
+﻿using Kudu.Contracts.Settings;
+using Kudu.Core.Deployment.Generator;
+using Kudu.Core.Infrastructure;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Kudu.Core.Deployment.Oryx
 {
-    public class ExpressBuilder
+    public class ExpressBuilder : ExternalCommandBuilder
     {
-        public static void SetupExpressBuilderArtifacts(string outputPath)
-        {
-            string framework = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkSetting);
+        public override string ProjectType => "OryxBuild";
 
-            if (string.IsNullOrEmpty(framework))
+        public ExpressBuilder(IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string sourcePath)
+            : base(environment, settings, propertyProvider, sourcePath)
+        {
+
+        }
+
+        public void SetupExpressBuilderArtifacts(string outputPath, DeploymentContext context, IOryxArguments args)
+        {     
+            if(args.Flags != BuildOptimizationsFlags.UseExpressBuild)
             {
                 return;
             }
 
-            Framework oryxFramework = SupportedFrameworks.ParseLanguage(framework);
             string root = "/home/data/SitePackages";
             string packageNameFile = Path.Combine(root, "packagename.txt");
             string packagePathFile = Path.Combine(root, "packagepath.txt");
 
-            CreateSitePackagesDirectory(root);
+            FileSystemHelpers.EnsureDirectory(root);
+
             string packageName = "";
-            if(oryxFramework == Framework.NodeJs)
+
+            if(args.Language == Framework.NodeJs)
             {
                 // For App service express mode
                 // Generate packagename.txt and packagepath
                 packageName = "node_modules.zip:/node_modules";
             }
-            else if(oryxFramework == Framework.Python)
+            else if(args.Language == Framework.Python)
             {
-                // not supported
+                packageName = $"{args.VirtualEnv}.zip:/home/site/wwwroot/{args.VirtualEnv}";
+            }
+            else if(args.Language == Framework.DotNETCore)
+            {
+                string artifactName = SetupNetCoreAppExpressArtifacts(context, root, outputPath);
+                packageName = artifactName;
             }
 
             File.WriteAllText(packageNameFile, packageName);
             File.WriteAllText(packagePathFile, outputPath);
         }
 
-        private static void CreateSitePackagesDirectory(string path)
+        private string SetupNetCoreAppExpressArtifacts(DeploymentContext context, string sitePackages, string outputPath)
         {
-            if (!Directory.Exists(path))
+
+            // Create NetCore Zip and copy it to sitePackages
+            string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
+
+            string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath, outputPath, zipAppName, BuildArtifactType.Zip, numBuildArtifacts: -1);
+
+            var copyExe = ExternalCommandFactory.BuildExternalCommandExecutable(OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup, sitePackages, context.Logger);
+
+            var copyToPath = Path.Combine(sitePackages, zipAppName);
+
+            try
             {
-                Directory.CreateDirectory(path);
+                copyExe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"cp {createdZip} {copyToPath}");
             }
+            catch (Exception)
+            {
+                context.GlobalLogger.LogError();
+                throw;
+            }
+
+            // Remove the old zips
+            DeploymentHelper.PurgeBuildArtifactsIfNecessary(sitePackages, BuildArtifactType.Zip, context.Tracer, totalAllowedFiles: 2);
+
+            return zipAppName;
+        }
+
+        /// <summary>
+        /// Package every files and sub directories from a source folder
+        /// </summary>
+        /// <param name="context">The deployment context in current scope</param>
+        /// <param name="srcDirectory">The source directory to be packed</param>
+        /// <param name="artifactDirectory">The destination directory to eject the build artifact</param>
+        /// <param name="artifactFilename">The filename of the build artifact</param>
+        /// <param name="artifactType">The method for packing the artifact</param>
+        /// <param name="numBuildArtifacts">The number of temporary artifacts should be hold in the destination directory</param>
+        /// <returns></returns>
+        private string PackageArtifactFromFolder(DeploymentContext context, string srcDirectory, string artifactDirectory, string artifactFilename, BuildArtifactType artifactType, int numBuildArtifacts = 0)
+        {
+            context.Logger.Log($"Writing the artifacts to a {artifactType.ToString()} file");
+            string file = Path.Combine(artifactDirectory, artifactFilename);
+            var exe = ExternalCommandFactory.BuildExternalCommandExecutable(srcDirectory, artifactDirectory, context.Logger);
+            try
+            {
+                switch (artifactType)
+                {
+                    case BuildArtifactType.Zip:
+                        exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"zip -r -0 -q {file} .");
+                        break;
+                    case BuildArtifactType.Squashfs:
+                        exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"mksquashfs . {file} -noappend");
+                        break;
+                    default:
+                        throw new ArgumentException($"Received unknown file extension {artifactType.ToString()}");
+                }
+            }
+            catch (Exception)
+            {
+                context.GlobalLogger.LogError();
+                throw;
+            }
+
+            // Just to be sure that we don't keep adding build artifacts here
+            if (numBuildArtifacts > 0)
+            {
+                DeploymentHelper.PurgeBuildArtifactsIfNecessary(artifactDirectory, artifactType, context.Tracer, numBuildArtifacts);
+            }
+
+            return file;
+        }
+
+        public override Task Build(DeploymentContext context)
+        {
+            throw new NotImplementedException();
         }
     }
 }

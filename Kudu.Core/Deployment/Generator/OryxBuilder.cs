@@ -12,9 +12,18 @@ namespace Kudu.Core.Deployment.Generator
     {
         public override string ProjectType => "Oryx-Build";
 
+        IEnvironment environment;
+        IDeploymentSettingsManager settings;
+        IBuildPropertyProvider propertyProvider;
+        string sourcePath;
+
         public OryxBuilder(IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string sourcePath)
             : base(environment, settings, propertyProvider, sourcePath)
         {
+            this.environment = environment;
+            this.settings = settings;
+            this.propertyProvider = propertyProvider;
+            this.sourcePath = sourcePath;
         }
 
         public override Task Build(DeploymentContext context)
@@ -59,11 +68,11 @@ namespace Kudu.Core.Deployment.Generator
                     }
                     else
                     {
-                        Oryx.ExpressBuilder.SetupExpressBuilderArtifacts(context.OutputPath);
+                        ExpressBuilder appServiceExpressBuilder = new ExpressBuilder(environment, settings, propertyProvider, sourcePath);
+                        appServiceExpressBuilder.SetupExpressBuilderArtifacts(context.OutputPath, context, args);
                     }
                 }
             }
-
             return Task.CompletedTask;
         }
 
