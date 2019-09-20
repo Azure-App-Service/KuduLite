@@ -92,7 +92,7 @@ namespace Kudu.Services.Diagnostics
                     return Ok("Stats updated successfully");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
