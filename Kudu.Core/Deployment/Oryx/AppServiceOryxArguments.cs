@@ -111,7 +111,6 @@ namespace Kudu.Core.Deployment
         public string GenerateOryxBuildCommand(DeploymentContext context)
         {
             StringBuilder args = new StringBuilder();
-
             // Language
             switch (Language)
             {
@@ -229,6 +228,8 @@ namespace Kudu.Core.Deployment
             {
                 OryxArgumentsHelper.AddPythonVirtualEnv(args, VirtualEnv);
             }
+
+            OryxArgumentsHelper.AddDebugLog(args);
 
             return args.ToString();
         }

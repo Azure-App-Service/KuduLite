@@ -50,5 +50,10 @@ namespace Kudu.Core.Deployment.Oryx
         {
             args.AppendFormat(" -publishedOutputPath {0}", path);
         }
+
+        internal static void AddDebugLog(StringBuilder args)
+        {
+            args.AppendFormat(" --log-file /tmp/test.log ");
+        }
     }
 }
