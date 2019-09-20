@@ -64,6 +64,11 @@ namespace Kudu.Core.Deployment
 
                 case Framework.Python:
                     SetVirtualEnvironment();
+                    // For python, enable compress option by default
+                    if (Flags == BuildOptimizationsFlags.None)
+                    {
+                        Flags = BuildOptimizationsFlags.CompressModules;
+                    }
                     return;
 
                 case Framework.DotNETCore:
@@ -147,6 +152,18 @@ namespace Kudu.Core.Deployment
                     break;
                 case Framework.PHP:
                 case Framework.NodeJs:
+                    if (Version.Contains("LTS", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 10-LTS, 12-LTS should use versions 10, 12 etc
+                        // Oryx Builder uses lts for major versions
+                        Version = Version.Replace("LTS", "").Replace("-", "");
+                        if (string.IsNullOrEmpty(Version))
+                        {
+                            // Current LTS
+                            Version = "10";
+                        }
+                    }
+                    break;
                 case Framework.Python:
                     OryxArgumentsHelper.AddLanguageVersion(args, Version);
                     break;

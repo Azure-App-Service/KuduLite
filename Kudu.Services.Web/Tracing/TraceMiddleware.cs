@@ -33,6 +33,8 @@ namespace Kudu.Services.Web.Tracing
 
         private const string KuduLiteTrackingHeader = "X-KUDULITE-RESPONSE";
 
+        private static List<string> whiteListedPaths = new List<string>(new string[] { "isDeploying", "default.cshtml" });
+
         private static readonly Lazy<string> KuduVersion = new Lazy<string>(() =>
         {
             var assembly = Assembly.GetExecutingAssembly();
@@ -208,6 +210,12 @@ namespace Kudu.Services.Web.Tracing
 
         private static void LogEndRequest(HttpContext httpContext)
         {
+            if (whiteListedPaths.FindIndex(x => x.Equals(httpContext.Request.Path.ToString(),
+                    StringComparison.OrdinalIgnoreCase)) != -1)
+            {
+                return;
+            }
+
             OperationManager.SafeExecute(() =>
             {
                 var request = httpContext.Request;
@@ -340,6 +348,12 @@ namespace Kudu.Services.Web.Tracing
 
         private static void LogBeginRequest(HttpContext httpContext)
         {
+            if (whiteListedPaths.FindIndex(x => x.Equals(httpContext.Request.Path.ToString(),
+                    StringComparison.OrdinalIgnoreCase)) != -1)
+            {
+                return;
+            }
+
             OperationManager.SafeExecute(() =>
             {
                 var request = httpContext.Request;
