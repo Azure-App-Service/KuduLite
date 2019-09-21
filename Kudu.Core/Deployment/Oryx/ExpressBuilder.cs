@@ -24,11 +24,11 @@ namespace Kudu.Core.Deployment.Oryx
                 return;
             }
 
-            string root = "/home/data/SitePackages";
-            string packageNameFile = Path.Combine(root, "packagename.txt");
-            string packagePathFile = Path.Combine(root, "packagepath.txt");
+            string sitePackagesDir = "/home/data/SitePackages";
+            string packageNameFile = Path.Combine(sitePackagesDir, "packagename.txt");
+            string packagePathFile = Path.Combine(sitePackagesDir, "packagepath.txt");
 
-            FileSystemHelpers.EnsureDirectory(root);
+            FileSystemHelpers.EnsureDirectory(sitePackagesDir);
 
             string packageName = "";
 
@@ -44,35 +44,23 @@ namespace Kudu.Core.Deployment.Oryx
             }
             else if(args.Language == Framework.DotNETCore)
             {
-                string artifactName = SetupNetCoreAppExpressArtifacts(context, root, outputPath);
-                packageName = artifactName;
+                // store the zipped artifacts at site packages dir
+                string artifactName = SetupNetCoreAppExpressArtifacts(context, sitePackagesDir, outputPath);
+                packageName = $"{artifactName:/home/site/wwwroot}";
             }
 
             File.WriteAllText(packageNameFile, packageName);
             File.WriteAllText(packagePathFile, outputPath);
         }
 
-        private string SetupNetCoreAppExpressArtifacts(DeploymentContext context, string sitePackages, string outputPath)
+        private string SetupNetCoreAppExpressArtifacts(DeploymentContext context, string sitePackages,string outputPath)
         {
+            context.Logger.Log($"Express Build enabled for NETCore app");
 
-            // Create NetCore Zip and copy it to sitePackages
+            // Create NetCore Zip at tm build folder where artifact were build and copy it to sitePackages
             string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
 
             string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath, outputPath, zipAppName, BuildArtifactType.Zip, numBuildArtifacts: -1);
-
-            var copyExe = ExternalCommandFactory.BuildExternalCommandExecutable(OryxBuildConstants.FunctionAppBuildSettings.ExpressBuildSetup, sitePackages, context.Logger);
-
-            var copyToPath = Path.Combine(sitePackages, zipAppName);
-
-            try
-            {
-                copyExe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"cp {createdZip} {copyToPath}");
-            }
-            catch (Exception)
-            {
-                context.GlobalLogger.LogError();
-                throw;
-            }
 
             // Remove the old zips
             DeploymentHelper.PurgeBuildArtifactsIfNecessary(sitePackages, BuildArtifactType.Zip, context.Tracer, totalAllowedFiles: 2);
@@ -92,7 +80,7 @@ namespace Kudu.Core.Deployment.Oryx
         /// <returns></returns>
         private string PackageArtifactFromFolder(DeploymentContext context, string srcDirectory, string artifactDirectory, string artifactFilename, BuildArtifactType artifactType, int numBuildArtifacts = 0)
         {
-            context.Logger.Log($"Writing the artifacts to a {artifactType.ToString()} file");
+            context.Logger.Log($"Writing the artifacts to {artifactType.ToString()} file at {artifactDirectory}");
             string file = Path.Combine(artifactDirectory, artifactFilename);
             var exe = ExternalCommandFactory.BuildExternalCommandExecutable(srcDirectory, artifactDirectory, context.Logger);
             try

@@ -92,9 +92,7 @@ namespace Kudu.Services.Deployment
                     // for post deployment sync triggers.
                     deploymentInfo.SyncFunctionsTriggersPath =
                         Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-                }
-
-                ;
+                };
 
                 return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
             }
@@ -210,6 +208,14 @@ namespace Kudu.Services.Deployment
         private async Task<IActionResult> PushDeployAsync(ZipDeploymentInfo deploymentInfo, bool isAsync,
             HttpContext context)
         {
+
+            var oryxManifestFile = Path.Combine(_environment.WebRootPath, "oryx-manifest.toml");
+            if (FileSystemHelpers.FileExists(oryxManifestFile))
+            {
+                _tracer.Step("Removing previous build artifact's manifest file");
+                FileSystemHelpers.DeleteFileSafe(oryxManifestFile);
+            }
+
             var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
             if (_settings.RunFromLocalZip())
             {

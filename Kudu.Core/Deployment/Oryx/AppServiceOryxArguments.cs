@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Kudu.Core.Deployment.Oryx;
+using LibGit2Sharp;
 
 namespace Kudu.Core.Deployment
 {
@@ -132,8 +133,16 @@ namespace Kudu.Core.Deployment
                     break;
 
                 case Framework.DotNETCore:
-                    // Input/Output [For .NET core, the source path is the RepositoryPath]
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
+                    if (Flags == BuildOptimizationsFlags.UseExpressBuild)
+                    {
+                        // We don't want to copy the built artifacts to wwwroot for ExpressBuild scenario
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath);
+                    }
+                    else
+                    {
+                        // Input/Output [For .NET core, the source path is the RepositoryPath]
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
+                    }
                     OryxArgumentsHelper.AddLanguage(args, "dotnet");
                     break;
 
