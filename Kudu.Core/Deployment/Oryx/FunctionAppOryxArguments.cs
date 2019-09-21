@@ -1,6 +1,8 @@
 ﻿using Kudu.Core.Infrastructure;
+using System;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Kudu.Core.Deployment.Oryx
 {
@@ -19,7 +21,7 @@ namespace Kudu.Core.Deployment.Oryx
             FunctionsWorkerRuntime = ResolveWorkerRuntime();
             RunOryxBuild = FunctionsWorkerRuntime != WorkerRuntime.None;
             var buildFlags = GetEnvironmentVariableOrNull(OryxBuildConstants.OryxEnvVars.BuildFlagsSetting);
-            Flags = BuildFlagsHelper.Parse(buildFlags);
+            Flags = BuildFlagsHelper.Parse(buildFlags, defaultVal: BuildOptimizationsFlags.UseExpressBuild);
             SkipKuduSync = Flags == BuildOptimizationsFlags.UseExpressBuild;
         }
 
@@ -70,10 +72,6 @@ namespace Kudu.Core.Deployment.Oryx
                 case WorkerRuntime.Python:
                     OryxArgumentsHelper.AddLanguage(args, "python");
                     break;
-
-                case WorkerRuntime.PHP:
-                    OryxArgumentsHelper.AddLanguage(args, "php");
-                    break;
             }
         }
 
@@ -121,7 +119,59 @@ namespace Kudu.Core.Deployment.Oryx
 
         private string ResolveWorkerRuntimeVersion(WorkerRuntime workerRuntime)
         {
+            var framework = GetEnvironmentVariableOrNull(OryxBuildConstants.OryxEnvVars.FrameworkSetting);
+            var frameworkVersion = GetEnvironmentVariableOrNull(OryxBuildConstants.OryxEnvVars.FrameworkVersionSetting);
+
+            // If either of them is not set we are not in a position to determine the version, and should let the caller
+            // switch to default
+            if (string.IsNullOrEmpty(framework) || string.IsNullOrEmpty(frameworkVersion))
+            {
+                return FunctionAppSupportedWorkerRuntime.GetDefaultLanguageVersion(workerRuntime);
+            }
+
+            // If it's set to DOCKER, it could be a) a function app image b) a custom image
+            // For custom image, there's no point doing a build, so we just default them (the parser won't work).
+            // if it's indeed a function app image, we look for the right tag that tells us about the version.
+            //
+            // Or if it's set to a supported worker runtime that was inferred, we assume that the framework version
+            // that is set is the correct version requested.
+            if (framework.Equals("DOCKER", StringComparison.OrdinalIgnoreCase))
+            {
+                var parsedVersion = ParseRuntimeVersionFromImage(frameworkVersion);
+                if (!string.IsNullOrEmpty(parsedVersion))
+                {
+                    return parsedVersion;
+                }
+            }
+            else if (framework.Equals(workerRuntime.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                return frameworkVersion;
+            }
+
             return FunctionAppSupportedWorkerRuntime.GetDefaultLanguageVersion(workerRuntime);
+        }
+
+        public static string ParseRuntimeVersionFromImage(string imageName)
+        {
+            // The image name would be in this format -- 'mcr.microsoft.com/azure-functions/python:2.0-python3.6-appservice'
+            // If we get any parsing issues, we return null here.
+            try
+            {
+                var imageTag = imageName.Substring(imageName.LastIndexOf(':') + 1);
+                var versionRegex = new Regex(@"^[0-9]+\.[0-9]+\-[A-Za-z]+([0-9].*)\-appservice$");
+                var versionMatch = versionRegex.Match(imageTag);
+                var version = versionMatch?.Groups[1]?.Value;
+                if (!string.IsNullOrEmpty(version))
+                {
+                    return version;
+                }
+                return null;
+            }
+            catch (Exception)
+            {
+                // TODO: Log at ETW event later
+                return null;
+            }
         }
 
         private string GetEnvironmentVariableOrNull(string environmentVarName)
