@@ -211,10 +211,6 @@ namespace Kudu.Console
                         foreach (var deployment in deployments.Items)
                         {
                             System.Console.WriteLine("Kube Deployment Metadata name: " + deployment.Metadata.Name);
-                            if ()
-                            {
-
-                            }
                         }
 
                         /*
