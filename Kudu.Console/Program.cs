@@ -207,7 +207,17 @@ namespace Kudu.Console
                     var client = new Kubernetes(config);
                     try
                     {
-                        var namespaces = client.ListNamespace();
+                        var deployments = client.ListDeploymentForAllNamespaces();
+                        foreach (var deployment in deployments.Items)
+                        {
+                            System.Console.WriteLine("Kube Deployment Metadata name: " + deployment.Metadata.Name);
+                            if ()
+                            {
+
+                            }
+                        }
+
+                        /*
                         foreach (var ns in namespaces.Items)
                         {
                             System.Console.WriteLine("Kube NS: " + ns.Metadata.Name);
@@ -217,6 +227,7 @@ namespace Kudu.Console
                                 System.Console.WriteLine("Kube NS Items: " + item.Metadata.Name);
                             }
                         }
+                        */
                     }
                     catch (Microsoft.Rest.HttpOperationException httpOperationException)
                     {
