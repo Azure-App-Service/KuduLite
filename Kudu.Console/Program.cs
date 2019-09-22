@@ -204,21 +204,31 @@ namespace Kudu.Console
 
                     // Use the config object to create a client.
                     var client = new Kubernetes(config);
-
-                    var namespaces = client.ListNamespace();
-                    foreach (var ns in namespaces.Items)
+                    try
                     {
-                        System.Console.WriteLine("Kube NS: "+ns.Metadata.Name);
-                        var list = client.ListNamespacedPod(ns.Metadata.Name);
-                        foreach (var item in list.Items)
+                        var namespaces = client.ListNamespace();
+                        foreach (var ns in namespaces.Items)
                         {
-                            System.Console.WriteLine("Kube NS Items: " + item.Metadata.Name);
+                            System.Console.WriteLine("Kube NS: " + ns.Metadata.Name);
+                            var list = client.ListNamespacedPod(ns.Metadata.Name);
+                            foreach (var item in list.Items)
+                            {
+                                System.Console.WriteLine("Kube NS Items: " + item.Metadata.Name);
+                            }
                         }
+                    }
+                    catch (Microsoft.Rest.HttpOperationException httpOperationException)
+                    {
+                        var phase = httpOperationException.Response.ReasonPhrase;
+                        //Bad Request
+                        var content = httpOperationException.Response.Content;
+                        System.Console.WriteLine("K8 Client errror");
+                        System.Console.WriteLine(content);
                     }
 
                     System.Console.WriteLine("Deployment Logs : '"+
-                        env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" + 
-                        gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");
+                    env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" + 
+                    gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");
                 }
             }
 
