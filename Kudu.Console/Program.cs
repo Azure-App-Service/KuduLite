@@ -22,6 +22,7 @@ using Kudu.Core.SourceControl.Git;
 using Kudu.Core.Tracing;
 using System.Reflection;
 using XmlSettings;
+using k8s;
 
 namespace Kudu.Console
 {
@@ -198,6 +199,23 @@ namespace Kudu.Console
                 }
                 finally
                 {
+                    // Load from in-cluster configuration:
+                    var config = KubernetesClientConfiguration.InClusterConfig();
+
+                    // Use the config object to create a client.
+                    var client = new Kubernetes(config);
+
+                    var namespaces = client.ListNamespace();
+                    foreach (var ns in namespaces.Items)
+                    {
+                        System.Console.WriteLine("Kube NS: "+ns.Metadata.Name);
+                        var list = client.ListNamespacedPod(ns.Metadata.Name);
+                        foreach (var item in list.Items)
+                        {
+                            System.Console.WriteLine("Kube NS Items: " + item.Metadata.Name);
+                        }
+                    }
+
                     System.Console.WriteLine("Deployment Logs : '"+
                         env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" + 
                         gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");
