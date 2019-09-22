@@ -210,7 +210,11 @@ namespace Kudu.Console
                         var deployments = client.ListDeploymentForAllNamespaces();
                         foreach (var deployment in deployments.Items)
                         {
-                            System.Console.WriteLine("Kube Deployment Metadata name: " + deployment.Metadata.Name);
+                            if(deployment.Metadata.Name.Equals("second",StringComparison.OrdinalIgnoreCase))
+                            {
+                                var containerData = deployment.Spec.Selector.MatchLabels["containers"];
+                                System.Console.WriteLine("container data :::: "+ containerData);
+                            }
                         }
 
                         /*
