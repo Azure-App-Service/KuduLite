@@ -200,7 +200,9 @@ namespace Kudu.Console
                 finally
                 {
                     // Load from in-cluster configuration:
-                    var config = KubernetesClientConfiguration.InClusterConfig();
+                    //var config = KubernetesClientConfiguration.InClusterConfig();
+
+                    var config = KubernetesClientConfiguration.BuildConfigFromConfigFile();
 
                     // Use the config object to create a client.
                     var client = new Kubernetes(config);
