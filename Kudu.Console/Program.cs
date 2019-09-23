@@ -23,12 +23,19 @@ using Kudu.Core.Tracing;
 using System.Reflection;
 using XmlSettings;
 using k8s;
+using k8s.Models;
+using Microsoft.AspNetCore.JsonPatch;
+using LibGit2Sharp;
+using System.Threading;
 
 namespace Kudu.Console
 {
     internal class Program
     {
-        
+        private static IEnvironment env;
+        private static IDeploymentSettingsManager settingsManager;
+
+
         private static int Main(string[] args)
         {
             // Turn flag on in app.config to wait for debugger on launch
@@ -61,9 +68,9 @@ namespace Kudu.Console
             string deployer = args.Length == 2 ? null : args[2];
             string requestId = System.Environment.GetEnvironmentVariable(Constants.RequestIdHeader);
 
-            IEnvironment env = GetEnvironment(appRoot, requestId);
+            env = GetEnvironment(appRoot, requestId);
             ISettings settings = new XmlSettings.Settings(GetSettingsPath(env));
-            IDeploymentSettingsManager settingsManager = new DeploymentSettingsManager(settings);
+            settingsManager = new DeploymentSettingsManager(settings);
 
             // Setup the trace
             TraceLevel level = settingsManager.GetTraceLevel();
@@ -199,6 +206,7 @@ namespace Kudu.Console
                 }
                 finally
                 {
+                    /*
                     // Load from in-cluster configuration:
                     var config = KubernetesClientConfiguration.InClusterConfig();
                     //var config = KubernetesClientConfiguration.InClusterConfig();
@@ -208,26 +216,24 @@ namespace Kudu.Console
                     try
                     {
                         var deployments = client.ListDeploymentForAllNamespaces();
+                        //client.PatchNamespacedDeployment1('{"spec":{"template":{"spec":{"containers":[{"name":"nginx","image":"nginx:1.11"}]}}}}');
+                        
                         foreach (var deployment in deployments.Items)
                         {
-                            if(deployment.Metadata.Name.Equals("second",StringComparison.OrdinalIgnoreCase))
+                            if(deployment.Spec.Template.Metadata.Name.Equals("second"))
                             {
-                                var containerData = deployment.Spec.Selector.MatchLabels["containers"];
-                                System.Console.WriteLine("container data :::: "+ containerData);
+                                foreach (var container in deployment.Spec.Template.Spec.Containers)
+                                {
+                                    foreach (var volumeMount in container.VolumeMounts)
+                                    {
+                                        volumeMount.SubPath = "apps/kudutestmount";
+                                        client.PatchNamespacedDeployment(new V1Patch<V1Deployment>(deployment), "second", "default");
+                                    }
+                                }
+                                var jdoc = new JsonPatchDocument<V1Deployment>();
+                                //jdoc.Add("spec/template/spec/containers/volumeMounts/mountPath/subPath", "apps/kudutestmount");
                             }
                         }
-
-                        /*
-                        foreach (var ns in namespaces.Items)
-                        {
-                            System.Console.WriteLine("Kube NS: " + ns.Metadata.Name);
-                            var list = client.ListNamespacedPod(ns.Metadata.Name);
-                            foreach (var item in list.Items)
-                            {
-                                System.Console.WriteLine("Kube NS Items: " + item.Metadata.Name);
-                            }
-                        }
-                        */
                     }
                     catch (Microsoft.Rest.HttpOperationException httpOperationException)
                     {
@@ -237,8 +243,28 @@ namespace Kudu.Console
                         System.Console.WriteLine("K8 Client errror");
                         System.Console.WriteLine(content);
                     }
+                    */
+                    // IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string repositoryPath
+                    Process _executingProcess = new Process()
+                    {
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = "/bin/bash",
+                            Arguments = "-c \" /patch.sh second newkududeployment \"",
+                            RedirectStandardOutput = true,
+                            UseShellExecute = false,
+                            CreateNoWindow = true,
+                        }
+                    };
+                    _executingProcess.Start();
+                    while (!_executingProcess.HasExited)
+                    {
+                        System.Console.WriteLine("Waiting for restart command to complete");
+                        Thread.Sleep(1000);
+                    }
+                    //ExternalCommandBuilder restartApp = new ExternalCommandBuilder(env, settingsManager, buildPropertyProvider,env.RepositoryPath);
 
-                    System.Console.WriteLine("Deployment Logs : '"+
+                        System.Console.WriteLine("Deployment Logs : '"+
                     env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" + 
                     gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");
                 }
