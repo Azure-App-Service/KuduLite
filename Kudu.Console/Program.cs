@@ -246,15 +246,17 @@ namespace Kudu.Console
                     }
                     */
                     // IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string repositoryPath
-                    string appName = appRoot.Replace("/home/apps/","").Split("/")[0];
-                    System.Console.WriteLine("Restarting Pods for App Service App :");
-                    System.Console.WriteLine("App Name: " + appName);
+                    string appName = appRoot.Replace("/home/apps/", "").Split("/")[0];
+
+                    System.Console.WriteLine("Restarting Pods for App Service App : ");
+                    System.Console.WriteLine("App Name: " + appName + $" Patch Args :::::: -c \" /patch.sh {appRoot} {gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"");
+
                     Process _executingProcess = new Process()
                     {
                         StartInfo = new ProcessStartInfo
                         {
                             FileName = "/bin/bash",
-                            Arguments = $"-c \" /patch.sh {appRoot} {gitRepository.GetChangeSet(settingsManager.GetBranch()).Id} \"",
+                            Arguments = $"-c \" /patch.sh {appRoot} {gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"",
                             RedirectStandardOutput = true,
                             UseShellExecute = false,
                             CreateNoWindow = true,

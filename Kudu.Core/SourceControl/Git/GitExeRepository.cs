@@ -185,7 +185,7 @@ fi" + "\n";
                     sb.AppendLine("#!/bin/sh");
                     sb.AppendLine("read i");
                     sb.AppendLine("echo $i > pushinfo");
-                    sb.AppendLine(KnownEnvironment.KUDUCOMMAND);
+                    sb.AppendLine(KnownEnvironment.KUDUCOMMAND.Replace("$KUDU_APPPATH",_environment.RepositoryPath));
                     if (OSDetector.IsOnWindows())
                     {
                         FileSystemHelpers.WriteAllText(PostReceiveHookPath, sb.ToString());
