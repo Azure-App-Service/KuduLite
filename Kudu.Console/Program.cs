@@ -35,7 +35,7 @@ namespace Kudu.Console
     {
         private static IEnvironment env;
         private static IDeploymentSettingsManager settingsManager;
-
+        private static string appRoot;
 
         private static int Main(string[] args)
         {
@@ -64,7 +64,7 @@ namespace Kudu.Console
             System.Console.Error.NewLine = "\n";
             System.Console.Out.NewLine = "\n";
 
-            string appRoot = args[0];
+            appRoot = args[0];
             string wapTargets = args[1];
             string deployer = args.Length == 2 ? null : args[2];
             string requestId = System.Environment.GetEnvironmentVariable(Constants.RequestIdHeader);
@@ -246,18 +246,22 @@ namespace Kudu.Console
                     }
                     */
                     // IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string repositoryPath
+                    string appName = appRoot.Replace("/home/apps/","").Split("/")[0];
+                    System.Console.WriteLine("Restarting Pods for App Service App :");
+                    System.Console.WriteLine("App Name: " + appName);
                     Process _executingProcess = new Process()
                     {
                         StartInfo = new ProcessStartInfo
                         {
                             FileName = "/bin/bash",
-                            Arguments = "-c \" /patch.sh second newkududeployment \"",
+                            Arguments = $"-c \" /patch.sh {appRoot.} newkududeployment \"",
                             RedirectStandardOutput = true,
                             UseShellExecute = false,
                             CreateNoWindow = true,
                         }
                     };
                     _executingProcess.Start();
+                    _executingProcess.OutputDataReceived += (sender, args) => System.Console.WriteLine("{0}", args.Data);
                     while (!_executingProcess.HasExited)
                     {
                         System.Console.WriteLine("Waiting for restart command to complete");
