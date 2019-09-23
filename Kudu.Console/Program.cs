@@ -27,6 +27,7 @@ using k8s.Models;
 using Microsoft.AspNetCore.JsonPatch;
 using LibGit2Sharp;
 using System.Threading;
+using IRepository = Kudu.Core.SourceControl.IRepository;
 
 namespace Kudu.Console
 {
