@@ -28,6 +28,8 @@ using Microsoft.AspNetCore.JsonPatch;
 using LibGit2Sharp;
 using System.Threading;
 using IRepository = Kudu.Core.SourceControl.IRepository;
+using log4net;
+using log4net.Config;
 
 namespace Kudu.Console
 {
@@ -39,6 +41,8 @@ namespace Kudu.Console
 
         private static int Main(string[] args)
         {
+            var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
+            XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
             // Turn flag on in app.config to wait for debugger on launch
             if (ConfigurationManager.AppSettings["WaitForDebuggerOnStart"] == "true")
             {
@@ -249,7 +253,7 @@ namespace Kudu.Console
                     string appName = appRoot.Replace("/home/apps/", "").Split("/")[0];
 
                     System.Console.WriteLine("Restarting Pods for App Service App : ");
-                    System.Console.WriteLine("App Name: " + appName + $" Patch Args :::::: -c \" /patch.sh {appName} {appRoot}/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"");
+                    System.Console.WriteLine("App Name: " + appName + $" Patch Args :::::: -c \" /patch.sh {appName} apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"");
 
                     Process _executingProcess = new Process()
                     {
