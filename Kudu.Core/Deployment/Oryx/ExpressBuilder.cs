@@ -40,7 +40,8 @@ namespace Kudu.Core.Deployment.Oryx
             {
                 // For App service express mode
                 // Generate packagename.txt and packagepath
-                packageName = "node_modules.zip:/node_modules";
+                //packageName = "node_modules.zip:/node_modules";
+                SetupNodeAppExpressArtifacts(context, sitePackagesDir, outputPath);
             }
             else if(args.Language == Framework.Python)
             {
