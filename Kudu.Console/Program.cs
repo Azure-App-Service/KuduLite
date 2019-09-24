@@ -260,7 +260,7 @@ namespace Kudu.Console
                         StartInfo = new ProcessStartInfo
                         {
                             FileName = "/bin/bash",
-                            Arguments = $"-c \" /patch.sh {appRoot} {appRoot}/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"",
+                            Arguments = $"-c \" /patch.sh {appName} {appName}/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"",
                             RedirectStandardOutput = true,
                             UseShellExecute = false,
                             CreateNoWindow = true,
