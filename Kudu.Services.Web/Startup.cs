@@ -339,6 +339,15 @@ namespace Kudu.Services.Web
                 await context.Response.WriteAsync("Kestrel Running");
             }));
 
+            var containsRelativeProvisionPath = new Func<HttpContext, bool>(i =>
+                i.Request.Path.Value.StartsWith("/api/provision", StringComparison.OrdinalIgnoreCase));
+
+            app.MapWhen(containsRelativeProvisionPath, application => application.Run(async context =>
+            {
+                FileSystemHelpers.EnsureDirectory("/apps/"+context.Request.Path.Value.Replace("/api/provision/", ""));
+                await context.Response.WriteAsync("App Provisioned");
+            }));
+
             var containsRelativePath2 = new Func<HttpContext, bool>(i =>
                 i.Request.Path.Value.StartsWith("/info", StringComparison.OrdinalIgnoreCase));
 

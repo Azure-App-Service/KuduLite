@@ -249,7 +249,7 @@ namespace Kudu.Console
                     string appName = appRoot.Replace("/home/apps/", "").Split("/")[0];
 
                     System.Console.WriteLine("Restarting Pods for App Service App : ");
-                    System.Console.WriteLine("App Name: " + appName + $" Patch Args :::::: -c \" /patch.sh {appName} {gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"");
+                    System.Console.WriteLine("App Name: " + appName + $" Patch Args :::::: -c \" /patch.sh {appName} {appRoot}/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"");
 
                     Process _executingProcess = new Process()
                     {
