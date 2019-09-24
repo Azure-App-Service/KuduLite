@@ -269,11 +269,11 @@ namespace Kudu.Console
                     // Read the standard error of net.exe and write it on to console.
                     _executingProcess.OutputDataReceived += (sender, args) => System.Console.WriteLine("{0}", args.Data);
                     _executingProcess.Start();
-                    while (!_executingProcess.HasExited)
-                    {
-                        System.Console.WriteLine("Waiting for restart command to complete");
-                        Thread.Sleep(1000);
-                    }
+                    //* Read the output (or the error)
+                    string output = _executingProcess.StandardOutput.ReadToEnd();
+                    System.Console.WriteLine(output);
+                    string err = _executingProcess.StandardError.ReadToEnd();
+                    System.Console.WriteLine(err);
                     _executingProcess.WaitForExit();
                     System.Console.WriteLine("Process exit code : "+_executingProcess.ExitCode);
                     //ExternalCommandBuilder restartApp = new ExternalCommandBuilder(env, settingsManager, buildPropertyProvider,env.RepositoryPath);
