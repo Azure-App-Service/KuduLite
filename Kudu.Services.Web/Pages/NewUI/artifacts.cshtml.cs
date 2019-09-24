@@ -9,8 +9,6 @@ namespace Kudu.Services.Web.Pages.NewUI
 {
     public class artifactsModel : PageModel
     {
-        public string appName { get; set; }
-
         public void OnGet()
         {
 

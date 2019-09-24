@@ -252,8 +252,8 @@ namespace Kudu.Console
                     // IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string repositoryPath
                     string appName = appRoot.Replace("/home/apps/", "").Split("/")[0];
 
-                    System.Console.WriteLine("Restarting Pods for App Service App : ");
-                    System.Console.WriteLine("App Name: " + appName + $" Patch Args :::::: -c \" /patch.sh {appName} apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"");
+                    System.Console.WriteLine("Restarting Pods for App Service App : " + appName);
+                    System.Console.WriteLine($" Patch Args :::::: -c \" /patch.sh {appName} apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"");
 
                     Process _executingProcess = new Process()
                     {
@@ -270,12 +270,14 @@ namespace Kudu.Console
                     _executingProcess.OutputDataReceived += (sender, args) => System.Console.WriteLine("{0}", args.Data);
                     _executingProcess.Start();
                     //* Read the output (or the error)
-                    string output = _executingProcess.StandardOutput.ReadToEnd();
-                    System.Console.WriteLine(output);
-                    string err = _executingProcess.StandardError.ReadToEnd();
-                    System.Console.WriteLine(err);
+                    //string output = _executingProcess.StandardOutput.ReadToEnd();
+                    //System.Console.WriteLine(output);
+                    //string err = _executingProcess.StandardError.ReadToEnd();
+                    //System.Console.WriteLine(err);
                     _executingProcess.WaitForExit();
                     System.Console.WriteLine("Process exit code : "+_executingProcess.ExitCode);
+                    System.Console.WriteLine("All Pods Restarted!");
+
                     //ExternalCommandBuilder restartApp = new ExternalCommandBuilder(env, settingsManager, buildPropertyProvider,env.RepositoryPath);
 
                     System.Console.WriteLine("Deployment Logs : '"+

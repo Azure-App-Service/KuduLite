@@ -1,4 +1,4 @@
-﻿@page "{appName}"
+﻿@page
 
 @model Kudu.Services.Web.Pages.NewUI.artifactsModel
 @{
@@ -76,7 +76,7 @@
 
         .timeline-centered .timeline-entry {
             position: relative;
-            width: 50%;
+            width: 70%;
             float: right;
             margin-bottom: 70px;
             clear: both;
@@ -128,7 +128,7 @@
                         margin-right: 70px;
                     }
 
-                        .timeline-centered .timeline-entry.left-aligned .timeline-entry-inner .timeline-label:after {
+                    .timeline-centered .timeline-entry.left-aligned .timeline-entry-inner .timeline-label:after {
                             left: auto;
                             right: 0;
                             margin-left: 0;
@@ -138,7 +138,7 @@
                             -webkit-transform: rotate(180deg);
                             -ms-transform: rotate(180deg);
                             transform: rotate(180deg);
-                        }
+                    }
 
             .timeline-centered .timeline-entry .timeline-entry-inner {
                 position: relative;
@@ -303,21 +303,34 @@
     <div class="row">
         <div class="timeline-centered">
 
-            @foreach (var dir in System.IO.Directory.GetDirectories("/home/apps/" + @Model.appName + "/site/artifacts"))
-            {
                 <article class="timeline-entry">
                     <div class="timeline-entry-inner">
-                        <time class="timeline-time" datetime="2014-01-10T03:45"><span>03:45 AM</span> <span>Today</span></time>
+                        <time class="timeline-time" datetime="2014-01-10T03:45"><span>4 Hours</span> <span>Ago</span></time>
                         <div class="timeline-icon bg-success">
                             <i class="entypo-feather"></i>
                         </div>
                         <div class="timeline-label">
-                            <h2><a href="#">@dir</a> <span></span></h2>
-                            <p>Redeploy</p>
+                            <h2><a href="#">ddbcbcc74</a> <span></span></h2>
+                            <p>
+                                <button type="button" class="btn btn-success">Production</button>
+                            </p>
                         </div>
                     </div>
                 </article>
-            }
+
+                <article class="timeline-entry">
+                    <div class="timeline-entry-inner">
+                        <time class="timeline-time" datetime="2014-01-10T03:45"><span>7 Hours</span> <span>Ago</span></time>
+                        <div class="timeline-icon bg-success">
+                            <i class="entypo-feather"></i>
+                        </div>
+                        <div class="timeline-label">
+                            <h2><a href="#">7fd7cc46d9</a><span></span></h2>
+                            <button type="button" class="btn btn-secondary">Redeploy Deployment</button>
+                            <button type="button" class="btn btn-danger">Revert App State</button>
+                        </div>
+                    </div>
+                </article>            
             <article class="timeline-entry begin">
                 <div class="timeline-entry-inner">
                     <div class="timeline-icon" style="-webkit-transform: rotate(-90deg); -moz-transform: rotate(-90deg);">
