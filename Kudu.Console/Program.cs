@@ -249,19 +249,20 @@ namespace Kudu.Console
                     string appName = appRoot.Replace("/home/apps/", "").Split("/")[0];
 
                     System.Console.WriteLine("Restarting Pods for App Service App : ");
-                    System.Console.WriteLine("App Name: " + appName + $" Patch Args :::::: -c \" /patch.sh {appRoot} {gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"");
+                    System.Console.WriteLine("App Name: " + appName + $" Patch Args :::::: -c \" /patch.sh {appName} {gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"");
 
                     Process _executingProcess = new Process()
                     {
                         StartInfo = new ProcessStartInfo
                         {
                             FileName = "/bin/bash",
-                            Arguments = $"-c \" /patch.sh {appRoot} {gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"",
+                            Arguments = $"-c \" /patch.sh {appRoot} {appRoot}/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"",
                             RedirectStandardOutput = true,
                             UseShellExecute = false,
                             CreateNoWindow = true,
                         }
                     };
+
                     _executingProcess.Start();
                     _executingProcess.OutputDataReceived += (sender, args) => System.Console.WriteLine("{0}", args.Data);
                     while (!_executingProcess.HasExited)
