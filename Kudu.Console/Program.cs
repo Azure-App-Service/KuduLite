@@ -266,17 +266,21 @@ namespace Kudu.Console
                             CreateNoWindow = true,
                         }
                     };
-
-                    _executingProcess.Start();
+                    StreamReader myStreamReader = _executingProcess.StandardError;
+                    // Read the standard error of net.exe and write it on to console.
                     _executingProcess.OutputDataReceived += (sender, args) => System.Console.WriteLine("{0}", args.Data);
+                    _executingProcess.Start();
                     while (!_executingProcess.HasExited)
                     {
                         System.Console.WriteLine("Waiting for restart command to complete");
                         Thread.Sleep(1000);
                     }
+                    _executingProcess.WaitForExit();
+                    System.Console.WriteLine("Process exit code : "+_executingProcess.ExitCode);
+                    System.Console.WriteLine(myStreamReader.ReadLine());
                     //ExternalCommandBuilder restartApp = new ExternalCommandBuilder(env, settingsManager, buildPropertyProvider,env.RepositoryPath);
 
-                        System.Console.WriteLine("Deployment Logs : '"+
+                    System.Console.WriteLine("Deployment Logs : '"+
                     env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" + 
                     gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");
                 }
