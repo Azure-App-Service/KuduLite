@@ -344,7 +344,8 @@ namespace Kudu.Services.Web
 
             app.MapWhen(containsRelativeProvisionPath, application => application.Run(async context =>
             {
-                FileSystemHelpers.EnsureDirectory("/apps/"+context.Request.Path.Value.Replace("/api/provision/", ""));
+                FileSystemHelpers.EnsureDirectory("/home/apps/"+context.Request.Path.Value.Replace("/api/provision/", ""));
+                FileSystemHelpers.EnsureDirectory("/home/apps/" + context.Request.Path.Value.Replace("/api/provision/", "")+"/site");
                 await context.Response.WriteAsync("App Provisioned");
             }));
 
