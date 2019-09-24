@@ -266,7 +266,6 @@ namespace Kudu.Console
                             CreateNoWindow = true,
                         }
                     };
-                    StreamReader myStreamReader = _executingProcess.StandardError;
                     // Read the standard error of net.exe and write it on to console.
                     _executingProcess.OutputDataReceived += (sender, args) => System.Console.WriteLine("{0}", args.Data);
                     _executingProcess.Start();
@@ -277,7 +276,6 @@ namespace Kudu.Console
                     }
                     _executingProcess.WaitForExit();
                     System.Console.WriteLine("Process exit code : "+_executingProcess.ExitCode);
-                    System.Console.WriteLine(myStreamReader.ReadLine());
                     //ExternalCommandBuilder restartApp = new ExternalCommandBuilder(env, settingsManager, buildPropertyProvider,env.RepositoryPath);
 
                     System.Console.WriteLine("Deployment Logs : '"+
