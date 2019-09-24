@@ -2,6 +2,7 @@
 {
     public interface IEnvironment
     {
+        string CurrId { get; set; }
         string RootPath { get; }                // e.g. /
         string SiteRootPath { get; }            // e.g. /site
         string RepositoryPath { get; set; }     // e.g. /site/repository

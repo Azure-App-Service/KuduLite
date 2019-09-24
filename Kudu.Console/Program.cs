@@ -147,6 +147,7 @@ namespace Kudu.Console
             {
                 gitRepository = new GitExeRepository(env, settingsManager, traceFactory);
             }
+            env.CurrId = gitRepository.GetChangeSet(settingsManager.GetBranch()).Id;
 
             IServerConfiguration serverConfiguration = new ServerConfiguration();
             IAnalytics analytics = new Analytics(settingsManager, serverConfiguration, traceFactory);
@@ -162,7 +163,6 @@ namespace Kudu.Console
                                                           deploymentLock,
                                                           GetLogger(env, level, logger),
                                                           hooksManager);
-
             var step = tracer.Step(XmlTracer.ExecutingExternalProcessTrace, new Dictionary<string, string>
             {
                 { "type", "process" },
@@ -347,12 +347,13 @@ namespace Kudu.Console
             }
 
             // CORE TODO Handing in a null IHttpContextAccessor (and KuduConsoleFullPath) again
-            return new Kudu.Core.Environment(root,
+            var env=  new Kudu.Core.Environment(root,
                 EnvironmentHelper.NormalizeBinPath(binPath),
                 repositoryPath,
                 requestId,
                 Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu.dll"),
                 null);
+            return env;
         }
     }
 }

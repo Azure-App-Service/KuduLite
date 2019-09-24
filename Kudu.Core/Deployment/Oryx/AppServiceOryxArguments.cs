@@ -230,6 +230,9 @@ namespace Kudu.Core.Deployment
                 case BuildOptimizationsFlags.UseTempDirectory:
                     OryxArgumentsHelper.AddTempDirectoryOption(args, context.BuildTempPath);
                     break;
+                case BuildOptimizationsFlags.UseK8SquashFs:
+                    OryxArgumentsHelper.AddTempDirectoryOption(args, context.BuildTempPath);
+                    break;
             }
 
             // Virtual Env?

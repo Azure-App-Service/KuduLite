@@ -10,11 +10,15 @@ namespace Kudu.Core.Deployment.Oryx
     public class ExpressBuilder : ExternalCommandBuilder
     {
         public override string ProjectType => "OryxBuild";
+        public IEnvironment environment;
+        IDeploymentSettingsManager settings;
+        IBuildPropertyProvider propertyProvider;
 
         public ExpressBuilder(IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string sourcePath)
             : base(environment, settings, propertyProvider, sourcePath)
         {
-
+            this.environment = environment;
+            this.settings = settings;
         }
 
         public void SetupExpressBuilderArtifacts(string outputPath, DeploymentContext context, IOryxArguments args)
@@ -61,6 +65,23 @@ namespace Kudu.Core.Deployment.Oryx
             string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
 
             string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath, outputPath, zipAppName, BuildArtifactType.Zip, numBuildArtifacts: -1);
+
+            // Remove the old zips
+            DeploymentHelper.PurgeBuildArtifactsIfNecessary(sitePackages, BuildArtifactType.Zip, context.Tracer, totalAllowedFiles: 2);
+
+            return zipAppName;
+        }
+
+
+        private string SetupNodeAppExpressArtifacts(DeploymentContext context, string sitePackages, string outputPath)
+        {
+            context.Logger.Log($"Express Build enabled for Node app");
+
+            // Create NetCore Zip at tm build folder where artifact were build and copy it to sitePackages, .GetBranch()
+            string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
+
+            context.Logger.Log($"From {context.BuildTempPath} to {environment.RepositoryPath} ");
+            string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath, environment.RepositoryPath +"/artifacts/" +environment.CurrId, zipAppName, BuildArtifactType.Squashfs, numBuildArtifacts: -1);
 
             // Remove the old zips
             DeploymentHelper.PurgeBuildArtifactsIfNecessary(sitePackages, BuildArtifactType.Zip, context.Tracer, totalAllowedFiles: 2);

@@ -463,6 +463,8 @@ namespace Kudu.Core
 
         public bool IsOnK8 => true;
 
+        public string CurrId { get; set; }
+
         public static string GetFreeSpaceHtml(string path)
         {
             try
