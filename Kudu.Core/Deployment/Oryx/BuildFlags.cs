@@ -15,11 +15,11 @@ namespace Kudu.Core.Deployment
 
     public class BuildFlagsHelper
     {
-        public static BuildOptimizationsFlags Parse(string value)
+        public static BuildOptimizationsFlags Parse(string value, BuildOptimizationsFlags defaultVal = BuildOptimizationsFlags.None)
         {
             if (string.IsNullOrEmpty(value))
             {
-                return BuildOptimizationsFlags.None;
+                return defaultVal;
             }
 
             try
@@ -29,7 +29,7 @@ namespace Kudu.Core.Deployment
             }
             catch (Exception)
             {
-                return BuildOptimizationsFlags.None;
+                return defaultVal;
             }
         }
     }
