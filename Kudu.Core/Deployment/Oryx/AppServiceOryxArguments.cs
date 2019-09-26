@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Kudu.Core.Deployment.Oryx;
+using LibGit2Sharp;
 
 namespace Kudu.Core.Deployment
 {
@@ -11,13 +12,13 @@ namespace Kudu.Core.Deployment
 
         public BuildOptimizationsFlags Flags { get; set; }
 
-        private Framework Language { get; set; }
+        public Framework Language { get; set; }
 
-        private string Version { get; set; }
+        public string Version { get; set; }
 
-        private string PublishFolder { get; set; }
+        public string PublishFolder { get; set; }
 
-        private string VirtualEnv { get; set; }
+        public string VirtualEnv { get; set; }
 
         public AppServiceOryxArguments()
         {
@@ -64,6 +65,11 @@ namespace Kudu.Core.Deployment
 
                 case Framework.Python:
                     SetVirtualEnvironment();
+                    // For python, enable compress option by default
+                    if (Flags == BuildOptimizationsFlags.None)
+                    {
+                        Flags = BuildOptimizationsFlags.CompressModules;
+                    }
                     return;
 
                 case Framework.DotNETCore:
@@ -106,7 +112,6 @@ namespace Kudu.Core.Deployment
         public string GenerateOryxBuildCommand(DeploymentContext context)
         {
             StringBuilder args = new StringBuilder();
-
             // Language
             switch (Language)
             {
@@ -128,8 +133,16 @@ namespace Kudu.Core.Deployment
                     break;
 
                 case Framework.DotNETCore:
-                    // Input/Output [For .NET core, the source path is the RepositoryPath]
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
+                    if (Flags == BuildOptimizationsFlags.UseExpressBuild)
+                    {
+                        // We don't want to copy the built artifacts to wwwroot for ExpressBuild scenario
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath);
+                    }
+                    else
+                    {
+                        // Input/Output [For .NET core, the source path is the RepositoryPath]
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
+                    }
                     OryxArgumentsHelper.AddLanguage(args, "dotnet");
                     break;
 
@@ -147,6 +160,18 @@ namespace Kudu.Core.Deployment
                     break;
                 case Framework.PHP:
                 case Framework.NodeJs:
+                    if (Version.Contains("LTS", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 10-LTS, 12-LTS should use versions 10, 12 etc
+                        // Oryx Builder uses lts for major versions
+                        Version = Version.Replace("LTS", "").Replace("-", "");
+                        if (string.IsNullOrEmpty(Version))
+                        {
+                            // Active LTS
+                            Version = "10";
+                        }
+                    }
+                    break;
                 case Framework.Python:
                     OryxArgumentsHelper.AddLanguageVersion(args, Version);
                     break;
@@ -184,7 +209,7 @@ namespace Kudu.Core.Deployment
                     }
                     else if (Language == Framework.Python)
                     {
-                        OryxArgumentsHelper.AddPythonCompressOption(args);
+                        OryxArgumentsHelper.AddPythonCompressOption(args, "tar-gz");
                     }
 
                     break;
@@ -194,6 +219,10 @@ namespace Kudu.Core.Deployment
                     if (Language == Framework.NodeJs)
                     {
                         OryxArgumentsHelper.AddNodeCompressOption(args, "zip");
+                    }
+                    else if (Language == Framework.Python)
+                    {
+                        OryxArgumentsHelper.AddPythonCompressOption(args, "zip");
                     }
 
                     break;
@@ -209,9 +238,12 @@ namespace Kudu.Core.Deployment
                 OryxArgumentsHelper.AddPythonVirtualEnv(args, VirtualEnv);
             }
 
+            OryxArgumentsHelper.AddDebugLog(args);
+
             return args.ToString();
         }
 
         public bool SkipKuduSync { get; set; }
+
     }
 }

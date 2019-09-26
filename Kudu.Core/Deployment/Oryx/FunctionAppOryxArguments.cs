@@ -14,6 +14,10 @@ namespace Kudu.Core.Deployment.Oryx
 
         protected readonly WorkerRuntime FunctionsWorkerRuntime;
         public bool SkipKuduSync { get; set; }
+        public string Version { get; set; }
+        public Framework Language { get; set; }
+        public string PublishFolder { get; set; }
+        public string VirtualEnv { get; set; }
 
         public FunctionAppOryxArguments()
         {
@@ -62,15 +66,22 @@ namespace Kudu.Core.Deployment.Oryx
             switch (workerRuntime)
             {
                 case WorkerRuntime.DotNet:
+                    Language = Framework.DotNETCore;
                     OryxArgumentsHelper.AddLanguage(args, "dotnet");
                     break;
 
                 case WorkerRuntime.Node:
+                    Language = Framework.NodeJs;
                     OryxArgumentsHelper.AddLanguage(args, "nodejs");
                     break;
 
                 case WorkerRuntime.Python:
+                    Language = Framework.Python;
                     OryxArgumentsHelper.AddLanguage(args, "python");
+                    break;
+                case WorkerRuntime.PHP:
+                    Language = Framework.PHP;
+                    OryxArgumentsHelper.AddLanguage(args, "php");
                     break;
             }
         }
@@ -80,6 +91,7 @@ namespace Kudu.Core.Deployment.Oryx
             var workerVersion = ResolveWorkerRuntimeVersion(FunctionsWorkerRuntime);
             if (!string.IsNullOrEmpty(workerVersion))
             {
+                Version = workerVersion;
                 OryxArgumentsHelper.AddLanguageVersion(args, workerVersion);
             }
         }

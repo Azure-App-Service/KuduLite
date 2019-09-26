@@ -28,7 +28,7 @@ namespace Kudu.Core.Tracing
                     }
                     else
                     {
-                        _eventGenerator = new DefaultKuduEventGenerator();
+                        _eventGenerator = new Log4NetEventGenerator();
                     }
                 }
             }
