@@ -106,5 +106,18 @@ namespace Kudu.Tests.Core.Deployment.Oryx
                     command);
             }
         }
+
+        [Theory]
+        [InlineData("mcr.microsoft.com/azure-functions/python:2.0-python3.7-appservice", "3.7")]
+        [InlineData("mcr.microsoft.com/azure-functions/python:2.0-python3.6-appservice", "3.6")]
+        [InlineData("mcr.microsoft.com/azure-functions/python:2.0-node8-appservice", "8")]
+        [InlineData("mcr.microsoft.com/azure-functions/python:2.0-node10-appservice", "10")]
+        [InlineData("mcr.microsoft.com/azure-functions/python:2.0-dotnet-appservice", null)]
+        [InlineData("mcr.microsoft.com/azure-functions/python:2.0-dotnet2.0-appservice", "2.0")]
+        [InlineData("mcr.microsoft.com/azure-functions/python:2.0-dotnet3.0-appservice", "3.0")]
+        public void TestVersionFromImage(string imageName, string version)
+        {
+            Assert.Equal(version, FunctionAppOryxArguments.ParseRuntimeVersionFromImage(imageName));
+        }
     }
 }

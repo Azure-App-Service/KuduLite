@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 
 namespace Kudu.Core.Deployment.Oryx
 {
@@ -23,7 +24,6 @@ namespace Kudu.Core.Deployment.Oryx
             public static readonly string Node = "8.15";
             public static readonly string Python = "3.6";
             public static readonly string Dotnet = "2.2";
-            public static readonly string PHP = "7.3";
         }
 
         internal static class FunctionAppBuildSettings

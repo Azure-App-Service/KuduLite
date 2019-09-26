@@ -64,6 +64,7 @@ namespace Kudu.Core.Deployment.Generator
                 return new BasicBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);
             }
 
+            // If ENABLE_ORYX_BUILD is not set, for function app, we assume it on by default
             string enableOryxBuild = System.Environment.GetEnvironmentVariable("ENABLE_ORYX_BUILD");
             if (!string.IsNullOrEmpty(enableOryxBuild))
             {
@@ -71,6 +72,10 @@ namespace Kudu.Core.Deployment.Generator
                 {
                     return new OryxBuilder(_environment, settings, _propertyProvider, repositoryRoot);
                 }
+            }
+            else if (FunctionAppHelper.LooksLikeFunctionApp())
+            {
+                return new OryxBuilder(_environment, settings, _propertyProvider, repositoryRoot);
             }
 
             if (!String.IsNullOrEmpty(targetProjectPath))
