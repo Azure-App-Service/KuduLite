@@ -167,7 +167,7 @@ namespace Kudu.Core.Deployment
                         Version = Version.Replace("LTS", "").Replace("-", "");
                         if (string.IsNullOrEmpty(Version))
                         {
-                            // Current LTS
+                            // Active LTS
                             Version = "10";
                         }
                     }
