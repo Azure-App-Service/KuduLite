@@ -118,7 +118,8 @@ namespace Kudu.Core.Deployment.Oryx
                     {
                         // Backward compatible with current python 3.6
                         OryxArgumentsHelper.AddPythonPackageDir(args, OryxBuildConstants.FunctionAppBuildSettings.Python36PackagesTargetDir);
-                    } else
+                    }
+                    else
                     {
                         OryxArgumentsHelper.AddPythonPackageDir(args, OryxBuildConstants.FunctionAppBuildSettings.PythonPackagesTargetDir);
                     }
