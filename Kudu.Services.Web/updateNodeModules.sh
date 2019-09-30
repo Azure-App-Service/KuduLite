@@ -39,5 +39,5 @@ copy_to_build_dir() {
 
 printf "\n\nInstalling Kudu Script\n\n" 
 echo "$@"
-retry npm --loglevel=error install https://github.com/projectkudu/KuduScript/tarball/16de31b5f5ca590ea085979e5fa5e74bb62f647e
+retry npm --loglevel=error install https://github.com/projectkudu/KuduScript/tarball/536355cdbe75807ce97b8b4e2d22f36106e9008e
 copy_to_build_dir "$@"

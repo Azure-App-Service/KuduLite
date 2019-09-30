@@ -17,7 +17,7 @@ echo.
 set /a counter+=1
 echo Attempt %counter% out of %attempts%
 
-cmd /c npm --loglevel=error install https://github.com/projectkudu/KuduScript/tarball/16de31b5f5ca590ea085979e5fa5e74bb62f647e
+cmd /c npm --loglevel=error install https://github.com/projectkudu/KuduScript/tarball/536355cdbe75807ce97b8b4e2d22f36106e9008e
 IF %ERRORLEVEL% NEQ 0 goto error
 if not exist "KuduConsole" mkdir KuduConsole
 xcopy node_modules KuduConsole
