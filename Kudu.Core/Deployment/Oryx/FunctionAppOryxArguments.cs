@@ -79,10 +79,6 @@ namespace Kudu.Core.Deployment.Oryx
                     Language = Framework.Python;
                     OryxArgumentsHelper.AddLanguage(args, "python");
                     break;
-                case WorkerRuntime.PHP:
-                    Language = Framework.PHP;
-                    OryxArgumentsHelper.AddLanguage(args, "php");
-                    break;
             }
         }
 
@@ -118,7 +114,15 @@ namespace Kudu.Core.Deployment.Oryx
             switch (workerRuntime)
             {
                 case WorkerRuntime.Python:
-                    OryxArgumentsHelper.AddPythonPackageDir(args, OryxBuildConstants.FunctionAppBuildSettings.PythonPackagesTargetDir);
+                    if (Version == "3.6")
+                    {
+                        // Backward compatible with current python 3.6
+                        OryxArgumentsHelper.AddPythonPackageDir(args, OryxBuildConstants.FunctionAppBuildSettings.Python36PackagesTargetDir);
+                    }
+                    else
+                    {
+                        OryxArgumentsHelper.AddPythonPackageDir(args, OryxBuildConstants.FunctionAppBuildSettings.PythonPackagesTargetDir);
+                    }
                     break;
             }
         }
