@@ -20,7 +20,15 @@ namespace Kudu.Services.Web
             public string revisionId;
             public string deploymentId;
             public bool active;
-            public IDeploymentStatusFile status;
+            public DeployStatus Status { get; set; }
+            public string StatusText { get; set; }
+            public string AuthorEmail { get; set; }
+            public string Author { get; set; }
+            public string Message { get; set; }
+            public string Deployer { get; set; }
+            public DateTime ReceivedTime { get; set; }
+            public DateTime StartTime { get; set; }
+            public DateTime? EndTime { get; set; }
         }
 
         // GET api/values

@@ -224,6 +224,7 @@ namespace Kudu.Console
                         {
                             System.Console.WriteLine("Found it");
                             System.Console.WriteLine("######### Current Revision Number: "+replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
+
                             FileSystemHelpers.EnsureDirectory($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
                             FileSystemHelpers.CreateFile($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision");
 
@@ -231,13 +232,22 @@ namespace Kudu.Console
                             {
                                 FileSystemHelpers.CreateFile($"/home/apps/{appName}/site/artifacts/current");
                             }
-
+                            
                             IDeploymentStatusFile statusFile = deploymentStatusManager.Open(gitRepository.GetChangeSet(settingsManager.GetBranch()).Id);
-                            var jObj = JsonConvert.SerializeObject(statusFile);
+                            statusFile.Save();
+                            revisiondata rv = new revisiondata()
+                            {
+                                StartTime = statusFile.StartTime,
+                                EndTime = statusFile.EndTime,
+                                Deployer = statusFile.Deployer,
+                                ReceivedTime = statusFile.ReceivedTime,
+                            };
+                            var json = Newtonsoft.Json.JsonConvert.SerializeObject(rv);
+
                             if (!FileSystemHelpers.FileExists($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json"))
                             {
                                 FileSystemHelpers.CreateFile($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json");
-                                File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json", jObj.ToString());
+                                File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json", json.ToString());
                             }
                             File.WriteAllText($"/home/apps/{appName}/site/artifacts/current", $"{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
                             File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision", replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
@@ -344,6 +354,22 @@ namespace Kudu.Console
             }
 
             return NullTracer.Instance;
+        }
+
+        public class revisiondata
+        {
+            public string revisionId;
+            public string deploymentId;
+            public bool active;
+            public DeployStatus Status { get; set; }
+            public string StatusText { get; set; }
+            public string AuthorEmail { get; set; }
+            public string Author { get; set; }
+            public string Message { get; set; }
+            public string Deployer { get; set; }
+            public DateTime ReceivedTime { get; set; }
+            public DateTime StartTime { get; set; }
+            public DateTime? EndTime { get; set; }
         }
 
         private static ILogger GetLogger(IEnvironment env, TraceLevel level, ILogger primary)
