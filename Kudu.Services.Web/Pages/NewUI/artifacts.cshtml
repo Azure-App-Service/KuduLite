@@ -379,6 +379,7 @@ mytimeline.ul.timeline > li:before {
                 success: function () {
                     obj.removeClass('course-id-1');
                     obj.addClass('course-id-2');
+                    $('#' + id + '-redep-btn').innerHTML = "Currently Deployed";
                     objData.animate(
                         { x: 100 },
                         {
@@ -396,7 +397,7 @@ mytimeline.ul.timeline > li:before {
             e.preventDefault();
         }
     $(document).ready(function () {
-        var json = JSON.parse('[{"revisionId":"21","deploymentId":null,"active":true,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"shs","Deployer":"","ReceivedTime":"2019-10-11T16:24:40.9421286Z","StartTime":"2019-10-11T16:24:41.4071646Z","EndTime":"2019-10-11T16:27:08.9458579Z"}]');
+        var json = JSON.parse('[{"revisionId":"23","deploymentId":"85499beba8f391099b473dfb9db6f7bb2470895a","active":false,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"453","Deployer":"","ReceivedTime":"2019-10-11T16:49:52.5561165Z","StartTime":"2019-10-11T16:49:53.1425998Z","EndTime":"2019-10-11T16:52:08.6700642Z"},{"revisionId":"24","deploymentId":"3b80bfc51f6c753e5caf5448c22db0538ba476a5","active":true,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"2345","Deployer":"","ReceivedTime":"2019-10-11T17:29:17.8700342Z","StartTime":"2019-10-11T17:29:18.3541755Z","EndTime":"2019-10-11T17:31:45.0052705Z"}]');
         $.ajax({ 
             type: "GET",
             crossDomain: true,
@@ -409,11 +410,13 @@ mytimeline.ul.timeline > li:before {
     for (var i in json)
     {   
         var revisionId = json[i].revisionId;
-        var author = json[i].author;
-        var id = json[i].deploymentId;
+        var author = json[i].Author;
+        var id = json[i].deploymentId.toString().trim();
+        alert(id);
+        var idShort = id.substring(0, 8);
         var ago = '4H';
-        var liObj = '<li id="'+id+'"><article class="card assignment-card course-id-2"><header class="card-header card-backgrund-color"><h2>'+id+'</h2></header><section class="card-body"> <div class="card-info"> <div class="card-info-element"> <div class="card-info-description">Ago</div><div class="card-info-value">'+ago+'</div></div><div class="card-info-element"> <div class="card-info-description">Author</div><div class="card-info-value">'+author+'</div></div><div class="card-info-element"> <div class="card-info-description">Revision</div><div class="card-info-value"><span class="card-info-assignment-level">'+revisionId+'</span></div></div></div><p class="card-body-delimiter"></p><p class="card-tags"> <span class="card-tag card-backgrund-color" onclick="revertDeployment(\"jennydemo\",'+id+')">Redeploy Deployment</span> <span class="card-tag">Revert State</span> <span class="card-tag">Revision Metadata</span> </p></section> <footer class="card-footer"> <p> <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" id="'+id+'-status" data-status="30" style="width: 30%;"></span></span> </p></footer> </article> </li>';
-        var liObj2 = '<li id="'+id+'"><article class="card assignment-card course-id-1"><header class="card-header card-backgrund-color"><h2>'+id+'</h2></header><section class="card-body"> <div class="card-info"> <div class="card-info-element"> <div class="card-info-description">Ago</div><div class="card-info-value">'+ago+'</div></div><div class="card-info-element"> <div class="card-info-description">Author</div><div class="card-info-value">'+author+'</div></div><div class="card-info-element"> <div class="card-info-description">Revision</div><div class="card-info-value"><span class="card-info-assignment-level">'+revisionId+'</span></div></div></div><p class="card-body-delimiter"></p><p class="card-tags"> <span class="card-tag card-backgrund-color" onclick="revertDeployment(\"jennydemo\",'+id+')">Redeploy Deployment</span> <span class="card-tag">Revert State</span> <span class="card-tag">Revision Metadata</span> </p></section> <footer class="card-footer"> <p> <span class="card-progress-bar" style="display:hidden"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span> </p></footer> </article> </li>';
+        var liObj = '<li id="'+id+'"><article class="card assignment-card course-id-2"><header class="card-header card-backgrund-color"><h2>'+idShort+'</h2></header><section class="card-body"> <div class="card-info"> <div class="card-info-element"> <div class="card-info-description">Ago</div><div class="card-info-value">'+ago+'</div></div><div class="card-info-element"> <div class="card-info-description">Author</div><div class="card-info-value">'+author+'</div></div><div class="card-info-element"> <div class="card-info-description">Revision</div><div class="card-info-value"><span class="card-info-assignment-level">'+revisionId+'</span></div></div></div><p class="card-body-delimiter"></p><p class="card-tags"> <span class="card-tag card-backgrund-color" id="'+id+'-redep-btn" onclick="revertDeployment(\"jennydemo\",\"'+id+'\")>Currently Deployed</span> <span class="card-tag">Revert State</span> <span class="card-tag">Revision Metadata</span> </p></section> <footer class="card-footer"> <p> <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" id="'+id+'-status" data-status="80" style="width: 30%;"></span></span> </p></footer> </article> </li>';
+        var liObj2 = '<li id="'+id+'"><article class="card assignment-card course-id-1"><header class="card-header card-backgrund-color"><h2>'+idShort+'</h2></header><section class="card-body"> <div class="card-info"> <div class="card-info-element"> <div class="card-info-description">Ago</div><div class="card-info-value">'+ago+'</div></div><div class="card-info-element"> <div class="card-info-description">Author</div><div class="card-info-value">'+author+'</div></div><div class="card-info-element"> <div class="card-info-description">Revision</div><div class="card-info-value"><span class="card-info-assignment-level">'+revisionId+'</span></div></div></div><p class="card-body-delimiter"></p><p class="card-tags"> <span class="card-tag card-backgrund-color" id="'+id+'-redep-btn" onclick="revertDeployment(\"jennydemo\",\"'+id+'\")>Redeploy Deployment</span> <span class="card-tag">Revert State</span> <span class="card-tag">Revision Metadata</span> </p></section> <footer class="card-footer"> <p> <span class="card-progress-bar" style="display:hidden"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span> </p></footer> </article> </li>';
         var timeline = $('#revisions-timeline');
         if (json[i].active)
         {
