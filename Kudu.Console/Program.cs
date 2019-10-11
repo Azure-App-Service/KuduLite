@@ -246,9 +246,11 @@ namespace Kudu.Console
 
                             if (!FileSystemHelpers.FileExists($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json"))
                             {
+                                Thread.Sleep(1000);
                                 FileSystemHelpers.CreateFile($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json");
-                                File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json", json.ToString());
                             }
+
+                            File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json", json.ToString());
                             File.WriteAllText($"/home/apps/{appName}/site/artifacts/current", $"{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
                             File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision", replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
                         }
