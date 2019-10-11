@@ -224,23 +224,23 @@ namespace Kudu.Console
                         {
                             System.Console.WriteLine("Found it");
                             System.Console.WriteLine("######### Current Revision Number: "+replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
-                            FileSystemHelpers.EnsureDirectory($"apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
-                            FileSystemHelpers.CreateFile($"apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision");
+                            FileSystemHelpers.EnsureDirectory($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
+                            FileSystemHelpers.CreateFile($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision");
 
-                            if (!FileSystemHelpers.FileExists($"apps/{appName}/site/artifacts/current"))
+                            if (!FileSystemHelpers.FileExists($"/home/apps/{appName}/site/artifacts/current"))
                             {
-                                FileSystemHelpers.CreateFile($"apps/{appName}/site/artifacts/current");
+                                FileSystemHelpers.CreateFile($"/home/apps/{appName}/site/artifacts/current");
                             }
 
                             IDeploymentStatusFile statusFile = deploymentStatusManager.Open(gitRepository.GetChangeSet(settingsManager.GetBranch()).Id);
                             var jObj = JsonConvert.SerializeObject(statusFile);
-                            if (!FileSystemHelpers.FileExists($"apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json"))
+                            if (!FileSystemHelpers.FileExists($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json"))
                             {
-                                FileSystemHelpers.CreateFile($"apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json");
-                                File.WriteAllText($"apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json", jObj.ToString());
+                                FileSystemHelpers.CreateFile($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json");
+                                File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json", jObj.ToString());
                             }
-                            File.WriteAllText($"apps/{appName}/site/artifacts/current", $"{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
-                            File.WriteAllText($"apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision", replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
+                            File.WriteAllText($"/home/apps/{appName}/site/artifacts/current", $"{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
+                            File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision", replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
                         }
                     }
                     /*
