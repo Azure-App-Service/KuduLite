@@ -30,6 +30,7 @@ using System.Threading;
 using IRepository = Kudu.Core.SourceControl.IRepository;
 using log4net;
 using log4net.Config;
+using Newtonsoft.Json;
 
 namespace Kudu.Console
 {
@@ -223,6 +224,22 @@ namespace Kudu.Console
                         {
                             System.Console.WriteLine("Found it");
                             System.Console.WriteLine("######### Current Revision Number: "+replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
+                            FileSystemHelpers.EnsureDirectory($"apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
+                            FileSystemHelpers.CreateFile($"apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision");
+
+                            if (!FileSystemHelpers.FileExists($"apps/{appName}/site/artifacts/current"))
+                            {
+                                FileSystemHelpers.CreateFile($"apps/{appName}/site/artifacts/current");
+                            }
+
+                            IDeploymentStatusFile statusFile = deploymentStatusManager.Open(gitRepository.GetChangeSet(settingsManager.GetBranch()).Id);
+                            var jObj = JsonConvert.SerializeObject(statusFile);
+                            if (!FileSystemHelpers.FileExists($"apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json"))
+                            {
+                                FileSystemHelpers.CreateFile($"apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json");
+                                File.WriteAllText($"apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json", jObj.ToString());
+                            }
+                            File.WriteAllText($"apps/{appName}/site/artifacts/current", $"{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
                             File.WriteAllText($"apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision", replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
                         }
                     }
