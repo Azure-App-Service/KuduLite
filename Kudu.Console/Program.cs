@@ -244,7 +244,8 @@ namespace Kudu.Console
                                 Author = statusFile.Author,
                                 AuthorEmail = statusFile.AuthorEmail,
                                 Message = statusFile.Message,
-                                Status = statusFile.Status
+                                Status = statusFile.Status,
+                                deploymentId = gitRepository.GetChangeSet(settingsManager.GetBranch()).Id
                             };
                             var json = Newtonsoft.Json.JsonConvert.SerializeObject(rv);
                             FileStream stream3 = File.Create($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json");

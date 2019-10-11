@@ -51,7 +51,7 @@ namespace Kudu.Services.Diagnostics
                     bool isCurr = active.Equals(dir.Replace($"/home/apps/{appName}/site/artifacts/", ""));
                     string status2 = FileSystemHelpers.ReadAllText($"{dir}/metadata.json");
                     var revData = JsonConvert.DeserializeObject<revisiondata>(status2);
-                    ret.Add(new revisiondata() { active = isCurr, revisionId = rev, EndTime = revData.EndTime, Deployer = revData.Deployer, Author = revData.Author, AuthorEmail = revData.AuthorEmail, ReceivedTime = revData.ReceivedTime, StartTime = revData.StartTime, Status = revData.Status, Message = revData.Message });
+                    ret.Add(new revisiondata() { deploymentId = revData.deploymentId ,active = isCurr, revisionId = rev, EndTime = revData.EndTime, Deployer = revData.Deployer, Author = revData.Author, AuthorEmail = revData.AuthorEmail, ReceivedTime = revData.ReceivedTime, StartTime = revData.StartTime, Status = revData.Status, Message = revData.Message });
                 }
             }
             return Ok(ret);
