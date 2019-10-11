@@ -218,12 +218,12 @@ namespace Kudu.Console
 
                     foreach (var replicaSet in replicaSets.Items)
                     {
-                        System.Console.WriteLine(" Replica Set name : "+ replicaSet.Metadata.Name);
-                        System.Console.WriteLine(" Replica Set avail : " + replicaSet.Status.AvailableReplicas);
-                        if (replicaSet.Metadata.Name.Equals(appName, StringComparison.OrdinalIgnoreCase)
+                        if (replicaSet.Metadata.Name.IndexOf(appName, StringComparison.OrdinalIgnoreCase) >= 0
                             && (replicaSet.Status.AvailableReplicas > 0))
                         {
-                            System.Console.WriteLine("Revision Number: "+replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
+                            System.Console.WriteLine("Found it");
+                            System.Console.WriteLine("######### Current Revision Number: "+replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
+                            File.WriteAllText($"apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision", replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
                         }
                     }
                     /*
