@@ -8,9 +8,7 @@ using System.Text;
 
 namespace Kudu.Services.Diagnostics
 {
-    [Route("api/revisions")]
-    [ApiController]
-    public class RevisionController : ControllerBase
+    public class RevisionController : Controller
     {
         public class revisiondata
         {
@@ -28,9 +26,8 @@ namespace Kudu.Services.Diagnostics
             public DateTime? EndTime { get; set; }
         }
 
-        // GET api/values
-        [HttpGet("data/{appName=all}")]
-        public IActionResult GetAllRevisions([FromRoute] string appName = "all")
+
+        public IActionResult GetMyRevisions([FromRoute] string appName = "all")
         {
             List<revisiondata> ret = new List<revisiondata>();
             string active = "";
