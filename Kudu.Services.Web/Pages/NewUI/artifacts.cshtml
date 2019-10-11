@@ -369,15 +369,30 @@ mytimeline.ul.timeline > li:before {
 <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
 <!------ Include the above in your HEAD tag ---------->
 <script>
+    function revertDeployment(appName, deploymentId){
+        $.ajax({
+            url: 'http://build.f422074646704c039cb3.eastus.aksapp.io/api/revisions',
+            type: 'post',
+            data: {'appName' : appName, 'deploymentId': deploymentId},
+                success: function(){
+                    alert('Reverted');
+                },
+                error: function (errorThrown) {
+                    alert('error');
+                    console.log( errorThrown );
+                }
+            });
+
+            e.preventDefault();
+        }
     $(document).ready(function () {
         var json = JSON.parse('[{"revisionId":"19","deploymentId":null,"active":false,"Status":0,"StatusText":null,"AuthorEmail":null,"Author":null,"Message":null,"Deployer":"","ReceivedTime":"2019-10-11T11:49:30.1250327Z","StartTime":"2019-10-11T11:49:30.4290369Z","EndTime":"2019-10-11T11:51:32.9365332Z","id":"98439nkj98"}]');
-        var jsonData;
         $.ajax({ 
             type: "GET",
             crossDomain: true,
             url: "http://build.f422074646704c039cb3.eastus.aksapp.io/api/revisions/jennydemo",
             success: function(data){        
-                alert(data);
+                json = JSON.parse(data);
             }
         });
       //http://build.f422074646704c039cb3.eastus.aksapp.io/api/revisions/jennydemo  
@@ -390,8 +405,8 @@ mytimeline.ul.timeline > li:before {
         }
         var id = json[i].Id;
         var ago = '4H';
-        var liObj = '<li><article class="card assignment-card course-id-2"><header class="card-header card-backgrund-color"><h2>'+id+'</h2></header><section class="card-body"> <div class="card-info"> <div class="card-info-element"> <div class="card-info-description">Ago</div><div class="card-info-value">'+ago+'</div></div><div class="card-info-element"> <div class="card-info-description">By</div><div class="card-info-value">'+author+'</div></div><div class="card-info-element"> <div class="card-info-description">Revision</div><div class="card-info-value"><span class="card-info-assignment-level">'+revisionId+'</span></div></div></div><p class="card-body-delimiter"></p><p class="card-tags"> <span class="card-tag card-backgrund-color">Redeploy Deployment</span> <span class="card-tag">Revert State</span> <span class="card-tag">Revision Metadata</span> </p></section> <footer class="card-footer"> <p> <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span> </p></footer> </article> </li>';
-        var liObj2 = '<li><article class="card assignment-card course-id-2"><header class="card-header card-backgrund-color"><h2>'+id+'</h2></header><section class="card-body"> <div class="card-info"> <div class="card-info-element"> <div class="card-info-description">Ago</div><div class="card-info-value">'+ago+'</div></div><div class="card-info-element"> <div class="card-info-description">By</div><div class="card-info-value">'+author+'</div></div><div class="card-info-element"> <div class="card-info-description">Revision</div><div class="card-info-value"><span class="card-info-assignment-level">'+revisionId+'</span></div></div></div><p class="card-body-delimiter"></p><p class="card-tags"> <span class="card-tag card-backgrund-color">Redeploy Deployment</span> <span class="card-tag">Revert State</span> <span class="card-tag">Revision Metadata</span> </p></section> <footer class="card-footer"> <p> <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span> </p></footer> </article> </li>';
+        var liObj = '<li><article class="card assignment-card course-id-2"><header class="card-header card-backgrund-color"><h2>'+id+'</h2></header><section class="card-body"> <div class="card-info"> <div class="card-info-element"> <div class="card-info-description">Ago</div><div class="card-info-value">'+ago+'</div></div><div class="card-info-element"> <div class="card-info-description">By</div><div class="card-info-value">'+author+'</div></div><div class="card-info-element"> <div class="card-info-description">Revision</div><div class="card-info-value"><span class="card-info-assignment-level">'+revisionId+'</span></div></div></div><p class="card-body-delimiter"></p><p class="card-tags"> <span class="card-tag card-backgrund-color" onclick="revertDeployment(jennydemo,'+id+')">Redeploy Deployment</span> <span class="card-tag">Revert State</span> <span class="card-tag">Revision Metadata</span> </p></section> <footer class="card-footer"> <p> <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span> </p></footer> </article> </li>';
+        var liObj2 = '<li><article class="card assignment-card course-id-2"><header class="card-header card-backgrund-color"><h2>'+id+'</h2></header><section class="card-body"> <div class="card-info"> <div class="card-info-element"> <div class="card-info-description">Ago</div><div class="card-info-value">'+ago+'</div></div><div class="card-info-element"> <div class="card-info-description">By</div><div class="card-info-value">'+author+'</div></div><div class="card-info-element"> <div class="card-info-description">Revision</div><div class="card-info-value"><span class="card-info-assignment-level">'+revisionId+'</span></div></div></div><p class="card-body-delimiter"></p><p class="card-tags"> <span class="card-tag card-backgrund-color" onclick="revertDeployment(jennydemo,'+id+')">Redeploy Deployment</span> <span class="card-tag">Revert State</span> <span class="card-tag">Revision Metadata</span> </p></section> <footer class="card-footer"> <p> <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span> </p></footer> </article> </li>';
         var timeline = $('#revisions-timeline');
         if (json[i].active)
         {
