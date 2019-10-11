@@ -1,9 +1,11 @@
 ﻿using Kudu.Core.Deployment;
 using Kudu.Core.Infrastructure;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace Kudu.Services.Diagnostics
@@ -26,14 +28,15 @@ namespace Kudu.Services.Diagnostics
             public DateTime? EndTime { get; set; }
         }
 
+        [EnableCors]
         [HttpGet]
         public IActionResult GetMyRevisions([FromRoute] string appName = "all")
         {
             List<revisiondata> ret = new List<revisiondata>();
             string active = "";
-            if (FileSystemHelpers.FileExists($"/home/apps/{appName}/site/artifacts/active"))
+            if (FileSystemHelpers.FileExists($"/home/apps/{appName}/site/artifacts/current"))
             {
-                active = FileSystemHelpers.ReadAllText($"/home/apps/{appName}/site/artifacts/active");
+                active = FileSystemHelpers.ReadAllText($"/home/apps/{appName}/site/artifacts/current");
             }
 
             if (FileSystemHelpers.DirectoryExists($"/home/apps/{appName}"))
@@ -52,6 +55,39 @@ namespace Kudu.Services.Diagnostics
                 }
             }
             return Ok(ret);
+        }
+
+        [EnableCors]
+        [HttpPost]
+        public IActionResult RedployDeployemnt([FromBody] string appName, [FromBody] string deploymentId)
+        {
+            System.Console.WriteLine("Restarting Pods for App Service App : " + appName);
+            System.Console.WriteLine($" Patch Args :::::: -c \" /patch.sh {appName} apps/{appName}/site/artifacts/{deploymentId}\"");
+
+            Process _executingProcess = new Process()
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "/bin/bash",
+                    Arguments = $"-c \" /patch.sh {appName} apps/{appName}/site/artifacts/{deploymentId}\"",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                }
+            };
+            // Read the standard error of net.exe and write it on to console.
+            _executingProcess.OutputDataReceived += (sender, args) => System.Console.WriteLine("{0}", args.Data);
+            _executingProcess.Start();
+            //* Read the output (or the error)
+            //string output = _executingProcess.StandardOutput.ReadToEnd();
+            //System.Console.WriteLine(output);
+            //string err = _executingProcess.StandardError.ReadToEnd();
+            //System.Console.WriteLine(err);
+            _executingProcess.WaitForExit();
+            System.Console.WriteLine("Process exit code : " + _executingProcess.ExitCode);
+            System.Console.WriteLine("All Pods Restarted!");
+            FileSystemHelpers.WriteAllText($"/home/apps/{appName}/site/artifacts/active", deploymentId);
+            return Ok();
         }
     }
 }

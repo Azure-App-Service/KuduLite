@@ -515,6 +515,11 @@ namespace Kudu.Services.Web
                     new { controller = "Revision", action = "GetMyRevisions" },
                     new { verb = new HttpMethodRouteConstraint("GET") });
 
+                // Revision script
+                routes.MapRoute("revert-deployment-revision", "api/revisions",
+                    new { controller = "Revision", action = "RedployDeployemnt" },
+                    new { verb = new HttpMethodRouteConstraint("POST") });
+
                 // IsDeploying status 
                 routes.MapRoute("is-deployment-underway", "api/isdeploying",
                     new {controller = "Deployment", action = "IsDeploying"},
