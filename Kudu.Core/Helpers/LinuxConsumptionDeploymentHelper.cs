@@ -22,7 +22,11 @@ namespace Kudu.Core.Helpers
         /// Specifically used for Linux Consumption to support Server Side build scenario
         /// </summary>
         /// <param name="context"></param>
-        public static async Task SetupLinuxConsumptionFunctionAppDeployment(IEnvironment env, IDeploymentSettingsManager settings, DeploymentContext context)
+        public static async Task SetupLinuxConsumptionFunctionAppDeployment(
+            IEnvironment env,
+            IDeploymentSettingsManager settings,
+            DeploymentContext context,
+            bool shouldWarmUp)
         {
             string sas = System.Environment.GetEnvironmentVariable(Constants.ScmRunFromPackage);
             string builtFolder = context.OutputPath;
@@ -43,6 +47,13 @@ namespace Kudu.Core.Helpers
 
             // Remove Linux consumption plan functionapp workers for the site
             await RemoveLinuxConsumptionFunctionAppWorkers(context);
+
+            // Invoke a warmup call to the main function site
+            if (shouldWarmUp)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                await WarmUpFunctionAppSite(context);
+            }
         }
 
         private static async Task LogDependenciesFile(string builtFolder)
@@ -179,7 +190,7 @@ namespace Kudu.Core.Helpers
             // Check if SCM_RUN_FROM_PACKAGE does exist
             if (string.IsNullOrEmpty(sas))
             {
-                context.Logger.Log($"Failed to upload because SCM_RUN_FROM_PACKAGE is not provided.");
+                context.Logger.Log($"Failed to upload because SCM_RUN_FROM_PACKAGE is not provided or misconfigured by function app setting.");
                 throw new DeploymentFailedException(new ArgumentException("Failed to upload because SAS is empty."));
             }
 
@@ -210,7 +221,7 @@ namespace Kudu.Core.Helpers
             string webSiteHostName = System.Environment.GetEnvironmentVariable(SettingsKeys.WebsiteHostname);
             string sitename = ServerConfiguration.GetApplicationName();
 
-            context.Logger.Log($"Reseting all workers for {webSiteHostName}");
+            context.Logger.Log($"Resetting all workers for {webSiteHostName}");
 
             try
             {
@@ -228,6 +239,24 @@ namespace Kudu.Core.Helpers
             {
                 context.Logger.Log($"Reset all workers endpoint responded with {hre.Message}");
                 throw new DeploymentFailedException(hre);
+            }
+        }
+
+        private static async Task WarmUpFunctionAppSite(DeploymentContext context)
+        {
+            string webSiteHostName = System.Environment.GetEnvironmentVariable(SettingsKeys.WebsiteHostname);
+
+            context.Logger.Log($"Warming up your function app {webSiteHostName}");
+
+            try
+            {
+                await OperationManager.AttemptAsync(async () =>
+                {
+                    await PostDeploymentHelper.WarmUpSiteAsync(webSiteHostName);
+                }, retries: 3, delayBeforeRetry: 2000);
+            } catch (HttpRequestException hre)
+            {
+                context.Logger.Log($"Warm up function site failed due to {hre.Message}");
             }
         }
 
