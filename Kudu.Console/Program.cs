@@ -31,6 +31,7 @@ using IRepository = Kudu.Core.SourceControl.IRepository;
 using log4net;
 using log4net.Config;
 using Newtonsoft.Json;
+using System.IO.Abstractions;
 
 namespace Kudu.Console
 {
@@ -226,13 +227,12 @@ namespace Kudu.Console
                             System.Console.WriteLine("######### Current Revision Number: "+replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
 
                             FileSystemHelpers.EnsureDirectory($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
-                            FileSystemHelpers.CreateFile($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision");
+                            FileStream stream = File.Create($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision");
+                            stream.Close();
+                            FileSystemHelpers.DeleteFileSafe($"/home/apps/{appName}/site/artifacts/current");
+                            FileStream stream2 = File.Create($"/home/apps/{appName}/site/artifacts/current");
+                            stream2.Close();
 
-                            if (!FileSystemHelpers.FileExists($"/home/apps/{appName}/site/artifacts/current"))
-                            {
-                                FileSystemHelpers.CreateFile($"/home/apps/{appName}/site/artifacts/current");
-                            }
-                            
                             IDeploymentStatusFile statusFile = deploymentStatusManager.Open(gitRepository.GetChangeSet(settingsManager.GetBranch()).Id);
                             statusFile.Save();
                             revisiondata rv = new revisiondata()
@@ -241,18 +241,17 @@ namespace Kudu.Console
                                 EndTime = statusFile.EndTime,
                                 Deployer = statusFile.Deployer,
                                 ReceivedTime = statusFile.ReceivedTime,
+                                Author = statusFile.Author,
+                                AuthorEmail = statusFile.AuthorEmail,
+                                Message = statusFile.Message,
+                                Status = statusFile.Status
                             };
                             var json = Newtonsoft.Json.JsonConvert.SerializeObject(rv);
-
-                            if (!FileSystemHelpers.FileExists($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json"))
-                            {
-                                Thread.Sleep(1000);
-                                FileSystemHelpers.CreateFile($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json");
-                            }
-
-                            File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json", json.ToString());
+                            FileStream stream3 = File.Create($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json");
+                            stream3.Close();
                             File.WriteAllText($"/home/apps/{appName}/site/artifacts/current", $"{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
                             File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision", replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
+                            File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json", json.ToString());
                         }
                     }
                     /*
