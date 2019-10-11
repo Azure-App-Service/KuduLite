@@ -38,7 +38,7 @@ namespace Kudu.Services.Diagnostics
 
             if (FileSystemHelpers.DirectoryExists($"/home/apps/{appName}"))
             {
-                foreach (var dir in FileSystemHelpers.GetDirectories($"/home/apps/{appName}/ite/artifacts"))
+                foreach (var dir in FileSystemHelpers.GetDirectories($"/home/apps/{appName}/site/artifacts"))
                 {
                     string rev = "";
                     if (FileSystemHelpers.FileExists($"{dir}/revision"))

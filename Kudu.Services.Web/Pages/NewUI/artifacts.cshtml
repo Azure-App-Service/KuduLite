@@ -5,339 +5,483 @@
     ViewData["Title"] = "artifacts";
 }
 <style>
+body {
+  background-color: #edeff0;
+  box-sizing: border-box;
+  font-family: 'Varela Round', sans-serif;
+  letter-spacing: 0.05em;
+}
 
-    img {
-        vertical-align: middle;
-    }
+body,
+html {
+  width: 100%;
+  margin: 0;
+}
 
-    .img-responsive {
-        display: block;
-        height: auto;
-        max-width: 100%;
-    }
+#wrapper > div {
+  font-size: 0;
+}
 
-    .img-rounded {
-        border-radius: 3px;
-    }
+.card.course-id-1 .card-backgrund-color {
+  background-color: #80ACE9;
+}
 
-    .img-thumbnail {
-        background-color: #fff;
-        border: 1px solid #ededf0;
-        border-radius: 3px;
-        display: inline-block;
-        height: auto;
-        line-height: 1.428571429;
-        max-width: 100%;
-        moz-transition: all .2s ease-in-out;
-        o-transition: all .2s ease-in-out;
-        padding: 2px;
-        transition: all .2s ease-in-out;
-        webkit-transition: all .2s ease-in-out;
-    }
+.card-assignment-icon:before {
+  background-color: rgba(128, 172, 233, 0.4);
+}
 
-    .img-circle {
-        border-radius: 50%;
-    }
+.card.course-id-2 .card-backgrund-color {
+  background-color: #68CF8C;
+}
 
-    .timeline-centered {
-        position: relative;
-        margin-bottom: 30px;
-    }
+.card.course-id-4 .card-backgrund-color {
+  background-color: #ED7070;
+}
 
-        .timeline-centered:before, .timeline-centered:after {
-            content: " ";
-            display: table;
-        }
+.card-group-heading {
+  margin: 0;
+  color: #566265;
+}
 
-        .timeline-centered:after {
-            clear: both;
-        }
+.card-container {
+  font-size: 0;
+}
 
-        .timeline-centered:before, .timeline-centered:after {
-            content: " ";
-            display: table;
-        }
+.card,
+.card * {
+  box-sizing: border-box;
+}
 
-        .timeline-centered:after {
-            clear: both;
-        }
+.card {
+  width: calc(100% - 40px);
+  min-width: 300px;
+  border-radius: 5px;
+  background-color: white;
+  text-align: center;
+  height: 300px;
+  position: relative;
+  display: inline-block;
+  margin: 20px;
+  cursor: pointer;
+  -webkit-transition: -webkit-transform .2s ease-in, box-shadow .1s ease-in;
+  /*   -moz-transition: -moz-transform .1s ease-in, box-shadow .1s ease-in; */
+  transition: transform .2s ease-in, box-shadow .1s ease-in;
+  box-shadow: 0px 2px 2px #dfe6f0;
+}
 
-        .timeline-centered:before {
-            content: '';
-            position: absolute;
-            display: block;
-            width: 4px;
-            background: #f5f5f6;
-            left: 50%;
-            top: 20px;
-            bottom: 20px;
-            margin-left: -4px;
-        }
+/* card shadow */
 
-        .timeline-centered .timeline-entry {
-            position: relative;
-            width: 70%;
-            float: right;
-            margin-bottom: 70px;
-            clear: both;
-        }
+.card:hover {
+  box-shadow: 0px 5px 10px #dfe6f0;
+  -webkit-transform: translateY(-5px);
+  transform: translateY(-5px);
+}
 
-            .timeline-centered .timeline-entry:before, .timeline-centered .timeline-entry:after {
-                content: " ";
-                display: table;
-            }
 
-            .timeline-centered .timeline-entry:after {
-                clear: both;
-            }
+/* header, footer, and body */
 
-            .timeline-centered .timeline-entry:before, .timeline-centered .timeline-entry:after {
-                content: " ";
-                display: table;
-            }
+.card-header,
+.card-footer,
+.card-body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  padding: 10px 20px;
+  overflow: hidden;
+}
 
-            .timeline-centered .timeline-entry:after {
-                clear: both;
-            }
+.card-header {
+  top: 0;
+  height: 50px;
+  border-radius: 5px 5px 0 0;
+}
 
-            .timeline-centered .timeline-entry.begin {
-                margin-bottom: 0;
-            }
+.card-footer {
+  bottom: 0;
+  height: 50px;
+  border-radius: 0 0 5px 5px;
+  background-color: #F4F6F8;
+}
 
-            .timeline-centered .timeline-entry.left-aligned {
-                float: left;
-            }
+.card-body {
+  top: 50px;
+  bottom: 50px;
+}
 
-                .timeline-centered .timeline-entry.left-aligned .timeline-entry-inner {
-                    margin-left: 0;
-                    margin-right: -18px;
-                }
+.card-header > h2,
+.card-body > p,
+.card-footer > p {
+  margin: 0;
+}
 
-                    .timeline-centered .timeline-entry.left-aligned .timeline-entry-inner .timeline-time {
-                        left: auto;
-                        right: -100px;
-                        text-align: left;
-                    }
 
-                    .timeline-centered .timeline-entry.left-aligned .timeline-entry-inner .timeline-icon {
-                        float: right;
-                    }
+/* header content */
 
-                    .timeline-centered .timeline-entry.left-aligned .timeline-entry-inner .timeline-label {
-                        margin-left: 0;
-                        margin-right: 70px;
-                    }
+.card-header > h2 {
+  font-size: 16px;
+  padding: 6px;
+  /* (30 - font-size) / 2 */
+  color: white;
+}
 
-                    .timeline-centered .timeline-entry.left-aligned .timeline-entry-inner .timeline-label:after {
-                            left: auto;
-                            right: 0;
-                            margin-left: 0;
-                            margin-right: -9px;
-                            -moz-transform: rotate(180deg);
-                            -o-transform: rotate(180deg);
-                            -webkit-transform: rotate(180deg);
-                            -ms-transform: rotate(180deg);
-                            transform: rotate(180deg);
-                    }
 
-            .timeline-centered .timeline-entry .timeline-entry-inner {
-                position: relative;
-                margin-left: -22px;
-            }
+/* body content*/
 
-                .timeline-centered .timeline-entry .timeline-entry-inner:before, .timeline-centered .timeline-entry .timeline-entry-inner:after {
-                    content: " ";
-                    display: table;
-                }
 
-                .timeline-centered .timeline-entry .timeline-entry-inner:after {
-                    clear: both;
-                }
+/* card-info */
 
-                .timeline-centered .timeline-entry .timeline-entry-inner:before, .timeline-centered .timeline-entry .timeline-entry-inner:after {
-                    content: " ";
-                    display: table;
-                }
+.card-info {
+  height: 60%;
+  display: flex;
+  justify-content: center;
+}
 
-                .timeline-centered .timeline-entry .timeline-entry-inner:after {
-                    clear: both;
-                }
+.card-info-element {
+  align-self: center;
+  display: inline-block;
+  vertical-align: middle;
+}
 
-                .timeline-centered .timeline-entry .timeline-entry-inner .timeline-time {
-                    position: absolute;
-                    left: -100px;
-                    text-align: right;
-                    padding: 10px;
-                    -webkit-box-sizing: border-box;
-                    -moz-box-sizing: border-box;
-                    box-sizing: border-box;
-                }
+.card-info-element {
+  width: 30%;
+}
 
-                    .timeline-centered .timeline-entry .timeline-entry-inner .timeline-time > span {
-                        display: block;
-                    }
+.card-info-description {
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: bold;
+  color: #B3BAC1;
+  margin-bottom: 10px;
+}
 
-                        .timeline-centered .timeline-entry .timeline-entry-inner .timeline-time > span:first-child {
-                            font-size: 15px;
-                            font-weight: bold;
-                        }
+.card-info-value {
+  color: #576366;
+  font-weight: bold;
+  font-size: 30px;
+  height: 37px;
+  vertical-align: bottom;
+}
 
-                        .timeline-centered .timeline-entry .timeline-entry-inner .timeline-time > span:last-child {
-                            font-size: 12px;
-                        }
+.card-info-assignment-level,
+.card-info-deadline {
+  color: white;
+  background-color: #B3BAC1;
+  display: inline-block;
+  display: inline-flex;
+  justify-content: center;
+  /* align horizontal */
+  align-items: center;
+  /* align vertical */
+  border-radius: 100px;
+}
 
-                .timeline-centered .timeline-entry .timeline-entry-inner .timeline-icon {
-                    background: #fff;
-                    color: #737881;
-                    display: block;
-                    width: 40px;
-                    height: 40px;
-                    -webkit-background-clip: padding-box;
-                    -moz-background-clip: padding;
-                    background-clip: padding-box;
-                    -webkit-border-radius: 20px;
-                    -moz-border-radius: 20px;
-                    border-radius: 20px;
-                    text-align: center;
-                    -moz-box-shadow: 0 0 0 5px #f5f5f6;
-                    -webkit-box-shadow: 0 0 0 5px #f5f5f6;
-                    box-shadow: 0 0 0 5px #f5f5f6;
-                    line-height: 40px;
-                    font-size: 15px;
-                    float: left;
-                }
+.card-info-assignment-level {
+  width: 40px;
+  height: 40px;
+  line-height: 30px;
+  padding-top: 2px;
+}
 
-                    .timeline-centered .timeline-entry .timeline-entry-inner .timeline-icon.bg-primary {
-                        background-color: #303641;
-                        color: #fff;
-                    }
+.card-info-deadline {
+  font-size: 12px;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  vertical-align: middle;
+}
 
-                    .timeline-centered .timeline-entry .timeline-entry-inner .timeline-icon.bg-secondary {
-                        background-color: #ee4749;
-                        color: #fff;
-                    }
 
-                    .timeline-centered .timeline-entry .timeline-entry-inner .timeline-icon.bg-success {
-                        background-color: #00a651;
-                        color: #fff;
-                    }
+/* delimiter */
 
-                    .timeline-centered .timeline-entry .timeline-entry-inner .timeline-icon.bg-info {
-                        background-color: #21a9e1;
-                        color: #fff;
-                    }
+.card-body-delimiter {
+  background-color: #EDEFF1;
+  width: 40px;
+  height: 3px;
+  border-radius: 2px;
+  position: absolute;
+  top: 112px;
+  /* should be info-height + body-padding - delimiter-height / 2 = 108 + 10 - 2 = 116, but since info-values contains a kind of padding it is hardcoded */
+  left: calc(50% - 20px);
+  /* (body-width - delimiter-width) / 2 = (300 - 40) / 2 = 130 */
+}
 
-                    .timeline-centered .timeline-entry .timeline-entry-inner .timeline-icon.bg-warning {
-                        background-color: #fad839;
-                        color: #fff;
-                    }
 
-                    .timeline-centered .timeline-entry .timeline-entry-inner .timeline-icon.bg-danger {
-                        background-color: #cc2424;
-                        color: #fff;
-                    }
+/* tags */
 
-                .timeline-centered .timeline-entry .timeline-entry-inner .timeline-label {
-                    position: relative;
-                    background: #f5f5f6;
-                    padding: 1.7em;
-                    margin-left: 70px;
-                    -webkit-background-clip: padding-box;
-                    -moz-background-clip: padding;
-                    background-clip: padding-box;
-                    -webkit-border-radius: 3px;
-                    -moz-border-radius: 3px;
-                    border-radius: 3px;
-                }
+.card-tags {
+  height: 40%;
+  display: flex;
+  justify-content: center;
+}
 
-                    .timeline-centered .timeline-entry .timeline-entry-inner .timeline-label:after {
-                        content: '';
-                        display: block;
-                        position: absolute;
-                        width: 0;
-                        height: 0;
-                        border-style: solid;
-                        border-width: 9px 9px 9px 0;
-                        border-color: transparent #f5f5f6 transparent transparent;
-                        left: 0;
-                        top: 10px;
-                        margin-left: -9px;
-                    }
+.card-tag {
+  background-color: #BDC5CD;
+  align-self: center;
+  display: inline-block;
+  padding: 5px 10px;
+  margin: 4px;
+  border-radius: 5px;
+  text-transform: uppercase;
+  font-weight: bold;
+  color: white;
+  font-size: 12px;
+}
 
-                    .timeline-centered .timeline-entry .timeline-entry-inner .timeline-label h2, .timeline-centered .timeline-entry .timeline-entry-inner .timeline-label p {
-                        color: #737881;
-                        font-family: "Noto Sans",sans-serif;
-                        font-size: 12px;
-                        margin: 0;
-                        line-height: 1.428571429;
-                    }
 
-                        .timeline-centered .timeline-entry .timeline-entry-inner .timeline-label p + p {
-                            margin-top: 15px;
-                        }
+/* assignment type content */
 
-                    .timeline-centered .timeline-entry .timeline-entry-inner .timeline-label h2 {
-                        font-size: 16px;
-                        margin-bottom: 10px;
-                    }
+.card-assignment-icon {
+  display: inline-block;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  height: 80px;
+  width: 80px;
+  position: absolute;
+  top: 20px;
+  left: calc(50% - 40px);
+}
 
-                        .timeline-centered .timeline-entry .timeline-entry-inner .timeline-label h2 a {
-                            color: #303641;
-                        }
+.card-assignment-icon:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  opacity: 1;
+  border-radius: 50%;
+}
 
-                        .timeline-centered .timeline-entry .timeline-entry-inner .timeline-label h2 span {
-                            -webkit-opacity: .6;
-                            -moz-opacity: .6;
-                            opacity: .6;
-                            -ms-filter: alpha(opacity=60);
-                            filter: alpha(opacity=60);
-                        }
+.card-assignment-text {
+  height: 40%;
+  font-size: 14px;
+  line-height: 18px;
+  color: #a6b0b2;
+  position: absolute;
+  top: 60%;
+  left: 20px;
+  right: 20px;
+}
+
+.ml-page-checks:after,
+.ml-cross-check:after {
+  content: "";
+  background: url("https://cdn0.iconfinder.com/data/icons/outline-business/512/file.png");
+  background-size: 50px;
+  width: 48px;
+  height: 49px;
+  display: inline-block;
+  background-repeat: no-repeat;
+}
+
+
+/* progress bar */
+
+.card-progress-bar {
+  background-color: #DFE4E9;
+  border-radius: 4px;
+  height: 8px;
+  display: block;
+  margin: 11px 0;
+  position: relative;
+}
+
+.card-progress-bar-status {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  border-radius: 4px;
+  -webkit-transition: width 1s ease-in-out;
+  -moz-transition: width 1s ease-in-out;
+  -o-transition: width 1s ease-in-out;
+  transition: width 1s ease-in-out;
+}
+
+
+/* footer content */
+
+.card-footer-text {
+  display: inline-block;
+  color: #576366;
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 30px;
+  height: 30px;
+  vertical-align: middle;
+}
+
+.card-footer-icon {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: inline-block;
+  color: white;
+  font-size: 14px;
+  padding: 2px 0;
+  margin: 2px 5px 2px 0;
+}
+
+.ml-checkmark:after {
+  content: "✔";
+}
+ul.timeline {
+    list-style-type: none;
+    position: relative;
+}
+
+ul.timeline:before {
+    content: ' ';
+    background: #d4d9df;
+    display: inline-block;
+    position: absolute;
+    left: 29px;
+    width: 2px;
+    height: 100%;
+    z-index: 400;
+}
+ul.timeline > li {
+    margin: 20px 0;
+    padding-left: 20px;
+}
+
+mytimeline.ul.timeline > li:before {
+    content: ' ';
+    background: white;
+    display: inline-block;
+    position: absolute;
+    border-radius: 50%;
+    border: 3px solid #22c0e8;
+    left: 20px;
+    width: 20px;
+    height: 20px;
+    z-index: 400;
+}
+            
 </style>
+<style>
+  
 
+</style>
 <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
 <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
 <script src="//code.jquery.com/jquery-1.11.1.min.js"></script>
 <!------ Include the above in your HEAD tag ---------->
 
-<div class="container">
+<div style="margin-left:30px">
     <div class="row">
-        <div class="timeline-centered">
-
-                <article class="timeline-entry">
-                    <div class="timeline-entry-inner">
-                        <time class="timeline-time" datetime="2014-01-10T03:45"><span>4 Hours</span> <span>Ago</span></time>
-                        <div class="timeline-icon bg-success">
-                            <i class="entypo-feather"></i>
-                        </div>
-                        <div class="timeline-label">
-                            <h2><a href="#">ddbcbcc74</a> <span></span></h2>
-                            <p>
-                                <button type="button" class="btn btn-success">Production</button>
-                            </p>
-                        </div>
-                    </div>
-                </article>
-
-                <article class="timeline-entry">
-                    <div class="timeline-entry-inner">
-                        <time class="timeline-time" datetime="2014-01-10T03:45"><span>7 Hours</span> <span>Ago</span></time>
-                        <div class="timeline-icon bg-success">
-                            <i class="entypo-feather"></i>
-                        </div>
-                        <div class="timeline-label">
-                            <h2><a href="#">7fd7cc46d9</a><span></span></h2>
-                            <button type="button" class="btn btn-secondary">Redeploy Deployment</button>
-                            <button type="button" class="btn btn-danger">Revert App State</button>
-                        </div>
-                    </div>
-                </article>            
-            <article class="timeline-entry begin">
-                <div class="timeline-entry-inner">
-                    <div class="timeline-icon" style="-webkit-transform: rotate(-90deg); -moz-transform: rotate(-90deg);">
-                        <i class="entypo-flight"></i>
-                    </div>
+        <div class="mt-5 mb-5">
+            <div class="row">
+                <div class="col-md-6 offset-md-3">
+                    <h4>Past Deployments</h4>
+                    <ul class="timeline mytimeline.">
+                        <li>
+                            <article class="card assignment-card course-id-2">
+                                <header class="card-header card-backgrund-color">
+                                    <h2>Deployment : 12343288934</h2>
+                                </header>
+                                <section class="card-body">
+                                    <div class="card-info">
+                                        <div class="card-info-element">
+                                            <div class="card-info-description">Ago</div>
+                                            <div class="card-info-value">02</div>
+                                        </div>
+                                        <div class="card-info-element">
+                                            <div class="card-info-description">By</div>
+                                            <div class="card-info-value">60</div>
+                                        </div>
+                                        <div class="card-info-element">
+                                            <div class="card-info-description">Time</div>
+                                            <div class="card-info-value"><span class="card-info-assignment-level">C</span></div>
+                                        </div>
+                                    </div>
+                                    <p class="card-body-delimiter"></p>
+                                    <p class="card-tags">
+                                        <span class="card-tag card-backgrund-color">Redeploy Deployment</span>
+                                        <span class="card-tag">Revert State</span>
+                                        <span class="card-tag">Revision Metadata</span>
+                                    </p>
+                                </section>
+                                <footer class="card-footer">
+                                    <p>
+                                        <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span>
+                                    </p>
+                                </footer>
+                            </article>
+                        </li>
+                        <li>
+                            <article class="card assignment-card course-id-1">
+                                <header class="card-header card-backgrund-color">
+                                    <h2>Deployment : 12343288934</h2>
+                                </header>
+                                <section class="card-body">
+                                    <div class="card-info">
+                                        <div class="card-info-element">
+                                            <div class="card-info-description">Ago</div>
+                                            <div class="card-info-value">02</div>
+                                        </div>
+                                        <div class="card-info-element">
+                                            <div class="card-info-description">By</div>
+                                            <div class="card-info-value">60</div>
+                                        </div>
+                                        <div class="card-info-element">
+                                            <div class="card-info-description">Time</div>
+                                            <div class="card-info-value"><span class="card-info-assignment-level">C</span></div>
+                                        </div>
+                                    </div>
+                                    <p class="card-body-delimiter"></p>
+                                    <p class="card-tags">
+                                        <span class="card-tag card-backgrund-color">Redeploy Deployment</span>
+                                        <span class="card-tag">Revert State</span>
+                                        <span class="card-tag">Revision Metadata</span>
+                                    </p>
+                                </section>
+                                <footer class="card-footer">
+                                    <p>
+                                        <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span>
+                                    </p>
+                                </footer>
+                            </article>
+                        </li>
+                        <li>
+                            <article class="card assignment-card course-id-1">
+                                <header class="card-header card-backgrund-color">
+                                    <h2>Deployment : 12343288934</h2>
+                                </header>
+                                <section class="card-body">
+                                    <div class="card-info">
+                                        <div class="card-info-element">
+                                            <div class="card-info-description">Ago</div>
+                                            <div class="card-info-value">02</div>
+                                        </div>
+                                        <div class="card-info-element">
+                                            <div class="card-info-description">By</div>
+                                            <div class="card-info-value">60</div>
+                                        </div>
+                                        <div class="card-info-element">
+                                            <div class="card-info-description">Time</div>
+                                            <div class="card-info-value"><span class="card-info-assignment-level">C</span></div>
+                                        </div>
+                                    </div>
+                                    <p class="card-body-delimiter"></p>
+                                    <p class="card-tags">
+                                        <span class="card-tag card-backgrund-color">Redeploy Deployment</span>
+                                        <span class="card-tag">Revert State</span>
+                                        <span class="card-tag">Revision Metadata</span>
+                                    </p>
+                                </section>
+                                <footer class="card-footer">
+                                    <p>
+                                        <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span>
+                                    </p>
+                                </footer>
+                            </article>
+                        </li>
+                    </ul>
                 </div>
-            </article>
+            </div>
         </div>
+
     </div>
 </div>
