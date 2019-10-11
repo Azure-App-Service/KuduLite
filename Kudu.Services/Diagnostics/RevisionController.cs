@@ -29,7 +29,7 @@ namespace Kudu.Services.Diagnostics
         }
 
         // GET api/values
-        [HttpGet("{appName=all}")]
+        [HttpGet("data/{appName=all}")]
         public IActionResult GetAllRevisions([FromRoute] string appName = "all")
         {
             List<revisiondata> ret = new List<revisiondata>();
@@ -56,8 +56,5 @@ namespace Kudu.Services.Diagnostics
             }
             return Ok(ret);
         }
-
-      
-        
     }
 }
