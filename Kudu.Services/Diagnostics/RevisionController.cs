@@ -26,7 +26,7 @@ namespace Kudu.Services.Diagnostics
             public DateTime? EndTime { get; set; }
         }
 
-
+        [HttpGet]
         public IActionResult GetMyRevisions([FromRoute] string appName = "all")
         {
             List<revisiondata> ret = new List<revisiondata>();
