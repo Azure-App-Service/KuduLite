@@ -377,9 +377,16 @@ mytimeline.ul.timeline > li:before {
                 type: 'post',
                 data: {'appName' : appName, 'deploymentId': deploymentId},
                 success: function () {
+                    $('#' + deploymentId + '-redep-btn').innerHTML = "Currently Deployed";
+                    var listItems = $("#revisions-timeline li");
+                        listItems.each(function(idx, li) {
+                        var item = $(li);
+                            item.removeClass('course-id-2');
+                            item.addClass('course-id-1');
+                        // and the rest of your code
+                        });
                     obj.removeClass('course-id-1');
                     obj.addClass('course-id-2');
-                    $('#' + id + '-redep-btn').innerHTML = "Currently Deployed";
                     objData.animate(
                         { x: 100 },
                         {
