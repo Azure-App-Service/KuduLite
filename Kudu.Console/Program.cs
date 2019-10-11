@@ -211,6 +211,21 @@ namespace Kudu.Console
                 }
                 finally
                 {
+                    var config = KubernetesClientConfiguration.InClusterConfig();
+                    var client = new Kubernetes(config);
+                    var replicaSets = client.ListReplicaSetForAllNamespaces();
+                    string appName = appRoot.Replace("/home/apps/", "").Split("/")[0];
+
+                    foreach (var replicaSet in replicaSets.Items)
+                    {
+                        System.Console.WriteLine(" Replica Set name : "+ replicaSet.Metadata.Name);
+                        System.Console.WriteLine(" Replica Set avail : " + replicaSet.Status.AvailableReplicas);
+                        if (replicaSet.Metadata.Name.Equals(appName, StringComparison.OrdinalIgnoreCase)
+                            && (replicaSet.Status.AvailableReplicas > 0))
+                        {
+                            System.Console.WriteLine("Revision Number: "+replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
+                        }
+                    }
                     /*
                     // Load from in-cluster configuration:
                     var config = KubernetesClientConfiguration.InClusterConfig();
@@ -250,7 +265,7 @@ namespace Kudu.Console
                     }
                     */
                     // IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string repositoryPath
-                    string appName = appRoot.Replace("/home/apps/", "").Split("/")[0];
+                    //string appName = appRoot.Replace("/home/apps/", "").Split("/")[0];
 
                     System.Console.WriteLine("Restarting Pods for App Service App : " + appName);
                     System.Console.WriteLine($" Patch Args :::::: -c \" /patch.sh {appName} apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"");
