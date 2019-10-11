@@ -7,6 +7,8 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Net;
 using System.Text;
 
 namespace Kudu.Services.Diagnostics
@@ -65,21 +67,20 @@ namespace Kudu.Services.Diagnostics
         }
 
         [EnableCors]
-        [HttpPost]
-        public IActionResult RedployDeployemnt([FromForm] RevisionPost rev)
+        [HttpGet]
+        public IActionResult RedployDeployemnt([FromRoute] string appName, [FromRoute] string deploymentId)
         {
-            try { 
-            //var rev = Newtonsoft.Json.JsonConvert.DeserializeObject<RevisionPost>(
-             //                   jsonData.ToString(Formatting.None));
-            System.Console.WriteLine("Restarting Pods for App Service App : " + rev.appName);
-            System.Console.WriteLine($" Patch Args :::::: -c \" /patch.sh {rev.appName} apps/{rev.appName}/site/artifacts/{rev.deploymentId}\"");
+            try {
+
+            System.Console.WriteLine("Restarting Pods for App Service App : " + appName);
+            System.Console.WriteLine($" Patch Args :::::: -c \" /patch.sh {appName} apps/{appName}/site/artifacts/{deploymentId}\"");
 
             Process _executingProcess = new Process()
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "/bin/bash",
-                    Arguments = $"-c \" /patch.sh {rev.appName} apps/{rev.appName}/site/artifacts/{rev.deploymentId}\"",
+                    Arguments = $"-c \" /patch.sh {appName} apps/{appName}/site/artifacts/{deploymentId}\"",
                     RedirectStandardOutput = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
@@ -89,19 +90,14 @@ namespace Kudu.Services.Diagnostics
             // Read the standard error of net.exe and write it on to console.
             _executingProcess.OutputDataReceived += (sender, args) => System.Console.WriteLine("{0}", args.Data);
             _executingProcess.Start();
-            //* Read the output (or the error)
-            //string output = _executingProcess.StandardOutput.ReadToEnd();
-            //System.Console.WriteLine(output);
-            //string err = _executingProcess.StandardError.ReadToEnd();
-            //System.Console.WriteLine(err);
             _executingProcess.WaitForExit();
             System.Console.WriteLine("Process exit code : " + _executingProcess.ExitCode);
             System.Console.WriteLine("All Pods Restarted!");
-            FileSystemHelpers.WriteAllText($"/home/apps/{rev.appName}/site/artifacts/active", rev.deploymentId);
+            FileSystemHelpers.WriteAllText($"/home/apps/{appName}/site/artifacts/active", deploymentId);
             }
             catch (Exception e)
             {
-
+                Console.WriteLine("error : "+e.Message);
             }
             return Ok();
         }

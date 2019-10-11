@@ -373,8 +373,8 @@ mytimeline.ul.timeline > li:before {
             var obj = $('#' + deploymentId);
             var objData = $('#' + deploymentId+'-data');
             $.ajax({
-                url: 'http://build.f422074646704c039cb3.eastus.aksapp.io/api/revisions',
-                type: 'post',
+                url: 'http://build.f422074646704c039cb3.eastus.aksapp.io/api/revisions/redeploy/' + appName + '/' + deploymentId + '',
+                type: 'GET',
                 data: {'appName' : appName, 'deploymentId': deploymentId},
                 success: function () {
                     $('#' + deploymentId + '-redep-btn').innerHTML = "Currently Deployed";
