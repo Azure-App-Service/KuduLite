@@ -3,6 +3,7 @@ using Kudu.Core.Infrastructure;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -57,24 +58,34 @@ namespace Kudu.Services.Diagnostics
             return Ok(ret);
         }
 
+        public class RevisionPost
+        {
+            public string appName;
+            public string deploymentId;
+        }
+
         [EnableCors]
         [HttpPost]
-        public IActionResult RedployDeployemnt([FromBody] string appName, [FromBody] string deploymentId)
+        public IActionResult RedployDeployemnt([FromForm] RevisionPost rev)
         {
-            System.Console.WriteLine("Restarting Pods for App Service App : " + appName);
-            System.Console.WriteLine($" Patch Args :::::: -c \" /patch.sh {appName} apps/{appName}/site/artifacts/{deploymentId}\"");
+            try { 
+            //var rev = Newtonsoft.Json.JsonConvert.DeserializeObject<RevisionPost>(
+             //                   jsonData.ToString(Formatting.None));
+            System.Console.WriteLine("Restarting Pods for App Service App : " + rev.appName);
+            System.Console.WriteLine($" Patch Args :::::: -c \" /patch.sh {rev.appName} apps/{rev.appName}/site/artifacts/{rev.deploymentId}\"");
 
             Process _executingProcess = new Process()
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "/bin/bash",
-                    Arguments = $"-c \" /patch.sh {appName} apps/{appName}/site/artifacts/{deploymentId}\"",
+                    Arguments = $"-c \" /patch.sh {rev.appName} apps/{rev.appName}/site/artifacts/{rev.deploymentId}\"",
                     RedirectStandardOutput = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                 }
             };
+
             // Read the standard error of net.exe and write it on to console.
             _executingProcess.OutputDataReceived += (sender, args) => System.Console.WriteLine("{0}", args.Data);
             _executingProcess.Start();
@@ -86,7 +97,12 @@ namespace Kudu.Services.Diagnostics
             _executingProcess.WaitForExit();
             System.Console.WriteLine("Process exit code : " + _executingProcess.ExitCode);
             System.Console.WriteLine("All Pods Restarted!");
-            FileSystemHelpers.WriteAllText($"/home/apps/{appName}/site/artifacts/active", deploymentId);
+            FileSystemHelpers.WriteAllText($"/home/apps/{rev.appName}/site/artifacts/active", rev.deploymentId);
+            }
+            catch (Exception e)
+            {
+
+            }
             return Ok();
         }
     }
