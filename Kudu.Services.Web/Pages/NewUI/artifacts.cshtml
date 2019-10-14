@@ -50,6 +50,7 @@ html {
 .card,
 .card * {
   box-sizing: border-box;
+  border-radius: 15px;
 }
 
 .card {
@@ -93,13 +94,13 @@ html {
 .card-header {
   top: 0;
   height: 50px;
-  border-radius: 5px 5px 0 0;
+  border-radius: 15px 15px 0 0;
 }
 
 .card-footer {
   bottom: 0;
   height: 50px;
-  border-radius: 0 0 5px 5px;
+  border-radius: 0 0 15px 15px;
   background-color: #F4F6F8;
 }
 
@@ -352,7 +353,7 @@ mytimeline.ul.timeline > li:before {
     display: inline-block;
     position: absolute;
     border-radius: 50%;
-    border: 3px solid #22c0e8;
+    border: 5px solid #c8c8c8;
     left: 20px;
     width: 20px;
     height: 20px;
@@ -366,11 +367,62 @@ mytimeline.ul.timeline > li:before {
 .progress-bar {
     -webkit-transition: width 4s ease;
     transition: width 4s ease;
-}            
+}          
+
+#header1 .caption {
+	text-align: center;
+    color: #fff;
+}
+
+#header1 .caption .title {
+	margin-bottom: 1.5rem;
+} 
+
+#header1 .caption .text {
+	margin-bottom: 1.5rem;
+}
+
+#header1 .caption .action {
+	margin-bottom: 1rem;
+	padding-left: 3rem;
+	padding-right: 3rem;
+	border-radius: 15px;
+}
+
+.speech-bubble {
+    background-color: #F4F6F8;
+    border: 1px solid #c8c8c8;
+    border-radius: 10px;
+    width: 250px;
+    text-align: center;
+    padding: 10px;
+    position: absolute;
+}  
+.speech-bubble .arrow {
+    border-style: solid;
+    position: absolute;
+}
+ 
+.bottom {
+    border-color: #c8c8c8 transparent transparent transparent;
+    border-width: 8px 8px 0px 8px;
+    bottom: -9px;
+    left: 20px;
+}
+.bottom:after {
+    border-color: #f8f8f8 transparent transparent transparent;
+    border-style: solid;
+    border-width: 7px 7px 0px 7px;
+    bottom: 1px;
+    content: "";
+    position: absolute;
+    left: -20px;
+}
+.sidebar {
+    padding-top: 0px;    
+}
 </style>
 <style>
-  
-
 </style>
 <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
 <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
@@ -413,8 +465,8 @@ mytimeline.ul.timeline > li:before {
             });
         }
     $(document).ready(function () {
-        var json = JSON.parse('[{"revisionId":"32","deploymentId":"06bb11472ded5bfebd740944044b2b2603b68a2b","active":false,"Status":4,"StatusText":null,"AuthorEmail":"root@KubeCtlVm.luvkdcpd5g4epksxdxdfwlp5xd.xx.internal.cloudapp.net","Author":"root","Message":"changed clr","Deployer":"","ReceivedTime":"2019-10-11T21:26:54.2635576Z","StartTime":"2019-10-11T21:26:54.6443279Z","EndTime":"2019-10-11T21:27:04.8177288Z"},{"revisionId":"23","deploymentId":"85499beba8f391099b473dfb9db6f7bb2470895a","active":false,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"453","Deployer":"","ReceivedTime":"2019-10-11T16:49:52.5561165Z","StartTime":"2019-10-11T16:49:53.1425998Z","EndTime":"2019-10-11T16:52:08.6700642Z"},{"revisionId":"25","deploymentId":"b308f7575fb514e768a4d5b97b23434d51e7958d","active":false,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"TEST","Deployer":"","ReceivedTime":"2019-10-11T19:26:37.2324323Z","StartTime":"2019-10-11T19:26:37.6684099Z","EndTime":"2019-10-11T19:29:05.5728312Z"},{"revisionId":"30","deploymentId":"32c5c48c6d52d4ce06bdc989c395281dc363d773","active":false,"Status":4,"StatusText":null,"AuthorEmail":"root@KubeCtlVm.luvkdcpd5g4epksxdxdfwlp5xd.xx.internal.cloudapp.net","Author":"root","Message":"Test","Deployer":"","ReceivedTime":"2019-10-11T21:23:43.5351849Z","StartTime":"2019-10-11T21:23:43.8960041Z","EndTime":"2019-10-11T21:23:55.1829356Z"},{"revisionId":"24","deploymentId":"3b80bfc51f6c753e5caf5448c22db0538ba476a5","active":false,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"2345","Deployer":"","ReceivedTime":"2019-10-11T17:29:17.8700342Z","StartTime":"2019-10-11T17:29:18.3541755Z","EndTime":"2019-10-11T17:31:45.0052705Z"},{"revisionId":"28","deploymentId":"aa060d61311068b18e6240d4caff26c4463f0adf","active":false,"Status":4,"StatusText":null,"AuthorEmail":"root@KubeCtlVm.luvkdcpd5g4epksxdxdfwlp5xd.xx.internal.cloudapp.net","Author":"root","Message":"basic","Deployer":"","ReceivedTime":"2019-10-11T21:21:37.3448059Z","StartTime":"2019-10-11T21:21:38.652415Z","EndTime":"2019-10-11T21:21:51.2469904Z"},{"revisionId":"33","deploymentId":"139b34ab6e7dbe80797a10b34807e99ab306de7c","active":true,"Status":4,"StatusText":null,"AuthorEmail":"root@KubeCtlVm.luvkdcpd5g4epksxdxdfwlp5xd.xx.internal.cloudapp.net","Author":"root","Message":"test","Deployer":"","ReceivedTime":"2019-10-11T21:28:07.188486Z","StartTime":"2019-10-11T21:28:07.7113288Z","EndTime":"2019-10-11T21:28:17.940069Z"}]');
-        $.ajax({ 
+        var json = JSON.parse('[{"revisionId":"33","deploymentId":"139b34ab6e7dbe80797a10b34807e99ab306de7c","active":true,"Status":4,"StatusText":null,"AuthorEmail":"root@KubeCtlVm.luvkdcpd5g4epksxdxdfwlp5xd.xx.internal.cloudapp.net","Author":"root","Message":"test","Deployer":"","ReceivedTime":"2019-10-11T21:28:07.188486Z","StartTime":"2019-10-11T21:28:07.7113288Z","EndTime":"2019-10-11T21:28:17.940069Z"},{"revisionId":"28","deploymentId":"aa060d61311068b18e6240d4caff26c4463f0adf","active":false,"Status":4,"StatusText":null,"AuthorEmail":"root@KubeCtlVm.luvkdcpd5g4epksxdxdfwlp5xd.xx.internal.cloudapp.net","Author":"root","Message":"basic","Deployer":"","ReceivedTime":"2019-10-11T21:21:37.3448059Z","StartTime":"2019-10-11T21:21:38.652415Z","EndTime":"2019-10-11T21:21:51.2469904Z"},{"revisionId":"24","deploymentId":"3b80bfc51f6c753e5caf5448c22db0538ba476a5","active":false,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"2345","Deployer":"","ReceivedTime":"2019-10-11T17:29:17.8700342Z","StartTime":"2019-10-11T17:29:18.3541755Z","EndTime":"2019-10-11T17:31:45.0052705Z"},{"revisionId":"30","deploymentId":"32c5c48c6d52d4ce06bdc989c395281dc363d773","active":false,"Status":4,"StatusText":null,"AuthorEmail":"root@KubeCtlVm.luvkdcpd5g4epksxdxdfwlp5xd.xx.internal.cloudapp.net","Author":"root","Message":"Test","Deployer":"","ReceivedTime":"2019-10-11T21:23:43.5351849Z","StartTime":"2019-10-11T21:23:43.8960041Z","EndTime":"2019-10-11T21:23:55.1829356Z"},{"revisionId":"25","deploymentId":"b308f7575fb514e768a4d5b97b23434d51e7958d","active":false,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"TEST","Deployer":"","ReceivedTime":"2019-10-11T19:26:37.2324323Z","StartTime":"2019-10-11T19:26:37.6684099Z","EndTime":"2019-10-11T19:29:05.5728312Z"},{"revisionId":"23","deploymentId":"85499beba8f391099b473dfb9db6f7bb2470895a","active":false,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"453","Deployer":"","ReceivedTime":"2019-10-11T16:49:52.5561165Z","StartTime":"2019-10-11T16:49:53.1425998Z","EndTime":"2019-10-11T16:52:08.6700642Z"},{"revisionId":"32","deploymentId":"06bb11472ded5bfebd740944044b2b2603b68a2b","active":false,"Status":4,"StatusText":null,"AuthorEmail":"root@KubeCtlVm.luvkdcpd5g4epksxdxdfwlp5xd.xx.internal.cloudapp.net","Author":"root","Message":"changed clr","Deployer":"","ReceivedTime":"2019-10-11T21:26:54.2635576Z","StartTime":"2019-10-11T21:26:54.6443279Z","EndTime":"2019-10-11T21:27:04.8177288Z"}]');
+        $.ajax({
             type: "GET",
             crossDomain: true,
             url: "http://build.f422074646704c039cb3.eastus.aksapp.io/api/revisions/jennydemo",
@@ -444,90 +496,91 @@ mytimeline.ul.timeline > li:before {
         }
     }
     });
-
-
 </script>
 <div style="margin-left:30px">
     <div class="row">
         <div class="mt-5 mb-5">
             <div class="row">
                 <div class="col-md-6 offset-md-3">
-                    <h4>Past Deployments</h4>
-                    <ul class="timeline" id="revisions-timeline">
+                    <div class="speech-bubble">
+                        <div class="arrow bottom right"></div>
+                        <h3 style="font-weight: 300;color: #34495e">Past Deployments</h3>
+                    </div>
+                        <ul class="timeline" style="margin-top:80px" id="revisions-timeline">
 
-                        <!--
-    <li>
-        <article class="card assignment-card course-id-1">
-            <header class="card-header card-backgrund-color">
-                <h2>Deployment : 12343288934</h2>
-            </header>
-            <section class="card-body">
-                <div class="card-info">
-                    <div class="card-info-element">
-                        <div class="card-info-description">Ago</div>
-                        <div class="card-info-value">02</div>
-                    </div>
-                    <div class="card-info-element">
-                        <div class="card-info-description">By</div>
-                        <div class="card-info-value">60</div>
-                    </div>
-                    <div class="card-info-element">
-                        <div class="card-info-description">Revision</div>
-                        <div class="card-info-value"><span class="card-info-assignment-level">18</span></div>
+                            <!--
+            <li>
+                <article class="card assignment-card course-id-1">
+                    <header class="card-header card-backgrund-color">
+                        <h2>Deployment : 12343288934</h2>
+                    </header>
+                    <section class="card-body">
+                        <div class="card-info">
+                            <div class="card-info-element">
+                                <div class="card-info-description">Ago</div>
+                                <div class="card-info-value">02</div>
+                            </div>
+                            <div class="card-info-element">
+                                <div class="card-info-description">By</div>
+                                <div class="card-info-value">60</div>
+                            </div>
+                            <div class="card-info-element">
+                                <div class="card-info-description">Revision</div>
+                                <div class="card-info-value"><span class="card-info-assignment-level">18</span></div>
+                            </div>
+                        </div>
+                        <p class="card-body-delimiter"></p>
+                        <p class="card-tags">
+                            <span class="card-tag card-backgrund-color">Redeploy Deployment</span>
+                            <span class="card-tag">Revert State</span>
+                            <span class="card-tag">Revision Metadata</span>
+                        </p>
+                    </section>
+                    <footer class="card-footer">
+                        <p>
+                            <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span>
+                        </p>
+                    </footer>
+                </article>
+            </li>
+            <li>
+                <article class="card assignment-card course-id-1">
+                    <header class="card-header card-backgrund-color">
+                        <h2>Deployment : 12343288934</h2>
+                    </header>
+                    <section class="card-body">
+                        <div class="card-info">
+                            <div class="card-info-element">
+                                <div class="card-info-description">Ago</div>
+                                <div class="card-info-value">02</div>
+                            </div>
+                            <div class="card-info-element">
+                                <div class="card-info-description">By</div>
+                                <div class="card-info-value">60</div>
+                            </div>
+                            <div class="card-info-element">
+                                <div class="card-info-description">Revision</div>
+                                <div class="card-info-value"><span class="card-info-assignment-level">18</span></div>
+                            </div>
+                        </div>
+                        <p class="card-body-delimiter"></p>
+                        <p class="card-tags">
+                            <span class="card-tag card-backgrund-color">Redeploy Deployment</span>
+                            <span class="card-tag">Revert State</span>
+                            <span class="card-tag">Revision Metadata</span>
+                        </p>
+                    </section>
+                    <footer class="card-footer">
+                        <p>
+                            <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span>
+                        </p>
+                    </footer>
+                </article>
+            </li>
+                -->
+                        </ul>
                     </div>
                 </div>
-                <p class="card-body-delimiter"></p>
-                <p class="card-tags">
-                    <span class="card-tag card-backgrund-color">Redeploy Deployment</span>
-                    <span class="card-tag">Revert State</span>
-                    <span class="card-tag">Revision Metadata</span>
-                </p>
-            </section>
-            <footer class="card-footer">
-                <p>
-                    <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span>
-                </p>
-            </footer>
-        </article>
-    </li>
-    <li>
-        <article class="card assignment-card course-id-1">
-            <header class="card-header card-backgrund-color">
-                <h2>Deployment : 12343288934</h2>
-            </header>
-            <section class="card-body">
-                <div class="card-info">
-                    <div class="card-info-element">
-                        <div class="card-info-description">Ago</div>
-                        <div class="card-info-value">02</div>
-                    </div>
-                    <div class="card-info-element">
-                        <div class="card-info-description">By</div>
-                        <div class="card-info-value">60</div>
-                    </div>
-                    <div class="card-info-element">
-                        <div class="card-info-description">Revision</div>
-                        <div class="card-info-value"><span class="card-info-assignment-level">18</span></div>
-                    </div>
-                </div>
-                <p class="card-body-delimiter"></p>
-                <p class="card-tags">
-                    <span class="card-tag card-backgrund-color">Redeploy Deployment</span>
-                    <span class="card-tag">Revert State</span>
-                    <span class="card-tag">Revision Metadata</span>
-                </p>
-            </section>
-            <footer class="card-footer">
-                <p>
-                    <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span>
-                </p>
-            </footer>
-        </article>
-    </li>
-        -->
-                    </ul>
-                </div>
-            </div>
         </div>
 
     </div>
