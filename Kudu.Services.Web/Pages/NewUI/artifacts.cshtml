@@ -472,10 +472,7 @@ mytimeline.ul.timeline > li:before {
             url: "http://build.f422074646704c039cb3.eastus.aksapp.io/api/revisions/jennydemo",
             success: function(data){        
                 this.json = data;
-            }
-        });
-      //http://build.f422074646704c039cb3.eastus.aksapp.io/api/revisions/jennydemo  
-    for (var i in json)
+                for (var i in json)
     {   
         var revisionId = json[i].revisionId;
         var author = json[i].Author;
@@ -496,6 +493,9 @@ mytimeline.ul.timeline > li:before {
         }
     }
     });
+            }
+        });
+      //http://build.f422074646704c039cb3.eastus.aksapp.io/api/revisions/jennydemo  
 </script>
 <div style="margin-left:30px">
     <div class="row">
