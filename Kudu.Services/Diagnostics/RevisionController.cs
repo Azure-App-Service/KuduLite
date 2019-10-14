@@ -57,6 +57,10 @@ namespace Kudu.Services.Diagnostics
                     ret.Add(new revisiondata() { deploymentId = revData.deploymentId ,active = isCurr, revisionId = rev, EndTime = revData.EndTime, Deployer = revData.Deployer, Author = revData.Author, AuthorEmail = revData.AuthorEmail, ReceivedTime = revData.ReceivedTime, StartTime = revData.StartTime, Status = revData.Status, Message = revData.Message });
                 }
             }
+            if (ret.Count != 0)
+            {
+                ret.Reverse();
+            }
             return Ok(ret);
         }
 

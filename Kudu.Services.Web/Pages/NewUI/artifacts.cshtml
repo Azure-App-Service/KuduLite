@@ -358,7 +358,15 @@ mytimeline.ul.timeline > li:before {
     height: 20px;
     z-index: 400;
 }
-            
+
+.pbar-green {
+    background-color: #68CF8C !important;
+}
+
+.progress-bar {
+    -webkit-transition: width 4s ease;
+    transition: width 4s ease;
+}            
 </style>
 <style>
   
@@ -371,28 +379,33 @@ mytimeline.ul.timeline > li:before {
 <script>
         function revertDeployment(appName, deploymentId) {
             var obj = $('#' + deploymentId);
-            var objData = $('#' + deploymentId+'-data');
+            var objData = $('#' + deploymentId + '-data');
+
             $.ajax({
                 url: 'http://build.f422074646704c039cb3.eastus.aksapp.io/api/revisions/redeploy/' + appName + '/' + deploymentId + '',
                 type: 'GET',
                 data: {'appName' : appName, 'deploymentId': deploymentId},
                 success: function () {
-                    $('#' + deploymentId + '-redep-btn').innerHTML = "Currently Deployed";
+                    $('#' + deploymentId + '-redep-btn').html("Currently Deployed");
                     var listItems = $("#revisions-timeline li");
-                        listItems.each(function(idx, li) {
+                    listItems.each(function(idx, li) {
                         var item = $(li);
-                            item.removeClass('course-id-2');
-                            item.addClass('course-id-1');
-                        // and the rest of your code
-                        });
-                    obj.removeClass('course-id-1');
-                    obj.addClass('course-id-2');
-                    objData.animate(
-                        { x: 100 },
-                        {
-                            duration: 2000,
-                            step: function(now) { $(this).attr("data-status", now); }
-                        });
+                        if (item.attr('id') != deploymentId) {
+                            var liId = item.attr('id');
+                            $('#' + liId + '-redep-btn').html("Redeploy Deployment");
+                            $('#' + liId+'-article').removeClass('course-id-2');
+                            $('#' + liId + '-article').addClass('course-id-1');
+                            $('#' + liId + '-progress').css({ "visibility": "hidden" });
+                            $('#' + liId + "-progress-bar").css('width', '0%');
+                    }
+                    else {
+                            $('#' + deploymentId + "-progress-bar").css('width', '0%');
+                            $('#' + deploymentId+'-article').removeClass('course-id-1');
+                            $('#' + deploymentId + '-article').addClass('course-id-2');
+                            $('#' + deploymentId + '-progress').css({ "visibility": "visible" });
+                            $('#' + deploymentId + "-progress-bar").css('width', '100%');
+                    }
+                    });
                 },
                 error: function (errorThrown) {
                     console.log( errorThrown );
@@ -400,13 +413,13 @@ mytimeline.ul.timeline > li:before {
             });
         }
     $(document).ready(function () {
-        var json = JSON.parse('[{"revisionId":"23","deploymentId":"85499beba8f391099b473dfb9db6f7bb2470895a","active":false,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"453","Deployer":"","ReceivedTime":"2019-10-11T16:49:52.5561165Z","StartTime":"2019-10-11T16:49:53.1425998Z","EndTime":"2019-10-11T16:52:08.6700642Z"},{"revisionId":"24","deploymentId":"85499beba8f391099b473dfb9db6f7bb2470895","active":true,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"2345","Deployer":"","ReceivedTime":"2019-10-11T17:29:17.8700342Z","StartTime":"2019-10-11T17:29:18.3541755Z","EndTime":"2019-10-11T17:31:45.0052705Z"}]');
+        var json = JSON.parse('[{"revisionId":"32","deploymentId":"06bb11472ded5bfebd740944044b2b2603b68a2b","active":false,"Status":4,"StatusText":null,"AuthorEmail":"root@KubeCtlVm.luvkdcpd5g4epksxdxdfwlp5xd.xx.internal.cloudapp.net","Author":"root","Message":"changed clr","Deployer":"","ReceivedTime":"2019-10-11T21:26:54.2635576Z","StartTime":"2019-10-11T21:26:54.6443279Z","EndTime":"2019-10-11T21:27:04.8177288Z"},{"revisionId":"23","deploymentId":"85499beba8f391099b473dfb9db6f7bb2470895a","active":false,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"453","Deployer":"","ReceivedTime":"2019-10-11T16:49:52.5561165Z","StartTime":"2019-10-11T16:49:53.1425998Z","EndTime":"2019-10-11T16:52:08.6700642Z"},{"revisionId":"25","deploymentId":"b308f7575fb514e768a4d5b97b23434d51e7958d","active":false,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"TEST","Deployer":"","ReceivedTime":"2019-10-11T19:26:37.2324323Z","StartTime":"2019-10-11T19:26:37.6684099Z","EndTime":"2019-10-11T19:29:05.5728312Z"},{"revisionId":"30","deploymentId":"32c5c48c6d52d4ce06bdc989c395281dc363d773","active":false,"Status":4,"StatusText":null,"AuthorEmail":"root@KubeCtlVm.luvkdcpd5g4epksxdxdfwlp5xd.xx.internal.cloudapp.net","Author":"root","Message":"Test","Deployer":"","ReceivedTime":"2019-10-11T21:23:43.5351849Z","StartTime":"2019-10-11T21:23:43.8960041Z","EndTime":"2019-10-11T21:23:55.1829356Z"},{"revisionId":"24","deploymentId":"3b80bfc51f6c753e5caf5448c22db0538ba476a5","active":false,"Status":4,"StatusText":null,"AuthorEmail":"sanchit.mehta602@gmail.com","Author":"Sanchit Mehta","Message":"2345","Deployer":"","ReceivedTime":"2019-10-11T17:29:17.8700342Z","StartTime":"2019-10-11T17:29:18.3541755Z","EndTime":"2019-10-11T17:31:45.0052705Z"},{"revisionId":"28","deploymentId":"aa060d61311068b18e6240d4caff26c4463f0adf","active":false,"Status":4,"StatusText":null,"AuthorEmail":"root@KubeCtlVm.luvkdcpd5g4epksxdxdfwlp5xd.xx.internal.cloudapp.net","Author":"root","Message":"basic","Deployer":"","ReceivedTime":"2019-10-11T21:21:37.3448059Z","StartTime":"2019-10-11T21:21:38.652415Z","EndTime":"2019-10-11T21:21:51.2469904Z"},{"revisionId":"33","deploymentId":"139b34ab6e7dbe80797a10b34807e99ab306de7c","active":true,"Status":4,"StatusText":null,"AuthorEmail":"root@KubeCtlVm.luvkdcpd5g4epksxdxdfwlp5xd.xx.internal.cloudapp.net","Author":"root","Message":"test","Deployer":"","ReceivedTime":"2019-10-11T21:28:07.188486Z","StartTime":"2019-10-11T21:28:07.7113288Z","EndTime":"2019-10-11T21:28:17.940069Z"}]');
         $.ajax({ 
             type: "GET",
             crossDomain: true,
             url: "http://build.f422074646704c039cb3.eastus.aksapp.io/api/revisions/jennydemo",
             success: function(data){        
-                json = data;
+                this.json = data;
             }
         });
       //http://build.f422074646704c039cb3.eastus.aksapp.io/api/revisions/jennydemo  
@@ -418,8 +431,8 @@ mytimeline.ul.timeline > li:before {
         var idShort = id.substring(0, 8);
         var ago = '4H';
         var appName = "jennydemo".trim();
-        var liObj = '<li id="'+id+'"><article class="card assignment-card course-id-2"><header class="card-header card-backgrund-color"><h2>'+idShort+'</h2></header><section class="card-body"> <div class="card-info"> <div class="card-info-element"> <div class="card-info-description">Ago</div><div class="card-info-value">'+ago+'</div></div><div class="card-info-element"> <div class="card-info-description">Author</div><div class="card-info-value">'+author+'</div></div><div class="card-info-element"> <div class="card-info-description">Revision</div><div class="card-info-value"><span class="card-info-assignment-level">'+revisionId+'</span></div></div></div><p class="card-body-delimiter"></p><p class="card-tags"> <button type="button" class=" card-tag card-backgrund-color" id="'+id+'-redep-btn" onclick="revertDeployment\(\''+appName+'\',\''+id+'\'\)\"> Currently Deployed</button> <span class="card-tag">Revert State</span> <span class="card-tag">Revision Metadata</span> </p></section> <footer class="card-footer"> <p> <span class="card-progress-bar"><span class="card-progress-bar-status card-backgrund-color" id="'+id+'-status" data-status="80" style="width: 30%;"></span></span> </p></footer> </article> </li>';
-        var liObj2 = '<li id="'+id+'"><article class="card assignment-card course-id-1"><header class="card-header card-backgrund-color"><h2>'+idShort+'</h2></header><section class="card-body"> <div class="card-info"> <div class="card-info-element"> <div class="card-info-description">Ago</div><div class="card-info-value">'+ago+'</div></div><div class="card-info-element"> <div class="card-info-description">Author</div><div class="card-info-value">'+author+'</div></div><div class="card-info-element"> <div class="card-info-description">Revision</div><div class="card-info-value"><span class="card-info-assignment-level">'+revisionId+'</span></div></div></div><p class="card-body-delimiter"></p><p class="card-tags"> <button type="button" class=" card-tag card-backgrund-color" id="'+id+'-redep-btn" onclick="revertDeployment\(\''+appName+'\',\''+id+'\'\)\"> Redeploy Deployment</button> <span class="card-tag">Revert State</span> <span class="card-tag">Revision Metadata</span> </p></section> <footer class="card-footer"> <p> <span class="card-progress-bar" style="display:hidden"><span class="card-progress-bar-status card-backgrund-color" data-status="30" style="width: 30%;"></span></span> </p></footer> </article> </li>';
+        var liObj = '<li id="'+id+'"><article id="'+id+'-article" class="card assignment-card course-id-2"><header class="card-header card-backgrund-color"><h2>'+idShort+'</h2></header><section class="card-body"> <div class="card-info"> <div class="card-info-element"> <div class="card-info-description">Ago</div><div class="card-info-value">'+ago+'</div></div><div class="card-info-element"> <div class="card-info-description">Author</div><div class="card-info-value">'+author+'</div></div><div class="card-info-element"> <div class="card-info-description">Revision</div><div class="card-info-value"><span class="card-info-assignment-level">'+revisionId+'</span></div></div></div><p class="card-body-delimiter"></p><p class="card-tags"> <button type="button" class="card-tag card-backgrund-color" id="'+id+'-redep-btn" onclick="revertDeployment\(\''+appName+'\',\''+id+'\'\)\"> Currently Deployed</button> <span class="card-tag">Revert App State</span> <span class="card-tag">Revision Metadata</span> </p></section> <footer class="card-footer"> <p> <span class="progress" style="height: 12px;visibility: hidden;" id="'+id+'-progress"><span class="progress-bar" id="'+id+'-progress-bar" role="progressbar" style="width: 10%; background-color: #68CF8C !important" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></span></span> </p></footer> </article> </li>';
+        var liObj2 = '<li id="'+id+'"><article id="'+id+'-article" class="card assignment-card course-id-1"><header class="card-header card-backgrund-color"><h2>'+idShort+'</h2></header><section class="card-body"> <div class="card-info"> <div class="card-info-element"> <div class="card-info-description">Ago</div><div class="card-info-value">'+ago+'</div></div><div class="card-info-element"> <div class="card-info-description">Author</div><div class="card-info-value">'+author+'</div></div><div class="card-info-element"> <div class="card-info-description">Revision</div><div class="card-info-value"><span class="card-info-assignment-level">'+revisionId+'</span></div></div></div><p class="card-body-delimiter"></p><p class="card-tags"> <button type="button" class="card-tag card-backgrund-color" id="'+id+'-redep-btn" onclick="revertDeployment\(\''+appName+'\',\''+id+'\'\)\"> Redeploy Deployment</button> <span class="card-tag">Revert App State</span> <span class="card-tag">Revision Metadata</span> </p></section> <footer class="card-footer"> <p> <span class="progress" style="height: 12px;visibility: hidden;" id="'+id+'-progress"><span class="progress-bar" id="'+id+'-progress-bar" role="progressbar" style="width: 10%; background-color: #68CF8C !important" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></span></span> </p></footer> </article> </li>';
         var timeline = $('#revisions-timeline');
         if (json[i].active)
         {
@@ -431,6 +444,7 @@ mytimeline.ul.timeline > li:before {
         }
     }
     });
+
 
 </script>
 <div style="margin-left:30px">
