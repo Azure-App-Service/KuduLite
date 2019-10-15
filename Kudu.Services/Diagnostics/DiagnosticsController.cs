@@ -24,7 +24,7 @@ namespace Kudu.Services.Performance
     class DockerLogSourceMap
     {
         public string LogSource { get; set; } // RDxxxxxxxxxxxx + "_" + default, easyauth, "" (i.e. Docker), etc.
-        public int Timestamp { get; set; }  // YYYYmmDD
+        public DateTime Timestamp { get; set; }  // YYYYmmDD
         public List<string> Paths { get; set; }
     }
 
@@ -170,10 +170,14 @@ namespace Kudu.Services.Performance
                     // Get the timestamp and log source (machine name "_" default, easyauth, empty(Docker), etc) from the file name
                     // and find the latest one for each source
                     // Note that timestamps are YYYY_MM_DD (sortable as integers with the underscores removed)
-                    var date = int.Parse(match.Groups[1].Value.Replace("_", String.Empty));
+                    DateTime date;
+                    if (!DateTime.TryParse(match.Groups[1].Value.Replace("_", "/"), out date))
+                    {
+                        continue;
+                    }
                     var source = match.Groups[2].Value;
 
-                    if (!logSources.ContainsKey(source) || logSources[source].Timestamp < date)
+                    if (!logSources.ContainsKey(source) || logSources[source].Timestamp.CompareTo(date) < 0)
                     {
                         logSources[source] = new DockerLogSourceMap {
                             LogSource = source,
@@ -193,7 +197,8 @@ namespace Kudu.Services.Performance
                 return new string[0];
             }
 
-            return logSources.Values.SelectMany(m => m.Paths).ToArray();
+            var timeStampThreshold = logSources.Values.Max(v => v.Timestamp).AddDays(-7);
+            return logSources.Values.Where(v => v.Timestamp >= timeStampThreshold).SelectMany(m => m.Paths).ToArray();
         }
 
         private JObject CurrentDockerLogFilenameToJson(string path, string vfsBaseAddress)
