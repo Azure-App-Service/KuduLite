@@ -22,6 +22,8 @@ using Kudu.Core.SourceControl.Git;
 using Kudu.Core.Tracing;
 using System.Reflection;
 using XmlSettings;
+using log4net;
+using log4net.Config;
 
 namespace Kudu.Console
 {
@@ -30,6 +32,9 @@ namespace Kudu.Console
         
         private static int Main(string[] args)
         {
+            var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
+            XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
+
             // Turn flag on in app.config to wait for debugger on launch
             if (ConfigurationManager.AppSettings["WaitForDebuggerOnStart"] == "true")
             {

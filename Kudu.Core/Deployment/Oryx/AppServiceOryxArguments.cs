@@ -159,18 +159,21 @@ namespace Kudu.Core.Deployment
                 case Framework.None:
                     break;
                 case Framework.PHP:
+                    OryxArgumentsHelper.AddLanguageVersion(args, Version);
+                    break;
                 case Framework.NodeJs:
                     if (Version.Contains("LTS", StringComparison.OrdinalIgnoreCase))
                     {
                         // 10-LTS, 12-LTS should use versions 10, 12 etc
                         // Oryx Builder uses lts for major versions
-                        Version = Version.Replace("LTS", "").Replace("-", "");
+                        Version = Version.Replace("LTS", "").Replace("-", "").Replace("lts", "");
                         if (string.IsNullOrEmpty(Version))
                         {
                             // Active LTS
                             Version = "10";
                         }
                     }
+                    OryxArgumentsHelper.AddLanguageVersion(args, Version);
                     break;
                 case Framework.Python:
                     OryxArgumentsHelper.AddLanguageVersion(args, Version);
