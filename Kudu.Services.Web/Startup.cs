@@ -644,7 +644,7 @@ namespace Kudu.Services.Web
                 }
 
                 // catch all unregistered url to properly handle not found
-                // routes.MapRoute("error-404", "{*path}", new {controller = "Error404", action = "Handle"});
+                routes.MapRoute("error-404", "{*path}", new {controller = "Error404", action = "Handle"});
             });
 
             Console.WriteLine(@"Exiting Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));

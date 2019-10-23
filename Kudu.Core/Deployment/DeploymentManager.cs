@@ -248,14 +248,6 @@ namespace Kudu.Core.Deployment
 
                         // Perform the build deployment of this changeset
                         await Build(changeSet, tracer, deployStep, repository, deploymentInfo, deploymentAnalytics, fullBuildByDefault);
-
-                        if (!(OSDetector.IsOnWindows() && 
-                              !EnvironmentHelper.IsWindowsContainers()) && 
-                            _settings.RestartAppContainerOnGitDeploy())
-                        {
-                            logger.Log(Resources.Log_TriggeringContainerRestart);
-                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason);
-                        }
                     }
                     catch (Exception ex)
                     {
@@ -297,6 +289,30 @@ namespace Kudu.Core.Deployment
                         throw new DeploymentFailedException(exception);
                     }
            
+            }
+        }
+
+        public async Task RestartMainSiteIfNeeded(ITracer tracer, ILogger logger)
+        {
+            // If post-deployment restart is disabled, do nothing.
+            if (!_settings.RestartAppOnGitDeploy())
+            {
+                return;
+            }
+
+            if (_settings.RecylePreviewEnabled())
+            {
+                logger.Log("Triggering recycle (preview mode enabled).");
+                tracer.Trace("Triggering recycle (preview mode enabled).");
+
+                await PostDeploymentHelper.RestartMainSiteAsync(_environment.RequestId, new PostDeploymentTraceListener(tracer, logger));
+            }
+            else
+            {
+                logger.Log("Triggering recycle (preview mode disabled).");
+                tracer.Trace("Triggering recycle (preview mode disabled).");
+
+                DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, tracer);
             }
         }
 
@@ -683,6 +699,8 @@ namespace Kudu.Core.Deployment
                     {
                         await builder.Build(context);
                         builder.PostBuild(context);
+
+                        await RestartMainSiteIfNeeded(tracer, logger);
 
                         if (FunctionAppHelper.LooksLikeFunctionApp() && _environment.IsOnLinuxConsumption)
                         {
