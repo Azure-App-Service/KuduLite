@@ -11,11 +11,6 @@ namespace Kudu.Core.Infrastructure
             return !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.FunctionRunTimeVersion));
         }
 
-        public static bool HasScmRunFromPackage()
-        {
-            return !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.ScmRunFromPackage));
-        }
-
         public static bool IsCSharpFunctionFromProjectFile(string projectPath)
         {
             return VsHelper.IncludesAnyReferencePackage(projectPath, "Microsoft.NET.Sdk.Functions");

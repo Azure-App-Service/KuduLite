@@ -28,7 +28,8 @@ namespace Kudu.Core.Helpers
             DeploymentContext context,
             bool shouldWarmUp)
         {
-            string sas = System.Environment.GetEnvironmentVariable(Constants.ScmRunFromPackage);
+            string sas = settings.GetValue(Constants.ScmRunFromPackage) ?? System.Environment.GetEnvironmentVariable(Constants.ScmRunFromPackage);
+
             string builtFolder = context.OutputPath;
             string packageFolder = env.DeploymentsPath;
             string packageFileName = OryxBuildConstants.FunctionAppBuildSettings.LinuxConsumptionArtifactName;
