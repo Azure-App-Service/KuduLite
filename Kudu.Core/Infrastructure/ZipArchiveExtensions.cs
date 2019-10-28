@@ -110,7 +110,7 @@ namespace Kudu.Core.Infrastructure
             return entry;
         }
 
-        public static IDictionary<string, string> Extract(this ZipArchive archive, string directoryName)
+        public static IDictionary<string, string> Extract(this ZipArchive archive, string directoryName, bool preserveSymlinks = false)
         {
             IDictionary<string, string> symLinks = new Dictionary<string, string>();
             bool isSymLink = false;
@@ -150,7 +150,7 @@ namespace Kudu.Core.Infrastructure
                                 fs.Close();
 
                                 var str = System.Text.Encoding.Default.GetString(buffer);
-                                if (str.StartsWith("../"))
+                                if (preserveSymlinks && str.StartsWith("../"))
                                 {
                                     using (StreamReader reader = fileInfo.OpenText())
                                     {

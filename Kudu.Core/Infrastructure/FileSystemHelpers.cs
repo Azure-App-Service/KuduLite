@@ -376,7 +376,7 @@ namespace Kudu.Core.Infrastructure
             }
         }
 
-        public static void CreateRelativeSymlinks(string source, string destination, TimeSpan timeout)
+        public static void CreateRelativeSymlink(string source, string destination, TimeSpan timeout)
         {
             string directory = FileSystemHelpers.GetDirectoryName(source);
             string cmd = String.Format("cd {0}; timeout {1}s  ln -s {2} {3}", directory, timeout.TotalSeconds, destination, source);

@@ -10,7 +10,8 @@ namespace Kudu.Core.Deployment
         None,
         CompressModules,
         UseExpressBuild,
-        UseTempDirectory
+        UseTempDirectory,
+        UseRFPV2
     }
 
     public class BuildFlagsHelper

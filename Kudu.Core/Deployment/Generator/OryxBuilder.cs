@@ -33,6 +33,8 @@ namespace Kudu.Core.Deployment.Generator
             // initialize the repository Path for the build
             context.RepositoryPath = RepositoryPath;
 
+            context.Logger.Log("Repository path is "+context.RepositoryPath);
+
             // Initialize Oryx Args.
             IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
 
@@ -40,7 +42,7 @@ namespace Kudu.Core.Deployment.Generator
             {
                 // Step 1: Run kudusync
                 string kuduSyncCommand = string.Format("kudusync -v 50 -f {0} -t {1} -n {2} -p {3} -i \".git;.hg;.deployment;.deploy.sh\"",
-                    RepositoryPath,
+                    context.RepositoryPath,
                     context.OutputPath,
                     context.NextManifestFilePath,
                     context.PreviousManifestFilePath

@@ -40,11 +40,8 @@ namespace Kudu.Core.Deployment
             {
                 return;
             }
-            else if (Language == Framework.DotNETCore)
-            {
-                // Skip kudu sync for .NET core builds
-                SkipKuduSync = true;
-            }
+            // Skip kudu sync for .NET core builds
+            SkipKuduSync = true;
 
             RunOryxBuild = true;
             Version = version;
@@ -117,18 +114,18 @@ namespace Kudu.Core.Deployment
             {
                 case Framework.None:
                     // Input/Output
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
+                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
                     break;
 
                 case Framework.NodeJs:
                     // Input/Output
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
+                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
                     OryxArgumentsHelper.AddLanguage(args, "nodejs");
                     break;
 
                 case Framework.Python:
                     // Input/Output
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
+                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
                     OryxArgumentsHelper.AddLanguage(args, "python");
                     break;
 
