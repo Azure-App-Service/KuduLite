@@ -7,6 +7,15 @@ using Kudu.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
+// **************************************************************************************************
+// **************************************************************************************************
+//
+// WARNING!!! THIS CLASS IS DEPRECATED AND WILL SOON BE REMOVED. GOING FORWARD, restartTrigger.txt 
+// WILL NOT BE USED FOR RESTARTING A SITE. INSTEAD, THE /api/app/restart API IS THE WAY TO GO.
+// 
+// **************************************************************************************************
+// **************************************************************************************************
+
 namespace Kudu.Services.Docker
 {
     public class DockerController : Controller
