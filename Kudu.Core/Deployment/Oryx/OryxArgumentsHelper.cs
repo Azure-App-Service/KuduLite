@@ -53,7 +53,7 @@ namespace Kudu.Core.Deployment.Oryx
 
         internal static void AddDebugLog(StringBuilder args)
         {
-            args.AppendFormat(" --log-file /tmp/test.log ");
+            args.AppendFormat(" --log-file /tmp/build-debug.log ");
         }
     }
 }

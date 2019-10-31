@@ -53,7 +53,31 @@ namespace Kudu.Core.Deployment
 
             return false;
         }
-        
+
+        public static void PurgeOldDeploymentsIfNecessary(string deploymentsPath, ITracer tracer, int totalAllowedDeployments)
+        {
+            IEnumerable<string> deploymentNames = FileSystemHelpers.GetDirectories(deploymentsPath);
+            if (deploymentNames.Count() > totalAllowedDeployments)
+            {
+                // Order the files in descending order of the modified date and remove the last (N - allowed zip files).
+                var deploymentsToDelete = deploymentNames.OrderByDescending(fileName => FileSystemHelpers.GetLastWriteTimeUtc(fileName)).Skip(totalAllowedDeployments);
+                foreach (var deploymentName in deploymentsToDelete)
+                {
+                    using (tracer.Step("Purging old deployment {0}", deploymentName))
+                    {
+                        try
+                        {
+                            FileSystemHelpers.DeleteDirectorySafe(deploymentName);
+                        }
+                        catch (Exception ex)
+                        {
+                            tracer.TraceError(ex, "Unable to delete deployment {0}", deploymentName);
+                        }
+                    }
+                }
+            }
+        }
+
         public static void PurgeBuildArtifactsIfNecessary(string sitePackagesPath, BuildArtifactType fileExtension, ITracer tracer, int totalAllowedFiles)
         {
             string extension = fileExtension.ToString().ToLowerInvariant();

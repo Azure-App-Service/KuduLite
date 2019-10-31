@@ -25,6 +25,15 @@ namespace Kudu.Core.Infrastructure
 
         public static Stream CreateFile(string path)
         {
+            try
+            {
+                EnsureDirectory(Path.GetDirectoryName(path));
+            }
+            catch
+            {
+                // File create should throw
+            }
+
             return Instance.File.Create(path);
         }
 
