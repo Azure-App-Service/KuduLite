@@ -28,7 +28,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
 
         [Theory]
         [InlineData("NODE", "8.15", true, false, BuildOptimizationsFlags.CompressModules)]
-        [InlineData("PYTHON", "3.6", true, false, BuildOptimizationsFlags.None)]
+        [InlineData("PYTHON", "3.6", true, false, BuildOptimizationsFlags.CompressModules)]
         [InlineData("PHP", "7.3", true, false, BuildOptimizationsFlags.None)]
         [InlineData("DOTNETCORE", "2.2", true, true, BuildOptimizationsFlags.UseTempDirectory)]
         public void ArgumentPropertyTest(string language, string version,
@@ -82,8 +82,8 @@ namespace Kudu.Tests.Core.Deployment.Oryx
         }
 
         [Theory]
-        [InlineData("1.0", "oryx build RepositoryPath -o OutputPath --platform dotnet --platform-version 1.1 -i BuildTempPath")]
-        [InlineData("2.0", "oryx build RepositoryPath -o OutputPath --platform dotnet --platform-version 2.1 -i BuildTempPath")]
+        [InlineData("1.0", "oryx build RepositoryPath -o OutputPath --platform dotnet --platform-version 1.1 -i BuildTempPath --log-file /tmp/test.log")]
+        [InlineData("2.0", "oryx build RepositoryPath -o OutputPath --platform dotnet --platform-version 2.1 -i BuildTempPath --log-file /tmp/test.log")]
         public void DotnetcoreVersionPromotionTest(string version, string expectedCommand)
         {
             var mockedEnvironment = new Dictionary<string, string>()

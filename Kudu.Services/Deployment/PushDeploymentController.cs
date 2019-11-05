@@ -56,6 +56,7 @@ namespace Kudu.Services.Deployment
         [DisableFormValueModelBinding]
         public async Task<IActionResult> ZipPushDeploy(
             [FromQuery] bool isAsync = false,
+            [FromQuery] bool warmUp = false,
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
             [FromQuery] string deployer = DefaultDeployer,
@@ -79,7 +80,8 @@ namespace Kudu.Services.Deployment
                     Author = author,
                     AuthorEmail = authorEmail,
                     Message = message,
-                    ZipURL = null
+                    ZipURL = null,
+                    DoWarmUp = warmUp
                 };
 
                 if (_settings.RunFromLocalZip())
@@ -102,6 +104,7 @@ namespace Kudu.Services.Deployment
         public async Task<IActionResult> ZipPushDeployViaUrl(
             [FromBody] JObject requestJson,
             [FromQuery] bool isAsync = false,
+            [FromQuery] bool warmUp = false,
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
             [FromQuery] string deployer = DefaultDeployer,
@@ -128,6 +131,7 @@ namespace Kudu.Services.Deployment
                     AuthorEmail = authorEmail,
                     Message = message,
                     ZipURL = zipUrl,
+                    DoWarmUp = warmUp
                 };
                 return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
             }

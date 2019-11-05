@@ -4,11 +4,11 @@ namespace Kudu.Core.Deployment.Oryx
 {
     public class OryxArgumentsFactory
     {
-        public static IOryxArguments CreateOryxArguments()
+        public static IOryxArguments CreateOryxArguments(IEnvironment env)
         {
             if (FunctionAppHelper.LooksLikeFunctionApp())
             {
-                if (FunctionAppHelper.HasScmRunFromPackage())
+                if (env.IsOnLinuxConsumption)
                 {
                     return new LinuxConsumptionFunctionAppOryxArguments();
                 } else {

@@ -384,6 +384,31 @@ namespace Kudu.Core.Helpers
             return;
         }
 
+        /// <summary>
+        /// Invoke main site url to warm up function app
+        /// </summary>
+        /// <param name="websiteHostname">sitename.azurewebsites.net</param>
+        /// <returns></returns>
+        public static async Task WarmUpSiteAsync(string websiteHostname)
+        {
+            Uri baseUri = null;
+            if (!Uri.TryCreate($"http://{websiteHostname}", UriKind.Absolute, out baseUri))
+            {
+                throw new ArgumentException($"Malformed URI is used in WarmUpSite");
+            }
+            Trace(TraceEventType.Information, "Calling WarmUpSite to warm up your application");
+
+            // Initiate GET request
+            using (var client = HttpClientFactory())
+            using (var response = await client.GetAsync(baseUri))
+            {
+                response.EnsureSuccessStatusCode();
+                Trace(TraceEventType.Information, "WarmUpSite, statusCode = {0}", response.StatusCode);
+            }
+
+            return;
+        }
+
         private static void VerifyEnvironments()
         {
             if (string.IsNullOrEmpty(HttpHost))
