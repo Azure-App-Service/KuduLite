@@ -382,6 +382,7 @@ namespace Kudu.Services.Web.Tracing
                     StringComparison.OrdinalIgnoreCase))
                 {
                     System.Environment.SetEnvironmentVariable(Constants.HttpHost, GetHostUrl(request));
+                    System.Environment.SetEnvironmentVariable(Constants.HttpAuthority, $"{request.Host}");
                 }
             }
             catch
