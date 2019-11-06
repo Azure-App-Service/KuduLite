@@ -33,7 +33,7 @@ namespace Kudu.Services.Web.Tracing
 
         private const string KuduLiteTrackingHeader = "X-KUDULITE-RESPONSE";
 
-        private static List<string> whiteListedPaths = new List<string>(new string[] { "/api/isdeploying", "default.cshtml" });
+        private static List<string> whiteListedPaths = new List<string>(new string[] { "/api/isdeploying", "default.cshtml", "webssh/host" });
 
         private static readonly Lazy<string> KuduVersion = new Lazy<string>(() =>
         {
@@ -382,6 +382,7 @@ namespace Kudu.Services.Web.Tracing
                     StringComparison.OrdinalIgnoreCase))
                 {
                     System.Environment.SetEnvironmentVariable(Constants.HttpHost, GetHostUrl(request));
+                    System.Environment.SetEnvironmentVariable(Constants.HttpAuthority, $"{request.Host}");
                 }
             }
             catch

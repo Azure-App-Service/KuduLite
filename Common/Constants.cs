@@ -98,6 +98,8 @@ namespace Kudu
         public const string LogicAppJson = "logicapp.json";
         public const string LogicAppUrlKey = "LOGICAPP_URL";
 
+        public const string RestartApiPath = "/api/app/restart";
+
         public const string SiteExtensionProvisioningStateCreated = "Created";
         public const string SiteExtensionProvisioningStateAccepted = "Accepted";
         public const string SiteExtensionProvisioningStateSucceeded = "Succeeded";
@@ -118,6 +120,7 @@ namespace Kudu
         public const string SiteRestrictedToken = "x-ms-site-restricted-token";
         public const string SiteAuthEncryptionKey = "WEBSITE_AUTH_ENCRYPTION_KEY";
         public const string HttpHost = "HTTP_HOST";
+        public const string HttpAuthority = "HTTP_AUTHORITY";
         public const string WebSiteSwapSlotName = "WEBSITE_SWAP_SLOTNAME";
         public const string AzureWebsiteInstanceId = "WEBSITE_INSTANCE_ID";
         public const string ContainerName = "CONTAINER_NAME";

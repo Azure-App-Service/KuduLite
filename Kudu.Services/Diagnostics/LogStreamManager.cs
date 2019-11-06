@@ -546,50 +546,59 @@ namespace Kudu.Services.Performance
                     return Enumerable.Empty<string>();
                 }
                 */
-
-                long offset = 0;
-                if (!_logFiles.TryGetValue(e.FullPath, out offset))
-                {
-                    _logFiles[e.FullPath] = 0;
-                }
-
-                using (FileStream fs = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                {
-                    long length = fs.Length;
-
-                    // file was truncated
-                    if (offset > length)
+                try
+                { 
+                    long offset = 0;
+                    if (!_logFiles.TryGetValue(e.FullPath, out offset))
                     {
-                        _logFiles[e.FullPath] = offset = 0;
+                        _logFiles[e.FullPath] = 0;
                     }
 
-                    // multiple events
-                    if (offset == length)
+                    using (FileStream fs = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
-                        return Enumerable.Empty<string>();
-                    }
+                        long length = fs.Length;
 
-                    if (offset != 0)
-                    {
-                        fs.Seek(offset, SeekOrigin.Begin);
-                    }
-
-                    List<string> changes = new List<string>();
-
-                    StreamReader reader = new StreamReader(fs);
-                    while (!reader.EndOfStream)
-                    {
-                        string line = ReadLine(reader);
-                        if (String.IsNullOrEmpty(_filter) || line.IndexOf(_filter, StringComparison.OrdinalIgnoreCase) >= 0)
+                        // file was truncated
+                        if (offset > length)
                         {
-                            changes.Add(line);
+                            _logFiles[e.FullPath] = offset = 0;
                         }
+
+                        // multiple events
+                        if (offset == length)
+                        {
+                            return Enumerable.Empty<string>();
+                        }
+
+                        if (offset != 0)
+                        {
+                            fs.Seek(offset, SeekOrigin.Begin);
+                        }
+
+                        List<string> changes = new List<string>();
+
+                        StreamReader reader = new StreamReader(fs);
+                        while (!reader.EndOfStream)
+                        {
+                            string line = ReadLine(reader);
+                            if (String.IsNullOrEmpty(_filter) || line.IndexOf(_filter, StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                changes.Add(line);
+                            }
+                        }
+
+                        // Adjust offset and return changes
+                        _logFiles[e.FullPath] = reader.BaseStream.Position;
+
+                        return changes;
                     }
-
-                    // Adjust offset and return changes
-                    _logFiles[e.FullPath] = reader.BaseStream.Position;
-
-                    return changes;
+                }
+                catch(FileNotFoundException)
+                {
+                    // if no log is produced for a long time,
+                    // lwas Log4Net maintains an open file-handle for an 
+                    // old log file, workaround till that is fixed
+                    return Enumerable.Empty<string>();
                 }
             }
         }

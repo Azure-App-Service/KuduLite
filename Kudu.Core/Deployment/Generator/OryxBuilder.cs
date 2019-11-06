@@ -36,7 +36,7 @@ namespace Kudu.Core.Deployment.Generator
             context.Logger.Log("Repository path is "+context.RepositoryPath);
 
             // Initialize Oryx Args.
-            IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
+            IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(environment);
 
             if (!args.SkipKuduSync)
             {
