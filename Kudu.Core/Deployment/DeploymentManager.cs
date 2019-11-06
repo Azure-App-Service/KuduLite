@@ -712,7 +712,7 @@ namespace Kudu.Core.Deployment
                             // 1. packaging the output folder
                             // 2. upload the artifact to user's storage account
                             // 3. reset the container workers after deployment
-                            await LinuxConsumptionDeploymentHelper.SetupLinuxConsumptionFunctionAppDeployment(_environment, _settings, context, deploymentInfo.DoWarmUp);
+                            await LinuxConsumptionDeploymentHelper.SetupLinuxConsumptionFunctionAppDeployment(_environment, _settings, context, deploymentInfo.DoSyncTriggers);
                         }
 
                         await PostDeploymentHelper.SyncFunctionsTriggers(
