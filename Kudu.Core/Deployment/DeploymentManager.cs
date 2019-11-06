@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
@@ -380,6 +381,9 @@ namespace Kudu.Core.Deployment
         {
             if (success)
             {
+                // Mitigation when status file is busy,
+                // and update fails
+                Thread.Sleep(200);
                 status.MarkSuccess();
             }
             else

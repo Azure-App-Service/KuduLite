@@ -358,7 +358,7 @@ namespace Kudu.Services.Deployment
 
                 using (var zip = new ZipArchive(file, ZipArchiveMode.Read))
                 {
-                    deploymentInfo.repositorySymlinks = zip.Extract(extractTargetDirectory);
+                    deploymentInfo.repositorySymlinks = zip.Extract(extractTargetDirectory, preserveSymlinks: ShouldPreserveSymlinks());
 
                     CreateZipSymlinks(deploymentInfo.repositorySymlinks, extractTargetDirectory);
 
@@ -367,7 +367,7 @@ namespace Kudu.Services.Deployment
             }
 
             CommitRepo(repository, zipDeploymentInfo);
-            return Task.CompletedTask;      
+            return Task.CompletedTask;
         }
 
         private async Task LocalZipHandler(IRepository repository, DeploymentInfoBase deploymentInfo,
@@ -437,7 +437,7 @@ namespace Kudu.Services.Deployment
                 {
                     string symLinkFilePath = Path.Combine(extractTargetDirectory, symlinkPair.Key);
                     FileSystemHelpers.EnsureDirectory(FileSystemHelpers.GetDirectoryName(Path.Combine(extractTargetDirectory, symlinkPair.Key)));
-                    FileSystemHelpers.CreateRelativeSymlinks(symLinkFilePath, symlinkPair.Value, TimeSpan.FromSeconds(5));
+                    FileSystemHelpers.CreateRelativeSymlink(symLinkFilePath, symlinkPair.Value, TimeSpan.FromSeconds(5));
                 }
             }
         }
@@ -472,6 +472,16 @@ namespace Kudu.Services.Deployment
 
             DeploymentHelper.PurgeBuildArtifactsIfNecessary(_environment.SitePackagesPath, BuildArtifactType.Zip,
                 tracer, _settings.GetMaxZipPackageCount());
+        }
+
+        private static bool ShouldPreserveSymlinks()
+        {
+            string framework = System.Environment.GetEnvironmentVariable("FRAMEWORK");
+            string preserveSymlinks = System.Environment.GetEnvironmentVariable("WEBSITE_ZIP_PRESERVE_SYMLINKS");
+            return !string.IsNullOrEmpty(framework) 
+                && framework.Equals("node", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrEmpty(preserveSymlinks)
+                && preserveSymlinks.Equals("true", StringComparison.OrdinalIgnoreCase);
         }
 
         private void DeleteFilesAndDirsExcept(string fileToKeep, string dirToKeep, ITracer tracer)

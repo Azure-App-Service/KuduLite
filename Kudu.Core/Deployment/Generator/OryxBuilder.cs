@@ -33,6 +33,8 @@ namespace Kudu.Core.Deployment.Generator
             // initialize the repository Path for the build
             context.RepositoryPath = RepositoryPath;
 
+            context.Logger.Log("Repository path is "+context.RepositoryPath);
+
             // Initialize Oryx Args.
             IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(environment);
 
@@ -40,7 +42,7 @@ namespace Kudu.Core.Deployment.Generator
             {
                 // Step 1: Run kudusync
                 string kuduSyncCommand = string.Format("kudusync -v 50 -f {0} -t {1} -n {2} -p {3} -i \".git;.hg;.deployment;.deploy.sh\"",
-                    RepositoryPath,
+                    context.RepositoryPath,
                     context.OutputPath,
                     context.NextManifestFilePath,
                     context.PreviousManifestFilePath
@@ -71,6 +73,9 @@ namespace Kudu.Core.Deployment.Generator
                         ExpressBuilder appServiceExpressBuilder = new ExpressBuilder(environment, settings, propertyProvider, sourcePath);
                         appServiceExpressBuilder.SetupExpressBuilderArtifacts(context.OutputPath, context, args);
                     }
+                }else if(args.Flags == BuildOptimizationsFlags.DeploymentV2)
+                {
+                    SetupAppServiceArtifacts(context);
                 }
             }
             return Task.CompletedTask;
@@ -89,6 +94,42 @@ namespace Kudu.Core.Deployment.Generator
                 }
             }
         }
+
+        private void SetupAppServiceArtifacts(DeploymentContext context)
+        {
+            string sitePackages = "/home/data/SitePackages";
+            string deploymentsPath = $"/home/site/deployments/";
+            string artifactPath = $"/home/site/deployments/{context.CommitId}/artifact";
+            string packageNameFile = Path.Combine(sitePackages, "packagename.txt");
+            string packagePathFile = Path.Combine(sitePackages, "packagepath.txt");
+
+            FileSystemHelpers.EnsureDirectory(sitePackages);
+            FileSystemHelpers.EnsureDirectory(artifactPath);
+
+            string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
+
+            string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath,
+                context.BuildTempPath, zipAppName, BuildArtifactType.Zip, numBuildArtifacts: -1);
+            var copyExe = ExternalCommandFactory.BuildExternalCommandExecutable(context.BuildTempPath, artifactPath, context.Logger);
+            var copyToPath = Path.Combine(artifactPath, zipAppName);
+
+            try
+            {
+                copyExe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"cp {createdZip} {copyToPath}");
+            }
+            catch (Exception)
+            {
+                context.GlobalLogger.LogError();
+                throw;
+            }
+
+            // Gotta remove the old zips
+            DeploymentHelper.PurgeOldDeploymentsIfNecessary(deploymentsPath, context.Tracer, totalAllowedDeployments: 10);
+
+            File.WriteAllText(packageNameFile, zipAppName);
+            File.WriteAllText(packagePathFile, artifactPath);
+        }
+
 
         private void SetupFunctionAppExpressArtifacts(DeploymentContext context)
         {
