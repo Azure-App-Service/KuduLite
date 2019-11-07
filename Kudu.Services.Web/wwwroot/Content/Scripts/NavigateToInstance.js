@@ -1,4 +1,4 @@
-(document).ready(function () {
+jQuery(document).ready(function () {
     $.ajax({
         type: "GET",
         url: '/instance/all',
