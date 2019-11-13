@@ -234,12 +234,14 @@ namespace Kudu.Services.Deployment
                     if (i.FileType == Mono.Unix.FileTypes.SymbolicLink)
                     {
                         _tracer.Step("Removing node_modules symlink");
-                        FileSystemHelpers.DeleteFileSafe(nodeModulesSymlinkFile);
+                        // TODO: Add support to remove Unix Symlink File in DeleteFileSafe
+                        // FileSystemHelpers.DeleteFileSafe(nodeModulesSymlinkFile); 
+                        FileSystemHelpers.RemoveUnixSymlink(nodeModulesSymlinkFile, TimeSpan.FromSeconds(5));
                     }
                 }
                 catch(Exception)
                 {
-
+                    // best effort
                 }
 
                 using (_tracer.Step("Writing zip file to {0}", zipFilePath))
