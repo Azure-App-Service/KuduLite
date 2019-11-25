@@ -213,13 +213,6 @@ namespace Kudu.Services.Deployment
             HttpContext context)
         {
 
-            var oryxManifestFile = Path.Combine(_environment.WebRootPath, "oryx-manifest.toml");
-            if (FileSystemHelpers.FileExists(oryxManifestFile))
-            {
-                _tracer.Step("Removing previous build artifact's manifest file");
-                FileSystemHelpers.DeleteFileSafe(oryxManifestFile);
-            }
-
             var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
             if (_settings.RunFromLocalZip())
             {
@@ -227,6 +220,30 @@ namespace Kudu.Services.Deployment
             }
             else
             {
+                var oryxManifestFile = Path.Combine(_environment.WebRootPath, "oryx-manifest.toml");
+                if (FileSystemHelpers.FileExists(oryxManifestFile))
+                {
+                    _tracer.Step("Removing previous build artifact's manifest file");
+                    FileSystemHelpers.DeleteFileSafe(oryxManifestFile);
+                }
+
+                try
+                {
+                    var nodeModulesSymlinkFile = Path.Combine(_environment.WebRootPath, "node_modules");
+                    Mono.Unix.UnixSymbolicLinkInfo i = new Mono.Unix.UnixSymbolicLinkInfo(nodeModulesSymlinkFile);
+                    if (i.FileType == Mono.Unix.FileTypes.SymbolicLink)
+                    {
+                        _tracer.Step("Removing node_modules symlink");
+                        // TODO: Add support to remove Unix Symlink File in DeleteFileSafe
+                        // FileSystemHelpers.DeleteFileSafe(nodeModulesSymlinkFile); 
+                        FileSystemHelpers.RemoveUnixSymlink(nodeModulesSymlinkFile, TimeSpan.FromSeconds(5));
+                    }
+                }
+                catch(Exception)
+                {
+                    // best effort
+                }
+
                 using (_tracer.Step("Writing zip file to {0}", zipFilePath))
                 {
                     if (!string.IsNullOrEmpty(context.Request.ContentType) &&
