@@ -209,7 +209,9 @@ namespace Kudu.Core.Deployment
                             // Perform the actual deployment
                             var changeSet = repository.GetChangeSet(deployBranch);
 
-                            if (changeSet == null && !String.IsNullOrEmpty(deploymentInfo.CommitId))
+                            if (changeSet == null 
+                                && !String.IsNullOrEmpty(deploymentInfo.CommitId)
+                                && !(deploymentInfo.IsPublishRequest && deploymentInfo.ShouldRunArtifactFromPackage && !deploymentInfo.ShouldBuildArtifact))
                             {
                                 throw new InvalidOperationException(String.Format("Invalid revision '{0}'!", deploymentInfo.CommitId));
                             }

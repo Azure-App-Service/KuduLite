@@ -258,7 +258,18 @@ namespace Kudu.Contracts.Settings
             // returning true by default here as an indicator of generally expected behavior
             return value == null || StringUtils.IsTrueLike(value);
         }
-        
+
+        // Used by SiteBuilder to determine if it needs to follow the 
+        // publish artifact format to maintain versioned artifacts for redeploying
+        public static bool ShouldPublishArtifacts(this IDeploymentSettingsManager settings)
+        {
+            string value = settings.GetValue(SettingsKeys.ShouldPublishArtifacts);
+
+            // A default value should be set on a per-deployment basis depending on the query param
+            // to the publish api, but returning false by default here as an indicator of generally expected behavior
+            return value != null || StringUtils.IsTrueLike(value);
+        }
+
         public static bool RunFromLocalZip(this IDeploymentSettingsManager settings)
         {
             return settings.GetFromFromZipAppSettingValue() == "1";
@@ -286,7 +297,7 @@ namespace Kudu.Contracts.Settings
         
         public static int GetMaxZipPackageCount(this IDeploymentSettingsManager settings)
         {
-            int DEFAULT_ALLOWED_ZIPS = 5;
+            int DEFAULT_ALLOWED_ZIPS = 10;
             int MIN_ALLOWED_ZIPS = 1;
             string maxZipPackageCount = settings.GetValue(SettingsKeys.MaxZipPackageCount);
             if(Int32.TryParse(maxZipPackageCount, out int totalAllowedZips))

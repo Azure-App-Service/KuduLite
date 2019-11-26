@@ -473,6 +473,11 @@ namespace Kudu.Services.Web
                     new {controller = "PushDeployment", action = "WarPushDeploy"},
                     new {verb = new HttpMethodRouteConstraint("POST")});
 
+                // Publish Deploy
+                routes.MapRoute("publish-deploy", "api/publish",
+                    new { controller = "PushDeployment", action = "PublishDeploy" },
+                    new { verb = new HttpMethodRouteConstraint("POST") });
+
                 // Support Linux Consumption Function app on Service Fabric Mesh
                 routes.MapRoute("admin-instance-info", "admin/instance/info",
                     new {controller = "LinuxConsumptionInstanceAdmin", action = "Info"},

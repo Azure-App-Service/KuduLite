@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using Kudu.Core.Helpers;
 using System.Threading;
 using System.Collections;
+using System.Web;
 
 namespace Kudu.Services.Deployment
 {
@@ -48,6 +49,59 @@ namespace Kudu.Services.Deployment
             _tracer = tracer;
             _traceFactory = traceFactory;
             _settings = settings;
+        }
+
+        [HttpPost]
+        [DisableRequestSizeLimit]
+        [DisableFormValueModelBinding]
+        public async Task<IActionResult> PublishDeploy(
+            [FromQuery] bool isAsync = false,
+            [FromQuery] bool doBuild = false,
+            [FromQuery] bool enableRFP = false,
+            [FromQuery] string zipURL = null,
+            [FromQuery] string author = null,
+            [FromQuery] string authorEmail = null,
+            [FromQuery] string deployer = DefaultDeployer,
+            [FromQuery] string message = DefaultMessage)
+        {
+            using (_tracer.Step("PublishDeploy"))
+            {
+                var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
+                {
+                    AllowDeploymentWhileScmDisabled = true,
+                    Deployer = deployer,
+                    IsContinuous = false,
+                    AllowDeferredDeployment = false,
+                    IsReusable = false,
+                    TargetChangeset =
+                        DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from published file"),
+                    CommitId = null,
+                    RepositoryType = RepositoryType.None,
+                    Fetch = LocalZipHandler,
+                    DoFullBuildByDefault = doBuild,
+                    Author = author,
+                    AuthorEmail = authorEmail,
+                    Message = message,
+                    ZipURL = GetZipURL(HttpUtility.UrlDecode(zipURL)),
+                    IsPublishRequest = true,
+                    ShouldRunArtifactFromPackage = enableRFP,
+                    ShouldBuildArtifact = doBuild
+
+                };
+
+                // would simply copy this zip to the deployment artifact directory
+                if (deploymentInfo.ShouldRunArtifactFromPackage
+                    && !deploymentInfo.ShouldBuildArtifact)
+                {
+                    // This is used if the deployment is Run-From-Zip
+                    // the name of the deployed file in /home/Site/Deploments/{name}.zip is the 
+                    // timestamp in the format yyyMMddHHmmss. 
+                    deploymentInfo.ZipName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
+                    //_settings.GetMaxZipPackageCount();
+                };
+
+                return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
+            }
         }
 
 
@@ -182,18 +236,35 @@ namespace Kudu.Services.Deployment
             }
         }
 
-        private string GetZipURLFromJSON(JObject requestObject)
+        public string GetZipURLFromJSON(JObject requestObject)
         {
-            using (_tracer.Step("Reading the zip URL from the request JSON"))
+            try
+            {
+                string packageUri = requestObject.Value<string>("packageUri");
+                if (string.IsNullOrEmpty(packageUri))
+                {
+                    throw new ArgumentException("Request body does not contain packageUri");
+                }
+                return GetZipURL(packageUri);
+            }
+            catch (Exception ex)
+            {
+                _tracer.TraceError(ex, "Error reading the URL from the JSON {0}", requestObject.ToString());
+                throw;
+            }
+        }
+
+        private string GetZipURL(string packageUri)
+        {
+            if(string.IsNullOrEmpty(packageUri))
+            {
+                return "";
+            }
+
+            using (_tracer.Step("Reading the zip URL"))
             {
                 try
                 {
-                    string packageUri = requestObject.Value<string>("packageUri");
-                    if (string.IsNullOrEmpty(packageUri))
-                    {
-                        throw new ArgumentException("Request body does not contain packageUri");
-                    }
-
                     Uri zipUri = null;
                     if (!Uri.TryCreate(packageUri, UriKind.Absolute, out zipUri))
                     {
@@ -203,7 +274,7 @@ namespace Kudu.Services.Deployment
                 }
                 catch (Exception ex)
                 {
-                    _tracer.TraceError(ex, "Error reading the URL from the JSON {0}", requestObject.ToString());
+                    _tracer.TraceError(ex, "Error reading the URL");
                     throw;
                 }
             }
@@ -216,32 +287,38 @@ namespace Kudu.Services.Deployment
             var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
             if (_settings.RunFromLocalZip())
             {
+                // Only for legacy Run From Package, for publish endpoint packages go to
+                // /home/Site/deployments/<guid>/artifact to enable re-deployment
+                // deployment id is generated by FetchDeploymentManager
                 await WriteSitePackageZip(deploymentInfo, _tracer);
             }
             else
             {
-                var oryxManifestFile = Path.Combine(_environment.WebRootPath, "oryx-manifest.toml");
-                if (FileSystemHelpers.FileExists(oryxManifestFile))
+                if (!OSDetector.IsOnWindows() && !deploymentInfo.IsPublishRequest)
                 {
-                    _tracer.Step("Removing previous build artifact's manifest file");
-                    FileSystemHelpers.DeleteFileSafe(oryxManifestFile);
-                }
-
-                try
-                {
-                    var nodeModulesSymlinkFile = Path.Combine(_environment.WebRootPath, "node_modules");
-                    Mono.Unix.UnixSymbolicLinkInfo i = new Mono.Unix.UnixSymbolicLinkInfo(nodeModulesSymlinkFile);
-                    if (i.FileType == Mono.Unix.FileTypes.SymbolicLink)
+                    var oryxManifestFile = Path.Combine(_environment.WebRootPath, "oryx-manifest.toml");
+                    if (FileSystemHelpers.FileExists(oryxManifestFile))
                     {
-                        _tracer.Step("Removing node_modules symlink");
-                        // TODO: Add support to remove Unix Symlink File in DeleteFileSafe
-                        // FileSystemHelpers.DeleteFileSafe(nodeModulesSymlinkFile); 
-                        FileSystemHelpers.RemoveUnixSymlink(nodeModulesSymlinkFile, TimeSpan.FromSeconds(5));
+                        _tracer.Step("Removing previous build artifact's manifest file");
+                        FileSystemHelpers.DeleteFileSafe(oryxManifestFile);
                     }
-                }
-                catch(Exception)
-                {
-                    // best effort
+
+                    try
+                    {
+                        var nodeModulesSymlinkFile = Path.Combine(_environment.WebRootPath, "node_modules");
+                        Mono.Unix.UnixSymbolicLinkInfo i = new Mono.Unix.UnixSymbolicLinkInfo(nodeModulesSymlinkFile);
+                        if (i.FileType == Mono.Unix.FileTypes.SymbolicLink)
+                        {
+                            _tracer.Step("Removing node_modules symlink");
+                            // TODO: Add support to remove Unix Symlink File in DeleteFileSafe
+                            // FileSystemHelpers.DeleteFileSafe(nodeModulesSymlinkFile); 
+                            FileSystemHelpers.RemoveUnixSymlink(nodeModulesSymlinkFile, TimeSpan.FromSeconds(5));
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // best effort
+                    }
                 }
 
                 using (_tracer.Step("Writing zip file to {0}", zipFilePath))
@@ -258,8 +335,9 @@ namespace Kudu.Services.Deployment
                             }
                         }
                     }
-                    else if (deploymentInfo.ZipURL != null)
+                    else if (!string.IsNullOrEmpty(deploymentInfo.ZipURL))
                     {
+                        // TODO: @shirs Recognize War File and store as zip in tmp dir, artifacts would be correctly set later
                         using (_tracer.Step("Writing zip file from packageUri to {0}", zipFilePath))
                         {
                             using (var httpClient = new HttpClient())
@@ -377,9 +455,13 @@ namespace Kudu.Services.Deployment
                 {
                     deploymentInfo.repositorySymlinks = zip.Extract(extractTargetDirectory, preserveSymlinks: ShouldPreserveSymlinks());
 
-                    CreateZipSymlinks(deploymentInfo.repositorySymlinks, extractTargetDirectory);
+                    if (!OSDetector.IsOnWindows())
+                    {
+                        CreateZipSymlinks(deploymentInfo.repositorySymlinks, extractTargetDirectory);
 
-                    PermissionHelper.ChmodRecursive("777", extractTargetDirectory, tracer, TimeSpan.FromMinutes(1));
+                        PermissionHelper.ChmodRecursive("777", extractTargetDirectory, tracer, TimeSpan.FromMinutes(1));
+
+                    }
                 }
             }
 
@@ -390,11 +472,20 @@ namespace Kudu.Services.Deployment
         private async Task LocalZipHandler(IRepository repository, DeploymentInfoBase deploymentInfo,
             string targetBranch, ILogger logger, ITracer tracer)
         {
-            if (_settings.RunFromLocalZip() && deploymentInfo is ZipDeploymentInfo)
+            if (deploymentInfo is ZipDeploymentInfo && _settings.RunFromLocalZip())
+            { 
+                    // If this is a Run-From-Zip deployment, then we need to extract function.json
+                    // from the zip file into path zipDeploymentInfo.SyncFunctionsTrigersPath
+                    ExtractTriggers(repository, deploymentInfo as ZipDeploymentInfo);
+            }
+            else if (deploymentInfo is ZipDeploymentInfo && (!deploymentInfo.ShouldBuildArtifact
+                        && deploymentInfo.ShouldRunArtifactFromPackage
+                        && deploymentInfo.IsPublishRequest))
             {
-                // If this is a Run-From-Zip deployment, then we need to extract function.json
-                // from the zip file into path zipDeploymentInfo.SyncFunctionsTrigersPath
-                ExtractTriggers(repository, deploymentInfo as ZipDeploymentInfo);
+                // don't extract zip if publish request with rfp and no build
+                // if artifact is to be built OryxBuildManager would plumb in
+                // the RFP setup after the build
+                CommitRepo(repository, (ZipDeploymentInfo) deploymentInfo);
             }
             else
             {
@@ -462,7 +553,7 @@ namespace Kudu.Services.Deployment
         private async Task WriteSitePackageZip(ZipDeploymentInfo zipDeploymentInfo, ITracer tracer)
         {
             var filePath = Path.Combine(_environment.SitePackagesPath, zipDeploymentInfo.ZipName);
-            // Make sure D:\home\data\SitePackages exists
+            // Make sure /home/data/SitePackages or /home/site/deployments/<>/artifact/ exists
             FileSystemHelpers.EnsureDirectory(_environment.SitePackagesPath);
             using (_tracer.Step("Writing zip file to {0}", filePath))
             {
