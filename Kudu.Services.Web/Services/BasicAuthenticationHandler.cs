@@ -66,23 +66,30 @@ namespace Kudu.Services.Web.Services
 
         public async Task<string> GetAuthenticationData(string username)
         {
-             
+            Console.WriteLine("Getting kube config");
             var config = KubernetesClientConfiguration.InClusterConfig();
+            Console.WriteLine("Getting kube config - done");
             string password = "";
 
             // Use the config object to create a client.
             var client = new Kubernetes(config);
+            Console.WriteLine("K8 Client Init - done");
+
             try
             {
+                Console.WriteLine("Reading Secret");
                 var secret = await client.ReadNamespacedSecretAsync($"{PublishingProfileSecretPrefix}{username.ToLower()}","");
+                Console.WriteLine("Reading Secret - done");
                 password = System.Text.Encoding.UTF8.GetString(secret.Data["password"]);
+                Console.WriteLine("Password - " + password);
             }
             catch (Microsoft.Rest.HttpOperationException httpOperationException)
             {
-                var phase = httpOperationException.Response.ReasonPhrase;
+                Console.WriteLine("Errrorrr!!!!! "+httpOperationException.InnerException);
+                var phrase = httpOperationException.Response.ReasonPhrase;
                 var content = httpOperationException.Response.Content;
                 System.Console.WriteLine("K8 Client errror");
-                System.Console.WriteLine(content);
+                System.Console.WriteLine(phrase);
             }
             return password;
         }
