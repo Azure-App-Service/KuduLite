@@ -42,6 +42,8 @@ using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 using Environment = Kudu.Core.Environment;
 using ILogger = Kudu.Core.Deployment.ILogger;
+using Microsoft.AspNetCore.Authentication;
+using Kudu.Services.Web.Services;
 
 namespace Kudu.Services.Web
 {
@@ -76,6 +78,10 @@ namespace Kudu.Services.Web
         {
             Console.WriteLine(@"Configure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
             FileSystemHelpers.DeleteDirectorySafe("/home/site/locks/deployment");
+            // configure basic authentication 
+            services.AddAuthentication("BasicAuthentication")
+                .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
+
             services.Configure<FormOptions>(options =>
             {
                 options.MultipartBodyLengthLimit = 52428800;
@@ -318,7 +324,9 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
 
-             app.UseKubeMiddleware();
+            app.UseAuthentication();
+
+            app.UseKubeMiddleware();
 
             if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
             {

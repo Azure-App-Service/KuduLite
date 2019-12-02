@@ -47,6 +47,14 @@ namespace Kudu.Services.Web
         /// <returns>Response be set to 404 if the route is not whitelisted</returns>
         public async Task Invoke(HttpContext context, IEnvironment environment, IServerConfiguration serverConfig)
         {
+            var result = await context.AuthenticateAsync();
+
+            if (result.Failure != null)
+            {
+                context.Response.StatusCode = 403;
+                await context.Response.WriteAsync(result.Failure.ToString(), Encoding.UTF8);
+            }
+
             if (IsGitRoute(context.Request.Path))
             {
                 string[] pathParts = context.Request.Path.ToString().Split("/");
