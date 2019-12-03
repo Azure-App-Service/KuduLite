@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Helpers;
 using System.Threading;
+using Microsoft.AspNetCore.Http;
 
 namespace Kudu.Services.Zip
 {
@@ -22,12 +23,26 @@ namespace Kudu.Services.Zip
     {
         private ITracer _tracer;
         private IEnvironment _environment;
-        public ZipController(ITracer tracer, IEnvironment environment)
-            : base(tracer, environment, environment.RootPath)
+        public ZipController(ITracer tracer, IEnvironment environment, IHttpContextAccessor accessor)
+            : base(tracer, GetEnvironment(accessor, environment), GetEnvironment(accessor, environment).RootPath)
         {
             _tracer = tracer;
-            _environment = environment;
+            _environment = GetEnvironment(accessor, environment);
+        }
 
+        private static IEnvironment GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
+        {
+            IEnvironment _environment;
+            var context = accessor.HttpContext;
+            if (!PostDeploymentHelper.IsK8Environment())
+            {
+                _environment = environment;
+            }
+            else
+            {
+                _environment = (IEnvironment)context.Items["environment"];
+            }
+            return _environment;
         }
 
         protected override Task<IActionResult> CreateDirectoryGetResponse(DirectoryInfoBase info, string localFilePath)

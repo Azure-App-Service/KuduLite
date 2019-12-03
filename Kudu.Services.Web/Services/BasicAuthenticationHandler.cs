@@ -77,8 +77,8 @@ namespace Kudu.Services.Web.Services
 
             try
             {
-                Console.WriteLine("Reading Secret");
-                var secret = await client.ReadNamespacedSecretAsync($"{PublishingProfileSecretPrefix}{username.ToLower()}","");
+                Console.WriteLine($"Reading Secret { PublishingProfileSecretPrefix}{ username.ToLower()}");
+                var secret = await client.ReadNamespacedSecretAsync($"{PublishingProfileSecretPrefix.ToLower()}{username.ToLower()}","k8seappspubpassword");
                 Console.WriteLine("Reading Secret - done");
                 password = System.Text.Encoding.UTF8.GetString(secret.Data["password"]);
                 Console.WriteLine("Password - " + password);
@@ -90,6 +90,7 @@ namespace Kudu.Services.Web.Services
                 var content = httpOperationException.Response.Content;
                 System.Console.WriteLine("K8 Client errror");
                 System.Console.WriteLine(phrase);
+                System.Console.WriteLine(content);
             }
             return password;
         }

@@ -25,6 +25,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Authorization;
 using Environment = Kudu.Core.Environment;
+using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace Kudu.Services.Web
 {
@@ -300,18 +301,18 @@ namespace Kudu.Services.Web
         /// </summary>
         internal static IEnvironment GetEnvironment(IHostingEnvironment hostingEnvironment,
             IDeploymentSettingsManager settings = null,
-            IHttpContextAccessor httpContextAccessor = null)
+            HttpContext httpContext = null)
         {
             var root = PathResolver.ResolveRootPath();
             var siteRoot = Path.Combine(root, Constants.SiteFolder);
             var repositoryPath = Path.Combine(siteRoot,
                 settings == null ? Constants.RepositoryPath : settings.GetRepositoryPath());
             var binPath = AppContext.BaseDirectory;
-            var requestId = httpContextAccessor?.HttpContext.Request.GetRequestId();
+            var requestId = httpContext != null ? httpContext.Request.GetRequestId() : null;
             var kuduConsoleFullPath =
                 Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
             return new Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId,
-                kuduConsoleFullPath, httpContextAccessor);
+                kuduConsoleFullPath, null);
         }
 
         /// <summary>

@@ -15,6 +15,7 @@ using Kudu.Core.Infrastructure;
 using Kudu.Core.Settings;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
+using Microsoft.AspNetCore.Http;
 
 namespace Kudu.Core.Deployment
 {
@@ -48,8 +49,9 @@ namespace Kudu.Core.Deployment
                                  IDeploymentStatusManager status,
                                  IDictionary<string, IOperationLock> namedLocks,
                                  ILogger globalLogger,
-                                 IWebHooksManager hooksManager)
-            : this(builderFactory, environment, traceFactory, analytics, settings, status, namedLocks["deployment"], globalLogger, hooksManager)
+                                 IWebHooksManager hooksManager,
+                                 IHttpContextAccessor httpContextAccessor)
+            : this(builderFactory, environment, traceFactory, analytics, settings, status, namedLocks["deployment"], globalLogger, hooksManager, httpContextAccessor)
         { }
 
         public DeploymentManager(ISiteBuilderFactory builderFactory,
@@ -60,10 +62,11 @@ namespace Kudu.Core.Deployment
                                  IDeploymentStatusManager status,
                                  IOperationLock deploymentLock,
                                  ILogger globalLogger,
-                                 IWebHooksManager hooksManager)
+                                 IWebHooksManager hooksManager,
+                                 IHttpContextAccessor httpContextAccessor)
         {
             _builderFactory = builderFactory;
-            _environment = environment;
+            _environment = GetEnvironment(httpContextAccessor, environment);
             _traceFactory = traceFactory;
             _analytics = analytics;
             _deploymentLock = deploymentLock;
@@ -71,6 +74,21 @@ namespace Kudu.Core.Deployment
             _settings = settings;
             _status = status;
             _hooksManager = hooksManager;
+        }
+
+        private IEnvironment GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
+        {
+            IEnvironment _environment;
+            var context = accessor.HttpContext;
+            if (!PostDeploymentHelper.IsK8Environment())
+            {
+                _environment = environment;
+            }
+            else
+            {
+                _environment = (IEnvironment)context.Items["environment"];
+            }
+            return _environment;
         }
 
         private bool IsDeploying

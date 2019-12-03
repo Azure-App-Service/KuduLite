@@ -1,24 +1,15 @@
-﻿using System.Linq;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
-using Kudu.Services.Infrastructure.Authorization;
-using Kudu.Services.Infrastructure.Authentication;
 using System;
-using System.Text.RegularExpressions;
-using Kudu.Core.Tracing;
 using Kudu.Core.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Services.Infrastructure;
-using Microsoft.AspNetCore.Http.Extensions;
 using Kudu.Core;
-using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using Kudu.Core.Helpers;
+using System.IO;
 
 namespace Kudu.Services.Web
 {
@@ -27,7 +18,8 @@ namespace Kudu.Services.Web
     /// </summary>
     public class KubeMiddleware
     {
-
+        private const string KuduConsoleFilename = "kudu.dll";
+        private const string KuduConsoleRelativePath = "KuduConsole";
         private readonly RequestDelegate _next;
 
         /// <summary>
@@ -48,52 +40,61 @@ namespace Kudu.Services.Web
         public async Task Invoke(HttpContext context, IEnvironment environment, IServerConfiguration serverConfig)
         {
             var result = await context.AuthenticateAsync();
-            if (result.Failure != null)
-            {
-                context.Response.StatusCode = 403;
-                await context.Response.WriteAsync(result.Failure.ToString(), Encoding.UTF8);
-            }
             
-
-            var host = context.Request.Headers["HTTP_HOST"].ToString();
-            var appName = host.Substring(0, host.IndexOf("."));
-
-            Console.WriteLine("APP : " + appName);
-
-            if (IsGitRoute(context.Request.Path))
+            
+            if (result.Succeeded == false)
             {
-                string[] pathParts = context.Request.Path.ToString().Split("/");
+                context.Response.StatusCode = 401;
+                context.Response.Headers["WWW-Authenticate"] = "Basic realm=\"site\"";
+                return;
+            }
 
-                string homeDir = "";
-                string siteRepoDir = "";
-                if (OSDetector.IsOnWindows())
-                {
-                    homeDir = "F:\\repos\\apps\\";
-                    siteRepoDir = "\\site\\repository";
-                }
-                else
-                {
-                    homeDir = "/home/apps/";
-                    siteRepoDir = "/site/repository";
-                }
+            foreach(var header in context.Request.Headers)
+            {
+                Console.WriteLine($"{header.Key} : {header.Value}");
+            }
 
-                if (pathParts != null && pathParts.Length >= 1)
+            var host = context.Request.Headers["Host"].ToString();
+            Console.WriteLine("HOST: "+host);
+            var appName = host.Substring(0, host.IndexOf("."));
+            //var appName = "test1";
+            Console.WriteLine("AppName: " + appName);
+            string homeDir = "";
+            string siteRepoDir = "";
+            if (OSDetector.IsOnWindows())
+            {
+                homeDir = "F:\\repos\\apps\\";
+                siteRepoDir = "\\site\\repository";
+            }
+            else
+            {
+                homeDir = "/home/apps/";
+                siteRepoDir = "/site/repository";
+            }
+
+            //Console.WriteLine("APP : " + appName);
+            //appName = "test1";
+
+
+            context.Items.Add("environment", GetEnvironment(homeDir, appName));
+
+
+            string[] pathParts = context.Request.Path.ToString().Split("/");
+
+            if (pathParts != null && pathParts.Length >= 1 && IsGitRoute(context.Request.Path))
+            {
+                appName = pathParts[1];
+                appName = appName.Trim().Replace(".git", "");
+                if (!FileSystemHelpers.DirectoryExists(homeDir + appName))
                 {
-                    var appName = pathParts[1];
-                    appName = appName.Trim().Replace(".git", "");
-                    if(!FileSystemHelpers.DirectoryExists(homeDir + appName))
-                    {
-                        context.Response.StatusCode = 404;
-                        await context.Response.WriteAsync("The repository does not exist", Encoding.UTF8);
-                        return;
-                    }
-                    else
-                    {
-                        serverConfig.GitServerRoot = appName + ".git";
-                        environment.RepositoryPath = homeDir + appName + siteRepoDir;
-                    }
+                    context.Response.StatusCode = 404;
+                    await context.Response.WriteAsync("The repository does not exist", Encoding.UTF8);
+                    return;
                 }
             }
+
+            serverConfig.GitServerRoot = appName + ".git";
+            environment.RepositoryPath = homeDir + appName + siteRepoDir;
             await _next.Invoke(context);
         }
         private bool IsGitRoute(PathString routePath)
@@ -105,8 +106,49 @@ namespace Kudu.Services.Web
             }
             return false;
         }
+
+        /// <summary>
+        /// Returns a specified environment configuration as the current webapp's
+        /// default configuration during the runtime.
+        /// </summary>
+        private static IEnvironment GetEnvironment(
+            string home,
+            string appName,
+            IDeploymentSettingsManager settings = null,
+            HttpContext httpContext = null)
+        {
+            var root = KubeMiddleware.ResolveRootPath(appName);
+            var siteRoot = Path.Combine(root, Constants.SiteFolder);
+            var repositoryPath = Path.Combine(siteRoot,
+                settings == null ? Constants.RepositoryPath : settings.GetRepositoryPath());
+            var binPath = AppContext.BaseDirectory;
+            var requestId = httpContext != null ? httpContext.Request.GetRequestId() : null;
+            var kuduConsoleFullPath =
+                Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
+            return new Core.Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId,
+                kuduConsoleFullPath, null);
+        }
+
+        public static string ResolveRootPath(string appName)
+        {
+            // The HOME path should always be set correctly
+            var path = System.Environment.ExpandEnvironmentVariables(@"%HOME%");
+            path = Path.Combine(path, "apps", appName);
+            if (!Directory.Exists(path))
+                // We should never get here
+                throw new DirectoryNotFoundException("The site's home directory could not be located");
+            // For users running Windows Azure Pack 2 (WAP2), %HOME% actually points to the site folder,
+            // which we don't want here. So yank that segment if we detect it.
+            if (Path.GetFileName(path).Equals(Constants.SiteFolder, StringComparison.OrdinalIgnoreCase))
+            {
+                path = Path.GetDirectoryName(path);
+            }
+
+            return path;
+
+        }
     }
-     
+
     /// <summary>
     /// Extension wrapper for using Kube Middleware
     /// </summary>

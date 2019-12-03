@@ -161,6 +161,13 @@ namespace Kudu.Services.Web
                 new DeploymentSettingsManager(new XmlSettings.Settings(KuduWebUtil.GetSettingsPath(environment)));
             TraceServices.TraceLevel = _noContextDeploymentsSettingsManager.GetTraceLevel();
 
+            // Its required to register the IHttpContextAccessor first
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+            services.AddScoped<IEnvironment>(provider => {
+                var httpContext = provider.GetRequiredService<IHttpContextAccessor>().HttpContext;
+                return KuduWebUtil.GetEnvironment(_hostingEnvironment, provider.GetRequiredService<IDeploymentSettingsManager>(), httpContext);
+            });
+
             // Per request environment
             services.AddScoped(sp =>
                 KuduWebUtil.GetEnvironment(_hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>()));
@@ -324,10 +331,6 @@ namespace Kudu.Services.Web
                 app.UseExceptionHandler("/Error");
             }
 
-            app.UseAuthentication();
-
-            app.UseKubeMiddleware();
-
             if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
             {
                 app.UseLinuxConsumptionRouteMiddleware();
@@ -349,6 +352,10 @@ namespace Kudu.Services.Web
 
             var containsRelativeProvisionPath = new Func<HttpContext, bool>(i =>
                 i.Request.Path.Value.StartsWith("/api/provision", StringComparison.OrdinalIgnoreCase));
+
+            app.UseTraceMiddleware();
+            app.UseAuthentication();
+            app.UseKubeMiddleware();
 
             app.MapWhen(containsRelativeProvisionPath, application => application.Run(async context =>
             {
@@ -372,8 +379,6 @@ namespace Kudu.Services.Web
                 i.Request.Path.Value.StartsWith("/AppServiceTunnel/Tunnel.ashx", StringComparison.OrdinalIgnoreCase));
 
             app.MapWhen(containsRelativePath3, builder => builder.UseMiddleware<DebugExtensionMiddleware>());
-
-            app.UseTraceMiddleware();
 
             applicationLifetime.ApplicationStopping.Register(OnShutdown);
 

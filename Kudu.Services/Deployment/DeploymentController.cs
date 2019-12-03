@@ -36,7 +36,7 @@ namespace Kudu.Services.Deployment
     {
         private static DeploymentsCacheItem _cachedDeployments = DeploymentsCacheItem.None;
 
-        private readonly IEnvironment _environment;
+        private IEnvironment _environment;
         private readonly IAnalytics _analytics;
         private readonly IDeploymentManager _deploymentManager;
         private readonly IDeploymentStatusManager _status;
@@ -53,16 +53,31 @@ namespace Kudu.Services.Deployment
                                     IDeploymentSettingsManager settings,
                                     //IOperationLock deploymentLock,
                                     IDictionary<string, IOperationLock> namedLocks,
-                                    IRepositoryFactory repositoryFactory)
+                                    IRepositoryFactory repositoryFactory,
+                                    IHttpContextAccessor accessor)
         {
             _tracer = tracer;
-            _environment = environment;
             _analytics = analytics;
             _deploymentManager = deploymentManager;
             _status = status;
             _settings = settings;
             _deploymentLock = (AllSafeLinuxLock) namedLocks["deployment"];
             _repositoryFactory = repositoryFactory;
+            GetEnvironment(accessor, environment);
+        }
+
+
+        private void GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
+        {
+            var context = accessor.HttpContext;
+            if (!PostDeploymentHelper.IsK8Environment())
+            {
+                _environment = environment;
+            }
+            else
+            {
+                _environment = (IEnvironment) context.Items["environment"];
+            }
         }
 
         /// <summary>

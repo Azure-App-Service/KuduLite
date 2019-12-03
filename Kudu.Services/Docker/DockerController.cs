@@ -20,7 +20,14 @@ namespace Kudu.Services.Docker
         {
             _traceFactory = traceFactory;
             _settings = settings;
-            _environment = environment;
+            if (!PostDeploymentHelper.IsK8Environment())
+            {
+                _environment = environment;
+            }
+            else
+            {
+                _environment = (IEnvironment)HttpContext.Items["environment"];
+            }
         }
 
         [HttpPost]

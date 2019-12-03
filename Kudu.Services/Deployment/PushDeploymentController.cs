@@ -41,15 +41,31 @@ namespace Kudu.Services.Deployment
             IFetchDeploymentManager deploymentManager,
             ITracer tracer,
             ITraceFactory traceFactory,
-            IDeploymentSettingsManager settings)
+            IDeploymentSettingsManager settings,
+            IHttpContextAccessor accessor)
         {
-            _environment = environment;
+
             _deploymentManager = deploymentManager;
             _tracer = tracer;
             _traceFactory = traceFactory;
             _settings = settings;
+            _environment = GetEnvironment(accessor, environment);
         }
 
+        private IEnvironment GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
+        {
+            IEnvironment _environment;
+            var context = accessor.HttpContext;
+            if (!PostDeploymentHelper.IsK8Environment())
+            {
+                _environment = environment;
+            }
+            else
+            {
+                _environment = (IEnvironment)context.Items["environment"];
+            }
+            return _environment;
+        }
 
         [HttpPost]
         [DisableRequestSizeLimit]

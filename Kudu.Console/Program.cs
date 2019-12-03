@@ -168,7 +168,8 @@ namespace Kudu.Console
                                                           deploymentStatusManager,
                                                           deploymentLock,
                                                           GetLogger(env, level, logger),
-                                                          hooksManager);
+                                                          hooksManager,
+                                                          null); // K8 todo
             var step = tracer.Step(XmlTracer.ExecutingExternalProcessTrace, new Dictionary<string, string>
             {
                 { "type", "process" },

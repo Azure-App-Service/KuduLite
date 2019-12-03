@@ -40,6 +40,7 @@ namespace Kudu.Services.Infrastructure
             }
             Tracer = tracer;
             Environment = environment;
+
             RootPath = Path.GetFullPath(rootPath.TrimEnd(Path.DirectorySeparatorChar));
             MediaTypeMap = MediaTypeMap.Default;
         }

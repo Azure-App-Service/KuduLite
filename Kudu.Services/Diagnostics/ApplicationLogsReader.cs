@@ -8,8 +8,10 @@ using System.Text.RegularExpressions;
 using Kudu.Contracts.Diagnostics;
 using Kudu.Contracts.Tracing;
 using Kudu.Core;
+using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Tracing;
+using Microsoft.AspNetCore.Http;
 
 namespace Kudu.Services.Diagnostics
 {

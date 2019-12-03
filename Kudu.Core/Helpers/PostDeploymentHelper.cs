@@ -93,7 +93,14 @@ namespace Kudu.Core.Helpers
         {
             return !String.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId));
         }
-        
+
+        // K8_BUILD_SERVICE not null or empty
+        public static bool IsK8Environment()
+        {
+            return true;
+            //return !String.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.KubernetesBuildService));
+        }
+
         // WEBSITE_HOME_STAMPNAME = waws-prod-bay-001
         private static string HomeStamp
         {

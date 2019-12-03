@@ -13,6 +13,7 @@ using Kudu.Core.Hooks;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
+using Microsoft.AspNetCore.Http;
 
 namespace Kudu.Core.Deployment
 {
@@ -24,6 +25,7 @@ namespace Kudu.Core.Deployment
         private readonly IOperationLock _deploymentLock;
         private readonly IDeploymentManager _deploymentManager;
         private readonly IDeploymentStatusManager _status;
+        private IHttpContextAccessor _httpContextAccessor = null;
         private readonly string _markerFilePath;
 
         public FetchDeploymentManager(
@@ -33,8 +35,9 @@ namespace Kudu.Core.Deployment
             //IOperationLock deploymentLock,
             IDictionary<string, IOperationLock> namedLocks,
             IDeploymentManager deploymentManager,
-            IDeploymentStatusManager status)
-            : this(settings, environment, tracer, namedLocks["deployment"], deploymentManager, status)
+            IDeploymentStatusManager status,
+            IHttpContextAccessor httpContextAccessor)
+            : this(settings, environment, tracer, namedLocks["deployment"], deploymentManager, status, httpContextAccessor)
         { }
 
         public FetchDeploymentManager(
@@ -43,15 +46,16 @@ namespace Kudu.Core.Deployment
             ITracer tracer,
             IOperationLock deploymentLock,
             IDeploymentManager deploymentManager,
-            IDeploymentStatusManager status)
+            IDeploymentStatusManager status,
+            IHttpContextAccessor httpContextAccessor)
         {
             _settings = settings;
-            _environment = environment;
+            _environment = GetEnvironment(httpContextAccessor, environment);
+            _httpContextAccessor = httpContextAccessor;
             _tracer = tracer;
             _deploymentLock = deploymentLock;
             _deploymentManager = deploymentManager;
             _status = status;
-
             _markerFilePath = Path.Combine(environment.DeploymentsPath, "pending");
 
             // Prefer marker creation in ctor to delay create when needed.
@@ -67,6 +71,21 @@ namespace Kudu.Core.Deployment
                     tracer.TraceError(ex);
                 }
             }
+        }
+
+        private IEnvironment GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
+        {
+            IEnvironment _environment;
+            var context = accessor.HttpContext;
+            if (!PostDeploymentHelper.IsK8Environment())
+            {
+                _environment = environment;
+            }
+            else
+            {
+                _environment = (IEnvironment)context.Items["environment"];
+            }
+            return _environment;
         }
 
         public async Task<FetchDeploymentRequestResult> FetchDeploy(
@@ -107,7 +126,8 @@ namespace Kudu.Core.Deployment
                         _settings,
                         _tracer.TraceLevel,
                         requestUri,
-                        waitForTempDeploymentCreation);
+                        waitForTempDeploymentCreation,
+                        _httpContextAccessor);
 
                     return successfullyRequested
                     ? FetchDeploymentRequestResult.RunningAynschronously
@@ -293,7 +313,8 @@ namespace Kudu.Core.Deployment
             IDeploymentSettingsManager settings,
             TraceLevel traceLevel,
             Uri uri,
-            bool waitForTempDeploymentCreation)
+            bool waitForTempDeploymentCreation,
+            IHttpContextAccessor _httpContextAccessor)
         {
             var tracer = traceLevel <= TraceLevel.Off ? NullTracer.Instance : new CascadeTracer(new XmlTracer(environment.TracePath, traceLevel), new ETWTracer(environment.RequestId, "POST"));
             var traceFactory = new TracerFactory(() => tracer);
@@ -330,8 +351,8 @@ namespace Kudu.Core.Deployment
                     var deploymentStatusManager = new DeploymentStatusManager(environment, analytics, statusLock);
                     var siteBuilderFactory = new SiteBuilderFactory(new BuildPropertyProvider(), environment);
                     var webHooksManager = new WebHooksManager(tracer, environment, hooksLock);
-                    var deploymentManager = new DeploymentManager(siteBuilderFactory, environment, traceFactory, analytics, settings, deploymentStatusManager, deploymentLock, NullLogger.Instance, webHooksManager);
-                    var fetchDeploymentManager = new FetchDeploymentManager(settings, environment, tracer, deploymentLock, deploymentManager, deploymentStatusManager);
+                    var deploymentManager = new DeploymentManager(siteBuilderFactory, environment, traceFactory, analytics, settings, deploymentStatusManager, deploymentLock, NullLogger.Instance, webHooksManager, _httpContextAccessor);
+                    var fetchDeploymentManager = new FetchDeploymentManager(settings, environment, tracer, deploymentLock, deploymentManager, deploymentStatusManager, _httpContextAccessor);
 
                     IDisposable tempDeployment = null;
 
