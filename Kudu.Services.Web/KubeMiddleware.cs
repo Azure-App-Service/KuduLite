@@ -23,7 +23,7 @@ using Kudu.Core.Helpers;
 namespace Kudu.Services.Web
 {
     /// <summary>
-    /// Middleware to filter out unnecessary routes when running in Linux Consumption
+    /// Middleware to modify Kudu Context when running on an K8 Cluster
     /// </summary>
     public class KubeMiddleware
     {
@@ -48,12 +48,17 @@ namespace Kudu.Services.Web
         public async Task Invoke(HttpContext context, IEnvironment environment, IServerConfiguration serverConfig)
         {
             var result = await context.AuthenticateAsync();
-
             if (result.Failure != null)
             {
                 context.Response.StatusCode = 403;
                 await context.Response.WriteAsync(result.Failure.ToString(), Encoding.UTF8);
             }
+            
+
+            var host = context.Request.Headers["HTTP_HOST"].ToString();
+            var appName = host.Substring(0, host.IndexOf("."));
+
+            Console.WriteLine("APP : " + appName);
 
             if (IsGitRoute(context.Request.Path))
             {
@@ -74,7 +79,7 @@ namespace Kudu.Services.Web
 
                 if (pathParts != null && pathParts.Length >= 1)
                 {
-                    string appName = pathParts[1];
+                    var appName = pathParts[1];
                     appName = appName.Trim().Replace(".git", "");
                     if(!FileSystemHelpers.DirectoryExists(homeDir + appName))
                     {
