@@ -2,6 +2,7 @@
 using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Infrastructure;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -28,20 +29,22 @@ namespace Kudu.Core.Deployment.Oryx
                 return;
             }
 
-            string sitePackagesDir = "/home/data/SitePackages";
-            string packageNameFile = Path.Combine(sitePackagesDir, "packagename.txt");
-            string packagePathFile = Path.Combine(sitePackagesDir, "packagepath.txt");
+            //string sitePackagesDir = "/home/data/SitePackages";
+            //string packageNameFile = Path.Combine(sitePackagesDir, "packagename.txt");
+            //string packagePathFile = Path.Combine(sitePackagesDir, "packagepath.txt");
 
-            FileSystemHelpers.EnsureDirectory(sitePackagesDir);
+            //FileSystemHelpers.EnsureDirectory(sitePackagesDir);
 
-            string packageName = "";
+            //string packageName = "";
 
+            SetupK8Artifacts(context, outputPath);
+            /*
             if(args.Language == Framework.NodeJs)
             {
                 // For App service express mode
                 // Generate packagename.txt and packagepath
                 //packageName = "node_modules.zip:/node_modules";
-                SetupNodeAppExpressArtifacts(context, sitePackagesDir, outputPath);
+                //SetupNodeAppExpressArtifacts(context, sitePackagesDir, outputPath);
             }
             else if(args.Language == Framework.Python)
             {
@@ -56,6 +59,7 @@ namespace Kudu.Core.Deployment.Oryx
 
             File.WriteAllText(packageNameFile, packageName);
             File.WriteAllText(packagePathFile, outputPath);
+            */
         }
 
         private string SetupNetCoreAppExpressArtifacts(DeploymentContext context, string sitePackages,string outputPath)
@@ -74,9 +78,9 @@ namespace Kudu.Core.Deployment.Oryx
         }
 
 
-        private string SetupNodeAppExpressArtifacts(DeploymentContext context, string sitePackages, string outputPath)
+        private string SetupK8Artifacts(DeploymentContext context, string outputPath)
         {
-            context.Logger.Log($"Express Build enabled for Node app");
+            context.Logger.Log($"Building for K8.");
 
             // Create NetCore Zip at tm build folder where artifact were build and copy it to sitePackages, .GetBranch()
             string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
@@ -85,10 +89,6 @@ namespace Kudu.Core.Deployment.Oryx
             FileSystemHelpers.EnsureDirectory(environment.RepositoryPath + "/../artifacts/");
             FileSystemHelpers.EnsureDirectory(environment.RepositoryPath + "/../artifacts/" + environment.CurrId);
             string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath, environment.RepositoryPath +"/../artifacts/" +environment.CurrId, zipAppName, BuildArtifactType.Squashfs, numBuildArtifacts: -1);
-
-            // Remove the old zips
-            DeploymentHelper.PurgeBuildArtifactsIfNecessary(sitePackages, BuildArtifactType.Zip, context.Tracer, totalAllowedFiles: 2);
-
             return zipAppName;
         }
 
