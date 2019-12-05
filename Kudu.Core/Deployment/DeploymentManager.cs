@@ -177,7 +177,7 @@ namespace Kudu.Core.Deployment
                     throw new InvalidOperationException(String.Format(CultureInfo.CurrentCulture, Resources.Error_UnableToDeleteDeploymentActive, id));
                 }
 
-                _status.Delete(id);
+                _status.Delete(id, _environment);
             }
         }
 
@@ -300,7 +300,7 @@ namespace Kudu.Core.Deployment
                     }
 
                     // Reload status file with latest updates
-                    statusFile = _status.Open(id);
+                    statusFile = _status.Open(id, _environment);
                     using (tracer.Step("Reloading status file with latest updates"))
                     {
                         if (statusFile != null)
@@ -324,7 +324,7 @@ namespace Kudu.Core.Deployment
             using (tracer.Step("Creating temporary deployment"))
             {
                 changeSet = changeSet != null && changeSet.IsTemporary ? changeSet : CreateTemporaryChangeSet();
-                IDeploymentStatusFile statusFile = _status.Create(changeSet.Id);
+                IDeploymentStatusFile statusFile = _status.Create(changeSet.Id, _environment);
                 statusFile.Id = changeSet.Id;
                 statusFile.Message = changeSet.Message;
                 statusFile.Author = changeSet.AuthorName;
@@ -344,7 +344,7 @@ namespace Kudu.Core.Deployment
             {
                 if (changeSet.IsTemporary)
                 {
-                    _status.Delete(changeSet.Id);
+                    _status.Delete(changeSet.Id, _environment);
                 }
             });
         }
@@ -412,7 +412,7 @@ namespace Kudu.Core.Deployment
                     {
                         foreach (DeployResult delete in toDelete)
                         {
-                            _status.Delete(delete.Id);
+                            _status.Delete(delete.Id, _environment);
 
                             tracer.Trace("Remove {0}, {1}, received at {2}",
                                          delete.Id.Substring(0, Math.Min(delete.Id.Length, 9)),
@@ -516,11 +516,11 @@ namespace Kudu.Core.Deployment
             using (tracer.Step("Collecting changeset information"))
             {
                 // Check if the status file already exists. This would happen when we're doing a redeploy
-                IDeploymentStatusFile statusFile = _status.Open(id);
+                IDeploymentStatusFile statusFile = _status.Open(id, _environment);
                 if (statusFile == null)
                 {
                     // Create the status file and store information about the commit
-                    statusFile = _status.Create(id);
+                    statusFile = _status.Create(id, _environment);
                 }
                 statusFile.Message = changeSet.Message;
                 statusFile.Author = changeSet.AuthorName;
@@ -590,7 +590,7 @@ namespace Kudu.Core.Deployment
                 logger = GetLogger(id);
                 ILogger innerLogger = logger.Log(Resources.Log_PreparingDeployment, TrimId(id));
 
-                currentStatus = _status.Open(id);
+                currentStatus = _status.Open(id, _environment);
                 currentStatus.Complete = false;
                 currentStatus.StartTime = DateTime.UtcNow;
                 currentStatus.Status = DeployStatus.Building;
@@ -846,7 +846,7 @@ namespace Kudu.Core.Deployment
         /// </summary>
         private IDeploymentStatusFile VerifyDeployment(string id, bool isDeploying)
         {
-            IDeploymentStatusFile statusFile = _status.Open(id);
+            IDeploymentStatusFile statusFile = _status.Open(id, _environment);
             
             if (statusFile == null)
             {
@@ -884,7 +884,7 @@ namespace Kudu.Core.Deployment
                 ILogger logger = GetLogger(id);
                 logger.Log(Resources.Log_DeploymentSuccessful);
 
-                IDeploymentStatusFile currentStatus = _status.Open(id);
+                IDeploymentStatusFile currentStatus = _status.Open(id, _environment);
                 MarkStatusComplete(currentStatus, success: true);
 
                 _status.ActiveDeploymentId = id;
@@ -949,7 +949,7 @@ namespace Kudu.Core.Deployment
         {
             var path = GetLogPath(id);
             var logger = GetLoggerForFile(path);
-            return new ProgressLogger(id, _status, new CascadeLogger(logger, _globalLogger));
+            return new ProgressLogger(id, _status, new CascadeLogger(logger, _globalLogger), _environment);
         }
 
         /// <summary>

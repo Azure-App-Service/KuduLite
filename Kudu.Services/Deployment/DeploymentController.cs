@@ -235,7 +235,7 @@ namespace Kudu.Services.Deployment
                                     changeSet = repository.GetChangeSet(targetBranch);
                                 }
 
-                                IDeploymentStatusFile statusFile = _status.Open(changeSet.Id);
+                                IDeploymentStatusFile statusFile = _status.Open(changeSet.Id, _environment);
                                 if (statusFile != null && statusFile.Status == DeployStatus.Success)
                                 {
                                     await PostDeploymentHelper.PerformAutoSwap(
@@ -267,14 +267,14 @@ namespace Kudu.Services.Deployment
         {
             var id = deployResult.Id;
             string path = Path.Combine(_environment.DeploymentsPath, id);
-            IDeploymentStatusFile statusFile = _status.Open(id);
+            IDeploymentStatusFile statusFile = _status.Open(id, _environment);
             if (statusFile != null)
             {
                 return StatusCode(StatusCodes.Status409Conflict, String.Format("Deployment with id '{0}' exists", id));
             }
 
             FileSystemHelpers.EnsureDirectory(path);
-            statusFile = _status.Create(id);
+            statusFile = _status.Create(id, _environment);
             statusFile.Status = deployResult.Status;
             statusFile.Message = deployResult.Message;
             statusFile.Deployer = deployResult.Deployer;
@@ -410,7 +410,7 @@ namespace Kudu.Services.Deployment
             {
                 using (_tracer.Step("DeploymentService.GetDeployResults"))
                 {
-                    if (!currentEtag.Equals(cachedDeployments.Etag))
+                    if (!currentEtag.Equals(cachedDeployments.Etag) || PostDeploymentHelper.IsK8Environment())
                     {
                         cachedDeployments = new DeploymentsCacheItem
                         {

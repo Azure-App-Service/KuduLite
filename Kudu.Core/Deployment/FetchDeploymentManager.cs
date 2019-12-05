@@ -260,7 +260,7 @@ namespace Kudu.Core.Deployment
                         // In case the commit or perhaps fetch do no-op.
                         if (deploymentInfo.TargetChangeset != null)
                         {
-                            IDeploymentStatusFile statusFile = _status.Open(deploymentInfo.TargetChangeset.Id);
+                            IDeploymentStatusFile statusFile = _status.Open(deploymentInfo.TargetChangeset.Id, _environment);
                             if (statusFile != null)
                             {
                                 statusFile.MarkFailed();
@@ -280,7 +280,7 @@ namespace Kudu.Core.Deployment
 
             if (lastChange != null && PostDeploymentHelper.IsAutoSwapEnabled())
             {
-                IDeploymentStatusFile statusFile = _status.Open(lastChange.Id);
+                IDeploymentStatusFile statusFile = _status.Open(lastChange.Id, _environment);
                 if (statusFile.Status == DeployStatus.Success)
                 {
                     // if last change is not null and finish successfully, mean there was at least one deployoment happened

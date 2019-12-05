@@ -10,7 +10,6 @@ namespace Kudu.Core.Deployment
     public class DeploymentStatusManager : IDeploymentStatusManager
     {
         public static readonly TimeSpan LockTimeout = TimeSpan.FromSeconds(10);
-        private readonly IEnvironment _environment;
         private readonly IAnalytics _analytics;
         private readonly IOperationLock _statusLock;
         private readonly string _activeFile;
@@ -25,25 +24,24 @@ namespace Kudu.Core.Deployment
                                        IAnalytics analytics,
                                        IOperationLock statusLock)
         {
-            _environment = environment;
             _analytics = analytics;
             _statusLock = statusLock;
             _activeFile = Path.Combine(environment.DeploymentsPath, Constants.ActiveDeploymentFile);
         }
 
-        public IDeploymentStatusFile Create(string id)
+        public IDeploymentStatusFile Create(string id, IEnvironment environment)
         {
-            return DeploymentStatusFile.Create(id, _environment, _statusLock);
+            return DeploymentStatusFile.Create(id, environment, _statusLock);
         }
 
-        public IDeploymentStatusFile Open(string id)
+        public IDeploymentStatusFile Open(string id, IEnvironment environment)
         {
-            return DeploymentStatusFile.Open(id, _environment, _analytics, _statusLock);
+            return DeploymentStatusFile.Open(id, environment, _analytics, _statusLock);
         }
 
-        public void Delete(string id)
+        public void Delete(string id, IEnvironment environment)
         {
-            string path = Path.Combine(_environment.DeploymentsPath, id);
+            string path = Path.Combine(environment.DeploymentsPath, id);
 
             _statusLock.LockOperation(() =>
             {

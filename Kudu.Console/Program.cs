@@ -194,7 +194,7 @@ namespace Kudu.Console
                     {
                         string branch = settingsManager.GetBranch();
                         ChangeSet changeSet = gitRepository.GetChangeSet(branch);
-                        IDeploymentStatusFile statusFile = deploymentStatusManager.Open(changeSet.Id);
+                        IDeploymentStatusFile statusFile = deploymentStatusManager.Open(changeSet.Id, env);
                         if (statusFile != null && statusFile.Status == DeployStatus.Success)
                         {
                             PostDeploymentHelper.PerformAutoSwap(env.RequestId,
@@ -230,7 +230,7 @@ namespace Kudu.Console
                             FileStream stream2 = File.Create($"/home/apps/{appName}/site/artifacts/current");
                             stream2.Close();
 
-                            IDeploymentStatusFile statusFile = deploymentStatusManager.Open(gitRepository.GetChangeSet(settingsManager.GetBranch()).Id);
+                            IDeploymentStatusFile statusFile = deploymentStatusManager.Open(gitRepository.GetChangeSet(settingsManager.GetBranch()).Id, env);
                             statusFile.Save();
                             revisiondata rv = new revisiondata()
                             {
