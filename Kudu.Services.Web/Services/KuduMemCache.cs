@@ -33,9 +33,9 @@ namespace Kudu.Services.Web.Services
                             //Priority on removing when reaching size limit (memory pressure)
                     .SetPriority(CacheItemPriority.High)
                     // Keep in cache for this time, reset time if accessed.
-                    .SetSlidingExpiration(TimeSpan.FromSeconds(2))
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(120))
                     // Remove from cache after this time, regardless of sliding expiration
-                    .SetAbsoluteExpiration(TimeSpan.FromSeconds(10));
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(480));
 
                 // Save data in cache.
                 _cache.Set(key, cacheEntry, cacheEntryOptions);
