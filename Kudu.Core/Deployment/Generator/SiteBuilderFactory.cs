@@ -57,9 +57,12 @@ namespace Kudu.Core.Deployment.Generator
             {
                 return new RunFromZipSiteBuilder();
             }
-            
+
+            tracer.Trace("Checking if build enabled: ");
+
             if (!settings.DoBuildDuringDeployment())
             {
+                tracer.Trace("Nope build is off");
                 var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
                 return new BasicBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);
             }
@@ -72,6 +75,9 @@ namespace Kudu.Core.Deployment.Generator
                     return new OryxBuilder(_environment, settings, _propertyProvider, repositoryRoot);
                 }
             }
+
+            tracer.Trace("After Oryx determination.");
+
 
             if (!String.IsNullOrEmpty(targetProjectPath))
             {

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.SourceControl;
+using Kudu.Contracts.Tracing;
 
 namespace Kudu.Contracts.Settings
 {
@@ -242,10 +243,10 @@ namespace Kudu.Contracts.Settings
             return value == null || StringUtils.IsTrueLike(value);
         }
 
-        public static bool DoBuildDuringDeployment(this IDeploymentSettingsManager settings)
+        public static bool DoBuildDuringDeployment(this IDeploymentSettingsManager settings, ITracer tracer)
         {
             string value = settings.GetValue(SettingsKeys.DoBuildDuringDeployment);
-
+            tracer.Trace("DoBuildDuringDeployment value : "+value);
             // A default value should be set on a per-deployment basis depending on the context, but
             // returning true by default here as an indicator of generally expected behavior
             return value == null || StringUtils.IsTrueLike(value);
