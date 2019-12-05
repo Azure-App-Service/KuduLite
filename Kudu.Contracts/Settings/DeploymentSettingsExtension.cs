@@ -243,10 +243,9 @@ namespace Kudu.Contracts.Settings
             return value == null || StringUtils.IsTrueLike(value);
         }
 
-        public static bool DoBuildDuringDeployment(this IDeploymentSettingsManager settings, ITracer tracer)
+        public static bool DoBuildDuringDeployment(this IDeploymentSettingsManager settings)
         {
             string value = settings.GetValue(SettingsKeys.DoBuildDuringDeployment);
-            tracer.Trace("DoBuildDuringDeployment value : "+value);
             // A default value should be set on a per-deployment basis depending on the context, but
             // returning true by default here as an indicator of generally expected behavior
             return value == null || StringUtils.IsTrueLike(value);

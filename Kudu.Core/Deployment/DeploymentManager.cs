@@ -215,6 +215,7 @@ namespace Kudu.Core.Deployment
                     }
 
                     string id = changeSet.Id;
+                    _environment.CurrId = id;
                     IDeploymentStatusFile statusFile = null;
                     try
                     {
@@ -224,13 +225,10 @@ namespace Kudu.Core.Deployment
                         FileSystemHelpers.DeleteFileSafe(logPath);
 
                         statusFile = GetOrCreateStatusFile(changeSet, tracer, deployer);
-                        Console.WriteLine("Before MarkPending");
 
                         statusFile.MarkPending();
 
                         ILogger logger = GetLogger(changeSet.Id);
-                        Console.WriteLine("GetLogger");
-
                         if (needFileUpdate)
                         {
                             using (tracer.Step("Updating to specific changeset"))
@@ -268,7 +266,6 @@ namespace Kudu.Core.Deployment
                         // set to null as Build() below takes over logging
                         innerLogger = null;
 
-                    Console.WriteLine("Before build");
                     // Perform the build deployment of this changeset
                     await Build(changeSet, tracer, deployStep, repository, deploymentInfo, deploymentAnalytics, fullBuildByDefault);
 
