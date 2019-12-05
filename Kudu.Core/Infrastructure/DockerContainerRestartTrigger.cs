@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using Kudu.Core.Helpers;
@@ -22,6 +23,27 @@ namespace Kudu.Core.Infrastructure
 
         public static void RequestContainerRestart(IEnvironment environment, string reason)
         {
+            if(PostDeploymentHelper.IsK8Environment())
+            {
+                string appName = environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0]; ;
+                Process _executingProcess = new Process()
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "/bin/bash",
+                        Arguments = $"-c \" /patch.sh {appName} apps/{appName}/site/artifacts/{environment.CurrId}\"",
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                    }
+                };
+                // Read the standard error of net.exe and write it on to console.
+                _executingProcess.OutputDataReceived += (sender, args) => System.Console.WriteLine("{0}", args.Data);
+                _executingProcess.Start();
+                _executingProcess.WaitForExit();
+                return;
+            }
+
             if (OSDetector.IsOnWindows() && !EnvironmentHelper.IsWindowsContainers())
             {
                 throw new NotSupportedException("RequestContainerRestart is only supported on Linux and Windows Containers");

@@ -224,14 +224,18 @@ namespace Kudu.Core.Deployment
                         FileSystemHelpers.DeleteFileSafe(logPath);
 
                         statusFile = GetOrCreateStatusFile(changeSet, tracer, deployer);
+                        Console.WriteLine("Before MarkPending");
+
                         statusFile.MarkPending();
 
                         ILogger logger = GetLogger(changeSet.Id);
+                        Console.WriteLine("GetLogger");
 
                         if (needFileUpdate)
                         {
                             using (tracer.Step("Updating to specific changeset"))
                             {
+                                
                                 innerLogger = logger.Log(Resources.Log_UpdatingBranch, targetBranch ?? id);
 
                                 using (var writer = new ProgressWriter())
@@ -264,17 +268,30 @@ namespace Kudu.Core.Deployment
                         // set to null as Build() below takes over logging
                         innerLogger = null;
 
-                        // Perform the build deployment of this changeset
-                        await Build(changeSet, tracer, deployStep, repository, deploymentInfo, deploymentAnalytics, fullBuildByDefault);
+                    Console.WriteLine("Before build");
+                    // Perform the build deployment of this changeset
+                    await Build(changeSet, tracer, deployStep, repository, deploymentInfo, deploymentAnalytics, fullBuildByDefault);
 
-                        if (!(OSDetector.IsOnWindows() && 
+                        if ((!(OSDetector.IsOnWindows() && 
                               !EnvironmentHelper.IsWindowsContainers()) && 
-                            _settings.RestartAppContainerOnGitDeploy())
+                            _settings.RestartAppContainerOnGitDeploy()) ||
+                            PostDeploymentHelper.IsK8Environment())
                         {
-                            logger.Log(Resources.Log_TriggeringContainerRestart);
-                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason);
-                        }
+                            if(PostDeploymentHelper.IsK8Environment())
+                            {
+                                logger.Log($"Restarting pods!");
+                            }
+                        else
+                            {
+                               logger.Log(Resources.Log_TriggeringContainerRestart);
+                            }
+                        string appName = _environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0]; ;
+
+                        DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason);
+                        logger.Log($"Deployment Pod Rollout Started! Use kubectl watch deplotment {appName} to monitor the rollout status");
+
                     }
+                }
                     catch (Exception ex)
                     {
                         exception = ex;
@@ -587,6 +604,7 @@ namespace Kudu.Core.Deployment
 
             try
             {
+                Console.WriteLine("Build.");
                 logger = GetLogger(id);
                 ILogger innerLogger = logger.Log(Resources.Log_PreparingDeployment, TrimId(id));
 
