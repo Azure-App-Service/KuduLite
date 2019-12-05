@@ -48,15 +48,27 @@ namespace Kudu.Services.Web
                 return;
             }
 
-            foreach(var header in context.Request.Headers)
-            {
-                Console.WriteLine($"{header.Key} : {header.Value}");
-            }
-
             var host = context.Request.Headers["Host"].ToString();
             Console.WriteLine("HOST: "+host);
-            var appName = host.Substring(0, host.IndexOf("."));
-            //var appName = "test1";
+            var appName = "";
+
+            if (host.IndexOf(".") <= 0)
+            {
+                appName = "test1";
+            }
+            else
+            {
+                try
+                {
+                    int res = Int32.Parse(host.Substring(0, host.IndexOf(".")));
+                    appName = "test1";
+                }
+                catch (FormatException)
+                {
+                    appName = host.Substring(0, host.IndexOf("."));
+                }
+            }
+
             Console.WriteLine("AppName: " + appName);
             string homeDir = "";
             string siteRepoDir = "";
@@ -70,10 +82,6 @@ namespace Kudu.Services.Web
                 homeDir = "/home/apps/";
                 siteRepoDir = "/site/repository";
             }
-
-            //Console.WriteLine("APP : " + appName);
-            //appName = "test1";
-
 
             context.Items.Add("environment", GetEnvironment(homeDir, appName));
 
@@ -116,7 +124,7 @@ namespace Kudu.Services.Web
             IDeploymentSettingsManager settings = null,
             HttpContext httpContext = null)
         {
-            var root = KubeMiddleware.ResolveRootPath(appName);
+            var root = KubeMiddleware.ResolveRootPath(home, appName);
             var siteRoot = Path.Combine(root, Constants.SiteFolder);
             var repositoryPath = Path.Combine(siteRoot,
                 settings == null ? Constants.RepositoryPath : settings.GetRepositoryPath());
@@ -128,11 +136,12 @@ namespace Kudu.Services.Web
                 kuduConsoleFullPath, null);
         }
 
-        public static string ResolveRootPath(string appName)
+        public static string ResolveRootPath(string home, string appName)
         {
             // The HOME path should always be set correctly
-            var path = System.Environment.ExpandEnvironmentVariables(@"%HOME%");
-            path = Path.Combine(path, "apps", appName);
+            //var path = System.Environment.ExpandEnvironmentVariables(@"%HOME%");
+            var path = home + appName;
+            Console.WriteLine("Checking site home : " + (home + appName));
             if (!Directory.Exists(path))
                 // We should never get here
                 throw new DirectoryNotFoundException("The site's home directory could not be located");
