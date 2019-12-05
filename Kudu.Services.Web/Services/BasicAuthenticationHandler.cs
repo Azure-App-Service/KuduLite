@@ -29,7 +29,9 @@ namespace Kudu.Services.Web.Services
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
             if (!Request.Headers.ContainsKey("Authorization"))
+            {
                 return AuthenticateResult.Fail("Missing Authorization Header");
+            }
 
             try
             {
@@ -65,27 +67,19 @@ namespace Kudu.Services.Web.Services
 
 
         public async Task<string> GetAuthenticationData(string username)
-        {
-            Console.WriteLine("Getting kube config");
+        {            
             var config = KubernetesClientConfiguration.InClusterConfig();
-            Console.WriteLine("Getting kube config - done");
             string password = "";
 
             // Use the config object to create a client.
             var client = new Kubernetes(config);
-            Console.WriteLine("K8 Client Init - done");
-
             try
             {
-                Console.WriteLine($"Reading Secret { PublishingProfileSecretPrefix}{ username.ToLower()}");
                 var secret = await client.ReadNamespacedSecretAsync($"{PublishingProfileSecretPrefix.ToLower()}{username.ToLower()}","k8seappspubpassword");
-                Console.WriteLine("Reading Secret - done");
                 password = System.Text.Encoding.UTF8.GetString(secret.Data["password"]);
-                Console.WriteLine("Password - " + password);
             }
             catch (Microsoft.Rest.HttpOperationException httpOperationException)
             {
-                Console.WriteLine("Errrorrr!!!!! "+httpOperationException.InnerException);
                 var phrase = httpOperationException.Response.ReasonPhrase;
                 var content = httpOperationException.Response.Content;
                 System.Console.WriteLine("K8 Client errror");

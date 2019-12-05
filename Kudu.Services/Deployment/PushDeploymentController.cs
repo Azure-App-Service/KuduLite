@@ -372,9 +372,11 @@ namespace Kudu.Services.Deployment
                 {
                     deploymentInfo.repositorySymlinks = zip.Extract(extractTargetDirectory);
 
-                    CreateZipSymlinks(deploymentInfo.repositorySymlinks, extractTargetDirectory);
-
-                    PermissionHelper.ChmodRecursive("777", extractTargetDirectory, tracer, TimeSpan.FromMinutes(1));
+                    if (!OSDetector.IsOnWindows())
+                    {
+                        CreateZipSymlinks(deploymentInfo.repositorySymlinks, extractTargetDirectory);
+                        PermissionHelper.ChmodRecursive("777", extractTargetDirectory, tracer, TimeSpan.FromMinutes(1));
+                    }
                 }
             }
 

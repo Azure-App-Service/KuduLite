@@ -79,13 +79,13 @@ namespace Kudu.Core.Deployment
         private IEnvironment GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
         {
             IEnvironment _environment;
-            var context = accessor.HttpContext;
-            if (!PostDeploymentHelper.IsK8Environment())
+            if (!PostDeploymentHelper.IsK8Environment() || accessor == null)
             {
                 _environment = environment;
             }
             else
             {
+                var context = accessor.HttpContext;
                 _environment = (IEnvironment)context.Items["environment"];
             }
             return _environment;

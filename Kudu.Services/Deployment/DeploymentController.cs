@@ -401,7 +401,8 @@ namespace Kudu.Services.Deployment
                 _tracer.Trace("Current Etag: {0}, Cached Etag: {1}", currentEtag, cachedDeployments.Etag);
             }
 
-            if (EtagEquals(Request, currentEtag))
+            // Avoid Caching when on K8
+            if (EtagEquals(Request, currentEtag) && !PostDeploymentHelper.IsK8Environment())
             {
                 result = StatusCode(StatusCodes.Status304NotModified);
             }

@@ -23,15 +23,9 @@ using Kudu.Core.Tracing;
 using System.Reflection;
 using XmlSettings;
 using k8s;
-using k8s.Models;
-using Microsoft.AspNetCore.JsonPatch;
-using LibGit2Sharp;
-using System.Threading;
 using IRepository = Kudu.Core.SourceControl.IRepository;
 using log4net;
 using log4net.Config;
-using Newtonsoft.Json;
-using System.IO.Abstractions;
 
 namespace Kudu.Console
 {
@@ -89,7 +83,7 @@ namespace Kudu.Console
             string deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
 
             IOperationLock deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
-            
+
             if (deploymentLock.IsHeld)
             {
                 return PerformDeploy(appRoot, wapTargets, deployer, lockPath, env, settingsManager, level, tracer, traceFactory, deploymentLock);
@@ -132,7 +126,6 @@ namespace Kudu.Console
 
             // Adjust repo path
             env.RepositoryPath = Path.Combine(env.SiteRootPath, settingsManager.GetRepositoryPath());
-
             string statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
             string hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
 
@@ -153,13 +146,17 @@ namespace Kudu.Console
             {
                 gitRepository = new GitExeRepository(env, settingsManager, traceFactory);
             }
+
             env.CurrId = gitRepository.GetChangeSet(settingsManager.GetBranch()).Id;
 
             IServerConfiguration serverConfiguration = new ServerConfiguration();
+
             IAnalytics analytics = new Analytics(settingsManager, serverConfiguration, traceFactory);
 
             IWebHooksManager hooksManager = new WebHooksManager(tracer, env, hooksLock);
+
             IDeploymentStatusManager deploymentStatusManager = new DeploymentStatusManager(env, analytics, statusLock);
+
             IDeploymentManager deploymentManager = new DeploymentManager(builderFactory,
                                                           env,
                                                           traceFactory,
@@ -170,6 +167,7 @@ namespace Kudu.Console
                                                           GetLogger(env, level, logger),
                                                           hooksManager,
                                                           null); // K8 todo
+
             var step = tracer.Step(XmlTracer.ExecutingExternalProcessTrace, new Dictionary<string, string>
             {
                 { "type", "process" },
@@ -224,8 +222,6 @@ namespace Kudu.Console
                         if (replicaSet.Metadata.Name.IndexOf(appName, StringComparison.OrdinalIgnoreCase) >= 0
                             && (replicaSet.Status.AvailableReplicas > 0))
                         {
-                            System.Console.WriteLine("Found it");
-                            System.Console.WriteLine("######### Current Revision Number: "+replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
 
                             FileSystemHelpers.EnsureDirectory($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
                             FileStream stream = File.Create($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision");
@@ -256,49 +252,6 @@ namespace Kudu.Console
                             File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json", json.ToString());
                         }
                     }
-                    /*
-                    // Load from in-cluster configuration:
-                    var config = KubernetesClientConfiguration.InClusterConfig();
-                    //var config = KubernetesClientConfiguration.InClusterConfig();
-
-                    // Use the config object to create a client.
-                    var client = new Kubernetes(config);
-                    try
-                    {
-                        var deployments = client.ListDeploymentForAllNamespaces();
-                        //client.PatchNamespacedDeployment1('{"spec":{"template":{"spec":{"containers":[{"name":"nginx","image":"nginx:1.11"}]}}}}');
-                        
-                        foreach (var deployment in deployments.Items)
-                        {
-                            if(deployment.Spec.Template.Metadata.Name.Equals("second"))
-                            {
-                                foreach (var container in deployment.Spec.Template.Spec.Containers)
-                                {
-                                    foreach (var volumeMount in container.VolumeMounts)
-                                    {
-                                        volumeMount.SubPath = "apps/kudutestmount";
-                                        client.PatchNamespacedDeployment(new V1Patch<V1Deployment>(deployment), "second", "default");
-                                    }
-                                }
-                                var jdoc = new JsonPatchDocument<V1Deployment>();
-                                //jdoc.Add("spec/template/spec/containers/volumeMounts/mountPath/subPath", "apps/kudutestmount");
-                            }
-                        }
-                    }
-                    catch (Microsoft.Rest.HttpOperationException httpOperationException)
-                    {
-                        var phase = httpOperationException.Response.ReasonPhrase;
-                        //Bad Request
-                        var content = httpOperationException.Response.Content;
-                        System.Console.WriteLine("K8 Client errror");
-                        System.Console.WriteLine(content);
-                    }
-                    */
-                    // IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string repositoryPath
-                    //string appName = appRoot.Replace("/home/apps/", "").Split("/")[0];
-
-                    System.Console.WriteLine("Restarting Pods for App Service App : " + appName);
-                    System.Console.WriteLine($" Patch Args :::::: -c \" /patch.sh {appName} apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"");
 
                     Process _executingProcess = new Process()
                     {
@@ -311,20 +264,12 @@ namespace Kudu.Console
                             CreateNoWindow = true,
                         }
                     };
+
                     // Read the standard error of net.exe and write it on to console.
                     _executingProcess.OutputDataReceived += (sender, args) => System.Console.WriteLine("{0}", args.Data);
                     _executingProcess.Start();
-                    //* Read the output (or the error)
-                    //string output = _executingProcess.StandardOutput.ReadToEnd();
-                    //System.Console.WriteLine(output);
-                    //string err = _executingProcess.StandardError.ReadToEnd();
-                    //System.Console.WriteLine(err);
                     _executingProcess.WaitForExit();
-                    System.Console.WriteLine("Process exit code : "+_executingProcess.ExitCode);
-                    System.Console.WriteLine("All Pods Restarted!");
-
-                    //ExternalCommandBuilder restartApp = new ExternalCommandBuilder(env, settingsManager, buildPropertyProvider,env.RepositoryPath);
-
+                    System.Console.WriteLine("Deployment Rollout Started!");
                     System.Console.WriteLine("Deployment Logs : '"+
                     env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" + 
                     gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");

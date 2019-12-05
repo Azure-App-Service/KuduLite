@@ -40,8 +40,7 @@ namespace Kudu.Services.Web
         public async Task Invoke(HttpContext context, IEnvironment environment, IServerConfiguration serverConfig)
         {
             var result = await context.AuthenticateAsync();
-            
-            
+         
             if (result.Succeeded == false)
             {
                 context.Response.StatusCode = 401;

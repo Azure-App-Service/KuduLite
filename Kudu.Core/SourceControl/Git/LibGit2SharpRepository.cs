@@ -108,7 +108,7 @@ fi" + "\n";
                     var content = @"#!/bin/sh
 read i
 echo $i > pushinfo
-" + KnownEnvironment.KUDUCOMMAND + "\r\n";
+" + KnownEnvironment.KUDUCOMMAND.Replace("$KUDU_APPPATH", RepositoryPath.Replace("site/repository", "")) + "\r\n";
 
                     File.WriteAllText(PostReceiveHookPath, content);
                 }
