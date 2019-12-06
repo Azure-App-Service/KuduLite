@@ -1,5 +1,6 @@
 ﻿using Kudu.Contracts.Settings;
 using Kudu.Core.Deployment.Oryx;
+using Kudu.Core.Infrastructure;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -22,7 +23,9 @@ namespace Kudu.Core.Deployment.Generator
             context.Logger.Log("SiteRootPath " + _environment.SiteRootPath);
             //context.Logger.Log("CurrId "+ _environment.);
             string src = _environment.RepositoryPath;
-            string artifactDir = Path.Combine(_environment.SiteRootPath, "atifacts", _environment.CurrId);
+            string artifactDir = Path.Combine(_environment.SiteRootPath, "artifacts", _environment.CurrId);
+            FileSystemHelpers.EnsureDirectory(Path.Combine(_environment.SiteRootPath, "artifacts"));
+            FileSystemHelpers.EnsureDirectory(artifactDir);
             context.Logger.Log($"src : {src} dest {artifactDir}");
             return Task.Factory.StartNew(() => PackageArtifactFromFolder(context, _environment.ZipTempPath, Path.Combine(_environment.SiteRootPath, "atifacts", _environment.CurrId),"artifact.zip" ,BuildArtifactType.Squashfs, 2));
         }
