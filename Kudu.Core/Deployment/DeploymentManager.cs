@@ -621,6 +621,7 @@ namespace Kudu.Core.Deployment
                 var perDeploymentSettings = DeploymentSettingsManager.BuildPerDeploymentSettingsManager(repository.RepositoryPath, settingsProviders);
 
                 string delayMaxInStr = perDeploymentSettings.GetValue(SettingsKeys.MaxRandomDelayInSec);
+                perDeploymentSettings.SetValue(SettingsKeys.DoBuildDuringDeployment, fullBuildByDefault.ToString());
                 if (!String.IsNullOrEmpty(delayMaxInStr))
                 {
                     int maxDelay;

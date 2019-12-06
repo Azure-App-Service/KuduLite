@@ -13,6 +13,7 @@ using Kudu.Services.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
+using Kudu.Core.Helpers;
 
 namespace Kudu.Services.Editor
 {
@@ -21,8 +22,8 @@ namespace Kudu.Services.Editor
     /// </summary>
     public class VfsController : VfsControllerBase
     {
-        public VfsController(ITracer tracer, IEnvironment environment)
-            : base(tracer, environment, environment.RootPath)
+        public VfsController(ITracer tracer, IEnvironment environment, IHttpContextAccessor accessor)
+            : base(tracer, GetEnvironment(accessor, environment), GetEnvironment(accessor, environment).RootPath)
         {
         }
 
@@ -46,6 +47,21 @@ namespace Kudu.Services.Editor
 
             // Return 201 Created response
             return Task.FromResult((IActionResult)StatusCode(StatusCodes.Status201Created));
+        }
+
+        private static IEnvironment GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
+        {
+            IEnvironment _environment;
+            if (!PostDeploymentHelper.IsK8Environment() || accessor == null)
+            {
+                _environment = environment;
+            }
+            else
+            {
+                var context = accessor.HttpContext;
+                _environment = (IEnvironment)context.Items["environment"];
+            }
+            return _environment;
         }
 
         protected override Task<IActionResult> CreateItemGetResponse(FileSystemInfoBase info, string localFilePath)
