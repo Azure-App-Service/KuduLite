@@ -74,6 +74,7 @@ namespace Kudu.Services.Deployment
             [FromQuery] bool isAsync = false,
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
+            [FromQuery] bool doBuild = false,
             [FromQuery] string deployer = DefaultDeployer,
             [FromQuery] string message = DefaultMessage)
         {
@@ -91,7 +92,7 @@ namespace Kudu.Services.Deployment
                     CommitId = null,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipHandler,
-                    DoFullBuildByDefault = false,
+                    DoFullBuildByDefault = doBuild,
                     Author = author,
                     AuthorEmail = authorEmail,
                     Message = message,
