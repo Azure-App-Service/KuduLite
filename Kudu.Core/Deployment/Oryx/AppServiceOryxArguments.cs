@@ -87,6 +87,10 @@ namespace Kudu.Core.Deployment
                     return;
 
                 case Framework.PHP:
+                    if (Flags == BuildOptimizationsFlags.None)
+                    {
+                        Flags = BuildOptimizationsFlags.UseTempDirectory;
+                    }
                     return;
             }
         }
