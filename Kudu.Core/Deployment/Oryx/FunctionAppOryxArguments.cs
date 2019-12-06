@@ -27,7 +27,7 @@ namespace Kudu.Core.Deployment.Oryx
             SkipKuduSync = Flags == BuildOptimizationsFlags.UseExpressBuild;
         }
 
-        public virtual string GenerateOryxBuildCommand(DeploymentContext context)
+        public virtual string GenerateOryxBuildCommand(DeploymentContext context, IEnvironment environment)
         {
             StringBuilder args = new StringBuilder();
 

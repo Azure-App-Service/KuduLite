@@ -134,7 +134,7 @@ namespace Kudu.Console
             IOperationLock hooksLock = new LockFile(hooksLockPath, traceFactory);
             
             IBuildPropertyProvider buildPropertyProvider = new BuildPropertyProvider();
-            ISiteBuilderFactory builderFactory = new SiteBuilderFactory(buildPropertyProvider, env);
+            ISiteBuilderFactory builderFactory = new SiteBuilderFactory(buildPropertyProvider, env, null);
             var logger = new ConsoleLogger();
 
             IRepository gitRepository;
@@ -179,6 +179,7 @@ namespace Kudu.Console
             {
                 try
                 {
+                    System.Console.WriteLine("deploymentTask");
                     // although the api is called DeployAsync, most expensive works are done synchronously.
                     // need to launch separate task to go async explicitly (consistent with FetchDeploymentManager)
                     var deploymentTask = Task.Run(async () => await deploymentManager.DeployAsync(gitRepository, changeSet: null, deployer: deployer, clean: false));
@@ -205,6 +206,7 @@ namespace Kudu.Console
                 }
                 catch (Exception e)
                 {
+                    System.Console.WriteLine(e.InnerException);
                     tracer.TraceError(e);
                     System.Console.Error.WriteLine(e.GetBaseException().Message);
                     System.Console.Error.WriteLine(Resources.Log_DeploymentError);
@@ -253,6 +255,7 @@ namespace Kudu.Console
                         }
                     }
 
+                    /*
                     Process _executingProcess = new Process()
                     {
                         StartInfo = new ProcessStartInfo
@@ -270,6 +273,7 @@ namespace Kudu.Console
                     _executingProcess.Start();
                     _executingProcess.WaitForExit();
                     System.Console.WriteLine("Deployment Rollout Started!");
+                    */
                     System.Console.WriteLine("Deployment Logs : '"+
                     env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" + 
                     gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");

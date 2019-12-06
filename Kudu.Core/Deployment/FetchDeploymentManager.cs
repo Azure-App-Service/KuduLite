@@ -349,7 +349,7 @@ namespace Kudu.Core.Deployment
 
                     var analytics = new Analytics(settings, new ServerConfiguration(), traceFactory);
                     var deploymentStatusManager = new DeploymentStatusManager(environment, analytics, statusLock);
-                    var siteBuilderFactory = new SiteBuilderFactory(new BuildPropertyProvider(), environment);
+                    var siteBuilderFactory = new SiteBuilderFactory(new BuildPropertyProvider(), environment, _httpContextAccessor);
                     var webHooksManager = new WebHooksManager(tracer, environment, hooksLock);
                     var deploymentManager = new DeploymentManager(siteBuilderFactory, environment, traceFactory, analytics, settings, deploymentStatusManager, deploymentLock, NullLogger.Instance, webHooksManager, _httpContextAccessor);
                     var fetchDeploymentManager = new FetchDeploymentManager(settings, environment, tracer, deploymentLock, deploymentManager, deploymentStatusManager, _httpContextAccessor);

@@ -6,9 +6,11 @@ using System.Linq;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
+using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
+using Microsoft.AspNetCore.Http;
 
 namespace Kudu.Core.Deployment.Generator
 {
@@ -17,10 +19,25 @@ namespace Kudu.Core.Deployment.Generator
         private readonly IEnvironment _environment;
         private readonly IBuildPropertyProvider _propertyProvider;
 
-        public SiteBuilderFactory(IBuildPropertyProvider propertyProvider, IEnvironment environment)
+        public SiteBuilderFactory(IBuildPropertyProvider propertyProvider, IEnvironment environment, IHttpContextAccessor accessor)
         {
             _propertyProvider = propertyProvider;
-            _environment = environment;
+            _environment = GetEnvironment(accessor, environment);
+        }
+
+        private IEnvironment GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
+        {
+            IEnvironment _environment;
+            if (!PostDeploymentHelper.IsK8Environment() || accessor==null)
+            {
+                _environment = environment;
+            }
+            else
+            {
+                var context = accessor.HttpContext;
+                _environment = (IEnvironment)context.Items["environment"];
+            }
+            return _environment;
         }
 
         public ISiteBuilder CreateBuilder(ITracer tracer, ILogger logger, IDeploymentSettingsManager settings, IRepository repository)

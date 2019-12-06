@@ -10,6 +10,7 @@ using Kudu.Core;
 using System.Text;
 using Kudu.Core.Helpers;
 using System.IO;
+using System.Net.Http.Headers;
 
 namespace Kudu.Services.Web
 {
@@ -61,7 +62,11 @@ namespace Kudu.Services.Web
                 try
                 {
                     int res = Int32.Parse(host.Substring(0, host.IndexOf(".")));
-                    appName = "test1";
+                    var authHeader = AuthenticationHeaderValue.Parse(context.Request.Headers["Authorization"]);
+                    var credentialBytes = Convert.FromBase64String(authHeader.Parameter);
+                    var credentials = Encoding.UTF8.GetString(credentialBytes).Split(new[] { ':' }, 2);
+                    var username = credentials[0];
+                    appName = username;
                 }
                 catch (FormatException)
                 {

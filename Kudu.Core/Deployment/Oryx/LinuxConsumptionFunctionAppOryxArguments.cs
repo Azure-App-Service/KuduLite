@@ -12,7 +12,7 @@ namespace Kudu.Core.Deployment.Oryx
             Flags = BuildOptimizationsFlags.Off;
         }
 
-        public override string GenerateOryxBuildCommand(DeploymentContext context)
+        public override string GenerateOryxBuildCommand(DeploymentContext context, IEnvironment environment)
         {
             StringBuilder args = new StringBuilder();
 

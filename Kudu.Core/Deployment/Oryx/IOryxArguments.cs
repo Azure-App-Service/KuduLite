@@ -12,7 +12,7 @@ namespace Kudu.Core.Deployment.Oryx
 
         bool SkipKuduSync { get; set; }
 
-        string GenerateOryxBuildCommand(DeploymentContext context);
+        string GenerateOryxBuildCommand(DeploymentContext context, IEnvironment environment);
 
         string Version { get; set; }
 

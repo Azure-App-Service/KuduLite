@@ -18,13 +18,13 @@ namespace Kudu.Core.Deployment.Generator
         public override Task Build(DeploymentContext context)
         {
             ILogger customLogger = context.Logger.Log("In K8 Basic Builder");
-            context.Logger.Log("RepositoryPath "+ _environment.RepositoryPath);
+            context.Logger.Log("RepositoryPath "+ _environment.ZipTempPath);
             context.Logger.Log("SiteRootPath " + _environment.SiteRootPath);
-            context.Logger.Log("CurrId "+ _environment.CurrId);
+            //context.Logger.Log("CurrId "+ _environment.);
             string src = _environment.RepositoryPath;
             string artifactDir = Path.Combine(_environment.SiteRootPath, "atifacts", _environment.CurrId);
             context.Logger.Log($"src : {src} dest {artifactDir}");
-            return Task.Factory.StartNew(() => PackageArtifactFromFolder(context, _environment.RepositoryPath, Path.Combine(_environment.SiteRootPath, "atifacts", _environment.CurrId),"artifact.zip" ,BuildArtifactType.Squashfs, 2));
+            return Task.Factory.StartNew(() => PackageArtifactFromFolder(context, _environment.ZipTempPath, Path.Combine(_environment.SiteRootPath, "atifacts", _environment.CurrId),"artifact.zip" ,BuildArtifactType.Squashfs, 2));
         }
 
 

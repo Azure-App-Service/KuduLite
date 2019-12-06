@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using k8s;
 using Kudu.Core.Deployment.Oryx;
+using Kudu.Core.Helpers;
 using LibGit2Sharp;
 
 namespace Kudu.Core.Deployment
@@ -109,8 +111,40 @@ namespace Kudu.Core.Deployment
             VirtualEnv = virtualEnvName;
         }
 
-        public string GenerateOryxBuildCommand(DeploymentContext context)
+        public string GenerateOryxBuildCommand(DeploymentContext context, IEnvironment environment)
         {
+            string appName = environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0];
+
+            if (PostDeploymentHelper.IsK8Environment())
+            {
+                var config = KubernetesClientConfiguration.InClusterConfig();
+                var client = new Kubernetes(config);
+
+                var deployment = client.ReadNamespacedDeployment(appName, "default");
+                foreach(var container in deployment.Spec.Template.Spec.Containers)
+                {
+                    if (container.Name.Equals(appName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        foreach(var env in container.Env)
+                        {
+                            if(env.Name.Equals("FRAMEWORK", StringComparison.OrdinalIgnoreCase))
+                            {
+                                Language = SupportedFrameworks.ParseLanguage(env.Value);
+                                if (Language == Framework.DotNETCore)
+                                {
+                                    // Skip kudu sync for .NET core builds
+                                    SkipKuduSync = true;
+                                }
+                            }
+                            else if(env.Name.Equals("FRAMEWORK_VERSION", StringComparison.OrdinalIgnoreCase))
+                            {
+                                Version = env.Value;
+                            }
+                        }
+                    }
+                }
+            }
+
             StringBuilder args = new StringBuilder();
             // Language
             switch (Language)

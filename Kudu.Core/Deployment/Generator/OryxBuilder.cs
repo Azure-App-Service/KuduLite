@@ -55,7 +55,7 @@ namespace Kudu.Core.Deployment.Generator
             {
                 PreOryxBuild(context);
 
-                string buildCommand = args.GenerateOryxBuildCommand(context);
+                string buildCommand = args.GenerateOryxBuildCommand(context, environment);
                 RunCommand(context, buildCommand, false, "Running oryx build...");
 
                 //
