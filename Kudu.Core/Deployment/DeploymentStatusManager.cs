@@ -36,7 +36,6 @@ namespace Kudu.Core.Deployment
 
         public IDeploymentStatusFile Open(string id, IEnvironment environment)
         {
-            Console.WriteLine("Open status file");
             return DeploymentStatusFile.Open(id, environment, _analytics, _statusLock);
         }
 

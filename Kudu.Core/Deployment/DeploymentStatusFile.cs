@@ -53,10 +53,8 @@ namespace Kudu.Core.Deployment
             return statusLock.LockOperation(() =>
             {
                 string path = Path.Combine(environment.DeploymentsPath, id, StatusFile);
-                Console.WriteLine("path : " + path);
                 if (!FileSystemHelpers.FileExists(path))
                 {
-                    Console.WriteLine("path null " );
                     return null;
                 }
 

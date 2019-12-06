@@ -179,7 +179,6 @@ namespace Kudu.Console
             {
                 try
                 {
-                    System.Console.WriteLine("deploymentTask");
                     // although the api is called DeployAsync, most expensive works are done synchronously.
                     // need to launch separate task to go async explicitly (consistent with FetchDeploymentManager)
                     var deploymentTask = Task.Run(async () => await deploymentManager.DeployAsync(gitRepository, changeSet: null, deployer: deployer, clean: false));
@@ -214,6 +213,7 @@ namespace Kudu.Console
                 }
                 finally
                 {
+                    /*
                     var config = KubernetesClientConfiguration.InClusterConfig();
                     var client = new Kubernetes(config);
                     var replicaSets = client.ListReplicaSetForAllNamespaces();

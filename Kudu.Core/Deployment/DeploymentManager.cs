@@ -601,7 +601,6 @@ namespace Kudu.Core.Deployment
 
             try
             {
-                Console.WriteLine("Build.");
                 logger = GetLogger(id);
                 ILogger innerLogger = logger.Log(Resources.Log_PreparingDeployment, TrimId(id));
 
