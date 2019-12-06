@@ -40,7 +40,7 @@ namespace Kudu.Services.Web.Services
                 var credentials = Encoding.UTF8.GetString(credentialBytes).Split(new[] { ':' }, 2);
                 var username = credentials[0];
                 var password = credentials[1];
-
+                Console.WriteLine($"password supplied: {password}");
                 if ((memCache.GetOrCreate(username, GetAuthenticationData)).Equals(password))
                 {
                     var claims = new[] {
@@ -67,7 +67,7 @@ namespace Kudu.Services.Web.Services
 
 
         public async Task<string> GetAuthenticationData(string username)
-        {            
+        {
             var config = KubernetesClientConfiguration.InClusterConfig();
             string password = "";
 
@@ -77,6 +77,7 @@ namespace Kudu.Services.Web.Services
             {
                 var secret = await client.ReadNamespacedSecretAsync($"{PublishingProfileSecretPrefix.ToLower()}{username.ToLower()}","k8seappspubpassword");
                 password = System.Text.Encoding.UTF8.GetString(secret.Data["password"]);
+                Console.WriteLine("Password retrieved: " + password);
             }
             catch (Microsoft.Rest.HttpOperationException httpOperationException)
             {
