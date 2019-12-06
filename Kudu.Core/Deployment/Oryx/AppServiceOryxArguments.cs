@@ -156,13 +156,13 @@ namespace Kudu.Core.Deployment
 
                 case Framework.NodeJs:
                     // Input/Output
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.RepositoryPath.Replace("repository","wwwroot"));
+                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath);
                     OryxArgumentsHelper.AddLanguage(args, "nodejs");
                     break;
 
                 case Framework.Python:
                     // Input/Output
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
+                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath);
                     OryxArgumentsHelper.AddLanguage(args, "python");
                     break;
 
