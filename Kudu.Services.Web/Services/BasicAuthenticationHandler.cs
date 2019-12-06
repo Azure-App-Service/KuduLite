@@ -75,7 +75,9 @@ namespace Kudu.Services.Web.Services
             var client = new Kubernetes(config);
             try
             {
+                Console.WriteLine("Retrieving Password: " + password);
                 var secret = await client.ReadNamespacedSecretAsync($"{PublishingProfileSecretPrefix.ToLower()}{username.ToLower()}","k8seappspubpassword");
+                Console.WriteLine("secret retrieved: ");
                 password = System.Text.Encoding.UTF8.GetString(secret.Data["password"]);
                 Console.WriteLine("Password retrieved: " + password);
             }
@@ -83,9 +85,9 @@ namespace Kudu.Services.Web.Services
             {
                 var phrase = httpOperationException.Response.ReasonPhrase;
                 var content = httpOperationException.Response.Content;
-                System.Console.WriteLine("K8 Client errror");
-                System.Console.WriteLine(phrase);
-                System.Console.WriteLine(content);
+                Console.WriteLine("K8 Client errror");
+                Console.WriteLine(phrase);
+                Console.WriteLine(content);
             }
             return password;
         }

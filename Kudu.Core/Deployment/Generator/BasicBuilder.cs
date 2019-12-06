@@ -22,18 +22,19 @@ namespace Kudu.Core.Deployment.Generator
             context.Logger.Log("RepositoryPath "+ _environment.ZipTempPath);
             context.Logger.Log("SiteRootPath " + _environment.SiteRootPath);
             //context.Logger.Log("CurrId "+ _environment.);
-            string src = _environment.RepositoryPath;
+            string src = _environment.ZipTempPath;
             string artifactDir = Path.Combine(_environment.SiteRootPath, "artifacts", _environment.CurrId);
-            FileSystemHelpers.EnsureDirectory(Path.Combine(_environment.SiteRootPath, "artifacts"));
+            FileSystemHelpers.EnsureDirectory(Path.Combine(_environment.ZipTempPath, "artifacts"));
             FileSystemHelpers.EnsureDirectory(artifactDir);
             context.Logger.Log($"src : {src} dest {artifactDir}");
-            return Task.Factory.StartNew(() => PackageArtifactFromFolder(context, _environment.ZipTempPath, Path.Combine(_environment.SiteRootPath, "atifacts", _environment.CurrId),"artifact.zip" ,BuildArtifactType.Squashfs, 2));
+            return Task.Factory.StartNew(() => PackageArtifactFromFolder(context, Path.Combine(_environment.ZipTempPath, "extracted"), Path.Combine(_environment.SiteRootPath, "artifacts", _environment.CurrId),"artifact.zip" ,BuildArtifactType.Squashfs, 2));
         }
 
 
         private string PackageArtifactFromFolder(DeploymentContext context, string srcDirectory, string artifactDirectory, string artifactFilename, BuildArtifactType artifactType, int numBuildArtifacts = 0)
         {
             context.Logger.Log($"Writing the artifacts to {artifactType.ToString()} file at {artifactDirectory}");
+            FileSystemHelpers.EnsureDirectory(artifactDirectory);
             string file = Path.Combine(artifactDirectory, artifactFilename);
             var exe = ExternalCommandFactory.BuildExternalCommandExecutable(srcDirectory, artifactDirectory, context.Logger);
             try
