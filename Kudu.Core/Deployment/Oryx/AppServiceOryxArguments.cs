@@ -250,15 +250,6 @@ namespace Kudu.Core.Deployment
 
                 case BuildOptimizationsFlags.UseExpressBuild:
                     OryxArgumentsHelper.AddTempDirectoryOption(args, context.BuildTempPath);
-                    if (Language == Framework.NodeJs)
-                    {
-                        OryxArgumentsHelper.AddNodeCompressOption(args, "zip");
-                    }
-                    else if (Language == Framework.Python)
-                    {
-                        OryxArgumentsHelper.AddPythonCompressOption(args, "zip");
-                    }
-
                     break;
 
                 case BuildOptimizationsFlags.UseTempDirectory:
