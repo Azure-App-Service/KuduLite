@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Kudu.Contracts.Infrastructure;
 using Kudu.Core.Deployment.Oryx;
 
 namespace Kudu.Core.Deployment
@@ -33,8 +34,8 @@ namespace Kudu.Core.Deployment
                 return;
             }
 
-            Language = SupportedFrameworks.ParseLanguage(framework);
-            if (Language == Framework.None)
+            string enableOryxBuild = System.Environment.GetEnvironmentVariable("ENABLE_ORYX_BUILD");
+            if (string.IsNullOrEmpty(enableOryxBuild) || !StringUtils.IsTrueLike(enableOryxBuild))
             {
                 return;
             }
@@ -53,9 +54,6 @@ namespace Kudu.Core.Deployment
         {
             switch(Language)
             {
-                case Framework.None:
-                    return;
-
                 case Framework.Python:
                     SetVirtualEnvironment();
                     return;
@@ -73,6 +71,9 @@ namespace Kudu.Core.Deployment
                     return;
 
                 case Framework.PHP:
+                    return;
+
+                default:
                     return;
             }
         }
@@ -102,9 +103,6 @@ namespace Kudu.Core.Deployment
             // Language
             switch (Language)
             {
-                case Framework.None:
-                    break;
-
                 case Framework.NodeJs:
                     args.AppendFormat(" --platform nodejs");
                     break;
@@ -119,6 +117,9 @@ namespace Kudu.Core.Deployment
 
                 case Framework.PHP:
                     args.AppendFormat(" --platform php");
+                    break;
+
+                default:
                     break;
             }
 

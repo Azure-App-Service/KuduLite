@@ -6,6 +6,7 @@ using System.Linq;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
+using Kudu.Core.Deployment.Oryx;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
@@ -178,33 +179,59 @@ namespace Kudu.Core.Deployment.Generator
 
         private ISiteBuilder ResolveNonAspProject(string repositoryRoot, string projectPath, IDeploymentSettingsManager perDeploymentSettings)
         {
-            string sourceProjectPath = projectPath ?? repositoryRoot;
-            if (FunctionAppHelper.LooksLikeFunctionApp())
-            {
-                return new FunctionBasicBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
-            }
-            else if (IsNodeSite(sourceProjectPath))
-            {
-                return new NodeSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
-            }
-            else if (IsPythonSite(sourceProjectPath))
-            {
-                return new PythonSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
-            }
-            else if (IsGoSite(sourceProjectPath))
-            {
-                return new GoSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
-            }
-            else if (IsRubySite(sourceProjectPath))
-            {
-                return new RubySiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
-            }
-            else if (IsPHPSite(sourceProjectPath))
-            {
-                return new PHPSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
-            }
+            // get framework from LinuxFxVersion
+            string strFramework = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkSetting);
+            Framework framework = SupportedFrameworks.ParseLanguage(strFramework);
 
-            return new BasicBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
+            string sourceProjectPath = projectPath ?? repositoryRoot;
+            switch (framework)
+            {
+                case Framework.NodeJs:
+                    return new NodeSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
+
+                case Framework.Python:
+                    return new PythonSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
+
+                case Framework.Go:
+                    return new GoSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
+
+                case Framework.Ruby:
+                    return new RubySiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
+                    
+                case Framework.PHP:
+                    return new PHPSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
+
+                default:
+                    // sniff the files for hints
+                    if (FunctionAppHelper.LooksLikeFunctionApp())
+                    {
+                        return new FunctionBasicBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
+                    }
+                    else if (IsRubySite(sourceProjectPath))
+                    {
+                        return new RubySiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
+                    }
+                    else if (IsNodeSite(sourceProjectPath))
+                    {
+                        return new NodeSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
+                    }
+                    else if (IsPythonSite(sourceProjectPath))
+                    {
+                        return new PythonSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
+                    }
+                    else if (IsGoSite(sourceProjectPath))
+                    {
+                        return new GoSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
+                    }
+                    else if (IsPHPSite(sourceProjectPath))
+                    {
+                        return new PHPSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
+                    }
+                    else
+                    {
+                        return new BasicBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
+                    }
+            }
         }
 
         private static bool IsGoSite(string projectPath)

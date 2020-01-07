@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Kudu.Contracts.Infrastructure;
 using Kudu.Core.Deployment.Oryx;
 using LibGit2Sharp;
 
@@ -35,8 +36,8 @@ namespace Kudu.Core.Deployment
                 return;
             }
 
-            Language = SupportedFrameworks.ParseLanguage(framework);
-            if (Language == Framework.None)
+            string enableOryxBuild = System.Environment.GetEnvironmentVariable("ENABLE_ORYX_BUILD");
+            if (string.IsNullOrEmpty(enableOryxBuild) || !StringUtils.IsTrueLike(enableOryxBuild))
             {
                 return;
             }
@@ -57,9 +58,6 @@ namespace Kudu.Core.Deployment
         {
             switch(Language)
             {
-                case Framework.None:
-                    return;
-
                 case Framework.Python:
                     SetVirtualEnvironment();
                     // For python, enable compress option by default
@@ -92,6 +90,9 @@ namespace Kudu.Core.Deployment
                         Flags = BuildOptimizationsFlags.UseTempDirectory;
                     }
                     return;
+
+                default:
+                    return;
             }
         }
 
@@ -116,18 +117,6 @@ namespace Kudu.Core.Deployment
             // Language
             switch (Language)
             {
-                case Framework.None:
-                    // Input/Output
-                    if (Flags == BuildOptimizationsFlags.DeploymentV2)
-                    {
-                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath);
-                    }
-                    else
-                    {
-                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
-                    }
-                    break;
-
                 case Framework.NodeJs:
                     // Input/Output
                     if (Flags == BuildOptimizationsFlags.DeploymentV2)
@@ -180,13 +169,23 @@ namespace Kudu.Core.Deployment
                     }
                     OryxArgumentsHelper.AddLanguage(args, "php");
                     break;
+
+                default:
+                    // Input/Output
+                    if (Flags == BuildOptimizationsFlags.DeploymentV2)
+                    {
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath);
+                    }
+                    else
+                    {
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
+                    }
+                    break;
             }
 
             // Version
             switch (Language)
             {
-                case Framework.None:
-                    break;
                 case Framework.PHP:
                     OryxArgumentsHelper.AddLanguageVersion(args, Version);
                     break;

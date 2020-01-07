@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Kudu.Core.Deployment.Oryx
 {
@@ -8,7 +9,9 @@ namespace Kudu.Core.Deployment.Oryx
         NodeJs,
         Python,
         DotNETCore,
-        PHP
+        PHP,
+        Go,
+        Ruby
     }
 
     public class SupportedFrameworks
@@ -30,6 +33,14 @@ namespace Kudu.Core.Deployment.Oryx
             else if (value.StartsWith("PHP", StringComparison.OrdinalIgnoreCase))
             {
                 return Framework.PHP;
+            }
+            else if (value.StartsWith("GO", StringComparison.OrdinalIgnoreCase))
+            {
+                return Framework.Go;
+            }
+            else if (value.StartsWith("RUBY", StringComparison.OrdinalIgnoreCase))
+            {
+                return Framework.Ruby;
             }
 
             return Framework.None;
