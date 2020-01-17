@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text;
+using Kudu.Contracts.Settings;
 using Kudu.Core.Deployment.Oryx;
-using LibGit2Sharp;
 
 namespace Kudu.Core.Deployment
 {
@@ -20,7 +19,7 @@ namespace Kudu.Core.Deployment
 
         public string VirtualEnv { get; set; }
 
-        public AppServiceOryxArguments()
+        public AppServiceOryxArguments(IDeploymentSettingsManager settingsManager)
         {
             RunOryxBuild = false;
             SkipKuduSync = false;
@@ -28,6 +27,12 @@ namespace Kudu.Core.Deployment
             string framework = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkSetting);
             string version = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkVersionSetting);
             string buildFlags = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.BuildFlagsSetting);
+
+            // Override build flags if publish artifacts enabled
+            if(settingsManager.ShouldPublishArtifacts())
+            {
+                buildFlags = "DeploymentV2";
+            }
 
             if (string.IsNullOrEmpty(framework) ||
                 string.IsNullOrEmpty(version))

@@ -211,6 +211,8 @@ namespace Kudu.Core.Deployment
 
                         ILogger logger = GetLogger(changeSet.Id);
 
+                        // TODO: Save Artifacts Zip at the correct path
+
                         if (needFileUpdate)
                         {
                             using (tracer.Step("Updating to specific changeset"))
@@ -628,11 +630,16 @@ namespace Kudu.Core.Deployment
                     }
                 }
 
+                if(deploymentInfo.IsPublishRequest)
+                {
+                    perDeploymentSettings.SetValue(SettingsKeys.ShouldPublishArtifacts, "true");
+                }
+
                 try
                 {
                     using (tracer.Step("Determining deployment builder"))
                     {
-                        builder = _builderFactory.CreateBuilder(tracer, innerLogger, perDeploymentSettings, repository);
+                        builder = _builderFactory.CreateBuilder(tracer, innerLogger, perDeploymentSettings, repository, deploymentInfo);
                         deploymentAnalytics.ProjectType = builder.ProjectType;
                         tracer.Trace("Builder is {0}", builder.GetType().Name);
                     }

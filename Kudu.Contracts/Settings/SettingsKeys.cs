@@ -46,6 +46,7 @@
         // To make it work for Windows apps, the app-setting WEBSITE_RECYCLE_PREVIEW_ENABLED=1 needs to be defined.
         public const string RestartAppAfterDeployment = "SCM_RESTART_APP_CONTAINER_AFTER_DEPLOYMENT";
 
+        public const string ShouldPublishArtifacts = "SCM_ENABLE_PUBLISH_ARTIFACTS";
         public const string DoBuildDuringDeployment = "SCM_DO_BUILD_DURING_DEPLOYMENT";
         public const string RunFromZipOld = "WEBSITE_RUN_FROM_ZIP";  // Old name, will eventually go away
         public const string RunFromZip = "WEBSITE_RUN_FROM_PACKAGE";

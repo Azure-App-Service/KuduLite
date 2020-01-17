@@ -13,16 +13,18 @@ namespace Kudu.Core.Deployment.Generator
         public override string ProjectType => "Oryx-Build";
 
         IEnvironment environment;
-        IDeploymentSettingsManager settings;
+        IDeploymentSettingsManager settingsManager;
         IBuildPropertyProvider propertyProvider;
+        DeploymentInfoBase deploymentInfo;
         string sourcePath;
 
-        public OryxBuilder(IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string sourcePath)
-            : base(environment, settings, propertyProvider, sourcePath)
+        public OryxBuilder(IEnvironment environment, IDeploymentSettingsManager settingsManager, IBuildPropertyProvider propertyProvider, DeploymentInfoBase deploymentInfo, string sourcePath)
+            : base(environment, settingsManager, propertyProvider, sourcePath)
         {
             this.environment = environment;
-            this.settings = settings;
+            this.settingsManager = settingsManager;
             this.propertyProvider = propertyProvider;
+            this.deploymentInfo = deploymentInfo;
             this.sourcePath = sourcePath;
         }
 
@@ -36,7 +38,7 @@ namespace Kudu.Core.Deployment.Generator
             context.Logger.Log("Repository path is "+context.RepositoryPath);
 
             // Initialize Oryx Args.
-            IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(environment);
+            IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(environment, settingsManager);
 
             if (!args.SkipKuduSync)
             {
@@ -60,7 +62,6 @@ namespace Kudu.Core.Deployment.Generator
                 string buildCommand = args.GenerateOryxBuildCommand(context);
                 RunCommand(context, buildCommand, false, "Running oryx build...");
 
-                //
                 // Run express build setups if needed
                 if (args.Flags == BuildOptimizationsFlags.UseExpressBuild)
                 {
@@ -70,10 +71,12 @@ namespace Kudu.Core.Deployment.Generator
                     }
                     else
                     {
-                        ExpressBuilder appServiceExpressBuilder = new ExpressBuilder(environment, settings, propertyProvider, sourcePath);
+                        ExpressBuilder appServiceExpressBuilder = new ExpressBuilder(environment, settingsManager, propertyProvider, sourcePath);
                         appServiceExpressBuilder.SetupExpressBuilderArtifacts(context.OutputPath, context, args);
                     }
-                }else if(args.Flags == BuildOptimizationsFlags.DeploymentV2)
+                }
+                // Publish API with RFP follows DeploymentV2 Format
+                else if(args.Flags == BuildOptimizationsFlags.DeploymentV2 || (deploymentInfo.IsPublishRequest && deploymentInfo.ShouldRunArtifactFromPackage))
                 {
                     SetupAppServiceArtifacts(context);
                 }
@@ -97,13 +100,9 @@ namespace Kudu.Core.Deployment.Generator
 
         private void SetupAppServiceArtifacts(DeploymentContext context)
         {
-            string sitePackages = "/home/data/SitePackages";
-            string deploymentsPath = $"/home/site/deployments/";
-            string artifactPath = $"/home/site/deployments/{context.CommitId}/artifact";
-            string packageNameFile = Path.Combine(sitePackages, "packagename.txt");
-            string packagePathFile = Path.Combine(sitePackages, "packagepath.txt");
+            string deploymentsPath = environment.DeploymentsPath;
+            string artifactPath = Path.Combine(deploymentsPath,context.CommitId,"artifact");
 
-            FileSystemHelpers.EnsureDirectory(sitePackages);
             FileSystemHelpers.EnsureDirectory(artifactPath);
 
             string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
@@ -123,17 +122,14 @@ namespace Kudu.Core.Deployment.Generator
                 throw;
             }
 
-            // Gotta remove the old zips
-            DeploymentHelper.PurgeOldDeploymentsIfNecessary(deploymentsPath, context.Tracer, totalAllowedDeployments: 10);
-
-            File.WriteAllText(packageNameFile, zipAppName);
-            File.WriteAllText(packagePathFile, artifactPath);
+            // Update the packagename file to ensure latest app restart loads the new zip file
+            DeploymentHelper.UpdateLatestAndPurgeOldArtifacts(environment, zipAppName, artifactPath, context.Tracer);
         }
 
 
         private void SetupFunctionAppExpressArtifacts(DeploymentContext context)
         {
-            string sitePackages = "/home/data/SitePackages";
+            string sitePackages = environment.SitePackagesPath;
             string packageNameFile = Path.Combine(sitePackages, "packagename.txt");
             string packagePathFile = Path.Combine(sitePackages, "packagepath.txt");
 
@@ -155,7 +151,7 @@ namespace Kudu.Core.Deployment.Generator
                 throw;
             }
 
-            // Gotta remove the old zips
+            // Purge old zips
             DeploymentHelper.PurgeBuildArtifactsIfNecessary(sitePackages, BuildArtifactType.Zip, context.Tracer, totalAllowedFiles: 2);
 
             File.WriteAllText(packageNameFile, zipAppName);

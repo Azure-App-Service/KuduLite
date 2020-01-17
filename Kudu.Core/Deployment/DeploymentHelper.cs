@@ -78,6 +78,29 @@ namespace Kudu.Core.Deployment
             }
         }
 
+        /// <summary>
+        /// Updates the RFP Manager to account for the latest zip artifact
+        /// </summary>
+        /// <param name="packageName">name of the zip file published via zip or as a result of the oryx build</param>
+        /// <param name="artifactPath">path where package name is stored eg: /home/site/deployments/<guid>/artifact</guid></param>
+        public static void UpdateLatestAndPurgeOldArtifacts(IEnvironment environment, 
+            string packageName, 
+            string artifactPath,
+            ITracer tracer,
+            int maxAllowedZips = 2)
+        {
+            string sitePackages = environment.SitePackagesPath;
+            FileSystemHelpers.EnsureDirectory(sitePackages);
+            string packageNameFile = Path.Combine(sitePackages, "packagename.txt");
+            string packagePathFile = Path.Combine(sitePackages, "packagepath.txt");
+
+            // Purge Old Artifacts, TODO change the logic to work with deployments/artifact dir
+            DeploymentHelper.PurgeBuildArtifactsIfNecessary(sitePackages, BuildArtifactType.Zip, tracer, totalAllowedFiles: maxAllowedZips);
+
+            File.WriteAllText(packageNameFile, packageName);
+            File.WriteAllText(packagePathFile, artifactPath);
+        }
+
         public static void PurgeBuildArtifactsIfNecessary(string sitePackagesPath, BuildArtifactType fileExtension, ITracer tracer, int totalAllowedFiles)
         {
             string extension = fileExtension.ToString().ToLowerInvariant();

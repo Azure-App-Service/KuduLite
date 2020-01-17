@@ -1,10 +1,11 @@
-﻿using Kudu.Core.Infrastructure;
+﻿using Kudu.Contracts.Settings;
+using Kudu.Core.Infrastructure;
 
 namespace Kudu.Core.Deployment.Oryx
 {
     public class OryxArgumentsFactory
     {
-        public static IOryxArguments CreateOryxArguments(IEnvironment env)
+        public static IOryxArguments CreateOryxArguments(IEnvironment env, IDeploymentSettingsManager settingsManager)
         {
             if (FunctionAppHelper.LooksLikeFunctionApp())
             {
@@ -15,7 +16,7 @@ namespace Kudu.Core.Deployment.Oryx
                     return new FunctionAppOryxArguments();
                 }
             }
-            return new AppServiceOryxArguments();
+            return new AppServiceOryxArguments(settingsManager);
         }
     }
 }

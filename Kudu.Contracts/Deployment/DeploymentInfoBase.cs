@@ -76,5 +76,14 @@ namespace Kudu.Core.Deployment
         // If doWarmUp is set to true, the after Linux Consumption function app deployment,
         // will initiate a GET request to http://appname.azurewebsites.net
         public bool DoWarmUp { get; set; }
+
+        // Used to set Publish Endpoint context
+        public bool IsPublishRequest { get; set; }
+
+        // Used to set Publish Endpoint context
+        public bool ShouldRunArtifactFromPackage { get; set; }
+
+        // Used to set Publish Endpoint context
+        public bool ShouldBuildArtifact { get; set; }
     }
 }

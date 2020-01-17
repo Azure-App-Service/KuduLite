@@ -23,7 +23,7 @@ namespace Kudu.Core.Deployment.Generator
             _environment = environment;
         }
 
-        public ISiteBuilder CreateBuilder(ITracer tracer, ILogger logger, IDeploymentSettingsManager settings, IRepository repository)
+        public ISiteBuilder CreateBuilder(ITracer tracer, ILogger logger, IDeploymentSettingsManager settings, IRepository repository, DeploymentInfoBase deploymentInfo)
         {
             string repositoryRoot = repository.RepositoryPath;
 
@@ -53,6 +53,19 @@ namespace Kudu.Core.Deployment.Generator
                 targetProjectPath = Path.GetFullPath(Path.Combine(repositoryRoot, targetProjectPath.TrimStart('/', '\\')));
             }
 
+            // Gets precidence over RFP App Setting, 
+            // follows the publish artifact format
+            // and puts artifact in /home/site/deployments/<guid>/artifact,
+            // sets up RFP manager
+            if (!settings.DoBuildDuringDeployment() 
+                && deploymentInfo.IsPublishRequest 
+                && deploymentInfo.ShouldRunArtifactFromPackage)
+            {
+                var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
+                // Also ensures setting up RFP if needed
+                return new DeploymentV2BasicBuilder(_environment, settings, _propertyProvider, deploymentInfo, repository, logger, tracer, repositoryRoot, projectPath);
+            }
+
             if (settings.RunFromLocalZip())
             {
                 return new RunFromZipSiteBuilder();
@@ -70,12 +83,12 @@ namespace Kudu.Core.Deployment.Generator
             {
                 if (StringUtils.IsTrueLike(enableOryxBuild))
                 {
-                    return new OryxBuilder(_environment, settings, _propertyProvider, repositoryRoot);
+                    return new OryxBuilder(_environment, settings, _propertyProvider, deploymentInfo, repositoryRoot);
                 }
             }
             else if (FunctionAppHelper.LooksLikeFunctionApp())
             {
-                return new OryxBuilder(_environment, settings, _propertyProvider, repositoryRoot);
+                return new OryxBuilder(_environment, settings, _propertyProvider, deploymentInfo, repositoryRoot);
             }
 
             if (!String.IsNullOrEmpty(targetProjectPath))
