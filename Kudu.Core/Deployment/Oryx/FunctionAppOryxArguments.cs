@@ -174,7 +174,7 @@ namespace Kudu.Core.Deployment.Oryx
             try
             {
                 var imageTag = imageName.Substring(imageName.LastIndexOf(':') + 1);
-                var versionRegex = new Regex(@"^[0-9]+\.[0-9]+\-[A-Za-z]+([0-9].*)\-appservice$");
+                var versionRegex = new Regex(@"^[0-9\.]+\-[A-Za-z]+([0-9].*)\-appservice$");
                 var versionMatch = versionRegex.Match(imageTag);
                 var version = versionMatch?.Groups[1]?.Value;
                 if (!string.IsNullOrEmpty(version))
