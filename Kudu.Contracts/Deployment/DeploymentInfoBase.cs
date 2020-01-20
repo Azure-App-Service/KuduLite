@@ -76,5 +76,9 @@ namespace Kudu.Core.Deployment
         // If DoSyncTriggers is set to true, the after Linux Consumption function app deployment,
         // will initiate a POST request to http://appname.azurewebsites.net/admin/host/synctriggers
         public bool DoSyncTriggers { get; set; }
+
+        // This config is for Linux Consumption function app only
+        // Allow remote build even when WEBSITE_RUN_FROM_PACKAGE is set to a Url (RunFromRemoteZip)
+        public bool ForceRemoteBuild { get; set; }
     }
 }
