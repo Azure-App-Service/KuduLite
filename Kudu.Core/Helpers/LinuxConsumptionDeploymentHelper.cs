@@ -26,7 +26,7 @@ namespace Kudu.Core.Helpers
             IEnvironment env,
             IDeploymentSettingsManager settings,
             DeploymentContext context,
-            bool shouldWarmUp)
+            bool shouldSyncTriggers)
         {
             string sas = settings.GetValue(Constants.ScmRunFromPackage) ?? System.Environment.GetEnvironmentVariable(Constants.ScmRunFromPackage);
 
@@ -50,10 +50,10 @@ namespace Kudu.Core.Helpers
             await RemoveLinuxConsumptionFunctionAppWorkers(context);
 
             // Invoke a warmup call to the main function site
-            if (shouldWarmUp)
+            if (shouldSyncTriggers)
             {
                 await Task.Delay(TimeSpan.FromSeconds(5));
-                await WarmUpFunctionAppSite(context);
+                await FunctionHostSyncTriggersAsync(context);
             }
         }
 
@@ -243,21 +243,21 @@ namespace Kudu.Core.Helpers
             }
         }
 
-        private static async Task WarmUpFunctionAppSite(DeploymentContext context)
+        private static async Task FunctionHostSyncTriggersAsync(DeploymentContext context)
         {
             string webSiteHostName = System.Environment.GetEnvironmentVariable(SettingsKeys.WebsiteHostname);
 
-            context.Logger.Log($"Warming up your function app {webSiteHostName}");
+            context.Logger.Log($"Synchronizing function triggers for your function app {webSiteHostName}");
 
             try
             {
                 await OperationManager.AttemptAsync(async () =>
                 {
-                    await PostDeploymentHelper.WarmUpSiteAsync(webSiteHostName);
+                    await PostDeploymentHelper.PerformFunctionHostSyncTriggersAsync(webSiteHostName);
                 }, retries: 3, delayBeforeRetry: 2000);
             } catch (HttpRequestException hre)
             {
-                context.Logger.Log($"Warm up function site failed due to {hre.Message}");
+                context.Logger.Log($"Function triggers synchronization failed due to {hre.Message}");
             }
         }
 

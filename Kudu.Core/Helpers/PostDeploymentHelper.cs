@@ -12,11 +12,13 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Kudu;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Deployment;
 using Kudu.Core.Infrastructure;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NuGet.Packaging.Signing;
 
 namespace Kudu.Core.Helpers
 {
@@ -403,9 +405,7 @@ namespace Kudu.Core.Helpers
         public static async Task RemoveAllWorkersAsync(string websiteHostname, string sitename)
         {
             // Generate URL encoded auth token
-            string websiteAuthEncryptionKey = System.Environment.GetEnvironmentVariable(SettingsKeys.AuthEncryptionKey);
-            DateTime expiry = DateTime.UtcNow.AddMinutes(5);
-            string authToken = SimpleWebTokenHelper.CreateToken(expiry, websiteAuthEncryptionKey.ToKeyBytes());
+            string authToken = GetWebsiteAuthToken();
             string authTokenEncoded = HttpUtility.UrlEncode(authToken);
 
             // Generate RemoveAllWorker request URI
@@ -421,8 +421,8 @@ namespace Kudu.Core.Helpers
             using (var client = HttpClientFactory())
             using (var response = await client.GetAsync(baseUri))
             {
-                response.EnsureSuccessStatusCode();
                 Trace(TraceEventType.Information, "RemoveAllWorkers, statusCode = {0}", response.StatusCode);
+                response.EnsureSuccessStatusCode();
             }
             
             return;
@@ -433,24 +433,34 @@ namespace Kudu.Core.Helpers
         /// </summary>
         /// <param name="websiteHostname">sitename.azurewebsites.net</param>
         /// <returns></returns>
-        public static async Task WarmUpSiteAsync(string websiteHostname)
+        public static async Task PerformFunctionHostSyncTriggersAsync(string websiteHostname)
         {
-            Uri baseUri = null;
-            if (!Uri.TryCreate($"http://{websiteHostname}", UriKind.Absolute, out baseUri))
+            if (!Uri.TryCreate($"http://{websiteHostname}/admin/host/synctriggers", UriKind.Absolute, out Uri baseUri))
             {
-                throw new ArgumentException($"Malformed URI is used in WarmUpSite");
+                throw new ArgumentException($"Malformed URI is used in function host sync trigger");
             }
-            Trace(TraceEventType.Information, "Calling WarmUpSite to warm up your application");
+            Trace(TraceEventType.Information, $"Calling function host synctrigger {websiteHostname}/admin/host/synctriggers");
 
-            // Initiate GET request
+            // Initiate POST request
             using (var client = HttpClientFactory())
-            using (var response = await client.GetAsync(baseUri))
+            using (var request = new HttpRequestMessage(HttpMethod.Post, baseUri))
             {
-                response.EnsureSuccessStatusCode();
-                Trace(TraceEventType.Information, "WarmUpSite, statusCode = {0}", response.StatusCode);
+                request.Headers.Add(Constants.SiteRestrictedToken, GetWebsiteAuthToken());
+                using (var response = await client.SendAsync(request))
+                {
+                    Trace(TraceEventType.Information, "FunctionHostSyncTrigger, statusCode = {0}", response.StatusCode);
+                    response.EnsureSuccessStatusCode();
+                }
             }
 
             return;
+        }
+
+        private static string GetWebsiteAuthToken()
+        {
+            string websiteAuthEncryptionKey = System.Environment.GetEnvironmentVariable(SettingsKeys.AuthEncryptionKey);
+            DateTime expiry = DateTime.UtcNow.AddMinutes(5);
+            return SimpleWebTokenHelper.CreateToken(expiry, websiteAuthEncryptionKey.ToKeyBytes());
         }
 
         private static void VerifyEnvironments()

@@ -73,8 +73,8 @@ namespace Kudu.Core.Deployment
         // files into a separate folders and run sync triggers from there.
         public string SyncFunctionsTriggersPath { get; set; } = null;
 
-        // If doWarmUp is set to true, the after Linux Consumption function app deployment,
-        // will initiate a GET request to http://appname.azurewebsites.net
-        public bool DoWarmUp { get; set; }
+        // If DoSyncTriggers is set to true, the after Linux Consumption function app deployment,
+        // will initiate a POST request to http://appname.azurewebsites.net/admin/host/synctriggers
+        public bool DoSyncTriggers { get; set; }
     }
 }
