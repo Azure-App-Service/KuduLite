@@ -6,7 +6,6 @@ using System.Linq;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
-using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.K8SE;
 using Kudu.Core.SourceControl;
@@ -76,11 +75,8 @@ namespace Kudu.Core.Deployment.Generator
                 return new RunFromZipSiteBuilder();
             }
 
-            tracer.Trace("Checking if build enabled: ");
-
             if (!settings.DoBuildDuringDeployment())
             {
-                tracer.Trace("Nope build is off");
                 var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
                 return new BasicBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);
             }

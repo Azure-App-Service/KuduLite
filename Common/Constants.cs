@@ -84,13 +84,6 @@ namespace Kudu
             get { return _maxAllowedExectionTime; }
         }
 
-        // K8SE Constants
-        public const string KubernetesConfigKind = "Config";
-        public const string KubernetesAppServiceApiGroup = "k8se.microsoft.com";
-        public const string KubernetesAppServiceApiVersion = "v1alpha1";
-        public static string KubernetesAppServiceAppPlural = "apps";
-        public static string KubernetesAppServiceAppNamespace = "k8se-apps";
-
         public const string ApplicationHostXdtFileName = "applicationHost.xdt";
         public const string ScmApplicationHostXdtFileName = "scmApplicationHost.xdt";
 
@@ -160,6 +153,6 @@ namespace Kudu
         public const string LinuxLogEventStreamName = "MS_KUDU_LOGS";
         public const string WebSiteHomeStampName = "WEBSITE_HOME_STAMPNAME";
         public const string WebSiteStampDeploymentId = "WEBSITE_STAMP_DEPLOYMENT_ID";
-        public const string KubernetesBuildService = "K8_BUILD_SERVICE";
+        public const string IsK8SEEnvironment = "K8SE_BUILD_SERVICE";
     }
 }

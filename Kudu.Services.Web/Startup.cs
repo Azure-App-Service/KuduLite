@@ -352,10 +352,12 @@ namespace Kudu.Services.Web
                 i.Request.Path.Value.StartsWith("/api/provision", StringComparison.OrdinalIgnoreCase));
 
             app.UseTraceMiddleware();
+
             if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 app.UseKubeMiddleware();
             }
+
             app.MapWhen(containsRelativeProvisionPath, application => application.Run(async context =>
             {
                 FileSystemHelpers.EnsureDirectory("/home/apps/"+context.Request.Path.Value.Replace("/api/provision/", ""));

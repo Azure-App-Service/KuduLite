@@ -277,7 +277,7 @@ namespace Kudu.Core.Deployment
                     {
                         if (K8SEDeploymentHelper.IsK8SEEnvironment())
                         {
-                            logger.Log(Resources.Log_TriggeringK8SERestart);
+                            //logger.Log(Resources.Log_TriggeringK8SERestart);
                         }
                         else
                         {
@@ -329,7 +329,6 @@ namespace Kudu.Core.Deployment
                         tracer.TraceError(exception);
                         throw new DeploymentFailedException(exception);
                     }
-
             }
         }
 
@@ -716,6 +715,7 @@ namespace Kudu.Core.Deployment
                     try
                     {
                         await builder.Build(context);
+
                         builder.PostBuild(context);
 
                         if (FunctionAppHelper.LooksLikeFunctionApp() && _environment.IsOnLinuxConsumption)

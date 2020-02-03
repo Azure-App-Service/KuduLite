@@ -1,15 +1,9 @@
-﻿using k8s;
-using Kudu.Contracts.K8SE;
-using Kudu.Contracts.Tracing;
+﻿using Kudu.Contracts.Tracing;
 using Kudu.Core.Deployment;
-using Kudu.Core.Deployment.Generator;
-using Kudu.Core.Infrastructure;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Rest;
 using System;
-using System.IO;
-using System.Net;
-using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Text;
 
 namespace Kudu.Core.K8SE
 {
@@ -17,68 +11,74 @@ namespace Kudu.Core.K8SE
     {
 
         public static ITracer _tracer;
-        private static Kubernetes _client;
-
-        private static Kubernetes _k8seClient
-        {
-            get
-            {
-                if (_client == null)
-                {
-
-                    var config = KubernetesClientConfiguration.InClusterConfig();
-                    _client = new Kubernetes(config);
-                }
-                return _client;
-            }
-        }
+        public static ILogger _logger;
 
         // K8SE_BUILD_SERVICE not null or empty
         public static bool IsK8SEEnvironment()
         {
-            return !String.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.KubernetesBuildService));
+            return !String.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.IsK8SEEnvironment));
         }
 
+        /// <summary>
+        /// Calls into buildctl to retrieve BuildVersion of
+        /// the K8SE App
+        /// </summary>
+        /// <param name="appName"></param>
+        /// <returns></returns>
         public static string GetLinuxFxVersion(string appName)
         {
-            K8SEApp app = GetK8SEApp(appName);
-            return $"{app.Spec.codeAppSpec.Framework}|{app.Spec.codeAppSpec.FrameworkVersion}";
+            var cmd = new StringBuilder();
+            BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "get");
+            BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+            BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "linuxFxVersion");
+            return RunBuildCtlCommand(cmd.ToString(), "Running buildctl to retrieve framework info...");
         }
 
-        public static bool UpdateBuildNumber(string appName, string buildNumber)
+        /// <summary>
+        /// Calls into buildctl to update a BuildVersion of
+        /// the K8SE App
+        /// </summary>
+        /// <param name="appName"></param>
+        /// <returns></returns>
+        public static void UpdateBuildNumber(string appName, string buildNumber)
         {
-            try
+            var cmd = new StringBuilder();
+            BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
+            BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+            BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "buildVersion");
+            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, buildNumber);
+            RunBuildCtlCommand(cmd.ToString(), "Running buildctl to retrieve framework info...");
+        }
+
+        private static string RunBuildCtlCommand(string args, string msg)
+        {
+            Console.WriteLine($"{msg} : {args}");
+            var process = new Process()
             {
-
-                K8SEApp app = new K8SEApp()
+                StartInfo = new ProcessStartInfo
                 {
-                    ApiVersion = Constants.KubernetesAppServiceApiVersion,
-                    Spec = new AppSpec()
-                };
-
-                app.Spec.codeAppSpec = new CodeAppSpec();
-
-                app.Spec.codeAppSpec.BuildVersion = buildNumber;
-
-                _k8seClient.PatchNamespacedCustomObject(
-                    app,
-                    Constants.KubernetesAppServiceApiGroup,
-                    Constants.KubernetesAppServiceApiVersion,
-                    Constants.KubernetesAppServiceAppNamespace,
-                    Constants.KubernetesAppServiceAppPlural,
-                    appName);
-                return true;
-            }
-            catch (HttpOperationException ex)
-            {
-                if ((ex.Response != null)
-                    && (ex.Response.StatusCode == HttpStatusCode.NotFound))
-                {
-                    return false;
+                    FileName = "/bin/bash",
+                    Arguments = $"-c \"{args}\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
                 }
+            };
 
+            process.Start();
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+
+            if (string.IsNullOrEmpty(error)) 
+            { 
+                return output; 
             }
-            return false;
+            else 
+            { 
+                throw new Exception(error); 
+            }
         }
 
         public static string GetAppName(HttpContext context)
@@ -96,6 +96,7 @@ namespace Kudu.Core.K8SE
             {
                 appName = host.Substring(0, host.IndexOf("."));
             }
+            Console.WriteLine("AppName :::::::: " + appName);
 
             try
             {
@@ -112,54 +113,6 @@ namespace Kudu.Core.K8SE
             }
 
             return appName;
-        }
-
-        public static K8SEApp GetK8SEApp(string siteName)
-        {
-            //Get the app
-            return ExecuteAsyncKubernetesTask<K8SEApp>((task) => GetAppFromCluster(siteName));
-        }
-
-        private static K8SEApp GetAppFromCluster(string appName)
-        {
-            try
-            {
-                var resultFromCluster = _k8seClient.GetNamespacedCustomObject(
-                                            Constants.KubernetesAppServiceApiGroup,
-                                            Constants.KubernetesAppServiceApiVersion,
-                                            Constants.KubernetesAppServiceAppNamespace,
-                                            Constants.KubernetesAppServiceAppPlural,
-                                            appName);
-
-                if (resultFromCluster == null)
-                {
-                    return null;
-                }
-
-                K8SEApp castedAksWebApp = ((Newtonsoft.Json.Linq.JObject)resultFromCluster).ToObject<K8SEApp>();
-
-                return castedAksWebApp;
-            }
-            catch (HttpOperationException ex)
-            {
-                if ((ex.Response != null)
-                    && (ex.Response.StatusCode == HttpStatusCode.NotFound))
-                {
-                    return null;
-                }
-
-            }
-
-            return null;
-        }
-
-        // Helper method to ensure that we get a different thread by avoiding use of ThreadPool's threads
-        // when calling Kubernetes client async methods.
-        private static T ExecuteAsyncKubernetesTask<T>(Func<object, T> action)
-        {
-            object result = Task.Factory.StartNew<T>(action, null, TaskCreationOptions.LongRunning).Result;
-
-            return (T)result;
         }
     }
 }

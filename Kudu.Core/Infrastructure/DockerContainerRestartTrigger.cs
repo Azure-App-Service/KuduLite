@@ -29,11 +29,7 @@ namespace Kudu.Core.Infrastructure
                 string appName = environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0];
                 string buildNumber = environment.CurrId;
 
-                if(!K8SEDeploymentHelper.UpdateBuildNumber(appName, buildNumber))
-                {
-                    throw new Exception("Updating Build Version Failed");
-                }
-
+                K8SEDeploymentHelper.UpdateBuildNumber(appName, buildNumber);
                 return;
             }
 

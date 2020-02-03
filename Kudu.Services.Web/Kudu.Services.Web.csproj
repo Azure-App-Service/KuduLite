@@ -10,6 +10,7 @@
     <NoWarn>$(NoWarn);NU1604</NoWarn>
     <NoWarn>$(NoWarn);NU1591</NoWarn>
     <NoWarn>$(NoWarn);NU1702</NoWarn>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
   </PropertyGroup>
   <PropertyGroup>

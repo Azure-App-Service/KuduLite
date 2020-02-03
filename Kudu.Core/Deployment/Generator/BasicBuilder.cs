@@ -1,6 +1,7 @@
 ﻿using Kudu.Contracts.Settings;
 using Kudu.Core.Deployment.Oryx;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.K8SE;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -18,18 +19,21 @@ namespace Kudu.Core.Deployment.Generator
 
         public override Task Build(DeploymentContext context)
         {
-            ILogger customLogger = context.Logger.Log("In K8 Basic Builder");
-            context.Logger.Log("RepositoryPath "+ _environment.ZipTempPath);
-            context.Logger.Log("SiteRootPath " + _environment.SiteRootPath);
-            //context.Logger.Log("CurrId "+ _environment.);
-            string src = _environment.ZipTempPath;
-            string artifactDir = Path.Combine(_environment.SiteRootPath, "artifacts", _environment.CurrId);
-            FileSystemHelpers.EnsureDirectory(Path.Combine(_environment.ZipTempPath, "artifacts"));
-            FileSystemHelpers.EnsureDirectory(artifactDir);
-            context.Logger.Log($"src : {src} dest {artifactDir}");
-            return Task.Factory.StartNew(() => PackageArtifactFromFolder(context, Path.Combine(_environment.ZipTempPath, "extracted"), Path.Combine(_environment.SiteRootPath, "artifacts", _environment.CurrId),"artifact.zip" ,BuildArtifactType.Squashfs, 2));
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                // K8SE TODO: Move to a resources file
+                ILogger customLogger = context.Logger.Log("Builder : K8SE Basic Builder");
+                string src = _environment.ZipTempPath;
+                string artifactDir = Path.Combine(_environment.SiteRootPath, "artifacts", _environment.CurrId);
+                FileSystemHelpers.EnsureDirectory(Path.Combine(_environment.ZipTempPath, "artifacts"));
+                FileSystemHelpers.EnsureDirectory(artifactDir);
+                return Task.Factory.StartNew(() => PackageArtifactFromFolder(context, Path.Combine(_environment.ZipTempPath, "extracted"), Path.Combine(_environment.SiteRootPath, "artifacts", _environment.CurrId), "artifact.zip", BuildArtifactType.Squashfs, 2));
+            }
+            else
+            {
+                return Task.CompletedTask;
+            }
         }
-
 
         private string PackageArtifactFromFolder(DeploymentContext context, string srcDirectory, string artifactDirectory, string artifactFilename, BuildArtifactType artifactType, int numBuildArtifacts = 0)
         {

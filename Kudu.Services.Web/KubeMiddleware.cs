@@ -84,6 +84,7 @@ namespace Kudu.Services.Web
             environment.RepositoryPath = $"{homeDir}{appName}{siteRepoDir}";
             await _next.Invoke(context);
         }
+
         private bool IsGitRoute(PathString routePath)
         {
             string[] pathParts = routePath.ToString().Split("/");
@@ -130,7 +131,7 @@ namespace Kudu.Services.Web
             var path = $"{home}{appName}";
 
             FileSystemHelpers.EnsureDirectory(path);
-            
+            FileSystemHelpers.EnsureDirectory($"{path}/site/artifacts/hostingstart");
             // For users running Windows Azure Pack 2 (WAP2), %HOME% actually points to the site folder,
             // which we don't want here. So yank that segment if we detect it.
             if (Path.GetFileName(path).Equals(Constants.SiteFolder, StringComparison.OrdinalIgnoreCase))
