@@ -5,6 +5,7 @@ using Kudu.Core.Infrastructure;
 using Kudu.Core.Helpers;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Deployment.Oryx;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Core.Deployment.Generator
 {
@@ -35,6 +36,11 @@ namespace Kudu.Core.Deployment.Generator
 
             // Initialize Oryx Args.
             IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
+
+            if(K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                args.appName = environment.K8SEAppName;
+            }
 
             if (!args.SkipKuduSync)
             {

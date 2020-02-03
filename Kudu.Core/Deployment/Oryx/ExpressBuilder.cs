@@ -1,6 +1,7 @@
 ﻿using Kudu.Contracts.Settings;
 using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.K8SE;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -13,7 +14,6 @@ namespace Kudu.Core.Deployment.Oryx
         public override string ProjectType => "OryxBuild";
         public IEnvironment environment;
         IDeploymentSettingsManager settings;
-        IBuildPropertyProvider propertyProvider;
 
         public ExpressBuilder(IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string sourcePath)
             : base(environment, settings, propertyProvider, sourcePath)
@@ -29,37 +29,56 @@ namespace Kudu.Core.Deployment.Oryx
                 return;
             }
 
-            //string sitePackagesDir = "/home/data/SitePackages";
-            //string packageNameFile = Path.Combine(sitePackagesDir, "packagename.txt");
-            //string packagePathFile = Path.Combine(sitePackagesDir, "packagepath.txt");
-
-            //FileSystemHelpers.EnsureDirectory(sitePackagesDir);
-
-            //string packageName = "";
-
-            SetupK8Artifacts(context, outputPath);
-            /*
-            if(args.Language == Framework.NodeJs)
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
-                // For App service express mode
-                // Generate packagename.txt and packagepath
-                //packageName = "node_modules.zip:/node_modules";
-                //SetupNodeAppExpressArtifacts(context, sitePackagesDir, outputPath);
+                SetupK8Artifacts(context, environment, outputPath);
             }
-            else if(args.Language == Framework.Python)
+            else
             {
-                packageName = $"{args.VirtualEnv}.zip:/home/site/wwwroot/{args.VirtualEnv}";
-            }
-            else if(args.Language == Framework.DotNETCore)
-            {
-                // store the zipped artifacts at site packages dir
-                string artifactName = SetupNetCoreAppExpressArtifacts(context, sitePackagesDir, outputPath);
-                packageName = $"{artifactName:/home/site/wwwroot}";
-            }
 
-            File.WriteAllText(packageNameFile, packageName);
-            File.WriteAllText(packagePathFile, outputPath);
-            */
+                string sitePackagesDir = "/home/data/SitePackages";
+                string packageNameFile = Path.Combine(sitePackagesDir, "packagename.txt");
+                string packagePathFile = Path.Combine(sitePackagesDir, "packagepath.txt");
+
+                FileSystemHelpers.EnsureDirectory(sitePackagesDir);
+
+                string packageName = "";
+
+                if (args.Language == Framework.NodeJs)
+                {
+                    // For App service express mode
+                    // Generate packagename.txt and packagepath
+                    //packageName = "node_modules.zip:/node_modules";
+                    //SetupNodeAppExpressArtifacts(context, sitePackagesDir, outputPath);
+                }
+                else if (args.Language == Framework.Python)
+                {
+                    packageName = $"{args.VirtualEnv}.zip:/home/site/wwwroot/{args.VirtualEnv}";
+                }
+                else if (args.Language == Framework.DotNETCore)
+                {
+                    // store the zipped artifacts at site packages dir
+                    string artifactName = SetupNetCoreAppExpressArtifacts(context, sitePackagesDir, outputPath);
+                    packageName = $"{artifactName:/home/site/wwwroot}";
+                }
+
+                File.WriteAllText(packageNameFile, packageName);
+                File.WriteAllText(packagePathFile, outputPath);
+            }   
+        }
+
+        public string SetupK8Artifacts(DeploymentContext context, IEnvironment environment, string outputPath)
+        {
+            context.Logger.Log($"Building for K8.");
+
+            // Create NetCore Zip at tm build folder where artifact were build and copy it to sitePackages, .GetBranch()
+            string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
+
+            context.Logger.Log($"From {context.BuildTempPath} to {(environment.RepositoryPath + "/../artifacts/" + environment.CurrId)} ");
+            FileSystemHelpers.EnsureDirectory(environment.RepositoryPath + "/../artifacts/");
+            FileSystemHelpers.EnsureDirectory(environment.RepositoryPath + "/../artifacts/" + environment.CurrId);
+            string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath, environment.RepositoryPath + "/../artifacts/" + environment.CurrId, zipAppName, BuildArtifactType.Squashfs, numBuildArtifacts: -1);
+            return zipAppName;
         }
 
         private string SetupNetCoreAppExpressArtifacts(DeploymentContext context, string sitePackages,string outputPath)
@@ -74,21 +93,6 @@ namespace Kudu.Core.Deployment.Oryx
             // Remove the old zips
             DeploymentHelper.PurgeBuildArtifactsIfNecessary(sitePackages, BuildArtifactType.Zip, context.Tracer, totalAllowedFiles: 2);
 
-            return zipAppName;
-        }
-
-
-        private string SetupK8Artifacts(DeploymentContext context, string outputPath)
-        {
-            context.Logger.Log($"Building for K8.");
-
-            // Create NetCore Zip at tm build folder where artifact were build and copy it to sitePackages, .GetBranch()
-            string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
-
-            context.Logger.Log($"From {context.BuildTempPath} to {(environment.RepositoryPath + "/../artifacts/" + environment.CurrId)} ");
-            FileSystemHelpers.EnsureDirectory(environment.RepositoryPath + "/../artifacts/");
-            FileSystemHelpers.EnsureDirectory(environment.RepositoryPath + "/../artifacts/" + environment.CurrId);
-            string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath, environment.RepositoryPath +"/../artifacts/" +environment.CurrId, zipAppName, BuildArtifactType.Squashfs, numBuildArtifacts: -1);
             return zipAppName;
         }
 

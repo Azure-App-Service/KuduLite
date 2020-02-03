@@ -365,7 +365,18 @@ namespace Kudu.Core {
                 return ResourceManager.GetString("Log_TriggeringContainerRestart", resourceCulture);
             }
         }
-        
+
+        /// <summary>
+        ///   Looks up a localized string similar to K8SEApp will begin restart..
+        /// </summary>
+        internal static string Log_TriggeringK8SERestart
+        {
+            get
+            {
+                return ResourceManager.GetString("Log_TriggeringK8SERestart", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to An unknown error has occurred. Check the diagnostic log for details..
         /// </summary>

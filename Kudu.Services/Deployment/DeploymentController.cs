@@ -29,6 +29,7 @@ using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using Kudu.Services.Zip;
 using System.IO.Compression;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Services.Deployment
 {
@@ -70,7 +71,7 @@ namespace Kudu.Services.Deployment
         private void GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
         {
             var context = accessor.HttpContext;
-            if (!PostDeploymentHelper.IsK8Environment())
+            if (!K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 _environment = environment;
             }
@@ -402,7 +403,7 @@ namespace Kudu.Services.Deployment
             }
 
             // Avoid Caching when on K8
-            if (EtagEquals(Request, currentEtag) && !PostDeploymentHelper.IsK8Environment())
+            if (EtagEquals(Request, currentEtag) && !K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 result = StatusCode(StatusCodes.Status304NotModified);
             }
@@ -410,7 +411,7 @@ namespace Kudu.Services.Deployment
             {
                 using (_tracer.Step("DeploymentService.GetDeployResults"))
                 {
-                    if (!currentEtag.Equals(cachedDeployments.Etag) || PostDeploymentHelper.IsK8Environment())
+                    if (!currentEtag.Equals(cachedDeployments.Etag) || K8SEDeploymentHelper.IsK8SEEnvironment())
                     {
                         cachedDeployments = new DeploymentsCacheItem
                         {

@@ -212,68 +212,7 @@ namespace Kudu.Console
                     return 1;
                 }
                 finally
-                {
-                    /*
-                    var config = KubernetesClientConfiguration.InClusterConfig();
-                    var client = new Kubernetes(config);
-                    var replicaSets = client.ListReplicaSetForAllNamespaces();
-                    string appName = appRoot.Replace("/home/apps/", "").Split("/")[0];
-
-                    foreach (var replicaSet in replicaSets.Items)
-                    {
-                        if (replicaSet.Metadata.Name.IndexOf(appName, StringComparison.OrdinalIgnoreCase) >= 0
-                            && (replicaSet.Status.AvailableReplicas > 0))
-                        {
-
-                            FileSystemHelpers.EnsureDirectory($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
-                            FileStream stream = File.Create($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision");
-                            stream.Close();
-                            FileSystemHelpers.DeleteFileSafe($"/home/apps/{appName}/site/artifacts/current");
-                            FileStream stream2 = File.Create($"/home/apps/{appName}/site/artifacts/current");
-                            stream2.Close();
-
-                            IDeploymentStatusFile statusFile = deploymentStatusManager.Open(gitRepository.GetChangeSet(settingsManager.GetBranch()).Id, env);
-                            statusFile.Save();
-                            revisiondata rv = new revisiondata()
-                            {
-                                StartTime = statusFile.StartTime,
-                                EndTime = statusFile.EndTime,
-                                Deployer = statusFile.Deployer,
-                                ReceivedTime = statusFile.ReceivedTime,
-                                Author = statusFile.Author,
-                                AuthorEmail = statusFile.AuthorEmail,
-                                Message = statusFile.Message,
-                                Status = statusFile.Status,
-                                deploymentId = gitRepository.GetChangeSet(settingsManager.GetBranch()).Id
-                            };
-                            var json = Newtonsoft.Json.JsonConvert.SerializeObject(rv);
-                            FileStream stream3 = File.Create($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json");
-                            stream3.Close();
-                            File.WriteAllText($"/home/apps/{appName}/site/artifacts/current", $"{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}");
-                            File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/revision", replicaSet.Metadata.Annotations["deployment.kubernetes.io/revision"]);
-                            File.WriteAllText($"/home/apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}/metadata.json", json.ToString());
-                        }
-                    }
-
-                    /*
-                    Process _executingProcess = new Process()
-                    {
-                        StartInfo = new ProcessStartInfo
-                        {
-                            FileName = "/bin/bash",
-                            Arguments = $"-c \" /patch.sh {appName} apps/{appName}/site/artifacts/{gitRepository.GetChangeSet(settingsManager.GetBranch()).Id}\"",
-                            RedirectStandardOutput = true,
-                            UseShellExecute = false,
-                            CreateNoWindow = true,
-                        }
-                    };
-
-                    // Read the standard error of net.exe and write it on to console.
-                    _executingProcess.OutputDataReceived += (sender, args) => System.Console.WriteLine("{0}", args.Data);
-                    _executingProcess.Start();
-                    _executingProcess.WaitForExit();
-                    System.Console.WriteLine("Deployment Rollout Started!");
-                    */
+                { 
                     System.Console.WriteLine("Deployment Logs : '"+
                     env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" + 
                     gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");
@@ -306,22 +245,6 @@ namespace Kudu.Console
             }
 
             return NullTracer.Instance;
-        }
-
-        public class revisiondata
-        {
-            public string revisionId;
-            public string deploymentId;
-            public bool active;
-            public DeployStatus Status { get; set; }
-            public string StatusText { get; set; }
-            public string AuthorEmail { get; set; }
-            public string Author { get; set; }
-            public string Message { get; set; }
-            public string Deployer { get; set; }
-            public DateTime ReceivedTime { get; set; }
-            public DateTime StartTime { get; set; }
-            public DateTime? EndTime { get; set; }
         }
 
         private static ILogger GetLogger(IEnvironment env, TraceLevel level, ILogger primary)

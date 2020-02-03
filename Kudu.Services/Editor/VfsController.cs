@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Net.Http.Headers;
 using Kudu.Core.Helpers;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Services.Editor
 {
@@ -52,7 +53,7 @@ namespace Kudu.Services.Editor
         private static IEnvironment GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
         {
             IEnvironment _environment;
-            if (!PostDeploymentHelper.IsK8Environment() || accessor == null)
+            if (!K8SEDeploymentHelper.IsK8SEEnvironment() || accessor == null)
             {
                 _environment = environment;
             }

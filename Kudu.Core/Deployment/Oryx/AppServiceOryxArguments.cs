@@ -4,6 +4,7 @@ using System.Text;
 using k8s;
 using Kudu.Core.Deployment.Oryx;
 using Kudu.Core.Helpers;
+using Kudu.Core.K8SE;
 using LibGit2Sharp;
 
 namespace Kudu.Core.Deployment
@@ -22,13 +23,27 @@ namespace Kudu.Core.Deployment
 
         public string VirtualEnv { get; set; }
 
+        public string appName { get; set; }
+
         public AppServiceOryxArguments()
         {
             RunOryxBuild = false;
             SkipKuduSync = false;
+            string framework = "";
+            string version = "";
 
-            string framework = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkSetting);
-            string version = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkVersionSetting);
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                // K8SE TODO: Inject Environment
+                var frameworkArr = K8SEDeploymentHelper.GetLinuxFxVersion(appName);
+                framework = frameworkArr.Split("|")[0];
+                version = frameworkArr.Split("|")[1];
+            }
+            else
+            {
+                framework = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkSetting);
+                version = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkVersionSetting);
+            }
             string buildFlags = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.BuildFlagsSetting);
 
             if (string.IsNullOrEmpty(framework) ||
@@ -113,38 +128,6 @@ namespace Kudu.Core.Deployment
 
         public string GenerateOryxBuildCommand(DeploymentContext context, IEnvironment environment)
         {
-            string appName = environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0];
-
-            if (PostDeploymentHelper.IsK8Environment())
-            {
-                var config = KubernetesClientConfiguration.InClusterConfig();
-                var client = new Kubernetes(config);
-
-                var deployment = client.ReadNamespacedDeployment(appName, "default");
-                foreach(var container in deployment.Spec.Template.Spec.Containers)
-                {
-                    if (container.Name.Equals(appName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        foreach(var env in container.Env)
-                        {
-                            if(env.Name.Equals("FRAMEWORK", StringComparison.OrdinalIgnoreCase))
-                            {
-                                Language = SupportedFrameworks.ParseLanguage(env.Value);
-                                if (Language == Framework.DotNETCore)
-                                {
-                                    // Skip kudu sync for .NET core builds
-                                    SkipKuduSync = true;
-                                }
-                            }
-                            else if(env.Name.Equals("FRAMEWORK_VERSION", StringComparison.OrdinalIgnoreCase))
-                            {
-                                Version = env.Value;
-                            }
-                        }
-                    }
-                }
-            }
-
             StringBuilder args = new StringBuilder();
             // Language
             switch (Language)

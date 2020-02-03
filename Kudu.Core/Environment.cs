@@ -11,6 +11,7 @@ using Microsoft.Win32;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Kudu.Core.Settings;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Core
 {
@@ -40,6 +41,8 @@ namespace Kudu.Core
         private readonly string _jobsBinariesPath;
         private readonly string _sitePackagesPath;
         private readonly string _secondaryJobsBinariesPath;
+        private readonly string _k8seAppName;
+
 
         // This ctor is used only in unit tests
         public Environment(
@@ -59,7 +62,8 @@ namespace Kudu.Core
                 string siteExtensionSettingsPath,
                 string sitePackagesPath,
                 string requestId,
-                IHttpContextAccessor httpContextAccessor)
+                IHttpContextAccessor httpContextAccessor,
+                string k8seAppName = null)
         {
             if (repositoryPath == null)
             {
@@ -78,8 +82,8 @@ namespace Kudu.Core
             _diagnosticsPath = diagnosticsPath;
             _locksPath = locksPath;
             _sshKeyPath = sshKeyPath;
-            Console.WriteLine("Root Path : "+rootPath);
-            Console.WriteLine("SSH Key Path : "+_sshKeyPath);
+            Console.WriteLine("Root Path : " + rootPath);
+            Console.WriteLine("SSH Key Path : " + _sshKeyPath);
             _scriptPath = scriptPath;
             _nodeModulesPath = nodeModulesPath;
 
@@ -98,6 +102,7 @@ namespace Kudu.Core
 
             RequestId = !string.IsNullOrEmpty(requestId) ? requestId : Guid.Empty.ToString();
             _httpContextAccessor = httpContextAccessor;
+            _k8seAppName = k8seAppName;
         }
 
         public Environment(
@@ -106,7 +111,8 @@ namespace Kudu.Core
                 string repositoryPath,
                 string requestId,
                 string kuduConsoleFullPath,
-                IHttpContextAccessor httpContextAccessor)
+                IHttpContextAccessor httpContextAccessor,
+                string k8seAppName = null)
         {
             RootPath = rootPath;
 
@@ -121,6 +127,7 @@ namespace Kudu.Core
             _siteExtensionSettingsPath = Path.Combine(SiteRootPath, Constants.SiteExtensionsCachePath);
             _diagnosticsPath = Path.Combine(SiteRootPath, Constants.DiagnosticsPath);
             _locksPath = Path.Combine(SiteRootPath, Constants.LocksPath);
+            _k8seAppName = k8seAppName;
 
             if (OSDetector.IsOnWindows())
             {
@@ -130,7 +137,7 @@ namespace Kudu.Core
             {
                 // in linux, rootPath is "/home", while .ssh folder need to under "/home/{user}"
                 string path2 = System.Environment.GetEnvironmentVariable("KUDU_RUN_USER");
-                if(path2 == null || path2.Equals(""))
+                if (path2 == null || path2.Equals(""))
                 {
                     path2 = "root";
                 }
@@ -461,9 +468,22 @@ namespace Kudu.Core
             }
         }
 
-        public bool IsOnK8 => true;
+        public bool IsK8SEApp {
+            get
+            {
+                return K8SEDeploymentHelper.IsK8SEEnvironment();
+            }
+        }
 
         public string CurrId { get; set; }
+
+        public string K8SEAppName
+        {
+            get
+            {
+                return _k8seAppName;
+            }
+        }
 
         public static string GetFreeSpaceHtml(string path)
         {

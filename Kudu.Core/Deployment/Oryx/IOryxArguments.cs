@@ -20,5 +20,6 @@ namespace Kudu.Core.Deployment.Oryx
 
         string PublishFolder { get; set; }
         string VirtualEnv { get; set; }
+        string appName { get; set; }
     }
 }

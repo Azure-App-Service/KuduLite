@@ -14,6 +14,7 @@ using Kudu.Core.Infrastructure;
 using Kudu.Core.Helpers;
 using System.Threading;
 using Microsoft.AspNetCore.Http;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Services.Zip
 {
@@ -34,7 +35,7 @@ namespace Kudu.Services.Zip
         {
             IEnvironment _environment;
             var context = accessor.HttpContext;
-            if (!PostDeploymentHelper.IsK8Environment())
+            if (!K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 _environment = environment;
             }

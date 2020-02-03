@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Http;
 using Kudu.Services.Infrastructure;
 using System.Threading.Tasks;
 using Kudu.Core.Helpers;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Services.Performance
 {
@@ -47,7 +48,7 @@ namespace Kudu.Services.Performance
                 Path.Combine(environment.RootPath, Constants.LogFilesPath),
                 Path.Combine(environment.WebRootPath, Constants.NpmDebugLogFile),
             };
-            if (!PostDeploymentHelper.IsK8Environment())
+            if (!K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 _environment = environment;
             }

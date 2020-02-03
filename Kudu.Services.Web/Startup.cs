@@ -44,6 +44,7 @@ using Environment = Kudu.Core.Environment;
 using ILogger = Kudu.Core.Deployment.ILogger;
 using Microsoft.AspNetCore.Authentication;
 using Kudu.Services.Web.Services;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Services.Web
 {
@@ -79,8 +80,6 @@ namespace Kudu.Services.Web
             Console.WriteLine(@"Configure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
             FileSystemHelpers.DeleteDirectorySafe("/home/site/locks/deployment");
             // configure basic authentication 
-            services.AddAuthentication("BasicAuthentication")
-                .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
 
             services.Configure<FormOptions>(options =>
             {
@@ -96,7 +95,6 @@ namespace Kudu.Services.Web
 
             services.AddMvcCore()
                 .AddRazorPages()
-                .AddAuthorization()
                 .AddJsonFormatters()
                 .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver())
                 .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices()
@@ -354,9 +352,10 @@ namespace Kudu.Services.Web
                 i.Request.Path.Value.StartsWith("/api/provision", StringComparison.OrdinalIgnoreCase));
 
             app.UseTraceMiddleware();
-            app.UseAuthentication();
-            app.UseKubeMiddleware();
-
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                app.UseKubeMiddleware();
+            }
             app.MapWhen(containsRelativeProvisionPath, application => application.Run(async context =>
             {
                 FileSystemHelpers.EnsureDirectory("/home/apps/"+context.Request.Path.Value.Replace("/api/provision/", ""));

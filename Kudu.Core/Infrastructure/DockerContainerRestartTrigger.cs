@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using Kudu.Core.Helpers;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Core.Infrastructure
 {
@@ -23,24 +24,16 @@ namespace Kudu.Core.Infrastructure
 
         public static void RequestContainerRestart(IEnvironment environment, string reason)
         {
-            if(PostDeploymentHelper.IsK8Environment())
+            if(K8SEDeploymentHelper.IsK8SEEnvironment())
             {
-                string appName = environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0]; ;
-                Process _executingProcess = new Process()
+                string appName = environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0];
+                string buildNumber = environment.CurrId;
+
+                if(!K8SEDeploymentHelper.UpdateBuildNumber(appName, buildNumber))
                 {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "/bin/bash",
-                        Arguments = $"-c \" /patch.sh {appName} apps/{appName}/site/artifacts/{environment.CurrId}\"",
-                        RedirectStandardOutput = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                    }
-                };
-                // Read the standard error of net.exe and write it on to console.
-                _executingProcess.OutputDataReceived += (sender, args) => System.Console.WriteLine("{0}", args.Data);
-                _executingProcess.Start();
-                _executingProcess.WaitForExit();
+                    throw new Exception("Updating Build Version Failed");
+                }
+
                 return;
             }
 

@@ -8,6 +8,7 @@ using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
 using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.K8SE;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
 using Microsoft.AspNetCore.Http;
@@ -28,7 +29,7 @@ namespace Kudu.Core.Deployment.Generator
         private IEnvironment GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
         {
             IEnvironment _environment;
-            if (!PostDeploymentHelper.IsK8Environment() || accessor==null)
+            if (!K8SEDeploymentHelper.IsK8SEEnvironment() || accessor==null)
             {
                 _environment = environment;
             }

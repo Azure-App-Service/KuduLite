@@ -11,6 +11,7 @@ using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Helpers;
 using Kudu.Core.Hooks;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.K8SE;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
 using Microsoft.AspNetCore.Http;
@@ -77,7 +78,7 @@ namespace Kudu.Core.Deployment
         {
             IEnvironment _environment;
             var context = accessor.HttpContext;
-            if (!PostDeploymentHelper.IsK8Environment())
+            if (!K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 _environment = environment;
             }
@@ -103,7 +104,7 @@ namespace Kudu.Core.Deployment
             {
                 return FetchDeploymentRequestResult.ForbiddenScmDisabled;
             }
-            
+
             // Else if this app is configured with a url in WEBSITE_USE_ZIP, then fail the deployment
             // since this is a RunFromZip site and the deployment has no chance of succeeding.
             else if (_settings.RunFromRemoteZip())
@@ -171,8 +172,8 @@ namespace Kudu.Core.Deployment
             }
         }
 
-        public async Task PerformDeployment(DeploymentInfoBase deploymentInfo, 
-            IDisposable tempDeployment = null, 
+        public async Task PerformDeployment(DeploymentInfoBase deploymentInfo,
+            IDisposable tempDeployment = null,
             ChangeSet tempChangeSet = null)
         {
             DateTime currentMarkerFileUTC;
@@ -286,8 +287,8 @@ namespace Kudu.Core.Deployment
                     // if last change is not null and finish successfully, mean there was at least one deployoment happened
                     // since deployment is now done, trigger swap if enabled
                     await PostDeploymentHelper.PerformAutoSwap(
-                        _environment.RequestId, 
-                        new PostDeploymentTraceListener(_tracer, 
+                        _environment.RequestId,
+                        new PostDeploymentTraceListener(_tracer,
                         _deploymentManager.GetLogger(lastChange.Id)));
                 }
             }
@@ -332,7 +333,7 @@ namespace Kudu.Core.Deployment
             // Needed for deployments where deferred deployment is not allowed. Will be set to false if
             // lock contention occurs and AllowDeferredDeployment is false, otherwise true.
             var deploymentWillOccurTcs = new TaskCompletionSource<bool>();
-            
+
             // This task will be let out of scope intentionally
             var deploymentTask = Task.Run(() =>
             {

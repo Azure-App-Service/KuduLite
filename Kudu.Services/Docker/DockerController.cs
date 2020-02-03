@@ -6,6 +6,7 @@ using Kudu.Core.Infrastructure;
 using Kudu.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Services.Docker
 {
@@ -20,7 +21,7 @@ namespace Kudu.Services.Docker
         {
             _traceFactory = traceFactory;
             _settings = settings;
-            if (!PostDeploymentHelper.IsK8Environment())
+            if (!K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 _environment = environment;
             }
