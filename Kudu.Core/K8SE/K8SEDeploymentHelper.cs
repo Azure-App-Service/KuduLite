@@ -83,34 +83,16 @@ namespace Kudu.Core.K8SE
 
         public static string GetAppName(HttpContext context)
         {
-            var host = context.Request.Headers["Host"].ToString();
-            var appName = "";
+            var appName = context.Request.Headers["K8SE_APP_NAME"].ToString();
 
-            if (host.IndexOf(".") <= 0)
+            if (string.IsNullOrEmpty(appName))
             {
                 context.Response.StatusCode = 401;
                 // K8SE TODO: move this to resource map
                 throw new InvalidOperationException("Couldn't recognize AppName");
             }
-            else
-            {
-                appName = host.Substring(0, host.IndexOf("."));
-            }
-            Console.WriteLine("AppName :::::::: " + appName);
 
-            try
-            {
-                // block any internal service communication to build server
-                // K8SE TODO: Check source IP to be in the internal service range and block them
-                Int32.Parse(appName);
-                context.Response.StatusCode = 401;
-                // K8SE TODO: move this to resource map
-                throw new InvalidOperationException("Internal services prohibited to communicate with the build server.");
-            }
-            catch(Exception)
-            {
-                // pass
-            }
+            Console.WriteLine("AppName :::::::: " + appName);
 
             return appName;
         }
