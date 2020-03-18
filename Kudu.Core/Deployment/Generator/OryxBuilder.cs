@@ -35,12 +35,7 @@ namespace Kudu.Core.Deployment.Generator
             context.RepositoryPath = RepositoryPath;
 
             // Initialize Oryx Args.
-            IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
-
-            if(K8SEDeploymentHelper.IsK8SEEnvironment())
-            {
-                args.appName = environment.K8SEAppName;
-            }
+            IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(environment);
 
             if (!args.SkipKuduSync)
             {

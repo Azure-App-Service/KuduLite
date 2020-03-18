@@ -6,7 +6,7 @@ namespace Kudu.Core.Deployment.Oryx
 {
     public class LinuxConsumptionFunctionAppOryxArguments : FunctionAppOryxArguments
     {
-        public LinuxConsumptionFunctionAppOryxArguments() : base()
+        public LinuxConsumptionFunctionAppOryxArguments(IEnvironment env) : base(env)
         {
             SkipKuduSync = true;
             Flags = BuildOptimizationsFlags.Off;

@@ -16,9 +16,9 @@ namespace Kudu.Core.Deployment.Oryx
         public Framework Language { get; set; }
         public string PublishFolder { get; set; }
         public string VirtualEnv { get; set; }
-        public string appName { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+        public string AppName { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
 
-        public FunctionAppOryxArguments()
+        public FunctionAppOryxArguments(IEnvironment environment)
         {
             SkipKuduSync = false;
             FunctionsWorkerRuntime = ResolveWorkerRuntime();

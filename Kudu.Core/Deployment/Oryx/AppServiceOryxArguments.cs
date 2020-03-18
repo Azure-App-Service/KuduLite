@@ -23,9 +23,9 @@ namespace Kudu.Core.Deployment
 
         public string VirtualEnv { get; set; }
 
-        public string appName { get; set; }
+        public string AppName { get; set; }
 
-        public AppServiceOryxArguments()
+        public AppServiceOryxArguments(IEnvironment environment)
         {
             RunOryxBuild = false;
             SkipKuduSync = false;
@@ -34,8 +34,11 @@ namespace Kudu.Core.Deployment
 
             if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
+                Console.WriteLine("Oryx App Name : " + environment.K8SEAppName);
+                this.AppName = environment.K8SEAppName;
+
                 // K8SE TODO: Inject Environment
-                var frameworkArr = K8SEDeploymentHelper.GetLinuxFxVersion(appName);
+                var frameworkArr = K8SEDeploymentHelper.GetLinuxFxVersion(AppName);
                 framework = frameworkArr.Split("|")[0];
                 version = frameworkArr.Split("|")[1];
             }
