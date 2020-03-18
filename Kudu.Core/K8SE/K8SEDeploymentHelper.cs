@@ -31,7 +31,7 @@ namespace Kudu.Core.K8SE
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "get");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
             BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "linuxFxVersion");
-            return RunBuildCtlCommand(cmd.ToString(), "Running buildctl to retrieve framework info...");
+            return RunBuildCtlCommand(cmd.ToString(), "Retrieving framework info...");
         }
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace Kudu.Core.K8SE
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
             BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "buildVersion");
             BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, buildNumber);
-            RunBuildCtlCommand(cmd.ToString(), "Running buildctl to retrieve framework info...");
+            RunBuildCtlCommand(cmd.ToString(), "Updating build version...");
         }
 
         private static string RunBuildCtlCommand(string args, string msg)
