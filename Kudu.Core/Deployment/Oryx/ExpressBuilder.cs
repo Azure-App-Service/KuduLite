@@ -72,7 +72,7 @@ namespace Kudu.Core.Deployment.Oryx
             context.Logger.Log($"Building for K8.");
 
             // Create NetCore Zip at tm build folder where artifact were build and copy it to sitePackages, .GetBranch()
-            string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
+            string zipAppName = $"artifact.zip";
 
             context.Logger.Log($"From {context.BuildTempPath} to {(environment.RepositoryPath + "/../artifacts/" + environment.CurrId)} ");
             FileSystemHelpers.EnsureDirectory(environment.RepositoryPath + "/../artifacts/");

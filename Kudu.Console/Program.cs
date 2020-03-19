@@ -271,6 +271,9 @@ namespace Kudu.Console
         private static IEnvironment GetEnvironment(string siteRoot, string requestId)
         {
             string root = Path.GetFullPath(Path.Combine(siteRoot, ".."));
+            string appName = root.Replace("/home/apps/","");
+            System.Console.WriteLine("!!!!!!!!!!!! ROOT ::: "+root);
+            System.Console.WriteLine("!!!!!!!!!!!! AppNAME ::: " + appName);
 
             // CORE TODO : test by setting SCM_REPOSITORY_PATH 
             // REVIEW: this looks wrong because it ignores SCM_REPOSITORY_PATH
@@ -293,7 +296,9 @@ namespace Kudu.Console
                 repositoryPath,
                 requestId,
                 Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu.dll"),
-                null);
+                null,
+                appName);
+
             return env;
         }
     }

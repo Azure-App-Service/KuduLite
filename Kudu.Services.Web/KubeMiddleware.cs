@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using System;
@@ -10,7 +9,6 @@ using Kudu.Core;
 using System.Text;
 using Kudu.Core.Helpers;
 using System.IO;
-using System.Net.Http.Headers;
 using Kudu.Core.K8SE;
 
 namespace Kudu.Services.Web
