@@ -50,6 +50,21 @@ namespace Kudu.Core.K8SE
             RunBuildCtlCommand(cmd.ToString(), "Updating build version...");
         }
 
+        /// <summary>
+        /// Updates the triggers for the function apps
+        /// </summary>
+        /// <param name="appName"The name of the function app></param>
+        /// <param name="functionTriggers">The function apps triggers in the json format</param>
+        public static void UpdateFunctionAppTriggers(string appName, string functionTriggers)
+        {
+            var cmd = new StringBuilder();
+            BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
+            BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+            BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "triggers");
+            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, functionTriggers);
+            RunBuildCtlCommand(cmd.ToString(), "Updating function app triggers...");
+        }
+
         private static string RunBuildCtlCommand(string args, string msg)
         {
             Console.WriteLine($"{msg} : {args}");

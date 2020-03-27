@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
+using Kudu.Core.Functions;
 using Kudu.Core.Helpers;
 using Kudu.Core.Hooks;
 using Kudu.Core.Infrastructure;
@@ -111,7 +112,7 @@ namespace Kudu.Core.Deployment
 
         public DeployResult GetResult(string id)
         {
-             return GetResult(id, _status.ActiveDeploymentId, IsDeploying);
+            return GetResult(id, _status.ActiveDeploymentId, IsDeploying);
         }
 
         public IEnumerable<LogEntry> GetLogEntries(string id)
@@ -194,30 +195,30 @@ namespace Kudu.Core.Deployment
             Console.WriteLine("Deploy Async");
             using (var deploymentAnalytics = new DeploymentAnalytics(_analytics, _settings))
             {
-                    Exception exception = null;
-                    ITracer tracer = _traceFactory.GetTracer();
-                    IDisposable deployStep = null;
-                    ILogger innerLogger = null;
-                    string targetBranch = null;
+                Exception exception = null;
+                ITracer tracer = _traceFactory.GetTracer();
+                IDisposable deployStep = null;
+                ILogger innerLogger = null;
+                string targetBranch = null;
 
-                    // If we don't get a changeset, find out what branch we should be deploying and get the commit ID from it
+                // If we don't get a changeset, find out what branch we should be deploying and get the commit ID from it
+                if (changeSet == null)
+                {
+                    targetBranch = _settings.GetBranch();
+
+                    changeSet = repository.GetChangeSet(targetBranch);
+
                     if (changeSet == null)
                     {
-                        targetBranch = _settings.GetBranch();
-
-                        changeSet = repository.GetChangeSet(targetBranch);
-
-                        if (changeSet == null)
-                        {
-                            throw new InvalidOperationException(String.Format(
-                                "The current deployment branch is '{0}', but nothing has been pushed to it",
-                                targetBranch));
-                        }
+                        throw new InvalidOperationException(String.Format(
+                            "The current deployment branch is '{0}', but nothing has been pushed to it",
+                            targetBranch));
                     }
+                }
 
-                    string id = changeSet.Id;
-                    _environment.CurrId = id;
-                    IDeploymentStatusFile statusFile = null;
+                string id = changeSet.Id;
+                _environment.CurrId = id;
+                IDeploymentStatusFile statusFile = null;
                 try
                 {
                     deployStep = tracer.Step($"DeploymentManager.Deploy(id:{id})");
@@ -284,7 +285,13 @@ namespace Kudu.Core.Deployment
                             logger.Log(Resources.Log_TriggeringContainerRestart);
                         }
 
-                        string appName = _environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0]; ;
+                        string appName = _environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0];
+                        var functionTriggers = FunctionTriggerProvider.GetFunctionTriggers("keda", deploymentInfo.RepositoryUrl);
+                        //Only for function apps functionTriggers will be non-null/non-empty 
+                        if (!string.IsNullOrEmpty(functionTriggers))
+                        {
+                            K8SEDeploymentHelper.UpdateFunctionAppTriggers(appName, functionTriggers);
+                        }
 
                         DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason);
                         logger.Log($"Deployment Pod Rollout Started! Use kubectl watch deplotment {appName} to monitor the rollout status");
@@ -314,21 +321,21 @@ namespace Kudu.Core.Deployment
                     }
                 }
 
-                    // Reload status file with latest updates
-                    statusFile = _status.Open(id, _environment);
-                    using (tracer.Step("Reloading status file with latest updates"))
+                // Reload status file with latest updates
+                statusFile = _status.Open(id, _environment);
+                using (tracer.Step("Reloading status file with latest updates"))
+                {
+                    if (statusFile != null)
                     {
-                        if (statusFile != null)
-                        {
-                            await _hooksManager.PublishEventAsync(HookEventTypes.PostDeployment, statusFile);
-                        }
+                        await _hooksManager.PublishEventAsync(HookEventTypes.PostDeployment, statusFile);
                     }
+                }
 
-                    if (exception != null)
-                    {
-                        tracer.TraceError(exception);
-                        throw new DeploymentFailedException(exception);
-                    }
+                if (exception != null)
+                {
+                    tracer.TraceError(exception);
+                    throw new DeploymentFailedException(exception);
+                }
             }
         }
 
@@ -681,11 +688,11 @@ namespace Kudu.Core.Deployment
                     NextManifestFilePath = GetDeploymentManifestPath(id),
                     PreviousManifestFilePath = GetActiveDeploymentManifestPath(),
                     IgnoreManifest = deploymentInfo != null && deploymentInfo.CleanupTargetDirectory,
-                                                                             // Ignoring the manifest will cause kudusync to delete sub-directories / files
-                                                                            // in the destination directory that are not present in the source directory,
-                                                                            // without checking the manifest to see if the file was copied over to the destination
-                                                                            // during a previous kudusync operation. This effectively performs a clean deployment
-                                                                            // from the source to the destination directory
+                    // Ignoring the manifest will cause kudusync to delete sub-directories / files
+                    // in the destination directory that are not present in the source directory,
+                    // without checking the manifest to see if the file was copied over to the destination
+                    // during a previous kudusync operation. This effectively performs a clean deployment
+                    // from the source to the destination directory
                     Tracer = tracer,
                     Logger = logger,
                     GlobalLogger = _globalLogger,
