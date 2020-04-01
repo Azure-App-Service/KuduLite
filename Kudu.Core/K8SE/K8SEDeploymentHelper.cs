@@ -58,10 +58,9 @@ namespace Kudu.Core.K8SE
         public static void UpdateFunctionAppTriggers(string appName, string functionTriggers)
         {
             var cmd = new StringBuilder();
-            BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
+            BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "updatejson");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
-            BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "triggers");
-            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, functionTriggers);
+            BuildCtlArgumentsHelper.AddJsonToPatchValueArgument(cmd, functionTriggers);
             RunBuildCtlCommand(cmd.ToString(), "Updating function app triggers...");
         }
 
@@ -86,13 +85,13 @@ namespace Kudu.Core.K8SE
             string error = process.StandardError.ReadToEnd();
             process.WaitForExit();
 
-            if (string.IsNullOrEmpty(error)) 
-            { 
-                return output; 
+            if (string.IsNullOrEmpty(error))
+            {
+                return output;
             }
-            else 
-            { 
-                throw new Exception(error); 
+            else
+            {
+                throw new Exception(error);
             }
         }
 

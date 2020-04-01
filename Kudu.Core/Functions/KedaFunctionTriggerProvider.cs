@@ -49,7 +49,17 @@ namespace Kudu.Core.Functions
                        fullName.Count(c => c == '/' || c == '\\') == 1;
             }
 
-            return JsonConvert.SerializeObject(kedaScaleTriggers, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            var patchAppJson = new PatchAppJson
+            {
+                PatchSpec = new PatchSpec
+                {
+                    TriggerOptions = new TriggerOptions
+                    {
+                        Triggers = kedaScaleTriggers
+                    }
+                }
+            };
+            return JsonConvert.SerializeObject(patchAppJson, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
         }
 
         public IEnumerable<ScaleTrigger> ParseFunctionJson(string functionName, string functionJson)
@@ -57,10 +67,10 @@ namespace Kudu.Core.Functions
             var json = JObject.Parse(functionJson);
             if (json.TryGetValue("disabled", out JToken value))
             {
-                string stringValue = value.ToString();              
+                string stringValue = value.ToString();
                 if (!bool.TryParse(stringValue, out bool disabled))
                 {
-                    string expandValue = System.Environment.GetEnvironmentVariable(stringValue);                    
+                    string expandValue = System.Environment.GetEnvironmentVariable(stringValue);
                     disabled = string.Equals(expandValue, "1", StringComparison.OrdinalIgnoreCase) ||
                                string.Equals(expandValue, "true", StringComparison.OrdinalIgnoreCase);
                 }
@@ -83,9 +93,11 @@ namespace Kudu.Core.Functions
                 var type = (string)binding["type"];
                 if (type.EndsWith("Trigger", StringComparison.OrdinalIgnoreCase))
                 {
-                    var scaleTrigger = new ScaleTrigger();
-                    scaleTrigger.Type = type;
-                    scaleTrigger.Metadata = new Dictionary<string, string>();
+                    var scaleTrigger = new ScaleTrigger
+                    {
+                        Type = type,
+                        Metadata = new Dictionary<string, string>()
+                    };
                     foreach (var property in binding)
                     {
                         if (property.Value.Type == JTokenType.String)
