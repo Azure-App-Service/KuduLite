@@ -57,9 +57,10 @@ namespace Kudu.Core.K8SE
         /// <summary>
         /// Updates the triggers for the function apps
         /// </summary>
-        /// <param name="appName"The name of the function app></param>
-        /// <param name="functionTriggers">The function apps triggers in the json format</param>
-        public static void UpdateFunctionApp(string appName, IEnumerable<ScaleTrigger> functionTriggers, string buildNumber)
+        /// <param name="appName">The app name to update</param>
+        /// <param name="functionTriggers">The IEnumerable<ScaleTrigger></param>
+        /// <param name="buildNumber">Build number to update</param>
+        public static void UpdateFunctionAppTriggers(string appName, IEnumerable<ScaleTrigger> functionTriggers, string buildNumber)
         {
             var functionAppPatchJson = GetFunctionAppPatchJson(functionTriggers, buildNumber);
             if (string.IsNullOrEmpty(functionAppPatchJson))
@@ -70,7 +71,7 @@ namespace Kudu.Core.K8SE
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "updatejson");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
-            BuildCtlArgumentsHelper.AddJsonToPatchValueArgument(cmd, functionAppPatchJson);
+            BuildCtlArgumentsHelper.AddFunctionAppTriggerToPatchValueArgument(cmd, functionAppPatchJson);
             RunBuildCtlCommand(cmd.ToString(), "Updating function app triggers...");
         }
 
