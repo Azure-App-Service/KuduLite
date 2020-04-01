@@ -9,25 +9,22 @@
         /// e.g. for "KEDA" the json string is the serialzed string of IEnumerable<ScaleTrigger>object</param>
         /// <param name="functionzipFilePath">The functions file path</param>
         /// <returns>The josn string of triggers in function.json</returns>
-        public static string GetFunctionTriggers(string providerName, string functionzipFilePath)
+        public static T GetFunctionTriggers<T>(string providerName, string functionzipFilePath)
         {
-            IFunctionTriggerFileProvider functionTriggerProvider;
             if (string.IsNullOrWhiteSpace(providerName))
             {
-                return null;
+                return default;
             }
 
             switch (providerName.ToLower())
             {
                 case "keda":
-                    functionTriggerProvider = new KedaFunctionTriggerProvider();
-                    break;
+                    var functionTriggerProvider = new KedaFunctionTriggerProvider();
+                    return (T)functionTriggerProvider.GetFunctionTriggers(functionzipFilePath);
                 default:
                     functionTriggerProvider = new KedaFunctionTriggerProvider();
-                    break;
+                    return (T)functionTriggerProvider.GetFunctionTriggers(functionzipFilePath);
             }
-
-            return functionTriggerProvider.GetFunctionTriggers(functionzipFilePath);
         }
     }
 }

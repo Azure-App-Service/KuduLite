@@ -286,14 +286,7 @@ namespace Kudu.Core.Deployment
                         }
 
                         string appName = _environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0];
-                        var functionTriggers = FunctionTriggerProvider.GetFunctionTriggers("keda", deploymentInfo.RepositoryUrl);
-                        //Only for function apps functionTriggers will be non-null/non-empty 
-                        if (!string.IsNullOrEmpty(functionTriggers))
-                        {
-                            K8SEDeploymentHelper.UpdateFunctionAppTriggers(appName, functionTriggers);
-                        }
-
-                        DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason);
+                        DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, deploymentInfo.RepositoryUrl);
                         logger.Log($"Deployment Pod Rollout Started! Use kubectl watch deplotment {appName} to monitor the rollout status");
                     }
                 }

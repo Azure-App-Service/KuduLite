@@ -10,11 +10,11 @@ using System.Text;
 namespace Kudu.Core.Functions
 {
     /// <summary>
-    /// Retuns the json of "<see cref="IEnumerable<ScaleTrigger>"/> for KEDA scalers" 
+    /// Returns "<see cref="IEnumerable<ScaleTrigger>"/> for KEDA scalers" 
     /// </summary>
-    public class KedaFunctionTriggerProvider : IFunctionTriggerFileProvider
+    public class KedaFunctionTriggerProvider
     {
-        public string GetFunctionTriggers(string zipFilePath)
+        public IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath)
         {
             if (!File.Exists(zipFilePath))
             {
@@ -48,18 +48,8 @@ namespace Kudu.Core.Functions
                 return fullName.EndsWith(Constants.FunctionsConfigFile) &&
                        fullName.Count(c => c == '/' || c == '\\') == 1;
             }
-
-            var patchAppJson = new PatchAppJson
-            {
-                PatchSpec = new PatchSpec
-                {
-                    TriggerOptions = new TriggerOptions
-                    {
-                        Triggers = kedaScaleTriggers
-                    }
-                }
-            };
-            return JsonConvert.SerializeObject(patchAppJson, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            
+            return kedaScaleTriggers;
         }
 
         public IEnumerable<ScaleTrigger> ParseFunctionJson(string functionName, string functionJson)

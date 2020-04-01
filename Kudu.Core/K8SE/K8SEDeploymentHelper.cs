@@ -1,8 +1,12 @@
 ﻿using Kudu.Contracts.Tracing;
 using Kudu.Core.Deployment;
+using Kudu.Core.Functions;
 using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 namespace Kudu.Core.K8SE
@@ -55,12 +59,18 @@ namespace Kudu.Core.K8SE
         /// </summary>
         /// <param name="appName"The name of the function app></param>
         /// <param name="functionTriggers">The function apps triggers in the json format</param>
-        public static void UpdateFunctionAppTriggers(string appName, string functionTriggers)
+        public static void UpdateFunctionApp(string appName, IEnumerable<ScaleTrigger> functionTriggers, string buildNumber)
         {
+            var functionAppPatchJson = GetFunctionAppPatchJson(functionTriggers, buildNumber);
+            if (string.IsNullOrEmpty(functionAppPatchJson))
+            {
+                return;
+            }
+
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "updatejson");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
-            BuildCtlArgumentsHelper.AddJsonToPatchValueArgument(cmd, functionTriggers);
+            BuildCtlArgumentsHelper.AddJsonToPatchValueArgument(cmd, functionAppPatchJson);
             RunBuildCtlCommand(cmd.ToString(), "Updating function app triggers...");
         }
 
@@ -109,6 +119,34 @@ namespace Kudu.Core.K8SE
             Console.WriteLine("AppName :::::::: " + appName);
 
             return appName;
+        }
+
+        private static string GetFunctionAppPatchJson(IEnumerable<ScaleTrigger> functionTriggers, string buildNumber)
+        {
+            if (functionTriggers == null || !functionTriggers.Any())
+            {
+                return null;
+            }
+
+            var patchAppJson = new PatchAppJson
+            {
+                PatchSpec = new PatchSpec
+                {
+                    TriggerOptions = new TriggerOptions
+                    {
+                        Triggers = functionTriggers
+                    },
+                    Code = new CodeSpec
+                    {
+                        PackageRef = new PackageReference
+                        {
+                            BuildVersion = buildNumber
+                        }
+                    }
+                }
+            };
+
+            return JsonConvert.SerializeObject(patchAppJson, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
         }
     }
 }
