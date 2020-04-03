@@ -26,7 +26,7 @@ namespace Kudu.Core.K8SE
             args.AppendFormat(" -appPropertyValue {0}", appPropertyValue);
         }
 
-        internal static void AddJsonToPatchValueArgument(StringBuilder args, string jsonToPatch)
+        internal static void AddFunctionAppTriggerToPatchValueArgument(StringBuilder args, string jsonToPatch)
         {
             args.AppendFormat(" -jsonToPatch {0}", jsonToPatch);
         }
