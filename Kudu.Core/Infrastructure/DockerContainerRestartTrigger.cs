@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using Kudu.Core.Functions;
 using Kudu.Core.Helpers;
 using Kudu.Core.K8SE;
 
@@ -22,14 +25,24 @@ namespace Kudu.Core.Infrastructure
             "The last modification Kudu made to this file was at {0}, for the following reason: {1}.",
             System.Environment.NewLine);
 
-        public static void RequestContainerRestart(IEnvironment environment, string reason)
+        public static void RequestContainerRestart(IEnvironment environment, string reason, string repositoryUrl = null)
         {
-            if(K8SEDeploymentHelper.IsK8SEEnvironment())
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 string appName = environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0];
                 string buildNumber = environment.CurrId;
+                var functionTriggers = FunctionTriggerProvider.GetFunctionTriggers<IEnumerable<ScaleTrigger>>("keda", repositoryUrl);
 
-                K8SEDeploymentHelper.UpdateBuildNumber(appName, buildNumber);
+                //Only for function apps functionTriggers will be non-null/non-empty 
+                if (functionTriggers?.Any() == true)
+                {
+                    K8SEDeploymentHelper.UpdateFunctionApp(appName, functionTriggers, buildNumber);
+                }
+                else
+                {
+                    K8SEDeploymentHelper.UpdateBuildNumber(appName, buildNumber);
+                }
+
                 return;
             }
 
