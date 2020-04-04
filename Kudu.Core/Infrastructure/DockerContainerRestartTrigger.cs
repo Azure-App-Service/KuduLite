@@ -36,7 +36,7 @@ namespace Kudu.Core.Infrastructure
                 //Only for function apps functionTriggers will be non-null/non-empty 
                 if (functionTriggers?.Any() == true)
                 {
-                    K8SEDeploymentHelper.UpdateFunctionAppTriggers(appName, functionTriggers, buildNumber);
+                    K8SEDeploymentHelper.UpdateFunctionAppTriggers(appName, functionTriggers, $"{buildNumber}|{appName}");
                 }
                 else
                 {
