@@ -71,7 +71,7 @@ namespace Kudu.Core.K8SE
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "updatejson");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
-            BuildCtlArgumentsHelper.AddFunctionAppTriggerToPatchValueArgument(cmd, functionAppPatchJson);
+            BuildCtlArgumentsHelper.AddFunctionTriggersJsonToPatchValueArgument(cmd, functionAppPatchJson);
             RunBuildCtlCommand(cmd.ToString(), "Updating function app triggers...");
         }
 
@@ -147,7 +147,9 @@ namespace Kudu.Core.K8SE
                 }
             };
 
-            return JsonConvert.SerializeObject(patchAppJson, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            var patchJson = JsonConvert.SerializeObject(patchAppJson, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            var patchJsonString = JsonConvert.ToString(patchJson);
+            return patchJsonString;
         }
     }
 }
