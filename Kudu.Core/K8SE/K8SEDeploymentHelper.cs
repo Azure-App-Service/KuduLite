@@ -148,8 +148,8 @@ namespace Kudu.Core.K8SE
             };
 
             var patchJson = JsonConvert.SerializeObject(patchAppJson, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-            //var patchJsonString = JsonConvert.ToString(patchJson);
-            return patchJson;
+            var patchJsonString = JsonConvert.ToString(patchJson);
+            return patchJsonString;
         }
     }
 }
