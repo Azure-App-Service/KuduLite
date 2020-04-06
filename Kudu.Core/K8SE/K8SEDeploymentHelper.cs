@@ -77,13 +77,14 @@ namespace Kudu.Core.K8SE
 
         private static string RunBuildCtlCommand(string args, string msg)
         {
+            var escapedArgs = args.Replace("\"", "\\\"");
             Console.WriteLine($"{msg} : {args}");
             var process = new Process()
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "/bin/bash",
-                    Arguments = $"-c \"{args}\"",
+                    Arguments = $"-c \"{escapedArgs}\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
