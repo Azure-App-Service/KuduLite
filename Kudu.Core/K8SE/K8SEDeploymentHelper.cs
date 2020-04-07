@@ -95,6 +95,7 @@ namespace Kudu.Core.K8SE
             process.Start();
             string output = process.StandardOutput.ReadToEnd();
             string error = process.StandardError.ReadToEnd();
+            Console.WriteLine($"buildctl output:\n {output}");
             process.WaitForExit();
 
             if (string.IsNullOrEmpty(error))
