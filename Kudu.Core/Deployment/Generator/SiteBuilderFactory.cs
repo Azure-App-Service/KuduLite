@@ -78,6 +78,15 @@ namespace Kudu.Core.Deployment.Generator
                 return new OryxBuilder(_environment, settings, _propertyProvider, repositoryRoot);
             }
 
+            // Check if we really need a builder for this
+            // If not, return the NoOpBuilder
+            string requiredBuild = System.Environment.GetEnvironmentVariable("BUILD_REQUIRED");
+            if(!string.IsNullOrEmpty(requiredBuild) && string.Equals(requiredBuild, Boolean.FalseString, StringComparison.OrdinalIgnoreCase))
+            {
+                var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
+                return new NoOpBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);
+            }
+
             if (!String.IsNullOrEmpty(targetProjectPath))
             {
                 // Try to resolve the project
