@@ -48,7 +48,7 @@ namespace Kudu.Core.Functions
                 return fullName.EndsWith(Constants.FunctionsConfigFile) &&
                        fullName.Count(c => c == '/' || c == '\\') == 1;
             }
-            
+
             return kedaScaleTriggers;
         }
 
@@ -85,7 +85,7 @@ namespace Kudu.Core.Functions
                 {
                     var scaleTrigger = new ScaleTrigger
                     {
-                        Type = type,
+                        Type = GetKedaTriggerType(type),
                         Metadata = new Dictionary<string, string>()
                     };
                     foreach (var property in binding)
@@ -112,6 +112,40 @@ namespace Kudu.Core.Functions
             }
 
             return zipEnetry.FullName.Split('/').Length == 2 ? zipEnetry.FullName.Split('/')[0] : zipEnetry.FullName.Split('\\')[0];
+        }
+
+        private static string GetKedaTriggerType(string triggerType)
+        {
+            if (string.IsNullOrEmpty(triggerType))
+            {
+                throw new ArgumentNullException(nameof(triggerType));
+            }
+
+            triggerType = triggerType.ToLower();
+
+            switch (triggerType)
+            {
+                case "queuetrigger":
+                    return "azure-queue";
+
+                case "kafkatrigger":
+                    return "kafka";
+
+                case "blobtrigger":
+                    return "azure-blob";
+
+                case "servicebustrigger":
+                    return "azure-servicebus";
+
+                case "eventhubtrigger":
+                    return "azure-eventhub";
+
+                case "rabbitmqtrigger":
+                    return "rabbitmq";
+
+                default:
+                    return triggerType;
+            }
         }
     }
 }

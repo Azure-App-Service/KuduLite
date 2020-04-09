@@ -71,19 +71,20 @@ namespace Kudu.Core.K8SE
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "updatejson");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
-            BuildCtlArgumentsHelper.AddFunctionAppTriggerToPatchValueArgument(cmd, functionAppPatchJson);
+            BuildCtlArgumentsHelper.AddFunctionTriggersJsonToPatchValueArgument(cmd, functionAppPatchJson);
             RunBuildCtlCommand(cmd.ToString(), "Updating function app triggers...");
         }
 
         private static string RunBuildCtlCommand(string args, string msg)
         {
+            var escapedArgs = args.Replace("\"", "\\\"");
             Console.WriteLine($"{msg} : {args}");
             var process = new Process()
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "/bin/bash",
-                    Arguments = $"-c \"{args}\"",
+                    Arguments = $"-c \"{escapedArgs}\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -94,6 +95,7 @@ namespace Kudu.Core.K8SE
             process.Start();
             string output = process.StandardOutput.ReadToEnd();
             string error = process.StandardError.ReadToEnd();
+            Console.WriteLine($"buildctl output:\n {output}");
             process.WaitForExit();
 
             if (string.IsNullOrEmpty(error))
@@ -147,7 +149,9 @@ namespace Kudu.Core.K8SE
                 }
             };
 
-            return JsonConvert.SerializeObject(patchAppJson, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            var patchJson = JsonConvert.SerializeObject(patchAppJson, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            var patchJsonString = JsonConvert.ToString(patchJson);
+            return patchJsonString;
         }
     }
 }
