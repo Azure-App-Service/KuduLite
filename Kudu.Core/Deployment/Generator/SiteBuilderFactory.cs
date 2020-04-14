@@ -80,8 +80,8 @@ namespace Kudu.Core.Deployment.Generator
 
             // Check if we really need a builder for this
             // If not, return the NoOpBuilder
-            string requiredBuild = System.Environment.GetEnvironmentVariable("BUILD_REQUIRED");
-            if(!string.IsNullOrEmpty(requiredBuild) && string.Equals(requiredBuild, Boolean.FalseString, StringComparison.OrdinalIgnoreCase))
+            string appFramework = System.Environment.GetEnvironmentVariable("FRAMEWORK");
+            if(!string.IsNullOrEmpty(appFramework) && string.Equals(appFramework, "STATICSITE", StringComparison.OrdinalIgnoreCase))
             {
                 var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
                 return new NoOpBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);
