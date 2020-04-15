@@ -64,6 +64,15 @@ namespace Kudu.Core.Deployment.Generator
                 return new BasicBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);
             }
 
+            // Check if we really need a builder for this
+            // If not, return the NoOpBuilder
+            string appFramework = System.Environment.GetEnvironmentVariable("FRAMEWORK");
+            if (!string.IsNullOrEmpty(appFramework) && string.Equals(appFramework, "STATICSITE", StringComparison.OrdinalIgnoreCase))
+            {
+                var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
+                return new NoOpBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);
+            }
+
             // If ENABLE_ORYX_BUILD is not set, for function app, we assume it on by default
             string enableOryxBuild = System.Environment.GetEnvironmentVariable("ENABLE_ORYX_BUILD");
             if (!string.IsNullOrEmpty(enableOryxBuild))
