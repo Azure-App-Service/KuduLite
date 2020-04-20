@@ -136,7 +136,7 @@ namespace Kudu.Core.Deployment.Generator
 
                 // we have a solution file, but no deployable project
                 // shunTODO how often do we run into this
-                return ResolveNonAspProject(repositoryRoot, null, settings);
+                return ResolveNonAspProject(tracer, repositoryRoot, null, settings);
             }
 
             if (project.IsWap)
@@ -177,11 +177,12 @@ namespace Kudu.Core.Deployment.Generator
                                             solution.Path);
         }
 
-        private ISiteBuilder ResolveNonAspProject(string repositoryRoot, string projectPath, IDeploymentSettingsManager perDeploymentSettings)
+        private ISiteBuilder ResolveNonAspProject(ITracer tracer, string repositoryRoot, string projectPath, IDeploymentSettingsManager perDeploymentSettings)
         {
             // get framework from LinuxFxVersion
             string strFramework = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkSetting);
             Framework framework = SupportedFrameworks.ParseLanguage(strFramework);
+            tracer.Trace(String.Format("linuxfxversion found: {0}", strFramework));
 
             string sourceProjectPath = projectPath ?? repositoryRoot;
             switch (framework)
@@ -197,7 +198,7 @@ namespace Kudu.Core.Deployment.Generator
 
                 case Framework.Ruby:
                     return new RubySiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
-                    
+
                 case Framework.PHP:
                     return new PHPSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
 
@@ -205,30 +206,37 @@ namespace Kudu.Core.Deployment.Generator
                     // sniff the files for hints
                     if (FunctionAppHelper.LooksLikeFunctionApp())
                     {
+                        tracer.Trace("Detected Function App");
                         return new FunctionBasicBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
                     }
                     else if (IsRubySite(sourceProjectPath))
                     {
+                        tracer.Trace("Detected Ruby App");
                         return new RubySiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
                     }
                     else if (IsNodeSite(sourceProjectPath))
                     {
+                        tracer.Trace("Detected Node.js App");
                         return new NodeSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
                     }
                     else if (IsPythonSite(sourceProjectPath))
                     {
+                        tracer.Trace("Detected Python App");
                         return new PythonSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
                     }
                     else if (IsGoSite(sourceProjectPath))
                     {
+                        tracer.Trace("Detected Go App");
                         return new GoSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
                     }
                     else if (IsPHPSite(sourceProjectPath))
                     {
+                        tracer.Trace("Detected PHP App");
                         return new PHPSiteBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
                     }
                     else
                     {
+                        tracer.Trace("Detected Basic App");
                         return new BasicBuilder(_environment, perDeploymentSettings, _propertyProvider, repositoryRoot, projectPath);
                     }
             }
