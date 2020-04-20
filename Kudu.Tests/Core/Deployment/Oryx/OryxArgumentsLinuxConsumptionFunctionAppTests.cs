@@ -23,7 +23,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
                 OutputPath = "OutputPath"
             };
             string command = args.GenerateOryxBuildCommand(mockedContext);
-            Assert.Equal("oryx build RepositoryPath -o RepositoryPath", command);
+            Assert.Equal("oryx build RepositoryPath -o OutputPath", command);
         }
 
         [Theory]

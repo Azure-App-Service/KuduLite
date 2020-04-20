@@ -1,4 +1,5 @@
-﻿using Kudu.Core.Deployment;
+﻿using Kudu.Core;
+using Kudu.Core.Deployment;
 using Kudu.Core.Deployment.Oryx;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,8 @@ namespace Kudu.Tests.Core.Deployment.Oryx
         [Fact]
         public void OryxArgumentShouldBeAppService()
         {
-            IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
+            IEnvironment ienv = new TestMockedIEnvironment();
+            IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(ienv);
             Assert.IsType<AppServiceOryxArguments>(args);
         }
 
@@ -22,7 +24,8 @@ namespace Kudu.Tests.Core.Deployment.Oryx
             using (new TestScopedEnvironmentVariable("FUNCTIONS_WORKER_RUNTIME", "PYTHON"))
             using (new TestScopedEnvironmentVariable("FUNCTIONS_EXTENSION_VERSION", "~2"))
             {
-                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
+                IEnvironment ienv = TestMockedEnvironment.GetMockedEnvironment();
+                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(ienv);
                 Assert.IsType<FunctionAppOryxArguments>(args);
             }
         }
@@ -34,7 +37,8 @@ namespace Kudu.Tests.Core.Deployment.Oryx
             using (new TestScopedEnvironmentVariable("FUNCTIONS_EXTENSION_VERSION", "~2"))
             using (new TestScopedEnvironmentVariable("SCM_RUN_FROM_PACKAGE", "http://microsoft.com"))
             {
-                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
+                IEnvironment ienv = TestMockedEnvironment.GetMockedEnvironment();
+                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(ienv);
                 Assert.IsType<LinuxConsumptionFunctionAppOryxArguments>(args);
             }
         }
@@ -55,7 +59,8 @@ namespace Kudu.Tests.Core.Deployment.Oryx
 
             using (new TestScopedEnvironmentVariable(env))
             {
-                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
+                IEnvironment ienv = TestMockedEnvironment.GetMockedEnvironment();
+                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(ienv);
                 Assert.Equal(expectedRunOryxBuild, args.RunOryxBuild);
             }
         }
@@ -76,7 +81,8 @@ namespace Kudu.Tests.Core.Deployment.Oryx
 
             using (new TestScopedEnvironmentVariable(env))
             {
-                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
+                IEnvironment ienv = TestMockedEnvironment.GetMockedEnvironment();
+                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(ienv);
                 Assert.Equal(expectedSkipKuduSync, args.SkipKuduSync);
             }
         }
@@ -88,7 +94,8 @@ namespace Kudu.Tests.Core.Deployment.Oryx
             {
                 OutputPath = "outputpath"
             };
-            IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
+            IEnvironment ienv = TestMockedEnvironment.GetMockedEnvironment();
+            IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(ienv);
             string command = args.GenerateOryxBuildCommand(deploymentContext);
             Assert.Equal(@"oryx build outputpath -o outputpath", command);
         }
@@ -104,7 +111,8 @@ namespace Kudu.Tests.Core.Deployment.Oryx
 
             using (new TestScopedEnvironmentVariable("FUNCTIONS_EXTENSION_VERSION", "~2"))
             {
-                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
+                IEnvironment ienv = TestMockedEnvironment.GetMockedEnvironment();
+                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(ienv);
                 string command = args.GenerateOryxBuildCommand(deploymentContext);
                 Assert.Equal(@"oryx build outputpath -o outputpath -i buildtemppath", command);
             }
@@ -121,7 +129,8 @@ namespace Kudu.Tests.Core.Deployment.Oryx
             using (new TestScopedEnvironmentVariable("FUNCTIONS_EXTENSION_VERSION", "~2"))
             using (new TestScopedEnvironmentVariable("SCM_RUN_FROM_PACKAGE", "http://microsoft.com"))
             {
-                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
+                IEnvironment ienv = TestMockedEnvironment.GetMockedEnvironment();
+                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(ienv);
                 string command = args.GenerateOryxBuildCommand(deploymentContext);
                 Assert.Equal(@"oryx build repositorypath -o repositorypath", command);
             }
@@ -139,7 +148,8 @@ namespace Kudu.Tests.Core.Deployment.Oryx
             using (new TestScopedEnvironmentVariable("FUNCTIONS_EXTENSION_VERSION", "~2"))
             using (new TestScopedEnvironmentVariable("FUNCTIONS_WORKER_RUNTIME", "python"))
             {
-                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments();
+                IEnvironment ienv = TestMockedEnvironment.GetMockedEnvironment();
+                IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(ienv);
                 string command = args.GenerateOryxBuildCommand(deploymentContext);
                 Assert.Equal(@"oryx build outputpath -o outputpath --platform python --platform-version 3.6 -i buildtemppath -p packagedir=.python_packages\lib\python3.6\site-packages", command);
             }

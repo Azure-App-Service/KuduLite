@@ -12,17 +12,21 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Kudu;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Deployment;
 using Kudu.Core.Infrastructure;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NuGet.Packaging.Signing;
 
 namespace Kudu.Core.Helpers
 {
     public static class PostDeploymentHelper
     {
         public const string AutoSwapLockFile = "autoswap.lock";
+        public const int RestartRetryIntervalInMilliSeconds = 5 * 1000; // 5 seconds
+        public const int RestartRetryCount = 5;
 
         private static Lazy<ProductInfoHeaderValue> _userAgent = new Lazy<ProductInfoHeaderValue>(() =>
         {
@@ -50,6 +54,12 @@ namespace Kudu.Core.Helpers
         private static string HttpHost
         {
             get { return System.Environment.GetEnvironmentVariable(Constants.HttpHost); }
+        }
+
+        // HTTP_AUTHORITY = host:port. Port is optional. Example: site.scm.azurewebsites.net or localhost:11212
+        private static string HttpAuthority
+        {
+            get { return System.Environment.GetEnvironmentVariable(Constants.HttpAuthority); }
         }
 
         // WEBSITE_SWAP_SLOTNAME = Production
@@ -98,6 +108,11 @@ namespace Kudu.Core.Helpers
         private static string HomeStamp
         {
             get { return System.Environment.GetEnvironmentVariable("WEBSITE_HOME_STAMPNAME"); }
+        }
+
+        private static bool IsLocalHost
+        {
+            get { return HttpHost.Equals("localhost", StringComparison.OrdinalIgnoreCase); }
         }
 
         /// <summary>
@@ -313,6 +328,37 @@ namespace Kudu.Core.Helpers
             return !string.IsNullOrEmpty(WebSiteSwapSlotName);
         }
 
+        public static async Task RestartMainSiteAsync(string requestId, TraceListener tracer)
+        {
+            _tracer = tracer;
+
+            Trace(tracer, TraceEventType.Information, "Requesting site restart");
+
+            VerifyEnvironments();
+
+            int attemptCount = 0;
+
+            try
+            {
+                await OperationManager.AttemptAsync(async () =>
+                {
+                    attemptCount++;
+
+                    Trace(tracer, TraceEventType.Information, $"Requesting site restart. Attempt #{attemptCount}");
+
+                    await PostAsync(Constants.RestartApiPath, requestId, null);
+
+                    Trace(tracer, TraceEventType.Information, $"Successfully requested a restart. Attempt #{attemptCount}");
+
+                }, RestartRetryCount, RestartRetryIntervalInMilliSeconds);
+            }
+            catch(Exception ex)
+            {
+                Trace(tracer, TraceEventType.Information, $"Failed to request a restart. Number of attempts: {attemptCount}. Exception: {ex}");
+                throw;
+            }
+        }
+
         public static async Task PerformAutoSwap(string requestId, TraceListener tracer)
         {
             _tracer = tracer;
@@ -359,9 +405,7 @@ namespace Kudu.Core.Helpers
         public static async Task RemoveAllWorkersAsync(string websiteHostname, string sitename)
         {
             // Generate URL encoded auth token
-            string websiteAuthEncryptionKey = System.Environment.GetEnvironmentVariable(SettingsKeys.AuthEncryptionKey);
-            DateTime expiry = DateTime.UtcNow.AddMinutes(5);
-            string authToken = SimpleWebTokenHelper.CreateToken(expiry, websiteAuthEncryptionKey.ToKeyBytes());
+            string authToken = GetWebsiteAuthToken();
             string authTokenEncoded = HttpUtility.UrlEncode(authToken);
 
             // Generate RemoveAllWorker request URI
@@ -377,11 +421,46 @@ namespace Kudu.Core.Helpers
             using (var client = HttpClientFactory())
             using (var response = await client.GetAsync(baseUri))
             {
-                response.EnsureSuccessStatusCode();
                 Trace(TraceEventType.Information, "RemoveAllWorkers, statusCode = {0}", response.StatusCode);
+                response.EnsureSuccessStatusCode();
             }
             
             return;
+        }
+
+        /// <summary>
+        /// Invoke main site url to warm up function app
+        /// </summary>
+        /// <param name="websiteHostname">sitename.azurewebsites.net</param>
+        /// <returns></returns>
+        public static async Task PerformFunctionHostSyncTriggersAsync(string websiteHostname)
+        {
+            if (!Uri.TryCreate($"http://{websiteHostname}/admin/host/synctriggers", UriKind.Absolute, out Uri baseUri))
+            {
+                throw new ArgumentException($"Malformed URI is used in function host sync trigger");
+            }
+            Trace(TraceEventType.Information, $"Calling function host synctrigger {websiteHostname}/admin/host/synctriggers");
+
+            // Initiate POST request
+            using (var client = HttpClientFactory())
+            using (var request = new HttpRequestMessage(HttpMethod.Post, baseUri))
+            {
+                request.Headers.Add(Constants.SiteRestrictedToken, GetWebsiteAuthToken());
+                using (var response = await client.SendAsync(request))
+                {
+                    Trace(TraceEventType.Information, "FunctionHostSyncTrigger, statusCode = {0}", response.StatusCode);
+                    response.EnsureSuccessStatusCode();
+                }
+            }
+
+            return;
+        }
+
+        private static string GetWebsiteAuthToken()
+        {
+            string websiteAuthEncryptionKey = System.Environment.GetEnvironmentVariable(SettingsKeys.AuthEncryptionKey);
+            DateTime expiry = DateTime.UtcNow.AddMinutes(5);
+            return SimpleWebTokenHelper.CreateToken(expiry, websiteAuthEncryptionKey.ToKeyBytes());
         }
 
         private static void VerifyEnvironments()
@@ -470,26 +549,27 @@ namespace Kudu.Core.Helpers
             }
         }
 
+        // Throws on failure
         private static async Task PostAsync(string path, string requestId, string content = null)
         {
-            var host = HttpHost;
-            var ipAddress = await GetAlternativeIPAddress(host);
+            var hostOrAuthority = IsLocalHost ? HttpAuthority : HttpHost;
+            var scheme = IsLocalHost ? "http" : "https";
+            var ipAddress = await GetAlternativeIPAddress(hostOrAuthority);
             var statusCode = default(HttpStatusCode);
-            Trace(TraceEventType.Verbose, "Begin HttpPost https://{0}{1}, x-ms-request-id: {2}", host, path, requestId);
             try
             {
                 using (var client = HttpClientFactory())
                 {
                     if (ipAddress == null)
                     {
-                        Trace(TraceEventType.Verbose, "Begin HttpPost https://{0}{1}, x-ms-request-id: {2}", host, path, requestId);
-                        client.BaseAddress = new Uri(string.Format("https://{0}", host));
+                        Trace(TraceEventType.Verbose, "Begin HttpPost {0}://{1}{2}, x-ms-request-id: {3}", scheme, hostOrAuthority, path, requestId);
+                        client.BaseAddress = new Uri(string.Format("{0}://{1}", scheme, hostOrAuthority));
                     }
                     else
                     {
-                        Trace(TraceEventType.Verbose, "Begin HttpPost https://{0}{1}, host: {2}, x-ms-request-id: {3}", ipAddress, path, host, requestId);
-                        client.BaseAddress = new Uri(string.Format("https://{0}", ipAddress));
-                        client.DefaultRequestHeaders.Host = host;
+                        Trace(TraceEventType.Verbose, "Begin HttpPost {0}://{1}{2}, host: {3}, x-ms-request-id: {4}", scheme, ipAddress, path, hostOrAuthority, requestId);
+                        client.BaseAddress = new Uri(string.Format("{0}://{1}", scheme, ipAddress));
+                        client.DefaultRequestHeaders.Host = hostOrAuthority;
                     }
 
                     client.DefaultRequestHeaders.UserAgent.Add(_userAgent.Value);
@@ -509,7 +589,7 @@ namespace Kudu.Core.Helpers
                 Trace(TraceEventType.Verbose, "End HttpPost, status: {0}", statusCode);
             }
         }
-        
+
         /// <summary>
         /// This works around the hostname dns resolution issue for recently created site.
         /// If dns failed, we will use the home hosted service as alternative IP address.
@@ -728,7 +808,11 @@ namespace Kudu.Core.Helpers
 
         private static void Trace(TraceEventType eventType, string format, params object[] args)
         {
-            var tracer = _tracer;
+            Trace(_tracer, eventType, format, args);
+        }
+
+        private static void Trace(TraceListener tracer, TraceEventType eventType, string format, params object[] args)
+        {
             if (tracer != null)
             {
                 tracer.TraceEvent(null, "PostDeployment", eventType, (int)eventType, format, args);

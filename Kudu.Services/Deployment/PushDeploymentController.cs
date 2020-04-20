@@ -18,6 +18,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Newtonsoft.Json.Linq;
 using System.Net.Http;
+using System.Collections.Generic;
+using Kudu.Core.Helpers;
 
 namespace Kudu.Services.Deployment
 {
@@ -52,6 +54,7 @@ namespace Kudu.Services.Deployment
         [DisableFormValueModelBinding]
         public async Task<IActionResult> ZipPushDeploy(
             [FromQuery] bool isAsync = false,
+            [FromQuery] bool syncTriggers = false,
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
             [FromQuery] string deployer = DefaultDeployer,
@@ -75,7 +78,8 @@ namespace Kudu.Services.Deployment
                     Author = author,
                     AuthorEmail = authorEmail,
                     Message = message,
-                    ZipURL = null
+                    ZipURL = null,
+                    DoSyncTriggers = syncTriggers
                 };
 
                 if (_settings.RunFromLocalZip())
@@ -88,9 +92,7 @@ namespace Kudu.Services.Deployment
                     // for post deployment sync triggers.
                     deploymentInfo.SyncFunctionsTriggersPath =
                         Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-                }
-
-                ;
+                };
 
                 return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
             }
@@ -100,6 +102,7 @@ namespace Kudu.Services.Deployment
         public async Task<IActionResult> ZipPushDeployViaUrl(
             [FromBody] JObject requestJson,
             [FromQuery] bool isAsync = false,
+            [FromQuery] bool syncTriggers = false,
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
             [FromQuery] string deployer = DefaultDeployer,
@@ -126,6 +129,7 @@ namespace Kudu.Services.Deployment
                     AuthorEmail = authorEmail,
                     Message = message,
                     ZipURL = zipUrl,
+                    DoSyncTriggers = syncTriggers
                 };
                 return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
             }
@@ -206,6 +210,7 @@ namespace Kudu.Services.Deployment
         private async Task<IActionResult> PushDeployAsync(ZipDeploymentInfo deploymentInfo, bool isAsync,
             HttpContext context)
         {
+
             var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
             if (_settings.RunFromLocalZip())
             {
@@ -213,6 +218,30 @@ namespace Kudu.Services.Deployment
             }
             else
             {
+                var oryxManifestFile = Path.Combine(_environment.WebRootPath, "oryx-manifest.toml");
+                if (FileSystemHelpers.FileExists(oryxManifestFile))
+                {
+                    _tracer.Step("Removing previous build artifact's manifest file");
+                    FileSystemHelpers.DeleteFileSafe(oryxManifestFile);
+                }
+
+                try
+                {
+                    var nodeModulesSymlinkFile = Path.Combine(_environment.WebRootPath, "node_modules");
+                    Mono.Unix.UnixSymbolicLinkInfo i = new Mono.Unix.UnixSymbolicLinkInfo(nodeModulesSymlinkFile);
+                    if (i.FileType == Mono.Unix.FileTypes.SymbolicLink)
+                    {
+                        _tracer.Step("Removing node_modules symlink");
+                        // TODO: Add support to remove Unix Symlink File in DeleteFileSafe
+                        // FileSystemHelpers.DeleteFileSafe(nodeModulesSymlinkFile); 
+                        FileSystemHelpers.RemoveUnixSymlink(nodeModulesSymlinkFile, TimeSpan.FromSeconds(5));
+                    }
+                }
+                catch(Exception)
+                {
+                    // best effort
+                }
+
                 using (_tracer.Step("Writing zip file to {0}", zipFilePath))
                 {
                     if (!string.IsNullOrEmpty(context.Request.ContentType) &&
@@ -297,7 +326,7 @@ namespace Kudu.Services.Deployment
                 case FetchDeploymentRequestResult.ConflictDeploymentInProgress:
                     return StatusCode(StatusCodes.Status409Conflict, Resources.Error_DeploymentInProgress);
                 case FetchDeploymentRequestResult.ConflictRunFromRemoteZipConfigured:
-                    return StatusCode(StatusCodes.Status409Conflict, Resources.Error_AutoSwapDeploymentOngoing);
+                    return StatusCode(StatusCodes.Status409Conflict, Resources.Error_RunFromRemoteZipConfigured);
                 default:
                     return BadRequest();
             }
@@ -344,15 +373,16 @@ namespace Kudu.Services.Deployment
 
                 using (var zip = new ZipArchive(file, ZipArchiveMode.Read))
                 {
-                    zip.Extract(extractTargetDirectory);
+                    deploymentInfo.repositorySymlinks = zip.Extract(extractTargetDirectory, preserveSymlinks: ShouldPreserveSymlinks());
+
+                    CreateZipSymlinks(deploymentInfo.repositorySymlinks, extractTargetDirectory);
+
+                    PermissionHelper.ChmodRecursive("777", extractTargetDirectory, tracer, TimeSpan.FromMinutes(1));
                 }
-                //});
-                //await Task.WhenAll(cleanTask, extractTask);
-                //await Task.WhenAll(cleanTask, extractTask);
             }
 
             CommitRepo(repository, zipDeploymentInfo);
-            return Task.CompletedTask;      
+            return Task.CompletedTask;
         }
 
         private async Task LocalZipHandler(IRepository repository, DeploymentInfoBase deploymentInfo,
@@ -414,6 +444,18 @@ namespace Kudu.Services.Deployment
             repository.Commit(zipDeploymentInfo.Message, zipDeploymentInfo.Author, zipDeploymentInfo.AuthorEmail);
         }
 
+        private static void CreateZipSymlinks(IDictionary<string, string> symLinks, string extractTargetDirectory)
+        {
+            if (!OSDetector.IsOnWindows() && symLinks != null)
+            {
+                foreach (var symlinkPair in symLinks)
+                {
+                    string symLinkFilePath = Path.Combine(extractTargetDirectory, symlinkPair.Key);
+                    FileSystemHelpers.EnsureDirectory(FileSystemHelpers.GetDirectoryName(Path.Combine(extractTargetDirectory, symlinkPair.Key)));
+                    FileSystemHelpers.CreateRelativeSymlink(symLinkFilePath, symlinkPair.Value, TimeSpan.FromSeconds(5));
+                }
+            }
+        }
 
         private async Task WriteSitePackageZip(ZipDeploymentInfo zipDeploymentInfo, ITracer tracer)
         {
@@ -445,6 +487,16 @@ namespace Kudu.Services.Deployment
 
             DeploymentHelper.PurgeBuildArtifactsIfNecessary(_environment.SitePackagesPath, BuildArtifactType.Zip,
                 tracer, _settings.GetMaxZipPackageCount());
+        }
+
+        private static bool ShouldPreserveSymlinks()
+        {
+            string framework = System.Environment.GetEnvironmentVariable("FRAMEWORK");
+            string preserveSymlinks = System.Environment.GetEnvironmentVariable("WEBSITE_ZIP_PRESERVE_SYMLINKS");
+            return !string.IsNullOrEmpty(framework) 
+                && framework.Equals("node", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrEmpty(preserveSymlinks)
+                && preserveSymlinks.Equals("true", StringComparison.OrdinalIgnoreCase);
         }
 
         private void DeleteFilesAndDirsExcept(string fileToKeep, string dirToKeep, ITracer tracer)

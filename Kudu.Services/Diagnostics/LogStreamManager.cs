@@ -103,7 +103,7 @@ namespace Kudu.Services.Performance
 
             FileSystemHelpers.EnsureDirectory(mountedLogFilesDir);
 
-            if (shouldMonitiorMountedLogsPath(mountedLogFilesDir))
+            if (ShouldMonitiorMountedLogsPath(mountedLogFilesDir))
             {
                 path = mountedLogFilesDir;
             }
@@ -127,33 +127,43 @@ namespace Kudu.Services.Performance
             {
                 NotifyClientWithLineBreak("Starting Log Tail -n 10 of existing logs ----", context);
 
-                foreach (string log in _logFiles.Keys)
+                try
                 {
-                    var reader = new StreamReader(log, Encoding.ASCII);
 
-                    var vfsPath = GetFileVfsPath(log);
 
-                    var printLine = log + " " + (!string.IsNullOrEmpty(vfsPath) ? " (" + vfsPath + ")" : "");
-
-                    NotifyClientWithLineBreak(String.Format(
-                                CultureInfo.CurrentCulture,
-                                printLine,
-                                DateTime.UtcNow.ToString("s"),
-                                System.Environment.NewLine),context);
-
-                    foreach (string logLine in Tail(reader, 10))
+                    foreach (string log in _logFiles.Keys)
                     {
-                        await context.Response.WriteAsync(logLine);
+
+                        var reader = new StreamReader(log, Encoding.ASCII);
+
+                        var vfsPath = GetFileVfsPath(log);
+
+                        var printLine = log + " " + (!string.IsNullOrEmpty(vfsPath) ? " (" + vfsPath + ")" : "");
+
+                        NotifyClientWithLineBreak(String.Format(
+                                    CultureInfo.CurrentCulture,
+                                    printLine,
+                                    DateTime.UtcNow.ToString("s"),
+                                    System.Environment.NewLine), context);
+
+                        foreach (string logLine in Tail(reader, 10))
+                        {
+                            await context.Response.WriteAsync(logLine);
+                            await context.Response.WriteAsync(System.Environment.NewLine);
+                        }
                         await context.Response.WriteAsync(System.Environment.NewLine);
                     }
-                    await context.Response.WriteAsync(System.Environment.NewLine);
                 }
+                catch (Exception)
+                {
+                    // best effort to get tail logs
+                }
+
                 NotifyClientWithLineBreak("Ending Log Tail of existing logs ---", context);
             }
             else
             {
                 _tracer.TraceError("LogStream: No pervious logfiles");
-                Console.WriteLine("LogStream: No pervious logfiles");
             }
 
             NotifyClientWithLineBreak("Starting Live Log Stream ---", context);
@@ -239,7 +249,7 @@ namespace Kudu.Services.Performance
         /// or the mounted fs logs dir, if kudu
         /// </summary>
         /// <returns></returns>
-        private static bool shouldMonitiorMountedLogsPath(string mountedDirPath)
+        private static bool ShouldMonitiorMountedLogsPath(string mountedDirPath)
         {
             int count = 0;
             string dateToday = DateTime.Now.ToString("yyyy_MM_dd");
@@ -536,50 +546,59 @@ namespace Kudu.Services.Performance
                     return Enumerable.Empty<string>();
                 }
                 */
-
-                long offset = 0;
-                if (!_logFiles.TryGetValue(e.FullPath, out offset))
-                {
-                    _logFiles[e.FullPath] = 0;
-                }
-
-                using (FileStream fs = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                {
-                    long length = fs.Length;
-
-                    // file was truncated
-                    if (offset > length)
+                try
+                { 
+                    long offset = 0;
+                    if (!_logFiles.TryGetValue(e.FullPath, out offset))
                     {
-                        _logFiles[e.FullPath] = offset = 0;
+                        _logFiles[e.FullPath] = 0;
                     }
 
-                    // multiple events
-                    if (offset == length)
+                    using (FileStream fs = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
-                        return Enumerable.Empty<string>();
-                    }
+                        long length = fs.Length;
 
-                    if (offset != 0)
-                    {
-                        fs.Seek(offset, SeekOrigin.Begin);
-                    }
-
-                    List<string> changes = new List<string>();
-
-                    StreamReader reader = new StreamReader(fs);
-                    while (!reader.EndOfStream)
-                    {
-                        string line = ReadLine(reader);
-                        if (String.IsNullOrEmpty(_filter) || line.IndexOf(_filter, StringComparison.OrdinalIgnoreCase) >= 0)
+                        // file was truncated
+                        if (offset > length)
                         {
-                            changes.Add(line);
+                            _logFiles[e.FullPath] = offset = 0;
                         }
+
+                        // multiple events
+                        if (offset == length)
+                        {
+                            return Enumerable.Empty<string>();
+                        }
+
+                        if (offset != 0)
+                        {
+                            fs.Seek(offset, SeekOrigin.Begin);
+                        }
+
+                        List<string> changes = new List<string>();
+
+                        StreamReader reader = new StreamReader(fs);
+                        while (!reader.EndOfStream)
+                        {
+                            string line = ReadLine(reader);
+                            if (String.IsNullOrEmpty(_filter) || line.IndexOf(_filter, StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                changes.Add(line);
+                            }
+                        }
+
+                        // Adjust offset and return changes
+                        _logFiles[e.FullPath] = reader.BaseStream.Position;
+
+                        return changes;
                     }
-
-                    // Adjust offset and return changes
-                    _logFiles[e.FullPath] = reader.BaseStream.Position;
-
-                    return changes;
+                }
+                catch(FileNotFoundException)
+                {
+                    // if no log is produced for a long time,
+                    // lwas Log4Net maintains an open file-handle for an 
+                    // old log file, workaround till that is fixed
+                    return Enumerable.Empty<string>();
                 }
             }
         }

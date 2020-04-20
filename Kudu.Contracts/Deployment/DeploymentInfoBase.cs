@@ -2,6 +2,8 @@
 using Kudu.Core.SourceControl;
 using Kudu.Contracts.Tracing;
 using System.Threading.Tasks;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace Kudu.Core.Deployment
 {
@@ -27,6 +29,8 @@ namespace Kudu.Core.Deployment
         public bool IsContinuous { get; set; }
         public FetchDelegate Fetch { get; set; }
         public bool AllowDeploymentWhileScmDisabled { get; set; }
+
+        public IDictionary<string, string> repositorySymlinks { get; set; }
 
         // Optional.
         // Path of the directory to be deployed to. The path should be relative to the wwwroot directory.
@@ -68,5 +72,9 @@ namespace Kudu.Core.Deployment
         // won't update until after a process restart. Therefore, we copy the needed
         // files into a separate folders and run sync triggers from there.
         public string SyncFunctionsTriggersPath { get; set; } = null;
+
+        // If DoSyncTriggers is set to true, the after Linux Consumption function app deployment,
+        // will initiate a POST request to http://appname.azurewebsites.net/admin/host/synctriggers
+        public bool DoSyncTriggers { get; set; }
     }
 }

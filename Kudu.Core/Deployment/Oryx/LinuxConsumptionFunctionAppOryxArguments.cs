@@ -16,7 +16,7 @@ namespace Kudu.Core.Deployment.Oryx
         {
             StringBuilder args = new StringBuilder();
 
-            base.AddOryxBuildCommand(args, context, source: context.RepositoryPath, destination: context.RepositoryPath);
+            base.AddOryxBuildCommand(args, context, source: context.RepositoryPath, destination: context.OutputPath);
             base.AddLanguage(args, base.FunctionsWorkerRuntime);
             base.AddLanguageVersion(args, base.FunctionsWorkerRuntime);
             base.AddBuildOptimizationFlags(args, context, Flags);

@@ -331,7 +331,7 @@ namespace Kudu.Services {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Run-From-Zip is set to a remote URL using WEBSITE_USE_ZIP app setting. Deployment is not supported in this configuration..
+        ///   Looks up a localized string similar to Run-From-Zip is set to a remote URL using WEBSITE_RUN_FROM_PACKAGE or WEBSITE_USE_ZIP app setting. Deployment is not supported in this configuration..
         /// </summary>
         internal static string Error_RunFromRemoteZipConfigured {
             get {
@@ -376,14 +376,14 @@ namespace Kudu.Services {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Check reults of last scan.
+        ///   Looks up a localized string similar to Check results of last scan.
         /// </summary>
         internal static string LastScanMsg {
             get {
                 return ResourceManager.GetString("LastScanMsg", resourceCulture);
             }
         }
-               
+        
         /// <summary>
         ///   Looks up a localized string similar to {0}{1}  The application was terminated.{0}.
         /// </summary>
@@ -556,7 +556,7 @@ namespace Kudu.Services {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Scan is already in progress..
+        ///   Looks up a localized string similar to Something is blocking the scan. It might be that a scan is already in progress or a deployment is underway..
         /// </summary>
         internal static string ScanInProgress {
             get {

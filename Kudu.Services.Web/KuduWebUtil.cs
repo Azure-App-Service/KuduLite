@@ -549,7 +549,7 @@ namespace Kudu.Services.Web
 
         internal static string GetWebSSHProxyPort()
         {
-            return System.Environment.GetEnvironmentVariable(Constants.WebSiteSwapSlotName) ?? Constants.WebSSHReverseProxyDefaultPort;
+            return System.Environment.GetEnvironmentVariable(Constants.WebSSHReverseProxyPortEnvVar) ?? Constants.WebSSHReverseProxyDefaultPort;
         }
     }
 }

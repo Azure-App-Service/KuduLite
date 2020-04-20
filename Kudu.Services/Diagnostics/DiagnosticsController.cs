@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
@@ -20,6 +21,13 @@ using System.Threading.Tasks;
 
 namespace Kudu.Services.Performance
 {
+    class DockerLogSourceMap
+    {
+        public string LogSource { get; set; } // RDxxxxxxxxxxxx + "_" + default, easyauth, "" (i.e. Docker), etc.
+        public DateTime Timestamp { get; set; }  // YYYYmmDD
+        public List<string> Paths { get; set; }
+    }
+
     public class DiagnosticsController : Controller
     {
         // Matches Docker log filenames of logs that haven't been rolled (are most current for a given machine name)
@@ -27,7 +35,7 @@ namespace Kudu.Services.Performance
         // Examples:
         //   2017_08_23_RD00155DD0D38E_docker.log (not rolled)
         //   2017_08_23_RD00155DD0D38E_docker.1.log (rolled)
-        private static readonly Regex NONROLLED_DOCKER_LOG_FILENAME_REGEX = new Regex(@"^\d{4}_\d{2}_\d{2}_.*_docker\.log$");
+        private static readonly Regex NONROLLED_DOCKER_LOG_FILENAME_REGEX = new Regex(@"^(\d{4}_\d{2}_\d{2})_(.*)_docker\.log$");
 
         private readonly DiagnosticsSettingsManager _settingsManager;
         private readonly string[] _paths;
@@ -150,27 +158,47 @@ namespace Kudu.Services.Performance
 
         private string[] GetCurrentDockerLogFilenames(SearchOption searchOption)
         {
-            // Get all non-rolled Docker log filenames from the LogFiles directory
-            var nonRolledDockerLogFilenames =
-                FileSystemHelpers.ListFiles(_environment.LogFilesPath, searchOption, new[] { "*" })
-                .Where(f => NONROLLED_DOCKER_LOG_FILENAME_REGEX.IsMatch(Path.GetFileName(f)))
-                .ToArray();
+            var allDockerLogFilenames = FileSystemHelpers.ListFiles(_environment.LogFilesPath, searchOption, new[] { "*" }).ToArray();
+            var logSources = new Dictionary<string, DockerLogSourceMap>();
 
-            if (!nonRolledDockerLogFilenames.Any())
+            // Get all non-rolled Docker log filenames from the LogFiles directory
+            foreach (var dockerLogPath in allDockerLogFilenames)
+            {
+                var match = NONROLLED_DOCKER_LOG_FILENAME_REGEX.Match(Path.GetFileName(dockerLogPath));
+                if (match.Success)
+                {
+                    // Get the timestamp and log source (machine name "_" default, easyauth, empty(Docker), etc) from the file name
+                    // and find the latest one for each source
+                    // Note that timestamps are YYYY_MM_DD (sortable as integers with the underscores removed)
+                    DateTime date;
+                    if (!DateTime.TryParse(match.Groups[1].Value.Replace("_", "/"), out date))
+                    {
+                        continue;
+                    }
+                    var source = match.Groups[2].Value;
+
+                    if (!logSources.ContainsKey(source) || logSources[source].Timestamp.CompareTo(date) < 0)
+                    {
+                        logSources[source] = new DockerLogSourceMap {
+                            LogSource = source,
+                            Timestamp = date,
+                            Paths = new List<string> { dockerLogPath }
+                        };
+                    }
+                    else
+                    {
+                        logSources[source].Paths.Add(dockerLogPath);
+                    }
+                }
+            }
+
+            if (logSources.Keys.Count == 0)
             {
                 return new string[0];
             }
 
-            // Find the latest date stamp and filter out those that don't have it
-            // Timestamps are YYYY_MM_DD (sortable as integers with the underscores removed)
-            var latestDatestamp = nonRolledDockerLogFilenames
-                .Select(p => Path.GetFileName(p).Substring(0, 10))
-                .OrderByDescending(s => int.Parse(s.Replace("_", String.Empty)))
-                .First();
-
-            return nonRolledDockerLogFilenames
-                .Where(f => Path.GetFileName(f).StartsWith(latestDatestamp, StringComparison.OrdinalIgnoreCase))
-                .ToArray();
+            var timeStampThreshold = logSources.Values.Max(v => v.Timestamp).AddDays(-7);
+            return logSources.Values.Where(v => v.Timestamp >= timeStampThreshold).SelectMany(m => m.Paths).ToArray();
         }
 
         private JObject CurrentDockerLogFilenameToJson(string path, string vfsBaseAddress)

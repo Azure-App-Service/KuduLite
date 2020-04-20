@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Kudu.Core.Deployment.Oryx;
+using LibGit2Sharp;
 
 namespace Kudu.Core.Deployment
 {
@@ -11,13 +12,13 @@ namespace Kudu.Core.Deployment
 
         public BuildOptimizationsFlags Flags { get; set; }
 
-        private Framework Language { get; set; }
+        public Framework Language { get; set; }
 
-        private string Version { get; set; }
+        public string Version { get; set; }
 
-        private string PublishFolder { get; set; }
+        public string PublishFolder { get; set; }
 
-        private string VirtualEnv { get; set; }
+        public string VirtualEnv { get; set; }
 
         public AppServiceOryxArguments()
         {
@@ -39,14 +40,11 @@ namespace Kudu.Core.Deployment
             {
                 return;
             }
-            else if (Language == Framework.DotNETCore)
-            {
-                // Skip kudu sync for .NET core builds
-                SkipKuduSync = true;
-            }
+            // Skip kudu sync for .NET core builds
+            SkipKuduSync = true;
 
             RunOryxBuild = true;
-            Version = version;
+            Version = version.ToLower();
 
             // Parse Build Flags
             Flags = BuildFlagsHelper.Parse(buildFlags);
@@ -64,6 +62,11 @@ namespace Kudu.Core.Deployment
 
                 case Framework.Python:
                     SetVirtualEnvironment();
+                    // For python, enable compress option by default
+                    if (Flags == BuildOptimizationsFlags.None)
+                    {
+                        Flags = BuildOptimizationsFlags.CompressModules;
+                    }
                     return;
 
                 case Framework.DotNETCore:
@@ -84,6 +87,10 @@ namespace Kudu.Core.Deployment
                     return;
 
                 case Framework.PHP:
+                    if (Flags == BuildOptimizationsFlags.None)
+                    {
+                        Flags = BuildOptimizationsFlags.UseTempDirectory;
+                    }
                     return;
             }
         }
@@ -106,36 +113,71 @@ namespace Kudu.Core.Deployment
         public string GenerateOryxBuildCommand(DeploymentContext context)
         {
             StringBuilder args = new StringBuilder();
-
             // Language
             switch (Language)
             {
                 case Framework.None:
                     // Input/Output
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
+                    if (Flags == BuildOptimizationsFlags.DeploymentV2)
+                    {
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath);
+                    }
+                    else
+                    {
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
+                    }
                     break;
 
                 case Framework.NodeJs:
                     // Input/Output
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
+                    if (Flags == BuildOptimizationsFlags.DeploymentV2)
+                    {
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath);
+                    }
+                    else
+                    {
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
+                    }
                     OryxArgumentsHelper.AddLanguage(args, "nodejs");
                     break;
 
                 case Framework.Python:
                     // Input/Output
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
+                    if (Flags == BuildOptimizationsFlags.DeploymentV2)
+                    {
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath);
+                    }
+                    else
+                    {
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
+                    }
                     OryxArgumentsHelper.AddLanguage(args, "python");
                     break;
 
                 case Framework.DotNETCore:
-                    // Input/Output [For .NET core, the source path is the RepositoryPath]
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
+                    if (Flags == BuildOptimizationsFlags.UseExpressBuild || Flags == BuildOptimizationsFlags.DeploymentV2)
+                    {
+                        // We don't want to copy the built artifacts to wwwroot for ExpressBuild scenario
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath);
+                    }
+                    else
+                    {
+                        // Input/Output [For .NET core, the source path is the RepositoryPath]
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
+                    }
                     OryxArgumentsHelper.AddLanguage(args, "dotnet");
                     break;
 
                 case Framework.PHP:
                     // Input/Output
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
+                    if (Flags == BuildOptimizationsFlags.DeploymentV2)
+                    {
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath);
+                    }
+                    else
+                    {
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
+                    }
                     OryxArgumentsHelper.AddLanguage(args, "php");
                     break;
             }
@@ -146,11 +188,31 @@ namespace Kudu.Core.Deployment
                 case Framework.None:
                     break;
                 case Framework.PHP:
+                    OryxArgumentsHelper.AddLanguageVersion(args, Version);
+                    break;
                 case Framework.NodeJs:
+                    if (Version.Contains("lts", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 10-LTS, 12-LTS should use versions 10, 12 etc
+                        // Oryx Builder uses lts for major versions
+                        Version = Version.Replace("lts", "").Replace("-", "");
+                    }
+
+                    if (string.IsNullOrEmpty(Version) || Version.Contains("10.16", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Active LTS
+                        Version = "10";
+                    }
+                    else if(Version.Contains("12.9", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Version = "12";
+                    }
+
+                    OryxArgumentsHelper.AddLanguageVersion(args, Version);
+                    break;
                 case Framework.Python:
                     OryxArgumentsHelper.AddLanguageVersion(args, Version);
                     break;
-
                 // work around issue regarding sdk version vs runtime version
                 case Framework.DotNETCore:
                     if (Version == "1.0")
@@ -184,7 +246,7 @@ namespace Kudu.Core.Deployment
                     }
                     else if (Language == Framework.Python)
                     {
-                        OryxArgumentsHelper.AddPythonCompressOption(args);
+                        OryxArgumentsHelper.AddPythonCompressOption(args, "tar-gz");
                     }
 
                     break;
@@ -195,10 +257,18 @@ namespace Kudu.Core.Deployment
                     {
                         OryxArgumentsHelper.AddNodeCompressOption(args, "zip");
                     }
+                    else if (Language == Framework.Python)
+                    {
+                        OryxArgumentsHelper.AddPythonCompressOption(args, "zip");
+                    }
 
                     break;
 
                 case BuildOptimizationsFlags.UseTempDirectory:
+                    OryxArgumentsHelper.AddTempDirectoryOption(args, context.BuildTempPath);
+                    break;
+
+                case BuildOptimizationsFlags.DeploymentV2:
                     OryxArgumentsHelper.AddTempDirectoryOption(args, context.BuildTempPath);
                     break;
             }
@@ -209,9 +279,12 @@ namespace Kudu.Core.Deployment
                 OryxArgumentsHelper.AddPythonVirtualEnv(args, VirtualEnv);
             }
 
+            OryxArgumentsHelper.AddDebugLog(args);
+
             return args.ToString();
         }
 
         public bool SkipKuduSync { get; set; }
+
     }
 }

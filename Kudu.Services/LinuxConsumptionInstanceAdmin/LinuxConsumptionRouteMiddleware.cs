@@ -26,8 +26,12 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         private static readonly HashSet<string> Whitelist = new HashSet<string>
         {
             "/api/zipdeploy",
+            "/api/deployments",
+            "/api/isdeploying",
+            "/api/settings",
             "/admin/instance",
             "/deployments",
+            "/zipdeploy"
         };
 
         private readonly RequestDelegate _next;

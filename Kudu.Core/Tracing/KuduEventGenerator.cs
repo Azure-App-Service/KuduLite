@@ -1,4 +1,6 @@
-﻿namespace Kudu.Core.Tracing
+﻿using Kudu.Core.Helpers;
+
+namespace Kudu.Core.Tracing
 {
     public class KuduEventGenerator
     {
@@ -6,6 +8,7 @@
 
         public static IKuduEventGenerator Log()
         {
+            // Linux Consumptions only
             bool isLinuxContainer = !string.IsNullOrEmpty(Environment.ContainerName);
             if (isLinuxContainer)
             {
@@ -18,7 +21,15 @@
             {
                 if (_eventGenerator == null)
                 {
-                    _eventGenerator = new DefaultKuduEventGenerator();
+                    // Generate ETW events when running on windows
+                    if (OSDetector.IsOnWindows())
+                    {
+                        _eventGenerator = new DefaultKuduEventGenerator();
+                    }
+                    else
+                    {
+                        _eventGenerator = new Log4NetEventGenerator();
+                    }
                 }
             }
             return _eventGenerator;

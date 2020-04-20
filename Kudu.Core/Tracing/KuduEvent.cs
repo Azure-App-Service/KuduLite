@@ -37,13 +37,14 @@ namespace Kudu.Core.Tracing
         {
             return $"{level},{siteName},{projectType},{result},{NormalizeString(error)},{deploymentDurationInMilliseconds},{siteMode},{scmType},{vsProjectId}," +
                 $"{jobName},{scriptExtension},{jobType},{trigger},{method},{path},{NormalizeString(Message)},{NormalizeString(exception)}," +
-                $"{route},{userAgent},{requestId},{buildVersion},{address},{verb},{statusCode},{latencyInMilliseconds}";
+                $"{route},{NormalizeString(userAgent)},{requestId},{buildVersion},{address},{verb},{statusCode},{latencyInMilliseconds}";
         }
 
         private string NormalizeString(string value)
         {
             // need to remove newlines for csv output
             value = value.Replace(System.Environment.NewLine, " ");
+            value = value.Replace("\"", " ");
 
             // Wrap string literals in enclosing quotes
             // For string columns that may contain quotes and/or

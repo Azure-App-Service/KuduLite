@@ -32,6 +32,18 @@
     });
 </script>
 
+@if (Kudu.Core.Environment.IsAzureEnvironment())
+    {
+        <script>
+            $.currInst = "@System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")";
+        </script>
+    }
+
+@if (Kudu.Core.Environment.IsAzureEnvironment())
+    {
+        <script type="text/javascript" src="/Content/Scripts/NavigateToInstance.js"></script>
+    }
+
 @{
     var workerIdHash = System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId);
     var workerIdShortHash = workerIdHash?.Substring(0, 12);
@@ -51,11 +63,7 @@
                 <button class="btn btn-sm dropdown-toggle" type="button" style="background-color: rgb(244, 245, 247);border: none" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <i class="fas fa-network-wired fa-style text-sm"></i> <a href="#"> Switch Instance</a>
                 </button>
-                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                    <a class="dropdown-item" href="#">Instance 1</a>
-                    <a class="dropdown-item" href="#">Instance 2</a>
-                    <a class="dropdown-item" href="#">Instance 3</a>
-                </div>
+                <ul class="dropdown-menu instances_tab_options_cls" id='instances_tab_options'></ul>
             </span> </small>
         </div>
         <div class="col-md-5" id="is-deploying-banner" style="display: none">
