@@ -34,7 +34,6 @@ namespace Kudu.Core.Deployment
 
             if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
-                Console.WriteLine("Oryx App Name : " + environment.K8SEAppName);
                 this.AppName = environment.K8SEAppName;
 
                 // K8SE TODO: Inject Environment
