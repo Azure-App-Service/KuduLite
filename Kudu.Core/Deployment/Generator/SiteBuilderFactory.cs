@@ -42,7 +42,12 @@ namespace Kudu.Core.Deployment.Generator
 
         public ISiteBuilder CreateBuilder(ITracer tracer, ILogger logger, IDeploymentSettingsManager settings, IRepository repository, DeploymentInfoBase deploymentInfo)
         {
+
             string repositoryRoot = _environment.RepositoryPath;
+            if (!string.IsNullOrEmpty(repository.RepositoryPath))
+            {
+                repositoryRoot = repository.RepositoryPath;
+            }
 
             // Use the cached vs projects file finder for: a. better performance, b. ignoring solutions/projects under node_modules
             var fileFinder = new CachedVsProjectsFileFinder(repository);
@@ -82,7 +87,7 @@ namespace Kudu.Core.Deployment.Generator
             }
 
             string enableOryxBuild = System.Environment.GetEnvironmentVariable("ENABLE_ORYX_BUILD");
-            if (!string.IsNullOrEmpty(enableOryxBuild) && deploymentInfo.ShouldBuildArtifact)
+            if (!string.IsNullOrEmpty(enableOryxBuild) && (deploymentInfo.ShouldBuildArtifact || settings.DoBuildDuringDeployment()))
             {
                 if (StringUtils.IsTrueLike(enableOryxBuild))
                 {
