@@ -156,5 +156,7 @@ namespace Kudu
         public const string LinuxLogEventStreamName = "MS_KUDU_LOGS";
         public const string WebSiteHomeStampName = "WEBSITE_HOME_STAMPNAME";
         public const string WebSiteStampDeploymentId = "WEBSITE_STAMP_DEPLOYMENT_ID";
+
+        public const string ScmDeploymentIdHeader = "SCM-DEPLOYMENT-ID";
     }
 }

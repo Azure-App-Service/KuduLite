@@ -62,6 +62,14 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("ZipPushDeploy"))
             {
+                string deploymentId = null;
+                IEnumerable<string> idValues;
+
+                if (Request.Headers.TryGetValues(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
+                {
+                    deploymentId = idValues.ElementAt(0);
+                }
+
                 var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
                 {
                     AllowDeploymentWhileScmDisabled = true,
@@ -71,7 +79,7 @@ namespace Kudu.Services.Deployment
                     IsReusable = false,
                     TargetChangeset =
                         DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed zip file"),
-                    CommitId = null,
+                    CommitId = deploymentId,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipHandler,
                     DoFullBuildByDefault = false,
@@ -110,6 +118,14 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("ZipPushDeployViaUrl"))
             {
+                string deploymentId = null;
+                IEnumerable<string> idValues;
+
+                if (Request.Headers.TryGetValues(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
+                {
+                    deploymentId = idValues.ElementAt(0);
+                }
+
                 string zipUrl = GetZipURLFromJSON(requestJson);
 
                 var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
@@ -122,6 +138,7 @@ namespace Kudu.Services.Deployment
                     TargetChangeset =
                         DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed zip file"),
                     CommitId = null,
+                    FixedDeploymentId = deploymentId,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipHandler,
                     DoFullBuildByDefault = false,
@@ -168,6 +185,7 @@ namespace Kudu.Services.Deployment
                     TargetChangeset =
                         DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed war file"),
                     CommitId = null,
+                    FixedDeploymentId = deploymentId,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipFetch,
                     DoFullBuildByDefault = false,
