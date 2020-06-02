@@ -79,7 +79,8 @@ namespace Kudu.Services.Deployment
                     IsReusable = false,
                     TargetChangeset =
                         DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed zip file"),
-                    CommitId = deploymentId,
+                    CommitId = null,
+                    FixedDeploymentId = deploymentId,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipHandler,
                     DoFullBuildByDefault = false,
@@ -165,6 +166,14 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("WarPushDeploy"))
             {
+                string deploymentId = null;
+                IEnumerable<string> idValues;
+
+                if (Request.Headers.TryGetValues(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
+                {
+                    deploymentId = idValues.ElementAt(0);
+                }
+
                 var appName = HttpContext.Request.Query["name"].ToString();
                 if (string.IsNullOrWhiteSpace(appName))
                 {
