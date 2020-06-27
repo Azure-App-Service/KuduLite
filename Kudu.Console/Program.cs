@@ -21,6 +21,7 @@ using Kudu.Core.SourceControl;
 using Kudu.Core.SourceControl.Git;
 using Kudu.Core.Tracing;
 using System.Reflection;
+using Kudu.Core.LinuxConsumption;
 using XmlSettings;
 using log4net;
 using log4net.Config;
@@ -283,7 +284,8 @@ namespace Kudu.Console
                 repositoryPath,
                 requestId,
                 Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu.dll"),
-                null);
+                null,
+                new FileSystemPathProvider(new NullMeshPersistentFileSystem()));
         }
     }
 }

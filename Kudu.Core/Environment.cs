@@ -11,15 +11,18 @@ using Microsoft.Win32;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Kudu.Core.Settings;
+using Kudu.Core.LinuxConsumption;
 
 namespace Kudu.Core
 {
     public class Environment : IEnvironment
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IFileSystemPathProvider _fileSystemPathsProvider;
 
         private readonly string _webRootPath;
         private readonly string _deploymentsPath;
+        private readonly string _artifactsPath;
         private readonly string _deploymentToolsPath;
         private readonly string _siteExtensionSettingsPath;
         private readonly string _diagnosticsPath;
@@ -106,7 +109,8 @@ namespace Kudu.Core
                 string repositoryPath,
                 string requestId,
                 string kuduConsoleFullPath,
-                IHttpContextAccessor httpContextAccessor)
+                IHttpContextAccessor httpContextAccessor,
+                IFileSystemPathProvider fileSystemPathsProvider)
         {
             RootPath = rootPath;
 
@@ -117,6 +121,7 @@ namespace Kudu.Core
             _zipTempPath = Path.Combine(_tempPath, Constants.ZipTempPath);
             _webRootPath = Path.Combine(SiteRootPath, Constants.WebRoot);
             _deploymentsPath = Path.Combine(SiteRootPath, Constants.DeploymentCachePath);
+            _artifactsPath = Path.Combine(SiteRootPath, Constants.ArtifactsPath);
             _deploymentToolsPath = Path.Combine(_deploymentsPath, Constants.DeploymentToolsPath);
             _siteExtensionSettingsPath = Path.Combine(SiteRootPath, Constants.SiteExtensionsCachePath);
             _diagnosticsPath = Path.Combine(SiteRootPath, Constants.DiagnosticsPath);
@@ -162,6 +167,7 @@ namespace Kudu.Core
             RequestId = !string.IsNullOrEmpty(requestId) ? requestId : Guid.Empty.ToString();
 
             _httpContextAccessor = httpContextAccessor;
+            _fileSystemPathsProvider = fileSystemPathsProvider ?? throw new ArgumentNullException(nameof(fileSystemPathsProvider));
 
             KuduConsoleFullPath = kuduConsoleFullPath;
         }
@@ -191,7 +197,20 @@ namespace Kudu.Core
         {
             get
             {
+                if (_fileSystemPathsProvider.TryGetDeploymentsPath(out var path))
+                {
+                    return FileSystemHelpers.EnsureDirectory(path); ;
+                }
+
                 return FileSystemHelpers.EnsureDirectory(_deploymentsPath);
+            }
+        }
+
+        public string ArtifactsPath
+        {
+            get
+            {
+                return FileSystemHelpers.EnsureDirectory(_artifactsPath);
             }
         }
 

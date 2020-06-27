@@ -31,7 +31,7 @@ namespace Kudu.Core.Helpers
             string sas = settings.GetValue(Constants.ScmRunFromPackage) ?? System.Environment.GetEnvironmentVariable(Constants.ScmRunFromPackage);
 
             string builtFolder = context.OutputPath;
-            string packageFolder = env.DeploymentsPath;
+            string packageFolder = env.ArtifactsPath;
             string packageFileName = OryxBuildConstants.FunctionAppBuildSettings.LinuxConsumptionArtifactName;
 
             // Package built content from oryx build artifact

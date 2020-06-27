@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Kudu.Contracts;
 using Kudu.Contracts.Settings;
 
-namespace Kudu.Core
+namespace Kudu.Core.LinuxConsumption
 {
     public class LinuxConsumptionEnvironment : ILinuxConsumptionEnvironment
     {
@@ -58,8 +56,6 @@ namespace Kudu.Core
                 return _standbyMode.Value;
             }
         }
-
-        Task ILinuxConsumptionEnvironment.DelayCompletionTask => throw new NotImplementedException();
 
         public void DelayRequests()
         {

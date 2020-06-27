@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
-using System.Net;
+using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Reflection;
 using AspNetCore.RouteAnalyzer;
@@ -17,6 +17,7 @@ using Kudu.Core.Commands;
 using Kudu.Core.Deployment;
 using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.LinuxConsumption;
 using Kudu.Core.Scan;
 using Kudu.Core.Settings;
 using Kudu.Core.SourceControl;
@@ -25,7 +26,6 @@ using Kudu.Core.Tracing;
 using Kudu.Services.Diagnostics;
 using Kudu.Services.GitServer;
 using Kudu.Services.Performance;
-using Kudu.Services.Scan;
 using Kudu.Services.TunnelServer;
 using Kudu.Services.Web.Infrastructure;
 using Kudu.Services.Web.Tracing;
@@ -37,10 +37,10 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing.Constraints;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
-using Environment = Kudu.Core.Environment;
 using ILogger = Kudu.Core.Deployment.ILogger;
 
 namespace Kudu.Services.Web
@@ -120,16 +120,50 @@ namespace Kudu.Services.Web
                 });
 
             services.AddSingleton<IHttpContextAccessor>(new HttpContextAccessor());
+            services.TryAddSingleton<ISystemEnvironment>(SystemEnvironment.Instance);
             services.AddSingleton<ILinuxConsumptionEnvironment, LinuxConsumptionEnvironment>();
             services.AddSingleton<ILinuxConsumptionInstanceManager, LinuxConsumptionInstanceManager>();
+            services.AddSingleton<IFileSystemPathProvider, FileSystemPathProvider>();
+            services.AddSingleton<IStorageClient, StorageClient>();
 
             KuduWebUtil.EnsureHomeEnvironmentVariable();
 
             KuduWebUtil.EnsureSiteBitnessEnvironmentVariable();
 
-            IEnvironment environment = KuduWebUtil.GetEnvironment(_hostingEnvironment);
+            var fileSystemPathProvider = new FileSystemPathProvider(new MeshPersistentFileSystem(SystemEnvironment.Instance,
+                new MeshServiceClient(SystemEnvironment.Instance, new HttpClient()), new StorageClient(SystemEnvironment.Instance)));
+            IEnvironment environment = KuduWebUtil.GetEnvironment(_hostingEnvironment, fileSystemPathProvider);
 
             _webAppRuntimeEnvironment = environment;
+
+            services.AddSingleton(_ => new HttpClient());
+            services.AddSingleton<IMeshServiceClient>(s =>
+            {
+                if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
+                {
+                    var httpClient = s.GetService<HttpClient>();
+                    var systemEnvironment = s.GetService<ISystemEnvironment>();
+                    return new MeshServiceClient(systemEnvironment, httpClient);
+                }
+                else
+                {
+                    return new NullMeshServiceClient();
+                }
+            });
+            services.AddSingleton<IMeshPersistentFileSystem>(s =>
+            {
+                if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
+                {
+                    var meshServiceClient = s.GetService<IMeshServiceClient>();
+                    var storageClient = s.GetService<IStorageClient>();
+                    var systemEnvironment = s.GetService<ISystemEnvironment>();
+                    return new MeshPersistentFileSystem(systemEnvironment, meshServiceClient, storageClient);
+                }
+                else
+                {
+                    return new NullMeshPersistentFileSystem();
+                }
+            });
 
             KuduWebUtil.EnsureDotNetCoreEnvironmentVariable(environment);
 
@@ -157,7 +191,7 @@ namespace Kudu.Services.Web
 
             // Per request environment
             services.AddScoped(sp =>
-                KuduWebUtil.GetEnvironment(_hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>()));
+                KuduWebUtil.GetEnvironment(_hostingEnvironment, sp.GetRequiredService <IFileSystemPathProvider>(), sp.GetRequiredService<IDeploymentSettingsManager>()));
 
             services.AddDeploymentServices(environment);
 
@@ -321,6 +355,7 @@ namespace Kudu.Services.Web
             if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
             {
                 app.UseLinuxConsumptionRouteMiddleware();
+                app.UseMiddleware<EnvironmentReadyCheckMiddleware>();
             }
 
             var webSocketOptions = new WebSocketOptions()

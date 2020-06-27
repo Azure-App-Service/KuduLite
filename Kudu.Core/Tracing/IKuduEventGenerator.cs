@@ -20,5 +20,7 @@ namespace Kudu.Core.Tracing
         void GenericEvent(string siteName, string Message, string requestId, string scmType, string siteMode, string buildVersion);
 
         void ApiEvent(string siteName, string Message, string address, string verb, string requestId, int statusCode, long latencyInMilliseconds, string userAgent);
+
+        void LogMessage(EventLevel logLevel, string siteName, string message, string exception);
     }
 }

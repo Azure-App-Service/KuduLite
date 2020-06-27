@@ -7,6 +7,7 @@
         string RepositoryPath { get; set; }     // e.g. /site/repository
         string WebRootPath { get; }             // e.g. /site/wwwroot
         string DeploymentsPath { get; }         // e.g. /site/deployments
+        string ArtifactsPath { get; }          // e.g /site/artifacts
         string DeploymentToolsPath { get; }     // e.g. /site/deployments/tools
         string SiteExtensionSettingsPath { get; }     // e.g. /site/siteextensions
         string DiagnosticsPath { get; }         // e.g. /site/diagnostics
