@@ -87,6 +87,12 @@ namespace Kudu.Core.Deployment.Generator
                 return new OryxBuilder(_environment, settings, _propertyProvider, repositoryRoot);
             }
 
+            string framework = System.Environment.GetEnvironmentVariable("FRAMEWORK");
+            if(framework.Equals("ruby", StringComparison.OrdinalIgnoreCase))
+            {
+                return new RubySiteBuilder(_environment, settings, _propertyProvider, repositoryRoot, targetProjectPath);
+            }
+
             if (!String.IsNullOrEmpty(targetProjectPath))
             {
                 // Try to resolve the project
