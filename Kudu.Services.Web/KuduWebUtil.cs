@@ -11,6 +11,7 @@ using Kudu.Core;
 using Kudu.Core.Deployment;
 using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.LinuxConsumption;
 using Kudu.Core.Settings;
 using Kudu.Core.Tracing;
 using Kudu.Services.Infrastructure;
@@ -299,6 +300,7 @@ namespace Kudu.Services.Web
         /// default configuration during the runtime.
         /// </summary>
         internal static IEnvironment GetEnvironment(IHostingEnvironment hostingEnvironment,
+            IFileSystemPathProvider fileSystemPathsProvider,
             IDeploymentSettingsManager settings = null,
             IHttpContextAccessor httpContextAccessor = null)
         {
@@ -311,7 +313,7 @@ namespace Kudu.Services.Web
             var kuduConsoleFullPath =
                 Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
             return new Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId,
-                kuduConsoleFullPath, httpContextAccessor);
+                kuduConsoleFullPath, httpContextAccessor, fileSystemPathsProvider);
         }
 
         /// <summary>

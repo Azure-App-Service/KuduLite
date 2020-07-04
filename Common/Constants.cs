@@ -34,6 +34,7 @@ namespace Kudu
         public const string NpmDebugLogFile = "npm-debug.log";
 
         public const string DeploymentCachePath = "deployments";
+        public const string ArtifactsPath = "artifacts";
         public const string SiteExtensionsCachePath = "siteextensions";
         public const string DeploymentToolsPath = "tools";
         public const string SiteFolder = @"site";
@@ -156,5 +157,10 @@ namespace Kudu
         public const string LinuxLogEventStreamName = "MS_KUDU_LOGS";
         public const string WebSiteHomeStampName = "WEBSITE_HOME_STAMPNAME";
         public const string WebSiteStampDeploymentId = "WEBSITE_STAMP_DEPLOYMENT_ID";
+        public const string MeshInitURI = "MESH_INIT_URI";
+        public const string AzureWebJobsStorage = "AzureWebJobsStorage";
+        public const string KuduFileShareMountPath = "/kudu-mnt";
+        public const string KuduFileSharePrefix = "kudu-mnt";
+        public const string EnablePersistentStorage = "ENABLE_KUDU_PERSISTENT_STORAGE";
     }
 }

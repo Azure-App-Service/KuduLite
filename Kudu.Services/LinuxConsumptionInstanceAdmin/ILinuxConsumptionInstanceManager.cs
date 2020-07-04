@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Threading.Tasks;
 using Kudu.Services.Models;
 
 namespace Kudu.Services.LinuxConsumptionInstanceAdmin
@@ -14,13 +13,6 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         /// </summary>
         /// <returns></returns>
         IDictionary<string, string> GetInstanceInfo();
-
-        /// <summary>
-        /// Validate if the assignment context matches the requirement for current instance's specialization
-        /// </summary>
-        /// <param name="assignmentContext">Contains site information such as environment variables</param>
-        /// <returns>Message on error, otherwise, null.</returns>
-        Task<string> ValidateContext(HostAssignmentContext assignmentContext);
 
         /// <summary>
         /// Apply assignment context and start specialization for current instance
