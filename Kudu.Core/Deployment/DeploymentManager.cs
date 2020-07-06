@@ -717,7 +717,7 @@ namespace Kudu.Core.Deployment
                                 settings: _settings,
                                 context: context,
                                 shouldSyncTriggers: deploymentInfo.DoSyncTriggers,
-                                shouldUpdateWebsiteRunFromPackage: deploymentInfo.ForceRemoteBuild);
+                                shouldUpdateWebsiteRunFromPackage: deploymentInfo.OverwriteWebsiteRunFromPackage);
                         }
 
                         await PostDeploymentHelper.SyncFunctionsTriggers(

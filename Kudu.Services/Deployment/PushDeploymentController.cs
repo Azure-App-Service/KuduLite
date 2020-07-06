@@ -55,7 +55,7 @@ namespace Kudu.Services.Deployment
         public async Task<IActionResult> ZipPushDeploy(
             [FromQuery] bool isAsync = false,
             [FromQuery] bool syncTriggers = false,
-            [FromQuery] bool forceRemoteBuild = false,
+            [FromQuery] bool overwriteWebsiteRunFromPackage = false,
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
             [FromQuery] string deployer = DefaultDeployer,
@@ -81,7 +81,7 @@ namespace Kudu.Services.Deployment
                     Message = message,
                     ZipURL = null,
                     DoSyncTriggers = syncTriggers,
-                    ForceRemoteBuild = forceRemoteBuild && _environment.IsOnLinuxConsumption
+                    OverwriteWebsiteRunFromPackage = overwriteWebsiteRunFromPackage && _environment.IsOnLinuxConsumption
                 };
 
                 if (_settings.RunFromLocalZip())
@@ -105,7 +105,7 @@ namespace Kudu.Services.Deployment
             [FromBody] JObject requestJson,
             [FromQuery] bool isAsync = false,
             [FromQuery] bool syncTriggers = false,
-            [FromQuery] bool forceRemoteBuild = false,
+            [FromQuery] bool overwriteWebsiteRunFromPackage = false,
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
             [FromQuery] string deployer = DefaultDeployer,
@@ -133,7 +133,7 @@ namespace Kudu.Services.Deployment
                     Message = message,
                     ZipURL = zipUrl,
                     DoSyncTriggers = syncTriggers,
-                    ForceRemoteBuild = forceRemoteBuild && _environment.IsOnLinuxConsumption
+                    OverwriteWebsiteRunFromPackage = overwriteWebsiteRunFromPackage && _environment.IsOnLinuxConsumption
                 };
                 return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
             }

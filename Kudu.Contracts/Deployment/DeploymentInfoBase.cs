@@ -78,7 +78,7 @@ namespace Kudu.Core.Deployment
         public bool DoSyncTriggers { get; set; }
 
         // This config is for Linux Consumption function app only
-        // Allow remote build even when WEBSITE_RUN_FROM_PACKAGE is set to a Url (RunFromRemoteZip)
-        public bool ForceRemoteBuild { get; set; }
+        // Allow artifact generation even when WEBSITE_RUN_FROM_PACKAGE is set to a Url (RunFromRemoteZip)
+        public bool OverwriteWebsiteRunFromPackage { get; set; }
     }
 }
