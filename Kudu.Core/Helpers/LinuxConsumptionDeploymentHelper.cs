@@ -26,13 +26,15 @@ namespace Kudu.Core.Helpers
             IEnvironment env,
             IDeploymentSettingsManager settings,
             DeploymentContext context,
-            bool shouldSyncTriggers)
+            bool shouldSyncTriggers,
+            bool shouldUpdateWebsiteRunFromPackage)
         {
-            string sas = settings.GetValue(Constants.ScmRunFromPackage) ?? System.Environment.GetEnvironmentVariable(Constants.ScmRunFromPackage);
-
             string builtFolder = context.OutputPath;
             string packageFolder = env.ArtifactsPath;
             string packageFileName = OryxBuildConstants.FunctionAppBuildSettings.LinuxConsumptionArtifactName;
+
+            // Try create a placeholder blob in AzureWebJobsStorage
+            CloudBlockBlob blob = await GetPlaceholderBlob(context, settings, shouldUpdateWebsiteRunFromPackage);
 
             // Package built content from oryx build artifact
             string filePath = PackageArtifactFromFolder(env, settings, context, builtFolder, packageFolder, packageFileName);
@@ -41,10 +43,16 @@ namespace Kudu.Core.Helpers
             await LogDependenciesFile(context.RepositoryPath);
 
             // Upload from DeploymentsPath
-            await UploadLinuxConsumptionFunctionAppBuiltContent(context, sas, filePath);
+            await UploadLinuxConsumptionFunctionAppBuiltContent(context, blob, filePath);
 
             // Clean up local built content
             FileSystemHelpers.DeleteDirectoryContentsSafe(context.OutputPath);
+
+            // Change WEBSITE_RUN_FROM_PACKAGE app setting
+            if (shouldUpdateWebsiteRunFromPackage)
+            {
+                await UpdateWebsiteRunFromPackageAppSetting(context, blob);
+            }
 
             // Remove Linux consumption plan functionapp workers for the site
             await RemoveLinuxConsumptionFunctionAppWorkers(context);
@@ -184,27 +192,10 @@ namespace Kudu.Core.Helpers
             }
         }
 
-        private static async Task UploadLinuxConsumptionFunctionAppBuiltContent(DeploymentContext context, string sas, string filePath)
+        private static async Task UploadLinuxConsumptionFunctionAppBuiltContent(DeploymentContext context, CloudBlockBlob blob, string filePath)
         {
-            context.Logger.Log($"Uploading built content {filePath} -> {sas}");
+            context.Logger.Log($"Uploading built content {filePath} for linux consumption function app...");
 
-            // Check if SCM_RUN_FROM_PACKAGE does exist
-            if (string.IsNullOrEmpty(sas))
-            {
-                context.Logger.Log($"Failed to upload because SCM_RUN_FROM_PACKAGE is not provided or misconfigured by function app setting.");
-                throw new DeploymentFailedException(new ArgumentException("Failed to upload because SAS is empty."));
-            }
-
-            // Parse SAS
-            Uri sasUri = null;
-            if (!Uri.TryCreate(sas, UriKind.Absolute, out sasUri))
-            {
-                context.Logger.Log($"Malformed SAS when uploading built content.");
-                throw new DeploymentFailedException(new ArgumentException("Failed to upload because SAS is malformed."));
-            }
-
-            // Upload blob to Azure Storage
-            CloudBlockBlob blob = new CloudBlockBlob(sasUri);
             try
             {
                 await blob.UploadFromFileAsync(filePath);
@@ -214,6 +205,122 @@ namespace Kudu.Core.Helpers
                 context.Logger.Log($"Failed to upload because Azure Storage responds {se.RequestInformation.HttpStatusCode}.");
                 context.Logger.Log(se.Message);
                 throw new DeploymentFailedException(se);
+            }
+        }
+
+        private static async Task<CloudBlockBlob> GetPlaceholderBlob(DeploymentContext context, IDeploymentSettingsManager settings, bool isWebsiteRunFromPackage)
+        {
+            context.Logger.Log($"Creating placeholder blob for linux consumption function app...");
+
+            // Get or create blob
+            if (isWebsiteRunFromPackage)
+            {
+                return await GetWebsiteRunFromPackageBlob(context, settings);
+
+            } else
+            {
+                return GetScmRunFromPackageBlob(context, settings);
+            }
+        }
+
+        private static async Task<CloudBlockBlob> GetWebsiteRunFromPackageBlob(
+            DeploymentContext context, IDeploymentSettingsManager settings)
+        {
+            string azureWebJobsStorage = settings.GetValue(Constants.AzureWebJobsStorage);
+            if (string.IsNullOrEmpty(azureWebJobsStorage))
+            {
+                azureWebJobsStorage = System.Environment.GetEnvironmentVariable(Constants.AzureWebJobsStorage);
+            }
+
+            // Check if storage account is an empty string
+            if (string.IsNullOrEmpty(azureWebJobsStorage))
+            {
+                context.Logger.Log($"{Constants.AzureWebJobsStorage} should not be empty");
+                throw new DeploymentFailedException(new ArgumentNullException(Constants.AzureWebJobsStorage));
+            }
+
+            CloudStorageAccount account;
+            try
+            {
+                account = CloudStorageAccount.Parse(azureWebJobsStorage);
+            }
+            catch (Exception ex)
+            {
+                context.Logger.Log($"Failed to parse {Constants.AzureWebJobsStorage} when connecting to storage account");
+                throw new DeploymentFailedException(ex);
+            }
+
+            // Get or create container
+            CloudBlobClient service = account.CreateCloudBlobClient();
+            CloudBlobContainer container = service.GetContainerReference(Constants.ScmRunFromPackageContainerName);
+            try
+            {
+                await container.CreateIfNotExistsAsync();
+            }
+            catch (Exception ex)
+            {
+                context.Logger.Log($"Failed to acquire blob container when deploying linux consumption app");
+                throw new DeploymentFailedException(ex);
+            }
+
+            string sitename = ServerConfiguration.GetApplicationName();
+            string placeholderBlobName = $"{Constants.ScmRunFromPackageBlobPrefix}-{sitename}.squashfs";
+            CloudBlockBlob blob = container.GetBlockBlobReference(placeholderBlobName);
+            context.Logger.Log($"WEBSITE_RUN_FROM_PACKAGE placeholder blob {blob.Name} located");
+            return blob;
+        }
+
+        private static CloudBlockBlob GetScmRunFromPackageBlob(DeploymentContext context, IDeploymentSettingsManager settings)
+        {
+            string scmSas = settings.GetValue(Constants.ScmRunFromPackage);
+            if (string.IsNullOrEmpty(scmSas))
+            {
+                scmSas = System.Environment.GetEnvironmentVariable(Constants.ScmRunFromPackage);
+            }
+
+            if (!Uri.TryCreate(scmSas, UriKind.Absolute, out Uri scmUri)) {
+                context.Logger.Log($"Malformed SCM_RUN_FROM_PACKAGE when uploading built content.");
+                throw new DeploymentFailedException(new ArgumentException("Failed to upload because SAS is malformed."));
+            }
+
+            CloudBlockBlob blob = new CloudBlockBlob(scmUri);
+            context.Logger.Log($"SCM_RUN_FROM_PACKAGE placeholder blob {blob.Name} located");
+            return blob;
+        }
+
+        private static async Task UpdateWebsiteRunFromPackageAppSetting(DeploymentContext context, CloudBlockBlob blob)
+        {
+            context.Logger.Log($"Updating WEBSITE_RUN_FROM_PACKAGE app setting for linux consumption app...");
+
+            SharedAccessBlobPolicy sasConstraints = new SharedAccessBlobPolicy();
+            sasConstraints.SharedAccessStartTime = DateTimeOffset.UtcNow.AddMinutes(-5);
+            sasConstraints.SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddYears(10);
+            sasConstraints.Permissions = SharedAccessBlobPermissions.Read;
+            string token = blob.GetSharedAccessSignature(sasConstraints);
+            string sas = blob.Uri + token;
+
+            try
+            {
+                await OperationManager.AttemptAsync(async () =>
+                {
+                    await PostDeploymentHelper.UpdateWebsiteRunFromPackage(sas, context);
+                }, retries: 3, delayBeforeRetry: 2000);
+            }
+            catch (ArgumentException ae)
+            {
+                context.Logger.Log($"Set run from package has malformed blob sas {ae.Message}");
+                throw new DeploymentFailedException(ae);
+            }
+            catch (HttpRequestException hre)
+            {
+                context.Logger.Log($"Set run from package endpoint responded with {hre.Message}");
+                Exception innerException = hre.InnerException;
+                while (innerException != null)
+                {
+                    context.Logger.Log($"Inner Exception = {innerException.Message}");
+                    innerException = innerException.InnerException;
+                }
+                throw new DeploymentFailedException(hre);
             }
         }
 

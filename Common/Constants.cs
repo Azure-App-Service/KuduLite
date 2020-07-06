@@ -137,11 +137,14 @@ namespace Kudu
         public const string FunctionKeyNewFormat = "~0.7";
         public const string FunctionRunTimeVersion = "FUNCTIONS_EXTENSION_VERSION";
         public const string ScmRunFromPackage = "SCM_RUN_FROM_PACKAGE";
+        public const string ScmRunFromPackageContainerName = "scm-releases";
+        public const string ScmRunFromPackageBlobPrefix = "rfp-latest";
         public const string WebSiteSku = "WEBSITE_SKU";
         public const string WebSiteElasticScaleEnabled = "WEBSITE_ELASTIC_SCALING_ENABLED";
         public const string DynamicSku = "Dynamic";
         public const string ElasticScaleEnabled = "1";
         public const string AzureWebJobsSecretStorageType = "AzureWebJobsSecretStorageType";
+        public const string AzureWebJobsStorage = "AzureWebJobsStorage";
         public const string HubName = "HubName";
         public const string DurableTaskStorageConnection = "connection";
         public const string DurableTaskStorageConnectionName = "azureStorageConnectionStringName";
@@ -158,7 +161,6 @@ namespace Kudu
         public const string WebSiteHomeStampName = "WEBSITE_HOME_STAMPNAME";
         public const string WebSiteStampDeploymentId = "WEBSITE_STAMP_DEPLOYMENT_ID";
         public const string MeshInitURI = "MESH_INIT_URI";
-        public const string AzureWebJobsStorage = "AzureWebJobsStorage";
         public const string KuduFileShareMountPath = "/kudu-mnt";
         public const string KuduFileSharePrefix = "kudu-mnt";
         public const string EnablePersistentStorage = "ENABLE_KUDU_PERSISTENT_STORAGE";

@@ -87,7 +87,9 @@ namespace Kudu.Core.Deployment
             
             // Else if this app is configured with a url in WEBSITE_USE_ZIP, then fail the deployment
             // since this is a RunFromZip site and the deployment has no chance of succeeding.
-            else if (_settings.RunFromRemoteZip())
+            // However, if this is a Linux Consumption function app, we allow KuduLite to change
+            // WEBSITE_RUN_FROM_PACKAGE app setting after a build finishes
+            else if (_settings.RunFromRemoteZip() && !deployInfo.OverwriteWebsiteRunFromPackage)
             {
                 return FetchDeploymentRequestResult.ConflictRunFromRemoteZipConfigured;
             }
