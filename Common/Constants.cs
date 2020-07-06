@@ -161,7 +161,6 @@ namespace Kudu
         public const string WebSiteHomeStampName = "WEBSITE_HOME_STAMPNAME";
         public const string WebSiteStampDeploymentId = "WEBSITE_STAMP_DEPLOYMENT_ID";
         public const string MeshInitURI = "MESH_INIT_URI";
-        public const string AzureWebJobsStorage = "AzureWebJobsStorage";
         public const string KuduFileShareMountPath = "/kudu-mnt";
         public const string KuduFileSharePrefix = "kudu-mnt";
         public const string EnablePersistentStorage = "ENABLE_KUDU_PERSISTENT_STORAGE";
