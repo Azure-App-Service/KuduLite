@@ -11,6 +11,7 @@ using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Helpers;
 using Kudu.Core.Hooks;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.LinuxConsumption;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
 
@@ -328,7 +329,7 @@ namespace Kudu.Core.Deployment
                     var hooksLock = new LockFile(hooksLockPath, traceFactory);
                     var deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
 
-                    var analytics = new Analytics(settings, new ServerConfiguration(), traceFactory);
+                    var analytics = new Analytics(settings, new ServerConfiguration(SystemEnvironment.Instance), traceFactory);
                     var deploymentStatusManager = new DeploymentStatusManager(environment, analytics, statusLock);
                     var siteBuilderFactory = new SiteBuilderFactory(new BuildPropertyProvider(), environment);
                     var webHooksManager = new WebHooksManager(tracer, environment, hooksLock);

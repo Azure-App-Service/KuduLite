@@ -48,11 +48,6 @@ namespace Kudu.Core.LinuxConsumption
             return !string.IsNullOrWhiteSpace(connectionString);
         }
 
-        private bool IsLinuxConsumption()
-        {
-            return !string.IsNullOrEmpty(_environment.GetEnvironmentVariable(Constants.ContainerName));
-        }
-
         private bool IsKuduShareMounted()
         {
             return _fileShareMounted;
@@ -80,7 +75,7 @@ namespace Kudu.Core.LinuxConsumption
                 return true;
             }
 
-            if (!IsLinuxConsumption())
+            if (!_environment.IsOnLinuxConsumption())
             {
                 const string message =
                     "Mounting kudu file share is only supported on Linux consumption environment";
@@ -125,7 +120,7 @@ namespace Kudu.Core.LinuxConsumption
         {
             if (_fileShareMounted)
             {
-                return Path.Combine(Constants.KuduFileShareMountPath, "deployments");
+                return Path.Combine(Constants.KuduFileShareMountPath, Constants.DeploymentCachePath);
             }
 
             return null;

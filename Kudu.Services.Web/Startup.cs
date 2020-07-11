@@ -50,7 +50,6 @@ namespace Kudu.Services.Web
         private readonly IHostingEnvironment _hostingEnvironment;
         private IEnvironment _webAppRuntimeEnvironment;
         private IDeploymentSettingsManager _noContextDeploymentsSettingsManager;
-        private static readonly ServerConfiguration ServerConfiguration = new ServerConfiguration();
 
         public Startup(IConfiguration configuration, IHostingEnvironment hostingEnvironment)
         {
@@ -180,7 +179,7 @@ namespace Kudu.Services.Web
             services.AddLinuxConsumptionAuthorization(environment);
 
             // General
-            services.AddSingleton<IServerConfiguration>(ServerConfiguration);
+            services.AddSingleton<IServerConfiguration, ServerConfiguration>();
 
             // CORE TODO Looks like this doesn't ever actually do anything, can refactor out?
             services.AddSingleton<IBuildPropertyProvider>(new BuildPropertyProvider());
