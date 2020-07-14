@@ -62,7 +62,7 @@ namespace Kudu.Core.SourceControl.Git
         public RepositoryType RepositoryType
         {
             get { return RepositoryType.Git; }
-        } 
+        }
 
         public bool SkipPostReceiveHookCheck
         {
@@ -185,7 +185,17 @@ fi" + "\n";
                     sb.AppendLine("#!/bin/sh");
                     sb.AppendLine("read i");
                     sb.AppendLine("echo $i > pushinfo");
-                    sb.AppendLine(KnownEnvironment.KUDUCOMMAND);
+
+
+                    if (EnvironmentHelper.IsDynamicInstallEnvironment())
+                    {
+                        sb.AppendLine(KnownEnvironment.KUDUCOMMAND_DYNAMICINSTALL);
+                    }
+                    else
+                    {
+                        sb.AppendLine(KnownEnvironment.KUDUCOMMAND);
+                    }
+
                     if (OSDetector.IsOnWindows())
                     {
                         FileSystemHelpers.WriteAllText(PostReceiveHookPath, sb.ToString());
