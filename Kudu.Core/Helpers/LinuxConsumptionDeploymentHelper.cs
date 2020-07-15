@@ -33,6 +33,10 @@ namespace Kudu.Core.Helpers
             string packageFolder = env.ArtifactsPath;
             string packageFileName = OryxBuildConstants.FunctionAppBuildSettings.LinuxConsumptionArtifactName;
 
+            // Indicate the memory limitation on Linux Consumption
+            context.Logger.Log($"Linux Consumption plan has a 1.5 GB memory limit on a remote build container.");
+            context.Logger.Log($"To check our service limit, please visit https://docs.microsoft.com/en-us/azure/azure-functions/functions-scale#service-limits");
+
             // Try create a placeholder blob in AzureWebJobsStorage
             CloudBlockBlob blob = await GetPlaceholderBlob(context, settings, shouldUpdateWebsiteRunFromPackage);
 
