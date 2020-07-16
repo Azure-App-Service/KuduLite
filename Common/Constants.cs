@@ -118,6 +118,7 @@ namespace Kudu
         //Setting for VC++ for node builds
         public const string VCVersion = "2015";
 
+        public const string WebsiteSiteName = "WEBSITE_SITE_NAME";
         public const string SiteRestrictedToken = "x-ms-site-restricted-token";
         public const string SiteAuthEncryptionKey = "WEBSITE_AUTH_ENCRYPTION_KEY";
         public const string HttpHost = "HTTP_HOST";

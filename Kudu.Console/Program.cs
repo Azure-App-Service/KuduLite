@@ -151,7 +151,7 @@ namespace Kudu.Console
                 gitRepository = new GitExeRepository(env, settingsManager, traceFactory);
             }
 
-            IServerConfiguration serverConfiguration = new ServerConfiguration();
+            IServerConfiguration serverConfiguration = new ServerConfiguration(SystemEnvironment.Instance);
             IAnalytics analytics = new Analytics(settingsManager, serverConfiguration, traceFactory);
 
             IWebHooksManager hooksManager = new WebHooksManager(tracer, env, hooksLock);
