@@ -20,6 +20,7 @@ using Newtonsoft.Json.Linq;
 using System.Net.Http;
 using System.Collections.Generic;
 using Kudu.Core.Helpers;
+using System.Threading;
 
 namespace Kudu.Services.Deployment
 {
@@ -446,6 +447,7 @@ namespace Kudu.Services.Deployment
             // least 1 commit in the IRepository. Even though there is no repo per se in this
             // scenario, deployment pipeline still generates a NullRepository
             repository.Commit(zipDeploymentInfo.Message, zipDeploymentInfo.Author, zipDeploymentInfo.AuthorEmail);
+            Thread.Sleep(2000);
         }
 
         private static void CreateZipSymlinks(IDictionary<string, string> symLinks, string extractTargetDirectory)

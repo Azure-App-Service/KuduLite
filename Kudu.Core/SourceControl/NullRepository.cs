@@ -67,7 +67,9 @@ namespace Kudu.Core.SourceControl
                 }
             }
 
-            throw new InvalidOperationException();
+            // Mark a null commit, and continue the deployment
+            Commit(null, null, null);
+            return _latestChangeSet;
         }
 
         public void AddFile(string path)

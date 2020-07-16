@@ -9,7 +9,7 @@ namespace Kudu.Core.Deployment
 {
     public class DeploymentStatusManager : IDeploymentStatusManager
     {
-        public static readonly TimeSpan LockTimeout = TimeSpan.FromSeconds(10);
+        public static readonly TimeSpan LockTimeout = TimeSpan.FromSeconds(30);
         private readonly IEnvironment _environment;
         private readonly IAnalytics _analytics;
         private readonly IOperationLock _statusLock;
