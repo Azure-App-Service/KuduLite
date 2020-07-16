@@ -18,5 +18,13 @@ namespace Kudu.Core.SourceControl.Git
                                            "\"$" + APPPATH + "\" " +
                                            "\"$" + MSBUILD + "\" " +
                                            "\"$" + DEPLOYER + "\"";
+
+        // Command to launch the post receive hook for dynamic install
+        // CORE NOTE modified the script to run "dotnet," assuming EXEPATH points
+        // to a framework-dependent Core app.
+        public static string KUDUCOMMAND_DYNAMICINSTALL = "dotnet \"$" + EXEPATH + "\" " +
+                                           "\"$" + APPPATH + "\" " +
+                                           "\"$" + MSBUILD + "\" " +
+                                           "\"$" + DEPLOYER + "\"";
     }
 }

@@ -23,7 +23,13 @@ namespace Kudu.Core.Helpers
 
             return binPath;
         }
-        
+
+        public static bool IsDynamicInstallEnvironment()
+        {
+            var dynEnvVarValue = System.Environment.GetEnvironmentVariable("DYNAMIC_INSTALL_ENABLED");
+            return dynEnvVarValue != null && string.Equals(dynEnvVarValue, "true", StringComparison.OrdinalIgnoreCase);
+        }
+
         // Is this a Windows Containers site?
         public static bool IsWindowsContainers()
         {
