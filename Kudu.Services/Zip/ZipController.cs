@@ -2,7 +2,6 @@
 using Kudu.Core;
 using Kudu.Services.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Internal;
 using System;
 using System.IO.Abstractions;
 using System.IO.Compression;
