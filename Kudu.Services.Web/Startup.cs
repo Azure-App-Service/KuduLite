@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Formatting;
 using System.Reflection;
 using AspNetCore.RouteAnalyzer;
 using Kudu.Contracts;
@@ -74,7 +73,6 @@ namespace Kudu.Services.Web
         public void ConfigureServices(IServiceCollection services)
         {
             Console.WriteLine(@"Configure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-            FileSystemHelpers.DeleteDirectorySafe("/home/site/locks/deployment");
             services.Configure<FormOptions>(options =>
             {
                 options.MultipartBodyLengthLimit = 52428800;
@@ -87,11 +85,9 @@ namespace Kudu.Services.Web
             // Kudu.Services contains all the Controllers 
             var kuduServicesAssembly = Assembly.Load("Kudu.Services");
 
-            services.AddMvcCore()
+            services.AddMvcCore(options => options.EnableEndpointRouting = false)
                 .AddRazorPages()
                 .AddAuthorization()
-                .AddJsonFormatters()
-                .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver())
                 .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices()
                 .AddApiExplorer();
 
@@ -317,10 +313,6 @@ namespace Kudu.Services.Web
             //target.FileName = logfile;
         }
 
-        // CORE TODO See NinjectServices.Stop
-
-        // CORE TODO See signalr stuff in NinjectServices
-
         private static Uri GetAbsoluteUri(HttpContext httpContext)
         {
             var request = httpContext.Request;
@@ -338,7 +330,7 @@ namespace Kudu.Services.Web
         {
             Console.WriteLine(@"Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
-            loggerFactory.AddEventSourceLogger();
+            //loggerFactory.AddEventSourceLogger();
 
             KuduWebUtil.MigrateToNetCorePatch(_webAppRuntimeEnvironment);
 
@@ -397,16 +389,6 @@ namespace Kudu.Services.Web
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 
-            // CORE TODO any equivalent for this? Needed?
-            //var configuration = kernel.Get<IServerConfiguration>();
-            //GlobalConfiguration.Configuration.Formatters.Clear();
-            //GlobalConfiguration.Configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
-
-            var jsonFormatter = new JsonMediaTypeFormatter();
-
-
-            // CORE TODO concept of "deprecation" in routes for traces, Do we need this for linux ?
-
             // Push url
             foreach (var url in new[] {"/git-receive-pack", $"/{configuration.GitServerRoot}/git-receive-pack"})
             {
@@ -438,9 +420,9 @@ namespace Kudu.Services.Web
             // Sets up the file server to LogFiles
             KuduWebUtil.SetupFileServer(app, Path.Combine(_webAppRuntimeEnvironment.LogFilesPath,"kudu","deployment"), "/deploymentlogs");
 
-            app.UseSwagger();
+            // app.UseSwagger();
 
-            app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "Kudu API Docs"); });
+            // app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "Kudu API Docs"); });
 
             app.UseMvc(routes =>
             {

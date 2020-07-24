@@ -25,19 +25,15 @@ retry() {
   done    
 }
 
-copy_to_build_dir() {
-  rm -rf "$@node_modules"	
-  if [ ! -d "node_modules" ]; then
+check_build_dir() {
+  echo "$@/node_modules"
+  if [ ! -d "$@/node_modules" ]; then
     exit 1
-  else
-    mkdir -p "$@"
-    mkdir -p "$@/KuduConsole"
-    cp -r node_modules "$@"
-    mv node_modules "$@/KuduConsole/node_modules"
   fi
 }
 
+pwd
 printf "\n\nInstalling Kudu Script\n\n" 
 echo "$@"
-retry npm --loglevel=error install https://github.com/projectkudu/KuduScript/tarball/16de31b5f5ca590ea085979e5fa5e74bb62f647e
-copy_to_build_dir "$@"
+retry npm --loglevel=error install --prefix $@ https://github.com/projectkudu/KuduScript/tarball/16de31b5f5ca590ea085979e5fa5e74bb62f647e
+check_build_dir() "$@"
