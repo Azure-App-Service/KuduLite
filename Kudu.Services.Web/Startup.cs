@@ -273,6 +273,20 @@ namespace Kudu.Services.Web
 
             services.AddScoped<ICommandExecutor, CommandExecutor>();
 
+            // KuduWebUtil.MigrateSite(environment, noContextDeploymentsSettingsManager);
+            // RemoveOldTracePath(environment);
+            // RemoveTempFileFromUserDrive(environment);
+
+            // CORE TODO Windows Fix: Temporary fix for https://github.com/npm/npm/issues/5905
+            //EnsureNpmGlobalDirectory();
+            //EnsureUserProfileDirectory();
+
+            //// Skip SSL Certificate Validate
+            //if (Environment.SkipSslValidation)
+            //{
+            //    ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+            //}
+
             //// Make sure webpages:Enabled is true. Even though we set it in web.config, it could be overwritten by
             //// an Azure AppSetting that's supposed to be for the site only but incidently affects Kudu as well.
             ConfigurationManager.AppSettings["webpages:Enabled"] = "true";
