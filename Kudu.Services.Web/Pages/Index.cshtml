@@ -1,99 +1,362 @@
-﻿@page
-@using System
-@using System.Reflection
+
+@page
+@using Kudu.Core.Deployment
 @using Microsoft.AspNetCore.Hosting
 @inject IHostingEnvironment hostingEnvironment
+@inject IDeploymentManager deploymentManager
 
 @{
-
-    // If Kudu home page gets requested with the api-version, we are likely dealing with a call
-    // on the 'ARM bridge' to list 'extensions'. e.g.
-    // /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Web/sites/{site}/extensions?api-version=2015-08-01
-    // Since we can't actually return a list of extensions, return [], which is enough to avoid ARM faliures
-
-    //if (Request.QueryString["api-version"] != null)
-    //{
-    //    Response.Write("[]");
-    //    Response.ContentType = "application/json";
-    //    Response.End();
-    //}
-
-    ViewData["Title"] = "Kudu Services";
-
-    string appServiceVersion = GetAppServiceVersion();
-    Console.WriteLine(DateTime.Now.ToString("hh.mm.ss.ffffff"));
+    ViewBag.Title = "title";
+    Layout = "_Layout";
 }
 
-@functions {
-    string GetAppServiceVersion()
-    {
-        Assembly assembly;
-        try
-        {
-            assembly = Assembly.Load("Microsoft.Web.Hosting, Version=7.1.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35");
-            var fileVersionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location);
-            return fileVersionInfo.ProductVersion;
-        }
-        catch
-        {
-            return "";
-        }
-    }
-}
-<style type="text/css">
-        .row > div {
-            padding-bottom: 10px;
-        }
+<style>
+    .bg-grad { background-image: linear-gradient(to right, #06B0BA, #2F3B61); }
 </style>
-<div class="container">
-    @{
-        string commitFile = System.IO.Path.Combine(hostingEnvironment.WebRootPath, "commit.txt");
-        string sha = System.IO.File.Exists(commitFile) ? System.IO.File.ReadAllText(commitFile).Trim() : null;
-        //var version = typeof(Kudu.Services.Web.Tracing.TraceMiddleware).Assembly.GetName().Version;
-        var version = Constants.KuduBuild;
-    }
-    <h3>Environment</h3>
-    <div class="row">
-        <div class="col-xs-2">
-            <strong>Build</strong>
-        </div>
-        <div>
-            @version
 
-            @if (!string.IsNullOrEmpty(sha))
-            {
-                string githubProjectRoot = Kudu.Core.Helpers.OSDetector.IsOnWindows() ? "ProjectKudu/kudu" : "Azure-App-Service/KuduLite";
-                <text>
-                    (<a id="sha" href="https://github.com/@githubProjectRoot/commit/@sha">@sha.Substring(0, 10)</a>)
-                </text>
-            }
+<script type="text/javascript">
+    function clickLink(a) {
+        var url1 = a.getAttribute('value');
+        document.cookie =
+            'ARRAffinity=' +
+            document.getElementById("curr-instance") +
+            '; expires=Wed, 1 Jan 2070 13:47:11 UTC; path=/Default.cshtml';
+    }
+
+    $(function toolTipView() {
+        $("#latest-deployment-deployer").tooltip();
+        $("#latest-deployment-id").tooltip();
+        $("#latest-deployment-id2").tooltip();
+        $("#latest-deployment-start-time").tooltip();
+        $("#latest-deployment-time-taken").tooltip();
+    });
+</script>
+
+@if (Kudu.Core.Environment.IsAzureEnvironment())
+    {
+        <script>
+            $.currInst = "@System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")";
+        </script>
+    }
+
+@if (Kudu.Core.Environment.IsAzureEnvironment())
+    {
+        <script type="text/javascript" src="/Content/Scripts/NavigateToInstance.js"></script>
+    }
+
+@{
+    var workerIdHash = System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId);
+    var workerIdShortHash = workerIdHash?.Substring(0, 12);
+    const string version = Constants.KuduBuild;
+    var showLearningBanner = !deploymentManager.GetResults().Any();
+    var welcomeBannerDisplayVal = showLearningBanner ? "display:block" : "display:none";
+    var lastDeployedDisplayVal = !showLearningBanner ? "display:block" : "display:none";
+}
+
+<div class="jumbotron" style="background-color: rgb(244, 245, 247); padding-top: 20px; padding-bottom: 10px">
+    <div class="row border-between">
+        <div class="col-md-7">
+            <div class="row align-middle" style="margin-left: 1px">
+                <h3>Kudu<span style="font-weight: 200">Lite</span></h3>@version</div>
+            <small>Site UpTime: <i class="fas fa-circle" style="color: #26C281; font-size: x-small; margin-right: 5px"></i>@Tracing.TraceMiddleware.UpTime.ToString(@"dd\.hh\:mm\:ss") | Site Folder: @PathResolver.ResolveRootPath() | Temp Folder: @System.IO.Path.GetTempPath()</small>
+            <br> <small onclick="clickLink(this)" id="curr-instance" title="@workerIdHash">Kudu Attached to Instance: &nbsp;<i class="fas fa-desktop fa-style"></i>&nbsp;<a href="#">@workerIdShortHash </a>| <span class="dropdown">
+                <button class="btn btn-sm dropdown-toggle" type="button" style="background-color: rgb(244, 245, 247);border: none" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <i class="fas fa-network-wired fa-style text-sm"></i> <a href="#"> Switch Instance</a>
+                </button>
+                <ul class="dropdown-menu instances_tab_options_cls" id='instances_tab_options'></ul>
+            </span> </small>
+        </div>
+        <div class="col-md-5" id="is-deploying-banner" style="display: none">
+            <div>
+                <div class="col-md-10 row-fluid">
+                    <h6 id="lock_msg" style="font-weight: 300"></h6>
+                    <h6 class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa" id="deployment-status">...</h6>
+                </div>
+                <div class="col-md-2 row-fluid">
+                    <div class="centering text-center">
+                        <a class="btn btn-primary btn-sm align-middle" href="/api/logstream" role="button">Stream Logs</a>
+                    </div>
+                </div>
+            </div>
+            <div class="progress" style="margin-left: 15px; margin-right: 10px">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; background-color: #26C281"></div>
+            </div>
+        </div>     
+        <div class="col-md-5" id="just-deployed-banner" style="display: none">
+            
+            <div class="col-md-10 row-fluid">
+                <h6 style="font-weight: 400; margin-bottom: -10px">
+                    Deployment &nbsp;
+                    <p class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa"> Successful <i class="fas fa-check-circle" style="color: #26C281;"></i>&nbsp;</p>
+                </h6>
+                <div class="row-fluid">
+                    <small style="color: #42526e"> Performing an Overlapped Recycle of your WebApp. Your changes would reflect in <span id="statusStrTimer"></span> seconds</small>
+                </div>
+            </div>
+            <div class="col-md-2 row-fluid" style="margin: 0px">
+                <button type="button" class="btn btn-primary btn-sm">
+                    <i class="fas fa-recycle"></i> <span id="timer" class="badge badge-light"></span> Seconds
+                </button>
+            </div>
+        </div>
+        <div class="col-md-5" id="last-deployed-banner" style="@lastDeployedDisplayVal">
+            <div class="col-md-9 row-fluid" style="height: 100%">
+                <h6 style="font-weight: 400; margin-bottom: -10px">
+                    Recent Deployment &nbsp;
+                    <p class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa" id="latest-deployment-id"> ... <i class="fas fa-check-circle" style="color: #26C281;"></i>&nbsp;</p>
+                    <p id="diagnose-btn" class="badge badge-secondary inconsolata align-left" style="background-color: #343a40; color: #fafafa; display: none"><i class="fas fa-user-md" style="color: #007bff"></i> Diagnose what went wrong ?</p>
+                </h6>
+                <div class="row-fluid">
+                    <small style="color: #42526e"> <i class="fas fa-fingerprint"></i> <span id="latest-deployment-id2">...</span> | <i class="far fa-calendar-alt"></i> <span id="latest-deployment-start-time" title="Deployed on">... </span> ago | <i class="fas fa-clock"></i> <span id="latest-deployment-time-taken" title="Time taken to deploy">... </span> | <i class="fas fa-user-circle" title="Deployed by" id="latest-deployment-deployer"></i> </small>
+                </div>
+            </div>
+            <div class="col-md-2 row-fluid" style="margin: 0px">
+                <div class="centering text-center">
+                    <a class="btn btn-primary btn-sm align-middle" id="latest-deployments-logs-btn" href="#" role="button">View Logs</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5" id="appsvc-welcome-banner" style="@welcomeBannerDisplayVal">
+            <div class="container" style="height: 100%; width: 100%; display: flex; align-items: center; vertical-align: middle">
+                <div class="row col-md-12 col-sm-12">
+                    <div class="col-lg-6 col-md-12 col-sm-12 mb-10 mt-10 text-center">
+                            <button type="button" onclick="location.href = 'https://go.microsoft.com/fwlink/?linkid=2084231';" class="btn btn-primary btn-sm"><i class="fas fa-cloud-upload-alt"></i>Deploy your first app</button>      
+                    </div>
+                    <div class="col-lg-6 col-sm-12 col-md-12 mb-10 mt-10 d-xs-none d-sm-none d-md-block text-center">
+                            <button type="button"  onclick="location.href = 'https://docs.microsoft.com/en-us/visualstudio/ide/quickstart-nodejs?view=vs-2019';" class="btn bkg-light-gray border-0 btn-sm"><i class="fas fa-cloud-upload-alt"></i> Learn Node <i class="fab fa-node-js"></i> Development</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="row">
-        <div class="col-xs-2">
-            <strong>Site up time</strong>
-        </div>
-        <div>
-            @Kudu.Services.Web.Tracing.TraceMiddleware.UpTime.ToString(@"dd\.hh\:mm\:ss")
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-xs-2">
-            <strong>Site folder</strong>
-        </div>
-        <div>
-            @Kudu.Services.Web.PathResolver.ResolveRootPath()
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-xs-2">
-            <strong>Temp folder</strong>
-        </div>
-        <div>
-            @System.IO.Path.GetTempPath()
-        </div>
-    </div>
-    <partial name="Index_RestApi" />
-    <partial name="Index_BrowseHistory" />
-    <h3>More information about Kudu can be found on the <a href="https://github.com/projectkudu/kudu/wiki">wiki</a>.</h3>
 </div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="card offset-md-1 col-xs-6 shadow-sm border-0" style="background-color: rgb(244, 245, 247); width: 20.8333%">
+            <div class="container">
+                <div class="row" style="margin: 10px; border-bottom: 1px solid #e3e3e3">
+                    <h6 class="font-weight-normal"><i class="far fa-arrow-alt-circle-right"></i>&nbsp;App Essentials</h6>
+                </div>
+                <div class="row" style="margin: 10px">
+                    <small>
+                        <ul class="list-unstyled" style="text-align: left; line-height: 25px">
+                            <li>
+                                <a href="/jsonviewer?view_url=/api/settings">App Settings</a>
+                            </li>
+                            <li>
+                                <a href="/wwwroot">Browse WWWRoot</a>
+                            </li>
+                            <li>
+                                <a href="/jsonviewer?view_url=/diagnostics/runtime">System Configuration</a>
+                            </li>
+                            <li>
+                                <a href="/jsonviewer?view_url=/api/vfs">Virtual File System API</a>
+                            </li>
+                            <li>
+                                <a href="/logs">Browse Logs Dir</a>
+                            </li>
+                            <li>
+                                <a href="/jsonviewer?view_url=/api/scan/start">Scan file system</a>
+                            </li>
+                            <li>
+                                <a href="/jsonviewer?view_url=/api/scan/results">Get All Scans</a>
+                            </li>
+                        </ul>
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="card offset-md-1 col-xs-6 shadow-sm border-0" style="background-color: rgb(244, 245, 247); width: 20.8333%">
+            <div class="container">
+                <div class="row" style="margin: 10px; border-bottom: 1px solid #e3e3e3">
+                    <h6 class="font-weight-normal"><i class="fas fa-cloud-upload-alt"></i>&nbsp;Deployments</h6>
+                </div>
+                <div class="row" style="margin: 10px">
+                    <small>
+                        <ul class="list-unstyled" style="text-align: left; line-height: 25px">
+                            <li>
+                                <a href="/jsonviewer?view_url=/api/deployments">List of Deployments</a>
+                            </li>
+                            <li>
+                                <a href="/jsonviewer?view_url=/api/scm/info">Source control Info</a>
+                            </li>
+                        </ul>
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="card offset-md-1 col-xs-6 shadow-sm border-0" style="background-color: rgb(244, 245, 247); width: 20.8333%">
+            <div class="container">
+                <div class="row" style="margin: 10px; border-bottom: 1px solid #e3e3e3">
+                    <h6 class="font-weight-normal"><i class="fab fa-docker"></i>&nbsp;Web App Container</h6>
+                </div>
+                <div class="row" style="margin: 10px">
+                    <small>
+                        <ul class="list-unstyled" style="text-align: left; line-height: 25px">
+                            <li>
+                                <a href="/jsonviewer?view_url=/api/logs/docker">Current Container Logs</a>
+                            </li>
+                            <li>
+                                <a href="/api/logs/docker/zip">Download All Container Logs</a>
+                            </li>
+                            <li hidden>
+                                <a href="#">Process Dump</a>
+                            </li>
+                        </ul>
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-1" style="width: 8.3333%"></div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
+<script>
+    var wasDeploying = false;
+    function checkDeployingStatus() {
+        $.ajax({
+            url: "/api/isdeploying?trace=false",
+            type: "GET",
+            success: function(data) {
+                console.log("deployment going on" + data["value"]);
+
+                $('#lock_msg').text(data["msg"]);
+                if (data["value"] == 'True') {
+                    $("#appsvc-welcome-banner").css("display", "none");
+                    $("#last-deployed-banner").css("display", "none");
+                    $("#just-deployed-banner").css("display", "none");
+                    $('#is-deploying-banner').css("display", "block");
+                    $.ajax({
+                        url: "/api/deployments/latest?trace=false",
+                        type: "GET",
+                        success: function(data) {
+                            console.log("latest deployment data");
+                            console.log(data);
+                            wasDeploying = true;
+                            $("#deployment-status").html(data["status_text"] + "...");
+                        },
+                        dataType: "json",
+                        timeout: 2000
+                    });
+                } else {
+                    $('#is-deploying-banner').css("display", "none");
+                    console.log("Trying to show just deployed banner : wasDeploying value is "+wasDeploying);
+                    if (wasDeploying) {
+                        UpdateLatestDeploymentStatus();
+                    }
+                }
+            },
+            dataType: "json",
+            //complete: setTimeout(function() { checkDeployingStatus() }, 5000),
+            timeout: 3000
+        });
+    }
+
+    function UpdateLatestDeploymentStatus() {
+        console.log("Making latest API call "+wasDeploying);
+        $.ajax({
+            url: "/api/deployments/latest?trace=false",
+            type: "GET",
+            success: function(data) {
+                if (!data["status"]) {
+                    return;
+                }
+                console.log("API call done "+wasDeploying);
+                $("#appsvc-welcome-banner").css("display", "none");
+                $("#just-deployed-banner").css("display", "none");
+                $("#diagnose-btn").css("display","none");
+                if (!wasDeploying) {
+                    $("#last-deployed-banner").css("display", "block");
+                    if (data["status"] === 4) {
+                        $("#latest-deployment-id")
+                            .html("Successful &nbsp;<i class=\"fas fa-check-circle\" style=\"color: #26C281;\"></i>")
+                            .prop('title', 'Deployment Status');
+                    } else if (data["status"] === 1 || data["status"] === 2) {
+                        $("#latest-deployment-id")
+                            .html("Pending &nbsp;<i class=\"fas fa-exclamation-circle\" style=\"color: #fdcb6e;\"></i>")
+                            .prop('title', 'Deployment Status');
+                    } else {
+                        $("#diagnose-btn").css("display","inline-block");
+                        $("#latest-deployment-id")
+                            .html("Failed &nbsp;<i class=\"fas fa-exclamation-circle\" style=\"color: #ff5e57;\"></i>")
+                            .prop('title', 'Deployment Status');
+                    }
+
+                    $("#latest-deployment-id2").html(data["id"]);
+
+                    $("#latest-deployment-time-taken")
+                        .html(timeSince(Date.parse(data["end_time"]) - Date.parse(data["received_time"])))
+                        .prop('title',
+                            'Deployment took ' +
+                            timeSince(Date.parse(data["end_time"]) - Date.parse(data["received_time"])));
+
+                    $("#latest-deployment-start-time")
+                        .html(timeSince(new Date(Date.now() - Date.parse(data["end_time"]))))
+                        .prop('title',
+                            'Deployed ' + timeSince(new Date(Date.now() - Date.parse(data["end_time"]))) + ' ago');
+
+                    $("#latest-deployments-logs-btn").prop("href",
+                        "/jsonviewer?view_url=/api/deployments/" + data["id"] + "/log");
+
+                    $("#latest-deployment-deployer").prop("title", "Deployed by " + data["author"]);
+                } else {           
+                    $("#just-deployed-banner").css("display", "inline-block");
+                    setTimeout(timer, 1000);
+                    wasDeploying = false;
+                }
+            }
+        });
+    };
+
+    var count = 10;
+    function timer()
+    {
+        count=count-1;
+        if (count <= 0)
+        {
+            count = 10;
+            document.getElementById("timer").innerHTML="0"; 
+            document.getElementById("statusStrTimer").innerHTML="0"; 
+            setTimeout(UpdateLatestDeploymentStatus, 1000);
+            return;
+        }
+        document.getElementById("timer").innerHTML=count; 
+        document.getElementById("statusStrTimer").innerHTML=count; 
+        setTimeout(timer, 1000);
+    }
+
+    UpdateLatestDeploymentStatus();
+
+    function timeSince(date) {
+        var seconds = Math.floor((date) / 1000);
+        var interval = Math.floor(seconds / 31536000);
+        if (interval > 1) {
+            return interval + " years";
+        }
+
+        interval = Math.floor(seconds / 2592000);
+        if (interval > 1) {
+            return interval + " months";
+        }
+        interval = Math.floor(seconds / 86400);
+
+        if (interval > 1) {
+            return interval + " days";
+        }
+        interval = Math.floor(seconds / 3600);
+
+        if (interval > 1) {
+            return interval + " hours";
+        }
+        interval = Math.floor(seconds / 60);
+        if (interval > 1) {
+            return interval + " minutes";
+        }
+        return Math.floor(seconds) + " seconds";
+    }
+
+    setInterval(function() {
+            checkDeployingStatus(); // this will run after every 10 seconds
+        },
+        10000);
+</script>

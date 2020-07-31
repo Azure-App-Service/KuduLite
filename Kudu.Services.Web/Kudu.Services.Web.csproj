@@ -46,6 +46,32 @@
     <Folder Include="wwwroot\Content\Styles\" />
     <Folder Include="wwwroot\Content\Scripts\" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Update="Pages\bash.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="Pages\DebugConsole2\LinuxConsole2.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="Pages\DebugConsole2\WindowsConsole2.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="Pages\Env.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="Pages\Index.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="Pages\_Layout.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
   <!-- Run updateNodeModules to install kuduscript -->  
   <Target Name="PutNodeModulesInBinDir" AfterTargets="Build">    
 	  <Exec Command="$(ProjectDir)\updateNodeModules.cmd &quot;$(PublishDir)&quot;" Condition="'$(OS)' == 'Windows_NT' AND  '$(Configuration)'=='Release'" />

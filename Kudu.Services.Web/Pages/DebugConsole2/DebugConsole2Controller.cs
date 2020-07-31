@@ -10,17 +10,17 @@ namespace Kudu.Services.Web.Pages.NewUI.DebugConsole2
         public ActionResult Index()
         {
             var os = OSDetector.IsOnWindows() ? "Windows" : "Linux";
-            return View($"~/Pages/NewUI/DebugConsole2/{os}Console2.cshtml");
+            return View($"~/Pages/DebugConsole2/{os}Console2.cshtml");
         }
 
         public ActionResult LinuxConsole()
         {
-            return View($"~/Pages/NewUI/DebugConsole/LinuxConsole2.cshtml");
+            return View($"~/Pages/DebugConsole/LinuxConsole2.cshtml");
         }
 
         public ActionResult WindowsConsole()
         {
-            return View($"~/Pages/NewUI/DebugConsole2/WindowsConsole2.cshtml");
+            return View($"~/Pages/DebugConsole2/WindowsConsole2.cshtml");
         }
 
     }
