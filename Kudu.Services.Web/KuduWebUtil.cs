@@ -31,7 +31,7 @@ namespace Kudu.Services.Web
 {
     internal static class KuduWebUtil
     {
-        private const string KuduConsoleFilename = "kudu.dll";
+        private const string KuduConsoleFilename = "kudu";
         private const string KuduConsoleRelativePath = "KuduConsole";
 
         private static Dictionary<string, IOperationLock> _namedLocks;

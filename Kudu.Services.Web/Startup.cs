@@ -86,6 +86,10 @@ namespace Kudu.Services.Web
             var kuduServicesAssembly = Assembly.Load("Kudu.Services");
 
             services.AddMvcCore(options => options.EnableEndpointRouting = false)
+                .AddNewtonsoftJson(o =>
+                {
+                    o.SerializerSettings.ContractResolver = new DefaultContractResolver();
+                })
                 .AddRazorPages()
                 .AddAuthorization()
                 .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices()

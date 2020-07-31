@@ -28,6 +28,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Proxy" />
     <PackageReference Include="Microsoft.Diagnostics.Runtime" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="4.0.1" />
     <PackageReference Include="XmlSettings" Version="0.1.3" />
   </ItemGroup>
@@ -56,8 +57,8 @@
     <Message Text="%0a%0aBuilding KuduConsole%0a" Importance="high" />
     <Exec Command="dotnet build ../Kudu.Console -o $(MSBuildProjectDirectory)/$(PublishDir)..\KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' == 'Windows_NT'" />
     <Exec Command="dotnet build ../Kudu.Console -o $(OutputPath)/KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' != 'Windows_NT'" />
-    <Exec Command="dotnet publish ..\Kudu.Console --configuration Release -o $(PublishDir)\KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' == 'Windows_NT'" />
-    <Exec Command="dotnet publish ../Kudu.Console --configuration Release -o $(PublishDir)/KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' != 'Windows_NT'" />
+    <Exec Command="dotnet publish ..\Kudu.Console -r linux-x64 --self-contained --configuration Release -o $(PublishDir)\KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' == 'Windows_NT'" />
+    <Exec Command="dotnet publish ../Kudu.Console -r linux-x64 --self-contained --configuration Release -o $(PublishDir)/KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' != 'Windows_NT'" />
   </Target>
   <Target Name="ChangeScriptPermissionsForLinux" AfterTargets="publish">
     <Message Text="%0a%0aSetting Permissions for Kudu Script(s)%0a" Importance="high" />
