@@ -289,7 +289,7 @@ namespace Kudu.Console
                 EnvironmentHelper.NormalizeBinPath(binPath),
                 repositoryPath,
                 requestId,
-                Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu.dll"),
+                Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu"),
                 null,
                 new FileSystemPathProvider(new NullMeshPersistentFileSystem()));
         }

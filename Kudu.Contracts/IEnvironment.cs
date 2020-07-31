@@ -29,7 +29,7 @@
         string FunctionsPath { get; }           // e.g. /site/wwwroot
         string AppBaseUrlPrefix { get; }        // e.g. siteName.azurewebsites.net
         string RequestId { get; }               // e.g. x-arr-log-id or x-ms-request-id header value
-        string KuduConsoleFullPath { get; }     // e.g. KuduConsole/kudu.dll
+        string KuduConsoleFullPath { get; }     // e.g. KuduConsole/kudu
         string SitePackagesPath { get; }        // e.g. /data/SitePackages
         bool IsOnLinuxConsumption { get; }      // Check if the application is a Linux Consumption function app
     }
