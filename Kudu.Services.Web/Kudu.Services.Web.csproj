@@ -83,8 +83,8 @@
     <Message Text="%0a%0aBuilding KuduConsole%0a" Importance="high" />
     <Exec Command="dotnet build ../Kudu.Console -o $(MSBuildProjectDirectory)/$(PublishDir)..\KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' == 'Windows_NT'" />
     <Exec Command="dotnet build ../Kudu.Console -o $(OutputPath)/KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' != 'Windows_NT'" />
-    <Exec Command="dotnet publish ..\Kudu.Console -r linux-x64 --self-contained --configuration Release -o $(PublishDir)\KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' == 'Windows_NT'" />
-    <Exec Command="dotnet publish ../Kudu.Console -r linux-x64 --self-contained --configuration Release -o $(PublishDir)/KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' != 'Windows_NT'" />
+    <Exec Command="dotnet publish ..\Kudu.Console -r linux-x64 --self-contained --configuration Release -p:PublishSingleFile=false -p:PublishTrimmed=true -o $(PublishDir)\KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' == 'Windows_NT'" />
+    <Exec Command="dotnet publish ../Kudu.Console -r linux-x64 --self-contained --configuration Release -p:PublishSingleFile=false -p:PublishTrimmed=true -o $(PublishDir)/KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' != 'Windows_NT'" />
   </Target>
   <Target Name="ChangeScriptPermissionsForLinux" AfterTargets="publish">
     <Message Text="%0a%0aSetting Permissions for Kudu Script(s)%0a" Importance="high" />
