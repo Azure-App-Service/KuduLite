@@ -41,16 +41,17 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 using ILogger = Kudu.Core.Deployment.ILogger;
+using Microsoft.Extensions.Hosting;
 
 namespace Kudu.Services.Web
 {
     public class Startup
     {
-        private readonly IHostingEnvironment _hostingEnvironment;
+        private readonly IWebHostEnvironment _hostingEnvironment;
         private IEnvironment _webAppRuntimeEnvironment;
         private IDeploymentSettingsManager _noContextDeploymentsSettingsManager;
 
-        public Startup(IConfiguration configuration, IHostingEnvironment hostingEnvironment)
+        public Startup(IConfiguration configuration, IWebHostEnvironment hostingEnvironment)
         {
             Console.WriteLine(@"Startup : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
             Configuration = configuration;
@@ -329,7 +330,7 @@ namespace Kudu.Services.Web
         }
 
         public void Configure(IApplicationBuilder app,
-            IApplicationLifetime applicationLifetime,
+            IHostApplicationLifetime applicationLifetime,
             ILoggerFactory loggerFactory)
         {
             Console.WriteLine(@"Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
