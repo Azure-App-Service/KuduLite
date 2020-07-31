@@ -311,7 +311,7 @@ namespace Kudu.Services.Web
         /// Returns a specified environment configuration as the current webapp's
         /// default configuration during the runtime.
         /// </summary>
-        internal static IEnvironment GetEnvironment(IHostingEnvironment hostingEnvironment,
+        internal static IEnvironment GetEnvironment(IWebHostEnvironment hostingEnvironment,
             IFileSystemPathProvider fileSystemPathsProvider,
             IDeploymentSettingsManager settings = null,
             IHttpContextAccessor httpContextAccessor = null)
