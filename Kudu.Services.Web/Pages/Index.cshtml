@@ -11,7 +11,9 @@
 }
 
 <style>
-    .bg-grad { background-image: linear-gradient(to right, #06B0BA, #2F3B61); }
+    .bg-grad {
+        background-image: linear-gradient(to right, #06B0BA, #2F3B61);
+    }
 </style>
 
 <script type="text/javascript">
@@ -33,16 +35,17 @@
 </script>
 
 @if (Kudu.Core.Environment.IsAzureEnvironment())
-    {
-        <script>
+{
+    <script>
             $.currInst = "@System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")";
-        </script>
-    }
+    </script>
+    <script type="text/javascript" src="/Content/Scripts/NavigateToInstance.js"></script>
+}
 
 @if (Kudu.Core.Environment.IsAzureEnvironment())
-    {
-        <script type="text/javascript" src="/Content/Scripts/NavigateToInstance.js"></script>
-    }
+{
+    <script type="text/javascript" src="/Content/Scripts/NavigateToInstance.js"></script>
+}
 
 @{
     var workerIdHash = System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId);
@@ -57,14 +60,17 @@
     <div class="row border-between">
         <div class="col-md-7">
             <div class="row align-middle" style="margin-left: 1px">
-                <h3>Kudu<span style="font-weight: 200">Lite</span></h3>@version</div>
+                <h3>Kudu<span style="font-weight: 200">Lite</span></h3>@version
+            </div>
             <small>Site UpTime: <i class="fas fa-circle" style="color: #26C281; font-size: x-small; margin-right: 5px"></i>@Tracing.TraceMiddleware.UpTime.ToString(@"dd\.hh\:mm\:ss") | Site Folder: @PathResolver.ResolveRootPath() | Temp Folder: @System.IO.Path.GetTempPath()</small>
-            <br> <small onclick="clickLink(this)" id="curr-instance" title="@workerIdHash">Kudu Attached to Instance: &nbsp;<i class="fas fa-desktop fa-style"></i>&nbsp;<a href="#">@workerIdShortHash </a>| <span class="dropdown">
-                <button class="btn btn-sm dropdown-toggle" type="button" style="background-color: rgb(244, 245, 247);border: none" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <i class="fas fa-network-wired fa-style text-sm"></i> <a href="#"> Switch Instance</a>
-                </button>
-                <ul class="dropdown-menu instances_tab_options_cls" id='instances_tab_options'></ul>
-            </span> </small>
+            <br> <small onclick="clickLink(this)" id="curr-instance" title="@workerIdHash">
+                Kudu Attached to Instance: &nbsp;<i class="fas fa-desktop fa-style"></i>&nbsp;<a href="#">@workerIdShortHash </a>| <span class="dropdown">
+                    <button class="btn btn-sm dropdown-toggle" type="button" style="background-color: rgb(244, 245, 247);border: none" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fas fa-network-wired fa-style text-sm"></i> <a href="#"> Switch Instance</a>
+                    </button>
+                    <ul class="dropdown-menu instances_tab_options_cls" id='instances_tab_options'></ul>
+                </span>
+            </small>
         </div>
         <div class="col-md-5" id="is-deploying-banner" style="display: none">
             <div>
@@ -81,9 +87,9 @@
             <div class="progress" style="margin-left: 15px; margin-right: 10px">
                 <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%; background-color: #26C281"></div>
             </div>
-        </div>     
+        </div>
         <div class="col-md-5" id="just-deployed-banner" style="display: none">
-            
+
             <div class="col-md-10 row-fluid">
                 <h6 style="font-weight: 400; margin-bottom: -10px">
                     Deployment &nbsp;
@@ -120,10 +126,10 @@
             <div class="container" style="height: 100%; width: 100%; display: flex; align-items: center; vertical-align: middle">
                 <div class="row col-md-12 col-sm-12">
                     <div class="col-lg-6 col-md-12 col-sm-12 mb-10 mt-10 text-center">
-                            <button type="button" onclick="location.href = 'https://go.microsoft.com/fwlink/?linkid=2084231';" class="btn btn-primary btn-sm"><i class="fas fa-cloud-upload-alt"></i>Deploy your first app</button>      
+                        <button type="button" onclick="location.href = 'https://go.microsoft.com/fwlink/?linkid=2084231';" class="btn btn-primary btn-sm"><i class="fas fa-cloud-upload-alt"></i>Deploy your first app</button>
                     </div>
                     <div class="col-lg-6 col-sm-12 col-md-12 mb-10 mt-10 d-xs-none d-sm-none d-md-block text-center">
-                            <button type="button"  onclick="location.href = 'https://docs.microsoft.com/en-us/visualstudio/ide/quickstart-nodejs?view=vs-2019';" class="btn bkg-light-gray border-0 btn-sm"><i class="fas fa-cloud-upload-alt"></i> Learn Node <i class="fab fa-node-js"></i> Development</button>
+                        <button type="button" onclick="location.href = 'https://docs.microsoft.com/en-us/visualstudio/ide/quickstart-nodejs?view=vs-2019';" class="btn bkg-light-gray border-0 btn-sm"><i class="fas fa-cloud-upload-alt"></i> Learn Node <i class="fab fa-node-js"></i> Development</button>
                     </div>
                 </div>
             </div>
@@ -156,13 +162,13 @@
                                 <a href="/logs">Browse Logs Dir</a>
                             </li>
                             <!--
-    <li>
-        <a href="/jsonviewer?view_url=/api/scan/start">Scan file system</a>
-    </li>
-    <li>
-        <a href="/jsonviewer?view_url=/api/scan/results">Get All Scans</a>
-    </li>
-        -->
+                            <li>
+                                <a href="/jsonviewer?view_url=/api/scan/start">Scan file system</a>
+                            </li>
+                            <li>
+                                <a href="/jsonviewer?view_url=/api/scan/results">Get All Scans</a>
+                            </li>
+                                -->
                         </ul>
                     </small>
                 </div>
@@ -219,7 +225,7 @@
         $.ajax({
             url: "/api/isdeploying?trace=false",
             type: "GET",
-            success: function(data) {
+            success: function (data) {
                 console.log("deployment going on" + data["value"]);
 
                 $('#lock_msg').text(data["msg"]);
@@ -231,7 +237,7 @@
                     $.ajax({
                         url: "/api/deployments/latest?trace=false",
                         type: "GET",
-                        success: function(data) {
+                        success: function (data) {
                             console.log("latest deployment data");
                             console.log(data);
                             wasDeploying = true;
@@ -242,7 +248,7 @@
                     });
                 } else {
                     $('#is-deploying-banner').css("display", "none");
-                    console.log("Trying to show just deployed banner : wasDeploying value is "+wasDeploying);
+                    console.log("Trying to show just deployed banner : wasDeploying value is " + wasDeploying);
                     if (wasDeploying) {
                         UpdateLatestDeploymentStatus();
                     }
@@ -255,18 +261,18 @@
     }
 
     function UpdateLatestDeploymentStatus() {
-        console.log("Making latest API call "+wasDeploying);
+        console.log("Making latest API call " + wasDeploying);
         $.ajax({
             url: "/api/deployments/latest?trace=false",
             type: "GET",
-            success: function(data) {
+            success: function (data) {
                 if (!data["status"]) {
                     return;
                 }
                 console.log(wasDeploying);
                 $("#appsvc-welcome-banner").css("display", "none");
                 $("#just-deployed-banner").css("display", "none");
-                $("#diagnose-btn").css("display","none");
+                $("#diagnose-btn").css("display", "none");
                 if (!wasDeploying) {
                     $("#last-deployed-banner").css("display", "block");
                     if (data["status"] === 4) {
@@ -278,7 +284,7 @@
                             .html("Pending &nbsp;<i class=\"fas fa-exclamation-circle\" style=\"color: #fdcb6e;\"></i>")
                             .prop('title', 'Deployment Status');
                     } else {
-                        $("#diagnose-btn").css("display","inline-block");
+                        $("#diagnose-btn").css("display", "inline-block");
                         $("#latest-deployment-id")
                             .html("Failed &nbsp;<i class=\"fas fa-exclamation-circle\" style=\"color: #ff5e57;\"></i>")
                             .prop('title', 'Deployment Status');
@@ -301,7 +307,7 @@
                         "/jsonviewer?view_url=/api/deployments/" + data["id"] + "/log");
 
                     $("#latest-deployment-deployer").prop("title", "Deployed by " + data["author"]);
-                } else {           
+                } else {
                     $("#just-deployed-banner").css("display", "inline-block");
                     setTimeout(timer, 1000);
                     wasDeploying = false;
@@ -311,19 +317,17 @@
     };
 
     var count = 10;
-    function timer()
-    {
-        count=count-1;
-        if (count <= 0)
-        {
+    function timer() {
+        count = count - 1;
+        if (count <= 0) {
             count = 10;
-            document.getElementById("timer").innerHTML="0"; 
-            document.getElementById("statusStrTimer").innerHTML="0"; 
+            document.getElementById("timer").innerHTML = "0";
+            document.getElementById("statusStrTimer").innerHTML = "0";
             setTimeout(UpdateLatestDeploymentStatus, 1000);
             return;
         }
-        document.getElementById("timer").innerHTML=count; 
-        document.getElementById("statusStrTimer").innerHTML=count; 
+        document.getElementById("timer").innerHTML = count;
+        document.getElementById("statusStrTimer").innerHTML = count;
         setTimeout(timer, 1000);
     }
 
@@ -357,8 +361,8 @@
         return Math.floor(seconds) + " seconds";
     }
 
-    setInterval(function() {
-            checkDeployingStatus(); // this will run after every 10 seconds
-        },
+    setInterval(function () {
+        checkDeployingStatus(); // this will run after every 10 seconds
+    },
         10000);
 </script>
