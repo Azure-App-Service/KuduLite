@@ -1,10 +1,11 @@
 jQuery(document).ready(function () {
-    $.ajax({
-        type: "GET",
-        url: '/instance/all',
-        success: function (response) {
-            try {
-                var obj = JSON.parse(response);
+    //$.ajax({
+    //    type: "GET",
+    //    url: '/instance/all',
+    //    success: function (response) {
+    //        try {
+    //            var obj = JSON.parse(response);
+    var obj = JSON.parse("inst1, inst2, inst3");
                 var ul = document.getElementById("instances_tab_options");
                 if (obj.length > 1) {
                     for (var i = 0; i < obj.length; i++) {
@@ -19,12 +20,12 @@ jQuery(document).ready(function () {
                 } else {
                     $("#instances-li").hide();
                 }
-            }
-            catch (err) {
-                console.log(err);
-            }
-        }
-    });
+    //        }
+    //        catch (err) {
+    //            console.log(err);
+    //        }
+    //    }
+   // });
 });
 
 function NavigateToInstance(instId) {
