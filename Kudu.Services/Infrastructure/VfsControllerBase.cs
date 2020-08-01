@@ -16,6 +16,7 @@ using Kudu.Core.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace Kudu.Services.Infrastructure
 {
@@ -47,6 +48,11 @@ namespace Kudu.Services.Infrastructure
         [AcceptVerbs("GET", "HEAD")]
         public virtual Task<IActionResult> GetItem()
         {
+            var syncIOFeature = HttpContext.Features.Get<IHttpBodyControlFeature>();
+            if (syncIOFeature != null)
+            {
+                syncIOFeature.AllowSynchronousIO = true;
+            }
             string localFilePath = GetLocalFilePath();
             if (VfsSpecialFolders.TryHandleRequest(Request, localFilePath, out IActionResult response))
             {
@@ -91,6 +97,11 @@ namespace Kudu.Services.Infrastructure
         [HttpPut]
         public virtual Task<IActionResult> PutItem()
         {
+            var syncIOFeature = HttpContext.Features.Get<IHttpBodyControlFeature>();
+            if (syncIOFeature != null)
+            {
+                syncIOFeature.AllowSynchronousIO = true;
+            }
             string localFilePath = GetLocalFilePath();
 
             if (VfsSpecialFolders.TryHandleRequest(Request, localFilePath, out IActionResult response))
@@ -121,6 +132,11 @@ namespace Kudu.Services.Infrastructure
         [HttpDelete]
         public virtual Task<IActionResult> DeleteItem(bool recursive = false)
         {
+            var syncIOFeature = HttpContext.Features.Get<IHttpBodyControlFeature>();
+            if (syncIOFeature != null)
+            {
+                syncIOFeature.AllowSynchronousIO = true;
+            }
             string localFilePath = GetLocalFilePath();
 
             if (VfsSpecialFolders.TryHandleRequest(Request, localFilePath, out IActionResult response))

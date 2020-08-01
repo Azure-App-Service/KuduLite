@@ -21,6 +21,7 @@ using System.Net.Http;
 using System.Collections.Generic;
 using Kudu.Core.Helpers;
 using System.Threading;
+using System.Text;
 
 namespace Kudu.Services.Deployment
 {
@@ -52,16 +53,52 @@ namespace Kudu.Services.Deployment
 
         [HttpPost]
         [DisableRequestSizeLimit]
-        [DisableFormValueModelBinding]
-        public async Task<IActionResult> ZipPushDeploy(
-            [FromQuery] bool isAsync = false,
-            [FromQuery] bool syncTriggers = false,
-            [FromQuery] bool overwriteWebsiteRunFromPackage = false,
-            [FromQuery] string author = null,
-            [FromQuery] string authorEmail = null,
-            [FromQuery] string deployer = DefaultDeployer,
-            [FromQuery] string message = DefaultMessage)
+        public async Task<IActionResult> ZipPushDeploy()
         {
+            bool isAsync = false;
+            if(Request.Query.ContainsKey("isAsync")) {
+                isAsync = Boolean.Parse(Request.Query["isAsync"]);
+            }
+
+            bool syncTriggers = false;
+            if (Request.Query.ContainsKey("syncTriggers"))
+            {
+                syncTriggers = Boolean.Parse(Request.Query["syncTriggers"]);
+            }
+
+            bool overwriteWebsiteRunFromPackage = false;
+            if (Request.Query.ContainsKey("overwriteWebsiteRunFromPackage"))
+            {
+                overwriteWebsiteRunFromPackage = Boolean.Parse(Request.Query["overwriteWebsiteRunFromPackage"]);
+            }
+
+            string author = null;
+            if (Request.Query.ContainsKey("author"))
+            {
+                author = Request.Query["author"];
+            }
+
+            string authorEmail = null;
+            if (Request.Query.ContainsKey("authorEmail"))
+            {
+                authorEmail = Request.Query["authorEmail"];
+            }
+
+            string deployer = DefaultDeployer;
+            if (Request.Query.ContainsKey("deployer"))
+            {
+                deployer = Request.Query["deployer"];
+            }
+
+            string message = DefaultMessage;
+            if (Request.Query.ContainsKey("message"))
+            {
+                message = Request.Query["message"];
+            }
+
+           // var responseBodyStream = new MemoryStream();
+           // HttpContext.Response.Body = responseBodyStream;
+
             using (_tracer.Step("ZipPushDeploy"))
             {
                 var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
@@ -143,14 +180,43 @@ namespace Kudu.Services.Deployment
 
         [HttpPost]
         [DisableRequestSizeLimit]
-        [DisableFormValueModelBinding]
-        public async Task<IActionResult> WarPushDeploy(
-            [FromQuery] bool isAsync = false,
-            [FromQuery] string author = null,
-            [FromQuery] string authorEmail = null,
-            [FromQuery] string deployer = DefaultDeployer,
-            [FromQuery] string message = DefaultMessage)
+        public async Task<IActionResult> WarPushDeploy()
         {
+            bool isAsync = false;
+            if(Request.Query.ContainsKey("isAsync")) {
+                isAsync = Boolean.Parse(Request.Query["isAsync"]);
+            }
+
+            bool syncTriggers = false;
+            if (Request.Query.ContainsKey("syncTriggers"))
+            {
+                syncTriggers = Boolean.Parse(Request.Query["syncTriggers"]);
+            }
+
+            string author = null;
+            if (Request.Query.ContainsKey("author"))
+            {
+                author = Request.Query["author"];
+            }
+
+            string authorEmail = null;
+            if (Request.Query.ContainsKey("authorEmail"))
+            {
+                authorEmail = Request.Query["authorEmail"];
+            }
+
+            string deployer = DefaultDeployer;
+            if (Request.Query.ContainsKey("deployer"))
+            {
+                deployer = Request.Query["deployer"];
+            }
+
+            string message = DefaultMessage;
+            if (Request.Query.ContainsKey("message"))
+            {
+                message = Request.Query["message"];
+            }
+
             using (_tracer.Step("WarPushDeploy"))
             {
                 var appName = HttpContext.Request.Query["name"].ToString();
@@ -184,6 +250,7 @@ namespace Kudu.Services.Deployment
                 return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
             }
         }
+
 
         private string GetZipURLFromJSON(JObject requestObject)
         {
@@ -249,19 +316,7 @@ namespace Kudu.Services.Deployment
 
                 using (_tracer.Step("Writing zip file to {0}", zipFilePath))
                 {
-                    if (!string.IsNullOrEmpty(context.Request.ContentType) &&
-                        context.Request.ContentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
-                    {
-                        FormValueProvider formModel;
-                        using (_tracer.Step("Writing zip file to {0}", zipFilePath))
-                        {
-                            using (var file = System.IO.File.Create(zipFilePath))
-                            {
-                                formModel = await Request.StreamFile(file);
-                            }
-                        }
-                    }
-                    else if (deploymentInfo.ZipURL != null)
+                    if (deploymentInfo.ZipURL != null)
                     {
                         using (_tracer.Step("Writing zip file from packageUri to {0}", zipFilePath))
                         {
@@ -293,7 +348,7 @@ namespace Kudu.Services.Deployment
                     {
                         using (var file = System.IO.File.Create(zipFilePath))
                         {
-                            await Request.Body.CopyToAsync(file);
+                            await HttpContext.Request.Body.CopyToAsync(file);
                         }
                     }
                 }
