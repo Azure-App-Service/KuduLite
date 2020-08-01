@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Helpers;
 using System.Threading;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace Kudu.Services.Zip
 {
@@ -31,12 +32,17 @@ namespace Kudu.Services.Zip
 
         protected override Task<IActionResult> CreateDirectoryGetResponse(DirectoryInfoBase info, string localFilePath)
         {
+            var syncIOFeature = HttpContext.Features.Get<IHttpBodyControlFeature>();
+            if (syncIOFeature != null)
+            {
+                syncIOFeature.AllowSynchronousIO = true;
+            }
             if (!Request.Query.TryGetValue("fileName", out var fileName))
             {
                 fileName = Path.GetFileName(Path.GetDirectoryName(localFilePath)) + ".zip";
             }
 
-            var result = new FileCallbackResult("application/zip", (outputStream, _) =>
+            var result = new FileCallbackResult("application/zip", async (outputStream, _) =>
             {
                 // Note that a stream wrapper is no longer needed for ZipArchive, this was fixed in its implementation.
                 using (var zip = new ZipArchive(outputStream, ZipArchiveMode.Create, leaveOpen: false))
@@ -51,12 +57,10 @@ namespace Kudu.Services.Zip
                         else
                         {
                             // Add it at the root of the zip
-                            zip.AddFile(fileSysInfo.FullName, Tracer, String.Empty);
+                            await zip.AddFile(fileSysInfo.FullName, Tracer, String.Empty);
                         }
                     }
                 }
-
-                return Task.CompletedTask;
             })
             {
                 FileDownloadName = fileName
@@ -74,6 +78,11 @@ namespace Kudu.Services.Zip
 
         protected override Task<IActionResult> CreateDirectoryPutResponse(DirectoryInfoBase info, string localFilePath)
         {
+            var syncIOFeature = HttpContext.Features.Get<IHttpBodyControlFeature>();
+            if (syncIOFeature != null)
+            {
+                syncIOFeature.AllowSynchronousIO = true;
+            }
             var zipArchive = new ZipArchive(Request.Body, ZipArchiveMode.Read);
             zipArchive.Extract(localFilePath);
             PermissionHelper.ChmodRecursive("777", localFilePath, _tracer, TimeSpan.FromSeconds(30));

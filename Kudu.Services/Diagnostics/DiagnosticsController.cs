@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Kudu.Services.Infrastructure;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace Kudu.Services.Performance
 {
@@ -67,16 +68,14 @@ namespace Kudu.Services.Performance
         /// <returns></returns>
         [HttpGet]
         [SuppressMessage("Microsoft.Usage", "CA2202", Justification = "The ZipArchive is instantiated in a way that the stream is not closed on dispose")]
-        public IActionResult GetLog()
+        public async Task<IActionResult> GetLog()
         {
-            return new FileCallbackResult("application/zip", (outputStream, _) =>
+            return new FileCallbackResult("application/zip", async (outputStream, _) =>
             {
                 using (var zip = new ZipArchive(outputStream, ZipArchiveMode.Create, leaveOpen: false))
                 {
-                    AddFilesToZip(zip);
+                    await AddFilesToZip(zip);
                 }
-
-                return Task.CompletedTask;
             })
             {
                 FileDownloadName = String.Format("dump-{0:MM-dd-HH-mm-ss}.zip", DateTime.UtcNow)
@@ -140,25 +139,32 @@ namespace Kudu.Services.Performance
         // and returns them in a zip archive
         [HttpGet]
         [SuppressMessage("Microsoft.Usage", "CA2202", Justification = "The ZipArchive is instantiated in a way that the stream is not closed on dispose")]
-        public IActionResult GetDockerLogsZip()
+        public async Task<IActionResult> GetDockerLogsZip()
         {
             using (_tracer.Step("DiagnosticsController.GetDockerLogsZip"))
             {
+
+                // Enable Synchronous operation to get docker logs zip, zip archive internally
+                // uses Write/Read and starting netcore 3.1, Synchronous writes/reads are not allowed
+                var syncIOFeature = HttpContext.Features.Get<IHttpBodyControlFeature>();
+                if (syncIOFeature != null)
+                {
+                    syncIOFeature.AllowSynchronousIO = true;
+                }
+
                 // Also search for "today's" files in sub folders. Windows containers archives log files
                 // when they reach a certain size.
                 var currentDockerLogFilenames = GetCurrentDockerLogFilenames(SearchOption.AllDirectories);
 
-                return new FileCallbackResult("application/zip", (outputStream, _) =>
+                return new FileCallbackResult("application/zip", async (outputStream, _) =>
                 {
                     using (var zip = new ZipArchive(outputStream, ZipArchiveMode.Create, leaveOpen: false))
                     {
                         foreach (var filename in currentDockerLogFilenames)
                         {
-                            zip.AddFile(filename, _tracer);
+                            await zip.AddFile(filename, _tracer);
                         }
                     }
-
-                    return Task.CompletedTask;
                 })
                 {
                     FileDownloadName = String.Format("dockerlogs-{0:MM-dd-HH-mm-ss}.zip", DateTime.UtcNow)
@@ -232,7 +238,7 @@ namespace Kudu.Services.Performance
                 new JProperty("path", info.FullName));
         }
 
-        private void AddFilesToZip(ZipArchive zip)
+        private async Task AddFilesToZip(ZipArchive zip)
         {
             foreach (var path in _paths)
             {
@@ -254,7 +260,7 @@ namespace Kudu.Services.Performance
                             }
                             else
                             {
-                                zip.AddFile((FileInfo)info, _tracer, dir.Name);
+                                await zip.AddFile((FileInfo)info, _tracer, dir.Name);
                             }
                         }
                     }
@@ -265,7 +271,7 @@ namespace Kudu.Services.Performance
                 }
                 else if (FileSystemHelpers.FileExists(path))
                 {
-                    zip.AddFile(path, _tracer, String.Empty);
+                    await zip.AddFile(path, _tracer, String.Empty);
                 }
             }
         }

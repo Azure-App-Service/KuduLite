@@ -42,6 +42,7 @@ using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 using ILogger = Kudu.Core.Deployment.ILogger;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 namespace Kudu.Services.Web
 {
@@ -80,14 +81,31 @@ namespace Kudu.Services.Web
                 options.ValueCountLimit = 500000;
                 options.KeyLengthLimit = 500000;
             });
+            
+            // When running in container
+            services.Configure<KestrelServerOptions>(options =>
+            {
+                options.AllowSynchronousIO = true;
+            });
+
+            // If using IIS
+            services.Configure<IISServerOptions>(options =>
+            {
+                options.AllowSynchronousIO = true;
+            });
 
             services.AddRouteAnalyzer();
 
             // Kudu.Services contains all the Controllers 
             var kuduServicesAssembly = Assembly.Load("Kudu.Services");
 
-            services.AddMvcCore(options => options.EnableEndpointRouting = false)
-                .AddNewtonsoftJson(o =>
+            services.AddMvcCore(options =>
+                {
+                    options.EnableEndpointRouting = false;
+                    // Breaks Zip Deploy as MVCCore tries 
+                    // to bind forms
+                    options.ModelValidatorProviders.Clear();
+                }).AddNewtonsoftJson(o =>
                 {
                     o.SerializerSettings.ContractResolver = new DefaultContractResolver();
                 })
@@ -103,7 +121,7 @@ namespace Kudu.Services.Web
                 var xmlFile = $"Kudu.Services.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 c.IncludeXmlComments(xmlPath);
-            });
+            }); 
 
             services.AddGZipCompression();
 

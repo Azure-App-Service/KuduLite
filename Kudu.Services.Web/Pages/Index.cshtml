@@ -47,7 +47,7 @@
 @{
     var workerIdHash = System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId);
     var workerIdShortHash = workerIdHash?.Substring(0, 12);
-    const string version = Constants.KuduBuild;
+    const string version = "Preview";
     var showLearningBanner = !deploymentManager.GetResults().Any();
     var welcomeBannerDisplayVal = showLearningBanner ? "display:block" : "display:none";
     var lastDeployedDisplayVal = !showLearningBanner ? "display:block" : "display:none";
@@ -261,7 +261,7 @@
                 if (!data["status"]) {
                     return;
                 }
-                console.log("API call done "+wasDeploying);
+                console.log(wasDeploying);
                 $("#appsvc-welcome-banner").css("display", "none");
                 $("#just-deployed-banner").css("display", "none");
                 $("#diagnose-btn").css("display","none");
