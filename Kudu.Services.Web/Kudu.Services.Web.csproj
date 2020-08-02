@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <TieredCompilation>true</TieredCompilation>
   </PropertyGroup>
   <!-- Supressing Net Core migration warnings-->
@@ -24,11 +24,11 @@
   <ItemGroup>
     <PackageReference Include="AspNetCore.RouteAnalyzer" Version="0.5.3" />
     <PackageReference Include="log4net" Version="2.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Proxy" />
     <PackageReference Include="Microsoft.Diagnostics.Runtime" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="4.0.1" />
     <PackageReference Include="XmlSettings" Version="0.1.3" />
   </ItemGroup>
@@ -46,6 +46,32 @@
     <Folder Include="wwwroot\Content\Styles\" />
     <Folder Include="wwwroot\Content\Scripts\" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Update="Pages\bash.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="Pages\DebugConsole2\LinuxConsole2.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="Pages\DebugConsole2\WindowsConsole2.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="Pages\Env.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="Pages\Index.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="Pages\_Layout.cshtml">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
   <!-- Run updateNodeModules to install kuduscript -->  
   <Target Name="PutNodeModulesInBinDir" AfterTargets="Build">    
 	  <Exec Command="$(ProjectDir)\updateNodeModules.cmd &quot;$(PublishDir)&quot;" Condition="'$(OS)' == 'Windows_NT' AND  '$(Configuration)'=='Release'" />
@@ -57,8 +83,8 @@
     <Message Text="%0a%0aBuilding KuduConsole%0a" Importance="high" />
     <Exec Command="dotnet build ../Kudu.Console -o $(MSBuildProjectDirectory)/$(PublishDir)..\KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' == 'Windows_NT'" />
     <Exec Command="dotnet build ../Kudu.Console -o $(OutputPath)/KuduConsole" Condition="'$(Configuration)' == 'Debug' AND '$(OS)' != 'Windows_NT'" />
-    <Exec Command="dotnet publish ..\Kudu.Console --configuration Release -o $(PublishDir)\KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' == 'Windows_NT'" />
-    <Exec Command="dotnet publish ../Kudu.Console --configuration Release -o $(PublishDir)/KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' != 'Windows_NT'" />
+    <Exec Command="dotnet publish ..\Kudu.Console -r linux-x64 --self-contained --configuration Release -p:PublishSingleFile=false -p:PublishTrimmed=true -o $(PublishDir)\KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' == 'Windows_NT'" />
+    <Exec Command="dotnet publish ../Kudu.Console -r linux-x64 --self-contained --configuration Release -p:PublishSingleFile=false -p:PublishTrimmed=true -o $(PublishDir)/KuduConsole" Condition="'$(Configuration)' == 'Release' AND '$(OS)' != 'Windows_NT'" />
   </Target>
   <Target Name="ChangeScriptPermissionsForLinux" AfterTargets="publish">
     <Message Text="%0a%0aSetting Permissions for Kudu Script(s)%0a" Importance="high" />

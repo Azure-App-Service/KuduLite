@@ -1,13 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <TieredCompilation>true</TieredCompilation>
   </PropertyGroup>
   <PropertyGroup>
     <ServerGarbageCollection>false</ServerGarbageCollection>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.App" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="2.2.0" />
   </ItemGroup>
   <ItemGroup>
@@ -32,8 +34,5 @@
   </PropertyGroup>
   <PropertyGroup>
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
-  </PropertyGroup>
-  <PropertyGroup>
-    <DocumentationFile>/opt/Kudu/Kudu.Services.xml</DocumentationFile>
   </PropertyGroup>
 </Project>

@@ -211,7 +211,7 @@ namespace Kudu.Console
                 finally
                 {
                     System.Console.WriteLine("Deployment Logs : '"+
-                        env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" +
+                        env.AppBaseUrlPrefix+ "/jsonviewer?view_url=/api/deployments/" +
                         gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");
                 }
             }
@@ -279,17 +279,14 @@ namespace Kudu.Console
             string binPath = System.Environment.GetEnvironmentVariable("SCM_BIN_PATH");
             if (string.IsNullOrWhiteSpace(binPath))
             {
-                // CORE TODO Double check. Process.GetCurrentProcess() always gets the dotnet.exe process,
-                // so changed to Assembly.GetEntryAssembly().Location
                 binPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
             }
 
-            // CORE TODO Handing in a null IHttpContextAccessor (and KuduConsoleFullPath) again
             return new Kudu.Core.Environment(root,
                 EnvironmentHelper.NormalizeBinPath(binPath),
                 repositoryPath,
                 requestId,
-                Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu.dll"),
+                Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu"),
                 null,
                 new FileSystemPathProvider(new NullMeshPersistentFileSystem()));
         }

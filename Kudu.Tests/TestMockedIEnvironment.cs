@@ -34,7 +34,7 @@ namespace Kudu.Tests
         public string _FunctionsPath = "/site/wwwroot";
         public string _AppBaseUrlPrefix = "siteName.azurewebsites.net";
         public string _RequestId = "00000000-0000-0000-0000-000000000000";
-        public string _KuduConsoleFullPath = "KuduConsole/kudu.dll";
+        public string _KuduConsoleFullPath = "KuduConsole/kudu";
         public string _SitePackagesPath = "/data/SitePackages";
         public bool _IsOnLinuxConsumption = false;
 

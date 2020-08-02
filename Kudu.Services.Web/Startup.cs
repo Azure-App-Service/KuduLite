@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Formatting;
 using System.Reflection;
 using AspNetCore.RouteAnalyzer;
 using Kudu.Contracts;
@@ -42,16 +41,18 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 using ILogger = Kudu.Core.Deployment.ILogger;
+using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 namespace Kudu.Services.Web
 {
     public class Startup
     {
-        private readonly IHostingEnvironment _hostingEnvironment;
+        private readonly IWebHostEnvironment _hostingEnvironment;
         private IEnvironment _webAppRuntimeEnvironment;
         private IDeploymentSettingsManager _noContextDeploymentsSettingsManager;
 
-        public Startup(IConfiguration configuration, IHostingEnvironment hostingEnvironment)
+        public Startup(IConfiguration configuration, IWebHostEnvironment hostingEnvironment)
         {
             Console.WriteLine(@"Startup : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
             Configuration = configuration;
@@ -74,12 +75,23 @@ namespace Kudu.Services.Web
         public void ConfigureServices(IServiceCollection services)
         {
             Console.WriteLine(@"Configure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-            FileSystemHelpers.DeleteDirectorySafe("/home/site/locks/deployment");
             services.Configure<FormOptions>(options =>
             {
                 options.MultipartBodyLengthLimit = 52428800;
                 options.ValueCountLimit = 500000;
                 options.KeyLengthLimit = 500000;
+            });
+            
+            // When running in container
+            services.Configure<KestrelServerOptions>(options =>
+            {
+                options.AllowSynchronousIO = true;
+            });
+
+            // If using IIS
+            services.Configure<IISServerOptions>(options =>
+            {
+                options.AllowSynchronousIO = true;
             });
 
             services.AddRouteAnalyzer();
@@ -87,11 +99,18 @@ namespace Kudu.Services.Web
             // Kudu.Services contains all the Controllers 
             var kuduServicesAssembly = Assembly.Load("Kudu.Services");
 
-            services.AddMvcCore()
+            services.AddMvcCore(options =>
+                {
+                    options.EnableEndpointRouting = false;
+                    // Breaks Zip Deploy as MVCCore tries 
+                    // to bind forms
+                    options.ModelValidatorProviders.Clear();
+                }).AddNewtonsoftJson(o =>
+                {
+                    o.SerializerSettings.ContractResolver = new DefaultContractResolver();
+                })
                 .AddRazorPages()
                 .AddAuthorization()
-                .AddJsonFormatters()
-                .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver())
                 .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices()
                 .AddApiExplorer();
 
@@ -102,7 +121,7 @@ namespace Kudu.Services.Web
                 var xmlFile = $"Kudu.Services.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 c.IncludeXmlComments(xmlPath);
-            });
+            }); 
 
             services.AddGZipCompression();
 
@@ -277,20 +296,6 @@ namespace Kudu.Services.Web
 
             services.AddScoped<ICommandExecutor, CommandExecutor>();
 
-            // KuduWebUtil.MigrateSite(environment, noContextDeploymentsSettingsManager);
-            // RemoveOldTracePath(environment);
-            // RemoveTempFileFromUserDrive(environment);
-
-            // CORE TODO Windows Fix: Temporary fix for https://github.com/npm/npm/issues/5905
-            //EnsureNpmGlobalDirectory();
-            //EnsureUserProfileDirectory();
-
-            //// Skip SSL Certificate Validate
-            //if (Environment.SkipSslValidation)
-            //{
-            //    ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
-            //}
-
             //// Make sure webpages:Enabled is true. Even though we set it in web.config, it could be overwritten by
             //// an Azure AppSetting that's supposed to be for the site only but incidently affects Kudu as well.
             ConfigurationManager.AppSettings["webpages:Enabled"] = "true";
@@ -317,10 +322,6 @@ namespace Kudu.Services.Web
             //target.FileName = logfile;
         }
 
-        // CORE TODO See NinjectServices.Stop
-
-        // CORE TODO See signalr stuff in NinjectServices
-
         private static Uri GetAbsoluteUri(HttpContext httpContext)
         {
             var request = httpContext.Request;
@@ -333,12 +334,12 @@ namespace Kudu.Services.Web
         }
 
         public void Configure(IApplicationBuilder app,
-            IApplicationLifetime applicationLifetime,
+            IHostApplicationLifetime applicationLifetime,
             ILoggerFactory loggerFactory)
         {
             Console.WriteLine(@"Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
-            loggerFactory.AddEventSourceLogger();
+            //loggerFactory.AddEventSourceLogger();
 
             KuduWebUtil.MigrateToNetCorePatch(_webAppRuntimeEnvironment);
 
@@ -397,16 +398,6 @@ namespace Kudu.Services.Web
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 
-            // CORE TODO any equivalent for this? Needed?
-            //var configuration = kernel.Get<IServerConfiguration>();
-            //GlobalConfiguration.Configuration.Formatters.Clear();
-            //GlobalConfiguration.Configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
-
-            var jsonFormatter = new JsonMediaTypeFormatter();
-
-
-            // CORE TODO concept of "deprecation" in routes for traces, Do we need this for linux ?
-
             // Push url
             foreach (var url in new[] {"/git-receive-pack", $"/{configuration.GitServerRoot}/git-receive-pack"})
             {
@@ -438,9 +429,9 @@ namespace Kudu.Services.Web
             // Sets up the file server to LogFiles
             KuduWebUtil.SetupFileServer(app, Path.Combine(_webAppRuntimeEnvironment.LogFilesPath,"kudu","deployment"), "/deploymentlogs");
 
-            app.UseSwagger();
+            // app.UseSwagger();
 
-            app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "Kudu API Docs"); });
+            // app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "Kudu API Docs"); });
 
             app.UseMvc(routes =>
             {

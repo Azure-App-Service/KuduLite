@@ -31,7 +31,7 @@ namespace Kudu.Services.Web
 {
     internal static class KuduWebUtil
     {
-        private const string KuduConsoleFilename = "kudu.dll";
+        private const string KuduConsoleFilename = "kudu";
         private const string KuduConsoleRelativePath = "KuduConsole";
 
         private static Dictionary<string, IOperationLock> _namedLocks;
@@ -236,7 +236,7 @@ namespace Kudu.Services.Web
                     // Dynamic Install should just contain dotnet
                     if (fileText.Contains("benv") && fileText.Contains("dotnet") && isRunningOnAzure)
                     {
-                        FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("benv dotnet=2.2", "dotnet"));
+                        FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("benv dotnet=2.2", ""));
                     }
                 }
 
@@ -311,7 +311,7 @@ namespace Kudu.Services.Web
         /// Returns a specified environment configuration as the current webapp's
         /// default configuration during the runtime.
         /// </summary>
-        internal static IEnvironment GetEnvironment(IHostingEnvironment hostingEnvironment,
+        internal static IEnvironment GetEnvironment(IWebHostEnvironment hostingEnvironment,
             IFileSystemPathProvider fileSystemPathsProvider,
             IDeploymentSettingsManager settings = null,
             IHttpContextAccessor httpContextAccessor = null)

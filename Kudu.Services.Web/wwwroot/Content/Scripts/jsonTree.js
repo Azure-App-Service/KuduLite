@@ -395,7 +395,7 @@ var jsonTree = (function() {
                 shouldShowJSONViewerURL = false;
             }
             if(shouldShowJSONViewerURL) {
-                val = "<span style=\"color:#953b39\"><a href=\"/newui/jsonviewer?view_url=" + val.substring(urlStartIdx, val.length) + "\">" + val + "</a></span>";
+                val = "<span style=\"color:#953b39\"><a href=\"/jsonviewer?view_url=" + val.substring(urlStartIdx, val.length) + "\">" + val + "</a></span>";
             }else{
                 val = "<span style=\"color:#953b39\"><a href=\""+val+"\">"+val+"</a></span>";
             }

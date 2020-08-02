@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
 using System.IO.Compression;
+using System.Threading.Tasks;
 using Kudu.Contracts.Tracing;
 using Kudu.Core.Helpers;
 using Kudu.Core.Tracing;
@@ -45,7 +46,7 @@ namespace Kudu.Core.Infrastructure
                 else
                 {
                     var entry = zipArchive.AddFile((FileInfoBase)info, tracer, directoryNameInArchive);
-                    files?.Add(entry);
+                    files?.Add(entry.Result);
                 }
             }
 
@@ -61,13 +62,13 @@ namespace Kudu.Core.Infrastructure
             return Path.Combine(part1, part2).Replace('\\', '/');
         }
 
-        public static ZipArchiveEntry AddFile(this ZipArchive zipArchive, string filePath, ITracer tracer, string directoryNameInArchive = "")
+        public static async Task<ZipArchiveEntry> AddFile(this ZipArchive zipArchive, string filePath, ITracer tracer, string directoryNameInArchive = "")
         {
             var fileInfo = new FileInfoWrapper(new FileInfo(filePath));
-            return zipArchive.AddFile(fileInfo, tracer, directoryNameInArchive);
+            return await zipArchive.AddFile(fileInfo, tracer, directoryNameInArchive);
         }
 
-        public static ZipArchiveEntry AddFile(this ZipArchive zipArchive, FileInfoBase file, ITracer tracer, string directoryNameInArchive)
+        public static async Task<ZipArchiveEntry> AddFile(this ZipArchive zipArchive, FileInfoBase file, ITracer tracer, string directoryNameInArchive)
         {
             Stream fileStream = null;
             try
@@ -90,7 +91,7 @@ namespace Kudu.Core.Infrastructure
 
                 using (Stream zipStream = entry.Open())
                 {
-                    fileStream.CopyTo(zipStream);
+                    await fileStream.CopyToAsync(zipStream);
                 }
                 return entry;
             }
