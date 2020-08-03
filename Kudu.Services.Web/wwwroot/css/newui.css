@@ -117,3 +117,8 @@ hr {
 .text-light{
     font-weight: 100;
 }
+
+.nav .dropdown-menu-right {
+    right: 0;
+    left: auto;
+}
