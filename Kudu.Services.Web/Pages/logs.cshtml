@@ -12,7 +12,7 @@
 </div>
 <script>
     function goBack() {
-        if (document.getElementById("wwwroot-files-frame").contentWindow.history.length) {
+        if (document.getElementById("deployment-logs-frame").contentWindow.history.length) {
             $("#page-back-btn").removeClass("disabled");
             window.history.back();
         } else {
@@ -20,4 +20,4 @@
         }
     }
 </script>
-<iframe src="/deploymentlogs" id="wwwroot-files-frame" frameborder="0" scrolling="no" seamless="seamless" style="display:block; width:100%; height:100vh;"></iframe>
+<iframe src="/deploymentlogs" id="deployment-logs-frame" frameborder="0" scrolling="no" seamless="seamless" style="display:block; width:100%; height:100vh;"></iframe>

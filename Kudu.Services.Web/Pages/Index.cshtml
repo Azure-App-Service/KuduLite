@@ -37,19 +37,15 @@
 @if (Kudu.Core.Environment.IsAzureEnvironment())
 {
     <script>
-            $.currInst = "@System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")";
+        $.currInst = "@System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID")";
     </script>
-    <script type="text/javascript" src="/Content/Scripts/NavigateToInstance.js"></script>
+    <script type="text/javascript" src="~/Content/Scripts/NavigateToInstance.js"></script>
 }
 
-@if (Kudu.Core.Environment.IsAzureEnvironment())
-{
-    <script type="text/javascript" src="/Content/Scripts/NavigateToInstance.js"></script>
-}
 
 @{
     var workerIdHash = System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId);
-    var workerIdShortHash = workerIdHash?.Substring(0, 12);
+    var workerIdShortHash = workerIdHash?.Substring(0, 8);
     const string version = "Preview";
     var showLearningBanner = !deploymentManager.GetResults().Any();
     var welcomeBannerDisplayVal = showLearningBanner ? "display:block" : "display:none";
@@ -65,7 +61,7 @@
             <small>Site UpTime: <i class="fas fa-circle" style="color: #26C281; font-size: x-small; margin-right: 5px"></i>@Tracing.TraceMiddleware.UpTime.ToString(@"dd\.hh\:mm\:ss") | Site Folder: @PathResolver.ResolveRootPath() | Temp Folder: @System.IO.Path.GetTempPath()</small>
             <br> <small onclick="clickLink(this)" id="curr-instance" title="@workerIdHash">
                 Kudu Attached to Instance: &nbsp;<i class="fas fa-desktop fa-style"></i>&nbsp;<a href="#">@workerIdShortHash </a>| <span class="dropdown">
-                    <button class="btn btn-sm dropdown-toggle" type="button" style="background-color: rgb(244, 245, 247);border: none" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <button class="btn btn-sm dropdown-toggle" type="button" style="background-color: rgb(244, 245, 247);border: none" id="instanceDropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-network-wired fa-style text-sm"></i> <a href="#"> Switch Instance</a>
                     </button>
                     <ul class="dropdown-menu instances_tab_options_cls" id='instances_tab_options'></ul>
@@ -150,7 +146,7 @@
                                 <a href="/jsonviewer?view_url=/api/settings">App Settings</a>
                             </li>
                             <li>
-                                <a href="/wwwroot">Browse WWWRoot</a>
+                                <a href="/sitedir">Browse WWWRoot</a>
                             </li>
                             <li>
                                 <a href="/jsonviewer?view_url=/diagnostics/runtime">System Configuration</a>
@@ -226,8 +222,6 @@
             url: "/api/isdeploying?trace=false",
             type: "GET",
             success: function (data) {
-                console.log("deployment going on" + data["value"]);
-
                 $('#lock_msg').text(data["msg"]);
                 if (data["value"] == 'True') {
                     $("#appsvc-welcome-banner").css("display", "none");
@@ -238,8 +232,6 @@
                         url: "/api/deployments/latest?trace=false",
                         type: "GET",
                         success: function (data) {
-                            console.log("latest deployment data");
-                            console.log(data);
                             wasDeploying = true;
                             $("#deployment-status").html(data["status_text"] + "...");
                         },
@@ -248,7 +240,6 @@
                     });
                 } else {
                     $('#is-deploying-banner').css("display", "none");
-                    console.log("Trying to show just deployed banner : wasDeploying value is " + wasDeploying);
                     if (wasDeploying) {
                         UpdateLatestDeploymentStatus();
                     }
@@ -261,7 +252,6 @@
     }
 
     function UpdateLatestDeploymentStatus() {
-        console.log("Making latest API call " + wasDeploying);
         $.ajax({
             url: "/api/deployments/latest?trace=false",
             type: "GET",
@@ -269,7 +259,6 @@
                 if (!data["status"]) {
                     return;
                 }
-                console.log(wasDeploying);
                 $("#appsvc-welcome-banner").css("display", "none");
                 $("#just-deployed-banner").css("display", "none");
                 $("#diagnose-btn").css("display", "none");
