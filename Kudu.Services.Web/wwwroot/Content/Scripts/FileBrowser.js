@@ -158,6 +158,7 @@ var copyObjectsManager = {
 
 copyObjectsManager.init();
 
+appRoot = "/";
 $.connection.hub.url = appRoot + "api/filesystemhub";
 var fileSystemHub = $.connection.fileSystemHub;
 fileSystemHub.client.fileExplorerChanged = function () {

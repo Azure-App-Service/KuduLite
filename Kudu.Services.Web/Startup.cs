@@ -42,6 +42,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 using ILogger = Kudu.Core.Deployment.ILogger;
+using Microsoft.Extensions.FileProviders;
 
 namespace Kudu.Services.Web
 {
@@ -163,6 +164,10 @@ namespace Kudu.Services.Web
                     return new NullMeshPersistentFileSystem();
                 }
             });
+
+            //Adding service - FileProvider - used in fileUpload Controller - for FileManager
+            services.AddSingleton<IFileProvider>(
+                new PhysicalFileProvider(_webAppRuntimeEnvironment.RootPath));
 
             KuduWebUtil.EnsureDotNetCoreEnvironmentVariable(environment);
 
@@ -434,7 +439,7 @@ namespace Kudu.Services.Web
 
             // Sets up the file server to web app's wwwroot
             KuduWebUtil.SetupFileServer(app, _webAppRuntimeEnvironment.WebRootPath, "/wwwroot");
-            
+
             // Sets up the file server to LogFiles
             KuduWebUtil.SetupFileServer(app, Path.Combine(_webAppRuntimeEnvironment.LogFilesPath,"kudu","deployment"), "/deploymentlogs");
 
@@ -685,6 +690,16 @@ namespace Kudu.Services.Web
 
                 // catch all unregistered url to properly handle not found
                 routes.MapRoute("error-404", "{*path}", new {controller = "Error404", action = "Handle"});
+
+                //Route for Uploading Files - FileManager
+                routes.MapRoute("UploadFile", "fileUpload/UploadFile",
+                    new { controller = "fileUpload", action = "UploadFile" },
+                    new { verb = new HttpMethodRouteConstraint("POST") });
+
+                //Route for Getting Files - FileManager
+                routes.MapRoute("Files", "fileUpload/Files",
+                    new { controller = "fileUpload", action = "Files" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
             });
 
             Console.WriteLine(@"Exiting Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
