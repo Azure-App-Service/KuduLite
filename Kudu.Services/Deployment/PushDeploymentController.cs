@@ -63,9 +63,9 @@ namespace Kudu.Services.Deployment
             using (_tracer.Step("ZipPushDeploy"))
             {
                 string deploymentId = null;
-                IEnumerable<string> idValues;
+                Microsoft.Extensions.Primitives.StringValues idValues;
 
-                if (Request.Headers.TryGetValues(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
+                if (Request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
                 {
                     deploymentId = idValues.ElementAt(0);
                 }
@@ -94,8 +94,8 @@ namespace Kudu.Services.Deployment
                 if (_settings.RunFromLocalZip())
                 {
                     // This is used if the deployment is Run-From-Zip
-                    // the name of the deployed file in D:\home\data\SitePackages\{name}.zip is the 
-                    // timestamp in the format yyyMMddHHmmss. 
+                    // the name of the deployed file in D:\home\data\SitePackages\{name}.zip is the
+                    // timestamp in the format yyyMMddHHmmss.
                     deploymentInfo.ZipName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
                     // This is also for Run-From-Zip where we need to extract the triggers
                     // for post deployment sync triggers.
@@ -120,9 +120,9 @@ namespace Kudu.Services.Deployment
             using (_tracer.Step("ZipPushDeployViaUrl"))
             {
                 string deploymentId = null;
-                IEnumerable<string> idValues;
+                Microsoft.Extensions.Primitives.StringValues idValues;
 
-                if (Request.Headers.TryGetValues(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
+                if (Request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
                 {
                     deploymentId = idValues.ElementAt(0);
                 }
@@ -167,9 +167,9 @@ namespace Kudu.Services.Deployment
             using (_tracer.Step("WarPushDeploy"))
             {
                 string deploymentId = null;
-                IEnumerable<string> idValues;
+                Microsoft.Extensions.Primitives.StringValues idValues;
 
-                if (Request.Headers.TryGetValues(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
+                if (Request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
                 {
                     deploymentId = idValues.ElementAt(0);
                 }
@@ -260,7 +260,7 @@ namespace Kudu.Services.Deployment
                     {
                         _tracer.Step("Removing node_modules symlink");
                         // TODO: Add support to remove Unix Symlink File in DeleteFileSafe
-                        // FileSystemHelpers.DeleteFileSafe(nodeModulesSymlinkFile); 
+                        // FileSystemHelpers.DeleteFileSafe(nodeModulesSymlinkFile);
                         FileSystemHelpers.RemoveUnixSymlink(nodeModulesSymlinkFile, TimeSpan.FromSeconds(5));
                     }
                 }
@@ -520,7 +520,7 @@ namespace Kudu.Services.Deployment
         {
             string framework = System.Environment.GetEnvironmentVariable("FRAMEWORK");
             string preserveSymlinks = System.Environment.GetEnvironmentVariable("WEBSITE_ZIP_PRESERVE_SYMLINKS");
-            return !string.IsNullOrEmpty(framework) 
+            return !string.IsNullOrEmpty(framework)
                 && framework.Equals("node", StringComparison.OrdinalIgnoreCase)
                 && !string.IsNullOrEmpty(preserveSymlinks)
                 && preserveSymlinks.Equals("true", StringComparison.OrdinalIgnoreCase);
