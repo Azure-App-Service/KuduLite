@@ -84,8 +84,8 @@ namespace Kudu.Services.Web
             services.Configure<FormOptions>(options =>
             {
                 options.MultipartBodyLengthLimit = 52428800;
-                options.ValueCountLimit = 500000;
-                options.KeyLengthLimit = 500000;
+                options.ValueCountLimit = 1000000;
+                options.KeyLengthLimit = 1000000;
             });
 
             services.AddRouteAnalyzer();

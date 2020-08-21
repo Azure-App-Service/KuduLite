@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
-using Kudu.Core.Functions;
 using Kudu.Core.Helpers;
 using Kudu.Core.Hooks;
 using Kudu.Core.Infrastructure;
@@ -286,7 +285,7 @@ namespace Kudu.Core.Deployment
                         }
 
                         string appName = _environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0];
-                        DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, deploymentInfo.RepositoryUrl);
+                        DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, deploymentInfo.RepositoryUrl, deploymentInfo.TargetPath);
                         logger.Log($"Deployment Pod Rollout Started! Use kubectl watch deplotment {appName} to monitor the rollout status");
                     }
                 }

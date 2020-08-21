@@ -1,4 +1,5 @@
-﻿using Kudu.Contracts.Tracing;
+﻿using Kudu.Contracts.Deployment;
+using Kudu.Contracts.Tracing;
 using Kudu.Core.Deployment;
 using Kudu.Core.Functions;
 using Microsoft.AspNetCore.Http;
@@ -44,13 +45,16 @@ namespace Kudu.Core.K8SE
         /// </summary>
         /// <param name="appName"></param>
         /// <returns></returns>
-        public static void UpdateBuildNumber(string appName, string buildNumber)
+        public static void UpdateBuildNumber(string appName, BuildMetadata buildMetadata)
         {
+            var buildPatchJson = JsonConvert.SerializeObject(buildMetadata);
+            var buildmetaJsonString = JsonConvert.ToString(buildPatchJson);
+
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
-            BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "buildVersion");
-            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, buildNumber);
+            BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "buildMetadata");
+            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, buildmetaJsonString);
             RunBuildCtlCommand(cmd.ToString(), "Updating build version...");
         }
 
@@ -60,9 +64,9 @@ namespace Kudu.Core.K8SE
         /// <param name="appName">The app name to update</param>
         /// <param name="functionTriggers">The IEnumerable<ScaleTrigger></param>
         /// <param name="buildNumber">Build number to update</param>
-        public static void UpdateFunctionAppTriggers(string appName, IEnumerable<ScaleTrigger> functionTriggers, string buildNumber)
+        public static void UpdateFunctionAppTriggers(string appName, IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)
         {
-            var functionAppPatchJson = GetFunctionAppPatchJson(functionTriggers, buildNumber);
+            var functionAppPatchJson = GetFunctionAppPatchJson(functionTriggers, buildMetadata);
             if (string.IsNullOrEmpty(functionAppPatchJson))
             {
                 return;
@@ -118,18 +122,23 @@ namespace Kudu.Core.K8SE
                 // K8SE TODO: move this to resource map
                 throw new InvalidOperationException("Couldn't recognize AppName");
             }
-
-            Console.WriteLine("AppName :::::::: " + appName);
-
             return appName;
         }
 
-        private static string GetFunctionAppPatchJson(IEnumerable<ScaleTrigger> functionTriggers, string buildNumber)
+        private static string GetFunctionAppPatchJson(IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)
         {
             if (functionTriggers == null || !functionTriggers.Any())
             {
                 return null;
             }
+
+            if (buildMetadata == null )
+            {
+                return null;
+            }
+
+            var buildPatchJson = JsonConvert.SerializeObject(buildMetadata);
+            var buildmetaJsonString = JsonConvert.ToString(buildPatchJson);
 
             var patchAppJson = new PatchAppJson
             {
@@ -143,7 +152,7 @@ namespace Kudu.Core.K8SE
                     {
                         PackageRef = new PackageReference
                         {
-                            BuildVersion = buildNumber
+                            BuildVersion = buildmetaJsonString
                         }
                     }
                 }

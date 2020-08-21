@@ -4,9 +4,11 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using Kudu.Contracts.Deployment;
 using Kudu.Core.Functions;
 using Kudu.Core.Helpers;
 using Kudu.Core.K8SE;
+using Newtonsoft.Json;
 
 namespace Kudu.Core.Infrastructure
 {
@@ -25,22 +27,28 @@ namespace Kudu.Core.Infrastructure
             "The last modification Kudu made to this file was at {0}, for the following reason: {1}.",
             System.Environment.NewLine);
 
-        public static void RequestContainerRestart(IEnvironment environment, string reason, string repositoryUrl = null)
+        public static void RequestContainerRestart(IEnvironment environment, string reason, string repositoryUrl = null, string appSubPath = "")
         {
             if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 string appName = environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0];
                 string buildNumber = environment.CurrId;
                 var functionTriggers = FunctionTriggerProvider.GetFunctionTriggers<IEnumerable<ScaleTrigger>>("keda", repositoryUrl);
+                var buildMetadata = new BuildMetadata()
+                {
+                    AppName = appName,
+                    BuildVersion = buildNumber,
+                    AppSubPath = appSubPath
+                };
 
                 //Only for function apps functionTriggers will be non-null/non-empty 
                 if (functionTriggers?.Any() == true)
                 {
-                    K8SEDeploymentHelper.UpdateFunctionAppTriggers(appName, functionTriggers, $"{buildNumber}|{appName}");
+                    K8SEDeploymentHelper.UpdateFunctionAppTriggers(appName, functionTriggers, buildMetadata);
                 }
                 else
                 {
-                    K8SEDeploymentHelper.UpdateBuildNumber(appName, buildNumber);
+                    K8SEDeploymentHelper.UpdateBuildNumber(appName, buildMetadata);
                 }
 
                 return;
