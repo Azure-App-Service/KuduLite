@@ -503,7 +503,7 @@ namespace Kudu.Services.Web
                     new {controller = "LinuxConsumptionInstanceAdmin", action = "Info"},
                     new {verb = new HttpMethodRouteConstraint("GET")});
                 routes.MapRoute("admin-instance-assign", "admin/instance/assign",
-                    new {controller = "LinuxConsumptionInstanceAdmin", action = "AssignAsync" },
+                    new {controller = "LinuxConsumptionInstanceAdmin", action = "Assign" },
                     new {verb = new HttpMethodRouteConstraint("POST")});
 
                 // Live Command Line

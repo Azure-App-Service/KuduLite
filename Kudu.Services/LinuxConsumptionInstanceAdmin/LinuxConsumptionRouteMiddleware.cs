@@ -31,7 +31,8 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             "/api/settings",
             "/admin/instance",
             "/deployments",
-            "/zipdeploy"
+            "/zipdeploy",
+            "/Error"
         };
 
         private readonly RequestDelegate _next;
