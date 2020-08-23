@@ -38,7 +38,8 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             "/admin/instance",
             "/admin/proxy",
             "/deployments",
-            "/zipdeploy"
+            "/zipdeploy",
+            "/Error"
         };
 
         private readonly RequestDelegate _next;

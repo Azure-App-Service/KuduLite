@@ -62,7 +62,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         /// <returns>Expect 202 when receives the first call, otherwise, returns 409</returns>
         [HttpPost]
         [Authorize(Policy = AuthPolicyNames.AdminAuthLevel)]
-        public async Task<IActionResult> AssignAsync([FromBody] EncryptedHostAssignmentContext encryptedAssignmentContext)
+        public IActionResult Assign([FromBody] EncryptedHostAssignmentContext encryptedAssignmentContext)
         {
             var containerKey = System.Environment.GetEnvironmentVariable(SettingsKeys.ContainerEncryptionKey);
             var assignmentContext = encryptedAssignmentContext.Decrypt(containerKey);
