@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Web;
 
 namespace Kudu.Core.K8SE
 {
@@ -47,14 +48,13 @@ namespace Kudu.Core.K8SE
         /// <returns></returns>
         public static void UpdateBuildNumber(string appName, BuildMetadata buildMetadata)
         {
-            var buildPatchJson = JsonConvert.SerializeObject(buildMetadata);
-            var buildmetaJsonString = JsonConvert.ToString(buildPatchJson);
+            var buildPatchJson = $"\"{HttpUtility.JavaScriptStringEncode(JsonConvert.SerializeObject(buildMetadata)).Replace("\\","\\\\")}\"";
 
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
             BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "buildMetadata");
-            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, buildmetaJsonString);
+            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, buildPatchJson);
             RunBuildCtlCommand(cmd.ToString(), "Updating build version...");
         }
 

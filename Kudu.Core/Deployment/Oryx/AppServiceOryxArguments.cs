@@ -184,12 +184,13 @@ namespace Kudu.Core.Deployment
                     {
                         // 10-LTS, 12-LTS should use versions 10, 12 etc
                         // Oryx Builder uses lts for major versions
-                        Version = Version.Replace("LTS", "").Replace("-", "");
+                        Version = Version.Replace("LTS", "").Replace("lts", "").Replace("-", "");
                         if (string.IsNullOrEmpty(Version))
                         {
                             // Current LTS
                             Version = "10";
                         }
+                        OryxArgumentsHelper.AddLanguageVersion(args, Version);
                     }
                     break;
                 case Framework.Python:
