@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Kudu.Contracts.Deployment;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
@@ -293,11 +294,23 @@ namespace Kudu.Core.Deployment
             }
         }
 
-        public async Task RestartMainSiteIfNeeded(ITracer tracer, ILogger logger)
+        public async Task RestartMainSiteIfNeeded(ITracer tracer, ILogger logger, DeploymentInfoBase deploymentInfo)
         {
             // If post-deployment restart is disabled, do nothing.
             if (!_settings.RestartAppOnGitDeploy())
             {
+                return;
+            }
+
+            // Proceed only if 'restart' is allowed for this deployment
+            if (deploymentInfo != null && !deploymentInfo.RestartAllowed)
+            {
+                return;
+            }
+
+            if (deploymentInfo != null && deploymentInfo.Deployer == Constants.OneDeploy)
+            {
+                await PostDeploymentHelper.RestartMainSiteAsync(_environment.RequestId, new PostDeploymentTraceListener(tracer, logger));
                 return;
             }
 
@@ -632,7 +645,7 @@ namespace Kudu.Core.Deployment
                 {
                     using (tracer.Step("Determining deployment builder"))
                     {
-                        builder = _builderFactory.CreateBuilder(tracer, innerLogger, perDeploymentSettings, repository);
+                        builder = _builderFactory.CreateBuilder(tracer, innerLogger, perDeploymentSettings, repository, deploymentInfo);
                         deploymentAnalytics.ProjectType = builder.ProjectType;
                         tracer.Trace("Builder is {0}", builder.GetType().Name);
                     }
@@ -703,8 +716,7 @@ namespace Kudu.Core.Deployment
                     {
                         await builder.Build(context);
                         builder.PostBuild(context);
-
-                        await RestartMainSiteIfNeeded(tracer, logger);
+                        await RestartMainSiteIfNeeded(tracer, logger, deploymentInfo);
 
                         if (FunctionAppHelper.LooksLikeFunctionApp() && _environment.IsOnLinuxConsumption)
                         {
@@ -725,14 +737,11 @@ namespace Kudu.Core.Deployment
                             new PostDeploymentTraceListener(tracer, logger), 
                             deploymentInfo?.SyncFunctionsTriggersPath);
 
-                        if (_settings.TouchWatchedFileAfterDeployment())
+                        TouchWatchedFileIfNeeded(_settings, deploymentInfo, context);
+
+                        if (_settings.RunFromLocalZip() && deploymentInfo is ArtifactDeploymentInfo)
                         {
-                            TryTouchWatchedFile(context, deploymentInfo);
-                        }
-                        
-                        if (_settings.RunFromLocalZip() && deploymentInfo is ZipDeploymentInfo)
-                        {
-                            await PostDeploymentHelper.UpdatePackageName(deploymentInfo as ZipDeploymentInfo, _environment, logger);
+                            await PostDeploymentHelper.UpdatePackageName(deploymentInfo as ArtifactDeploymentInfo, _environment, logger);
                         }
 
                         FinishDeployment(id, deployStep);
@@ -758,6 +767,19 @@ namespace Kudu.Core.Deployment
             {
                 // Clean the temp folder up
                 CleanBuild(tracer, buildTempPath);
+            }
+        }
+
+        private static void TouchWatchedFileIfNeeded(IDeploymentSettingsManager settings, DeploymentInfoBase deploymentInfo, DeploymentContext context)
+        {
+            if (deploymentInfo != null && !deploymentInfo.WatchedFileEnabled)
+            {
+                return;
+            }
+
+            if (settings.TouchWatchedFileAfterDeployment())
+            {
+                TryTouchWatchedFile(context, deploymentInfo);
             }
         }
 
@@ -813,20 +835,27 @@ namespace Kudu.Core.Deployment
 
         private static string GetOutputPath(DeploymentInfoBase deploymentInfo, IEnvironment environment, IDeploymentSettingsManager perDeploymentSettings)
         {
-            string targetPath = perDeploymentSettings.GetTargetPath();
+            string targetSubDirectoryRelativePath = perDeploymentSettings.GetTargetPath();
             
-            if (string.IsNullOrWhiteSpace(targetPath))
+            if (string.IsNullOrWhiteSpace(targetSubDirectoryRelativePath))
             {
-                targetPath = deploymentInfo?.TargetPath;
-            }
-            
-            if (!string.IsNullOrWhiteSpace(targetPath))
-            {
-                targetPath = targetPath.Trim('\\', '/');
-                return Path.GetFullPath(Path.Combine(environment.WebRootPath, targetPath));
+                targetSubDirectoryRelativePath = deploymentInfo?.TargetSubDirectoryRelativePath;
             }
 
-            return environment.WebRootPath;
+            var rootDirectoryPath = string.IsNullOrWhiteSpace(deploymentInfo.TargetRootPath) ? environment.WebRootPath : deploymentInfo.TargetRootPath;
+
+            if (deploymentInfo.Deployer == Constants.OneDeploy)
+            {
+                return rootDirectoryPath;
+            }
+
+            if (!string.IsNullOrWhiteSpace(targetSubDirectoryRelativePath))
+            {
+                targetSubDirectoryRelativePath = targetSubDirectoryRelativePath.Trim('\\', '/');
+                return Path.GetFullPath(Path.Combine(rootDirectoryPath, targetSubDirectoryRelativePath));
+            }
+
+            return rootDirectoryPath;
         }
 
         private IEnumerable<DeployResult> EnumerateResults()
