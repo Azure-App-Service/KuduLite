@@ -79,6 +79,10 @@ namespace Kudu.Services.Deployment
             [FromQuery] string deployer = DefaultDeployer,
             [FromQuery] string message = DefaultMessage)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
             using (_tracer.Step("ZipPushDeploy"))
             {
                 var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
@@ -125,6 +129,11 @@ namespace Kudu.Services.Deployment
             [FromQuery] string deployer = DefaultDeployer,
             [FromQuery] string message = DefaultMessage)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
             using (_tracer.Step("ZipPushDeployViaUrl"))
             {
                 string zipUrl = GetZipURLFromJSON(requestJson);
@@ -162,6 +171,11 @@ namespace Kudu.Services.Deployment
             [FromQuery] string deployer = DefaultDeployer,
             [FromQuery] string message = DefaultMessage)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
             using (_tracer.Step("WarPushDeploy"))
             {
                 var appName = HttpContext.Request.Query["name"].ToString();
@@ -234,7 +248,7 @@ namespace Kudu.Services.Deployment
                 FileSystemHelpers.DeleteFileSafe(oryxManifestFile);
             }
 
-            var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
+            var zipFilePath = Path.Combine(_environment.ZipTempPath, K8SEDeploymentHelper.GetAppName(context), Guid.NewGuid() + ".zip");
             if (_settings.RunFromLocalZip())
             {
                 await WriteSitePackageZip(deploymentInfo, _tracer);
