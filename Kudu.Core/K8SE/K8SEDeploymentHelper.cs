@@ -59,6 +59,22 @@ namespace Kudu.Core.K8SE
         }
 
         /// <summary>
+        /// Updates the Image Tag of the K8SE custom container app
+        /// </summary>
+        /// <param name="appName"></param>
+        /// <param name="imageTag">container image tag of the format registry/<image>:<tag></param>
+        /// <returns></returns>
+        public static void UpdateImageTag(string appName, string imageTag)
+        {
+            var cmd = new StringBuilder();
+            BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
+            BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+            BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "appImage");
+            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, imageTag);
+            RunBuildCtlCommand(cmd.ToString(), "Updating image tag...");
+        }
+
+        /// <summary>
         /// Updates the triggers for the function apps
         /// </summary>
         /// <param name="appName">The app name to update</param>

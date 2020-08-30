@@ -30,6 +30,7 @@ using Microsoft.Net.Http.Headers;
 using Kudu.Services.Zip;
 using System.IO.Compression;
 using Kudu.Core.K8SE;
+using Org.BouncyCastle.Ocsp;
 
 namespace Kudu.Services.Deployment
 {
@@ -581,6 +582,25 @@ namespace Kudu.Services.Deployment
 
             pending = null;
             return false;
+        }
+
+
+        /// <summary>
+        /// Updates Image tag of a custom container app when running in the K8SE Environment
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost]
+        public IActionResult UpdateContainerTag()
+        {
+            if(!K8SEDeploymentHelper.IsK8SEEnvironment()
+                || !Request.Headers.ContainsKey("LINUXFXVERSION")
+                || !Request.Headers["LINUXFXVERSION"].First().StartsWith("DOCKER|"))
+            {
+                return StatusCode(Microsoft.AspNetCore.Http.StatusCodes.Status405MethodNotAllowed);
+            }
+            string linuxFxVersion = Request.Headers["LINUXFXVERSION"].First().Replace("DOCKER|", "");
+            K8SEDeploymentHelper.UpdateImageTag(K8SEDeploymentHelper.GetAppName(Request.HttpContext), linuxFxVersion);
+            return Ok();
         }
 
         /// <summary>

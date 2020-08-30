@@ -518,6 +518,8 @@ namespace Kudu.Services.Web
                     new {controller = "Deployment", action = "GetLogEntry"});
                 routes.MapHttpRouteDual("one-deployment-log-details", "deployments/{id}/log/{logId}",
                     new {controller = "Deployment", action = "GetLogEntryDetails"});
+                routes.MapHttpRouteDual("update-container-tag", "app/update",
+                    new { controller = "Deployment", action = "UpdateContainerTag" });
 
                 // Deployment script
                 routes.MapRoute("get-deployment-script", "api/deploymentscript",
