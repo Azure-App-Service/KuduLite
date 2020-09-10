@@ -19,7 +19,7 @@ namespace Kudu.Core.Deployment
             DoFullBuildByDefault = true;
             WatchedFileEnabled = true;
             RestartAllowed = true;
-            ArtifactType = ArtifactType.Invalid;
+            ArtifactType = ArtifactType.Unknown;
         }
 
         public RepositoryType RepositoryType { get; set; }

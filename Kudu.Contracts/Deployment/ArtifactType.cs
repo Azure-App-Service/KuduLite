@@ -8,7 +8,7 @@ namespace Kudu.Contracts.Deployment
 {
     public enum ArtifactType
     {
-        Invalid,
+        Unknown,
         War,
         Jar,
         Ear,

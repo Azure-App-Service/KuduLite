@@ -11,6 +11,13 @@ namespace Kudu.Services.Deployment
 {
     static class OneDeployHelper
     {
+        private const string StackEnvVarName = "WEBSITE_STACK";
+
+        // Stacks supported by OneDeploy 
+        public const string Tomcat = "TOMCAT";
+        public const string JavaSE = "JAVA";
+        public const string JBossEap = "JBOSSEAP";
+
         // All paths are relative to HOME directory
         private const string ScriptsDirectoryRelativePath = "site/scripts";
         private const string LibsDirectoryRelativePath = "site/libs";
@@ -55,7 +62,7 @@ namespace Kudu.Services.Deployment
 
         public static string GetWebsiteStack()
         {
-            return System.Environment.GetEnvironmentVariable(Constants.StackEnvVarName);
+            return System.Environment.GetEnvironmentVariable(StackEnvVarName);
         }
 
         public static string GetLibsDirectoryAbsolutePath(IEnvironment environment)

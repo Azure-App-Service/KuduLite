@@ -842,20 +842,18 @@ namespace Kudu.Core.Deployment
                 targetSubDirectoryRelativePath = deploymentInfo?.TargetSubDirectoryRelativePath;
             }
 
-            var rootDirectoryPath = string.IsNullOrWhiteSpace(deploymentInfo.TargetRootPath) ? environment.WebRootPath : deploymentInfo.TargetRootPath;
-
-            if (deploymentInfo.Deployer == Constants.OneDeploy)
+            if (deploymentInfo?.Deployer == Constants.OneDeploy)
             {
-                return rootDirectoryPath;
+                return string.IsNullOrWhiteSpace(deploymentInfo?.TargetRootPath) ? environment.WebRootPath : deploymentInfo.TargetRootPath;
             }
 
             if (!string.IsNullOrWhiteSpace(targetSubDirectoryRelativePath))
             {
                 targetSubDirectoryRelativePath = targetSubDirectoryRelativePath.Trim('\\', '/');
-                return Path.GetFullPath(Path.Combine(rootDirectoryPath, targetSubDirectoryRelativePath));
+                return Path.GetFullPath(Path.Combine(environment.WebRootPath, targetSubDirectoryRelativePath));
             }
 
-            return rootDirectoryPath;
+            return environment.WebRootPath;
         }
 
         private IEnumerable<DeployResult> EnumerateResults()

@@ -267,7 +267,7 @@ namespace Kudu.Services.Deployment
                 // 
                 bool isAsync = async;
 
-                ArtifactType artifactType = ArtifactType.Invalid;
+                ArtifactType artifactType = ArtifactType.Unknown;
                 try
                 {
                     artifactType = (ArtifactType)Enum.Parse(typeof(ArtifactType), type, ignoreCase: true);
@@ -302,7 +302,7 @@ namespace Kudu.Services.Deployment
                 switch (artifactType)
                 {
                     case ArtifactType.War:
-                        if (!OneDeployHelper.EnsureValidStack(Constants.Tomcat, ignoreStack, out error))
+                        if (!OneDeployHelper.EnsureValidStack(OneDeployHelper.Tomcat, ignoreStack, out error))
                         {
                             return StatusCode400(error);
                         }
@@ -336,7 +336,7 @@ namespace Kudu.Services.Deployment
                         break;
 
                     case ArtifactType.Jar:
-                        if (!OneDeployHelper.EnsureValidStack(Constants.JavaSE, ignoreStack, out error))
+                        if (!OneDeployHelper.EnsureValidStack(OneDeployHelper.JavaSE, ignoreStack, out error))
                         {
                             return StatusCode400(error);
                         }
@@ -345,7 +345,7 @@ namespace Kudu.Services.Deployment
                         break;
 
                     case ArtifactType.Ear:
-                        if (!OneDeployHelper.EnsureValidStack(Constants.JBossEap, ignoreStack, out error))
+                        if (!OneDeployHelper.EnsureValidStack(OneDeployHelper.JBossEap, ignoreStack, out error))
                         {
                             return StatusCode400(error);
                         }

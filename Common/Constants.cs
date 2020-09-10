@@ -167,11 +167,5 @@ namespace Kudu
         public const string EnablePersistentStorage = "ENABLE_KUDU_PERSISTENT_STORAGE";
 
         public const string OneDeploy = "OneDeploy";
-        public const string StackEnvVarName = "WEBSITE_STACK";
-
-        // Stacks supported by OneDeploy 
-        public const string Tomcat = "TOMCAT";
-        public const string JavaSE = "JAVA";
-        public const string JBossEap = "JBOSSEAP";
     }
 }
