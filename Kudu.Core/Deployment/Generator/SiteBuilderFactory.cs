@@ -23,7 +23,7 @@ namespace Kudu.Core.Deployment.Generator
             _environment = environment;
         }
 
-        public ISiteBuilder CreateBuilder(ITracer tracer, ILogger logger, IDeploymentSettingsManager settings, IRepository repository)
+        public ISiteBuilder CreateBuilder(ITracer tracer, ILogger logger, IDeploymentSettingsManager settings, IRepository repository, DeploymentInfoBase deploymentInfo)
         {
             string repositoryRoot = repository.RepositoryPath;
 
@@ -51,6 +51,12 @@ namespace Kudu.Core.Deployment.Generator
             {
                 tracer.Trace("Specific project was specified: " + targetProjectPath);
                 targetProjectPath = Path.GetFullPath(Path.Combine(repositoryRoot, targetProjectPath.TrimStart('/', '\\')));
+            }
+
+            if (deploymentInfo != null && deploymentInfo.Deployer == Constants.OneDeploy)
+            {
+                var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
+                return new OneDeployBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath, deploymentInfo);
             }
 
             if (settings.RunFromLocalZip())
