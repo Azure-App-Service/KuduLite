@@ -1,4 +1,5 @@
 ﻿using Kudu.Core.Helpers;
+using Kudu.Core.LinuxConsumption;
 
 namespace Kudu.Core.Tracing
 {
@@ -6,10 +7,14 @@ namespace Kudu.Core.Tracing
     {
         private static IKuduEventGenerator _eventGenerator = null;
 
-        public static IKuduEventGenerator Log()
+        public static IKuduEventGenerator Log(ISystemEnvironment systemEnvironment = null)
         {
+            string containerName = systemEnvironment != null
+                ? systemEnvironment.GetEnvironmentVariable(Constants.ContainerName)
+                : Environment.ContainerName;
+
             // Linux Consumptions only
-            bool isLinuxContainer = !string.IsNullOrEmpty(Environment.ContainerName);
+            bool isLinuxContainer = !string.IsNullOrEmpty(containerName);
             if (isLinuxContainer)
             {
                 if (_eventGenerator == null)

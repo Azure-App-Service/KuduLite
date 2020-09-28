@@ -410,8 +410,7 @@ namespace Kudu.Core.Helpers
 
             // Generate RemoveAllWorker request URI
             string baseUrl = $"http://{websiteHostname}/operations/removeworker/{sitename}/allStandard?token={authTokenEncoded}";
-            Uri baseUri = null;
-            if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out baseUri))
+            if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out Uri baseUri))
             {
                 throw new ArgumentException($"Malformed URI is used in RemoveAllWorkers");
             }
@@ -424,8 +423,48 @@ namespace Kudu.Core.Helpers
                 Trace(TraceEventType.Information, "RemoveAllWorkers, statusCode = {0}", response.StatusCode);
                 response.EnsureSuccessStatusCode();
             }
+<<<<<<< HEAD
 
             return;
+=======
+        }
+
+        /// <summary>
+        /// Update WEBSITE_RUN_FROM_PACKAGE to point to the latest blob
+        /// </summary>
+        /// <param name="blobSas">The unencrypted sas uri points to the destination blob</param>
+        /// <exception cref="ArgumentException">Thrown when SetRunFromPkg url is malformed.</exception>
+        /// <exception cref="HttpRequestException">Thrown when request to SetRunFromPkg is not OK.</exception>
+        public static async Task UpdateWebsiteRunFromPackage(string blobSas, DeploymentContext context)
+        {
+            // Generate URL encoded blobSas
+            string encryptedBlobSas = GetBlobSasEncryptedToken(blobSas);
+            string encryptedBlobSasEncoded = HttpUtility.UrlEncode(encryptedBlobSas);
+
+            // Generate web request protocol
+            string protocol = Environment.SkipSslValidation ? "http" : "https";
+
+            // Generate update app setting request
+            string baseUrl = $"{protocol}://{HttpHost}/operations/set-run-from-pkg?run-from-pkg-path={encryptedBlobSasEncoded}";
+            if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out Uri baseUri))
+            {
+                throw new ArgumentException($"Malformed URI is used in SetRunFromPkg");
+            }
+
+            // Initiate web request
+            Trace(TraceEventType.Information, "Calling scm SetRunFromPkg to update WEBSITE_RUN_FROM_PACKAGE for the function app");
+            using (var client = HttpClientFactory())
+            using (var request = new HttpRequestMessage(HttpMethod.Post, baseUri))
+            {
+                request.Headers.Add(Constants.SiteRestrictedToken, GetWebsiteAuthToken());
+                using (var response = await client.SendAsync(request))
+                {
+                    Trace(TraceEventType.Information, "SetRunFromPkg, statusCode = {0}", response.StatusCode);
+                    context.Logger.Log($"response.StatusCode = {response.StatusCode}");
+                    response.EnsureSuccessStatusCode();
+                }
+            }
+>>>>>>> 7e75ea6273e9179a4863e2bcb35c40eafa7323ac
         }
 
         /// <summary>
@@ -461,6 +500,12 @@ namespace Kudu.Core.Helpers
             string websiteAuthEncryptionKey = System.Environment.GetEnvironmentVariable(SettingsKeys.AuthEncryptionKey);
             DateTime expiry = DateTime.UtcNow.AddMinutes(5);
             return SimpleWebTokenHelper.CreateToken(expiry, websiteAuthEncryptionKey.ToKeyBytes());
+        }
+
+        private static string GetBlobSasEncryptedToken(string blobSas)
+        {
+            string websiteAuthEncryptionKey = System.Environment.GetEnvironmentVariable(SettingsKeys.AuthEncryptionKey);
+            return SimpleWebTokenHelper.CreateEncryptedBlobSas(blobSas, websiteAuthEncryptionKey.ToKeyBytes());
         }
 
         private static void VerifyEnvironments()
@@ -819,11 +864,11 @@ namespace Kudu.Core.Helpers
             }
         }
 
-        public static async Task UpdatePackageName(ZipDeploymentInfo deploymentInfo, IEnvironment environment, ILogger logger)
+        public static async Task UpdatePackageName(ArtifactDeploymentInfo deploymentInfo, IEnvironment environment, ILogger logger)
         {
             var packageNamePath = Path.Combine(environment.SitePackagesPath, Constants.PackageNameTxt);
-            logger.Log($"Updating {packageNamePath} with deployment {deploymentInfo.ZipName}");
-            await FileSystemHelpers.WriteAllTextToFileAsync(packageNamePath, deploymentInfo.ZipName);
+            logger.Log($"Updating {packageNamePath} with deployment {deploymentInfo.ArtifactFileName}");
+            await FileSystemHelpers.WriteAllTextToFileAsync(packageNamePath, deploymentInfo.ArtifactFileName);
         }
     }
 }

@@ -21,19 +21,26 @@ using Kudu.Core.SourceControl;
 using Kudu.Core.SourceControl.Git;
 using Kudu.Core.Tracing;
 using System.Reflection;
+using Kudu.Core.LinuxConsumption;
 using XmlSettings;
-using log4net;
-using log4net.Config;
+using System.Xml;
 
 namespace Kudu.Console
 {
     internal class Program
     {
-        
+
         private static int Main(string[] args)
         {
-            var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
-            XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
+            // Configure Logging if running on Azure
+            if (System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID") != null)
+            {
+                XmlDocument log4netConfig = new XmlDocument();
+                log4netConfig.Load(File.OpenRead("/opt/Kudu/KuduConsole/log4net.config"));
+                var repo = log4net.LogManager.CreateRepository(Assembly.GetEntryAssembly(),
+                    typeof(log4net.Repository.Hierarchy.Hierarchy));
+                log4net.Config.XmlConfigurator.Configure(repo, log4netConfig["log4net"]);
+            }
 
             // Turn flag on in app.config to wait for debugger on launch
             if (ConfigurationManager.AppSettings["WaitForDebuggerOnStart"] == "true")
@@ -79,7 +86,7 @@ namespace Kudu.Console
             string deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
 
             IOperationLock deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
-            
+
             if (deploymentLock.IsHeld)
             {
                 return PerformDeploy(appRoot, wapTargets, deployer, lockPath, env, settingsManager, level, tracer, traceFactory, deploymentLock);
@@ -126,10 +133,10 @@ namespace Kudu.Console
             string statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
             string hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
 
-            
+
             IOperationLock statusLock = new LockFile(statusLockPath, traceFactory);
             IOperationLock hooksLock = new LockFile(hooksLockPath, traceFactory);
-            
+
             IBuildPropertyProvider buildPropertyProvider = new BuildPropertyProvider();
             ISiteBuilderFactory builderFactory = new SiteBuilderFactory(buildPropertyProvider, env);
             var logger = new ConsoleLogger();
@@ -144,7 +151,7 @@ namespace Kudu.Console
                 gitRepository = new GitExeRepository(env, settingsManager, traceFactory);
             }
 
-            IServerConfiguration serverConfiguration = new ServerConfiguration();
+            IServerConfiguration serverConfiguration = new ServerConfiguration(SystemEnvironment.Instance);
             IAnalytics analytics = new Analytics(settingsManager, serverConfiguration, traceFactory);
 
             IWebHooksManager hooksManager = new WebHooksManager(tracer, env, hooksLock);
@@ -204,7 +211,7 @@ namespace Kudu.Console
                 finally
                 {
                     System.Console.WriteLine("Deployment Logs : '"+
-                        env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" + 
+                        env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" +
                         gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");
                 }
             }
@@ -262,11 +269,11 @@ namespace Kudu.Console
         {
             string root = Path.GetFullPath(Path.Combine(siteRoot, ".."));
 
-            // CORE TODO : test by setting SCM_REPOSITORY_PATH 
+            // CORE TODO : test by setting SCM_REPOSITORY_PATH
             // REVIEW: this looks wrong because it ignores SCM_REPOSITORY_PATH
             string repositoryPath = Path.Combine(siteRoot, Constants.RepositoryPath);
 
-            // SCM_BIN_PATH is introduced in Kudu apache config file 
+            // SCM_BIN_PATH is introduced in Kudu apache config file
             // Provide a way to override Kudu bin path, to resolve issue where we can not find the right Kudu bin path when running on mono
             // CORE TODO I don't think this is needed anymore? This env var is not used anywhere but here.
             string binPath = System.Environment.GetEnvironmentVariable("SCM_BIN_PATH");
@@ -283,7 +290,8 @@ namespace Kudu.Console
                 repositoryPath,
                 requestId,
                 Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu.dll"),
-                null);
+                null,
+                new FileSystemPathProvider(new NullMeshPersistentFileSystem()));
         }
     }
 }

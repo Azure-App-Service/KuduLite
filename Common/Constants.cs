@@ -22,8 +22,8 @@ namespace Kudu
         public const string WebRoot = "wwwroot";
         public const string MappedSite = "/_app";
         public const string RepositoryPath = "repository";
-        public const string ZipTempPath = "zipdeploy";
-        public const string ZipExtractPath = "extracted";
+        public const string ZipTempDirectoryName = "zipdeploy";
+        public const string ArtifactStagingDirectoryName = "extracted";
 
         public const string LockPath = "locks";
         public const string DeploymentLockFile = "deployments.lock";
@@ -34,6 +34,7 @@ namespace Kudu
         public const string NpmDebugLogFile = "npm-debug.log";
 
         public const string DeploymentCachePath = "deployments";
+        public const string ArtifactsPath = "artifacts";
         public const string SiteExtensionsCachePath = "siteextensions";
         public const string DeploymentToolsPath = "tools";
         public const string SiteFolder = @"site";
@@ -122,9 +123,10 @@ namespace Kudu
         public const string FreeSKU = "Free";
         public const string BasicSKU = "Basic";
 
-        //Setting for VC++ for node builds
+        // Setting for VC++ for node builds
         public const string VCVersion = "2015";
 
+        public const string WebsiteSiteName = "WEBSITE_SITE_NAME";
         public const string SiteRestrictedToken = "x-ms-site-restricted-token";
         public const string SiteAuthEncryptionKey = "WEBSITE_AUTH_ENCRYPTION_KEY";
         public const string HttpHost = "HTTP_HOST";
@@ -144,11 +146,14 @@ namespace Kudu
         public const string FunctionKeyNewFormat = "~0.7";
         public const string FunctionRunTimeVersion = "FUNCTIONS_EXTENSION_VERSION";
         public const string ScmRunFromPackage = "SCM_RUN_FROM_PACKAGE";
+        public const string ScmRunFromPackageContainerName = "scm-releases";
+        public const string ScmRunFromPackageBlobPrefix = "rfp-latest";
         public const string WebSiteSku = "WEBSITE_SKU";
         public const string WebSiteElasticScaleEnabled = "WEBSITE_ELASTIC_SCALING_ENABLED";
         public const string DynamicSku = "Dynamic";
         public const string ElasticScaleEnabled = "1";
         public const string AzureWebJobsSecretStorageType = "AzureWebJobsSecretStorageType";
+        public const string AzureWebJobsStorage = "AzureWebJobsStorage";
         public const string HubName = "HubName";
         public const string DurableTaskStorageConnection = "connection";
         public const string DurableTaskStorageConnectionName = "azureStorageConnectionStringName";
@@ -164,6 +169,12 @@ namespace Kudu
         public const string LinuxLogEventStreamName = "MS_KUDU_LOGS";
         public const string WebSiteHomeStampName = "WEBSITE_HOME_STAMPNAME";
         public const string WebSiteStampDeploymentId = "WEBSITE_STAMP_DEPLOYMENT_ID";
+        public const string MeshInitURI = "MESH_INIT_URI";
+        public const string KuduFileShareMountPath = "/kudu-mnt";
+        public const string KuduFileSharePrefix = "kudu-mnt";
+        public const string EnablePersistentStorage = "ENABLE_KUDU_PERSISTENT_STORAGE";
+
+        public const string OneDeploy = "OneDeploy";
 
         public const string ScmDeploymentIdHeader = "SCM-DEPLOYMENT-ID";
     }

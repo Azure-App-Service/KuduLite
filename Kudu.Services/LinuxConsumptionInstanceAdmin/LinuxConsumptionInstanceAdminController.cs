@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Helpers;
 using System.Collections.Generic;
+using Kudu.Core.LinuxConsumption;
 using Kudu.Services.Infrastructure.Authorization;
 
 namespace Kudu.Services.LinuxConsumptionInstanceAdmin
@@ -19,6 +20,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         private const string _appsettingPrefix = "APPSETTING_";
         private readonly ILinuxConsumptionInstanceManager _instanceManager;
         private readonly IDeploymentSettingsManager _settingsManager;
+        private readonly IMeshPersistentFileSystem _meshPersistentFileSystem;
 
         /// <summary>
         /// This class handles appsetting assignment and provide information when running in a Service Fabric Mesh container,
@@ -26,10 +28,12 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         /// </summary>
         /// <param name="instanceManager">Allow KuduLite to interact with Service Fabric Mesh instance in Linux Consumption</param>
         /// <param name="settingsManager">Allow instance assignment to change application setting</param>
-        public LinuxConsumptionInstanceAdminController(ILinuxConsumptionInstanceManager instanceManager, IDeploymentSettingsManager settingsManager)
+        /// <param name="meshPersistentFileSystem">Provides persistent storage for Linux Consumption</param>
+        public LinuxConsumptionInstanceAdminController(ILinuxConsumptionInstanceManager instanceManager, IDeploymentSettingsManager settingsManager, IMeshPersistentFileSystem meshPersistentFileSystem)
         {
             _instanceManager = instanceManager;
             _settingsManager = settingsManager;
+            _meshPersistentFileSystem = meshPersistentFileSystem;
         }
 
         /// <summary>
@@ -40,7 +44,14 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         [Authorize(Policy = AuthPolicyNames.AdminAuthLevel)]
         public IActionResult Info()
         {
-            return Ok(_instanceManager.GetInstanceInfo());
+            var instanceHealth = new InstanceHealth {Items = new List<InstanceHealthItem>()};
+            var fileShareMount = new InstanceHealthItem();
+            fileShareMount.Name = "Persistent storage";
+            fileShareMount.Success = _meshPersistentFileSystem.GetStatus(out var persistenceMessage);
+            fileShareMount.Message = persistenceMessage;
+            instanceHealth.Items.Add(fileShareMount);
+
+            return Ok(instanceHealth);
         }
 
         /// <summary>

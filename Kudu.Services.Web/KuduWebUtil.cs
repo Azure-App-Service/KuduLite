@@ -11,6 +11,7 @@ using Kudu.Core;
 using Kudu.Core.Deployment;
 using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.LinuxConsumption;
 using Kudu.Core.Settings;
 using Kudu.Core.Tracing;
 using Kudu.Services.Infrastructure;
@@ -41,36 +42,36 @@ namespace Kudu.Services.Web
         // This method initializes status,ssh,hooks & deployment locks used by Kudu to ensure
         // synchronized operations. This method creates a dictionary of locks which is injected
         // into various controllers to resolve the locks they need.
-        // <list type="bullet">  
-        //     <listheader>  
-        //         <term>Locks used by Kudu:</term>  
-        //     </listheader>  
-        //     <item>  
-        //         <term>Status Lock</term>  
-        //         <description>Used by DeploymentStatusManager</description>  
-        //     </item> 
-        //     <item>  
-        //         <term>SSH Lock</term>  
-        //         <description>Used by SSHKeyController</description>  
-        //     </item> 
-        //     <item>  
-        //         <term>Hooks Lock</term>  
-        //         <description>Used by WebHooksManager</description>  
-        //     </item> 
-        //     <item>  
-        //         <term>Deployment Lock</term>  
+        // <list type="bullet">
+        //     <listheader>
+        //         <term>Locks used by Kudu:</term>
+        //     </listheader>
+        //     <item>
+        //         <term>Status Lock</term>
+        //         <description>Used by DeploymentStatusManager</description>
+        //     </item>
+        //     <item>
+        //         <term>SSH Lock</term>
+        //         <description>Used by SSHKeyController</description>
+        //     </item>
+        //     <item>
+        //         <term>Hooks Lock</term>
+        //         <description>Used by WebHooksManager</description>
+        //     </item>
+        //     <item>
+        //         <term>Deployment Lock</term>
         //         <description>
-        //             Used by DeploymentController, DeploymentManager, SettingsController, 
+        //             Used by DeploymentController, DeploymentManager, SettingsController,
         //             FetchDeploymentManager, LiveScmController, ReceivePackHandlerMiddleware
-        //         </description>  
-        //     </item> 
-        // </list>  
+        //         </description>
+        //     </item>
+        // </list>
         // </summary>
         // <remarks>
         //     Uses File watcher.
         //     This originally used Ninject's "WhenInjectedInto" in .Net project for specific instances. IServiceCollection
-        //     doesn't support this concept, or anything similar like named instances. There are a few possibilities, 
-        //     but the hack solution for now is just injecting a dictionary of locks and letting each dependent resolve 
+        //     doesn't support this concept, or anything similar like named instances. There are a few possibilities,
+        //     but the hack solution for now is just injecting a dictionary of locks and letting each dependent resolve
         //     the one it needs.
         // </remarks>
         private static void SetupLocks(ITraceFactory traceFactory, IEnvironment environment)
@@ -105,7 +106,7 @@ namespace Kudu.Services.Web
 
             // Create deployment logs directory if it doesn't exist
             FileSystemHelpers.CreateDirectory(fileDirectoryPath);
-            
+
             // Set up custom content types - associating file extension to MIME type
             var provider = new FileExtensionContentTypeProvider
             {
@@ -215,18 +216,30 @@ namespace Kudu.Services.Web
             {
                 var fileText = FileSystemHelpers.ReadAllText(gitPostReceiveHookFile);
                 var isRunningOnAzure = System.Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID") != null;
-                if (fileText.Contains("/usr/bin/mono"))
+
+                if(!EnvironmentHelper.IsDynamicInstallEnvironment())
                 {
-                    if(isRunningOnAzure)
+                    if (fileText.Contains("/usr/bin/mono"))
                     {
-                        FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("/usr/bin/mono", "benv dotnet=2.2 dotnet"));
+                        if (isRunningOnAzure)
+                        {
+                            FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("/usr/bin/mono", "benv dotnet=2.2 dotnet"));
+                        }
+                    }
+                    else if (!fileText.Contains("benv") && fileText.Contains("dotnet") && isRunningOnAzure)
+                    {
+                        FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("dotnet", "benv dotnet=2.2 dotnet"));
                     }
                 }
-                else if(!fileText.Contains("benv") && fileText.Contains("dotnet") && isRunningOnAzure)
+                else
                 {
-                    FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("dotnet", "benv dotnet=2.2 dotnet"));
+                    // Dynamic Install should just contain dotnet
+                    if (fileText.Contains("benv") && fileText.Contains("dotnet") && isRunningOnAzure)
+                    {
+                        FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("benv dotnet=2.2", "dotnet"));
+                    }
                 }
-                
+
             }
 
             if (FileSystemHelpers.DirectoryExists(Path.Combine(environment.RootPath, ".mono"))
@@ -269,7 +282,7 @@ namespace Kudu.Services.Web
         internal static ITracer GetTracerWithoutContext(IEnvironment environment, IDeploymentSettingsManager settings)
         {
             // when file system has issue, this can throw (environment.TracePath calls EnsureDirectory).
-            // prefer no-op tracer over outage.  
+            // prefer no-op tracer over outage.
             return OperationManager.SafeExecute(() =>
             {
                 var traceLevel = settings.GetTraceLevel();
@@ -299,6 +312,7 @@ namespace Kudu.Services.Web
         /// default configuration during the runtime.
         /// </summary>
         internal static IEnvironment GetEnvironment(IHostingEnvironment hostingEnvironment,
+            IFileSystemPathProvider fileSystemPathsProvider,
             IDeploymentSettingsManager settings = null,
             IHttpContextAccessor httpContextAccessor = null)
         {
@@ -311,7 +325,7 @@ namespace Kudu.Services.Web
             var kuduConsoleFullPath =
                 Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
             return new Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId,
-                kuduConsoleFullPath, httpContextAccessor);
+                kuduConsoleFullPath, httpContextAccessor, fileSystemPathsProvider);
         }
 
         /// <summary>
@@ -342,7 +356,7 @@ namespace Kudu.Services.Web
         /// corrupt settings.xml file
         /// </summary>
         /// <param name="environment">
-        /// IEnvironment object that maintains paths used by kudu 
+        /// IEnvironment object that maintains paths used by kudu
         /// </param>
         internal static void EnsureValidDeploymentXmlSettings(IEnvironment environment)
         {
@@ -435,7 +449,7 @@ namespace Kudu.Services.Web
         }
 
         /// <summary>
-        /// Sets the environment variables for Net Core CLI. 
+        /// Sets the environment variables for Net Core CLI.
         /// </summary>
         /// <remarks>
         /// This method previously included environment variables to optimize net core runtime to run in a container.
@@ -481,7 +495,7 @@ namespace Kudu.Services.Web
 
         /// <summary>
         /// Returns a dictionary containing references to all the singleton lock objects. Initialises these locks
-        /// if they have not been initialised 
+        /// if they have not been initialised
         /// </summary>
         /// <param name="traceFactory"></param>
         /// <param name="environment"></param>
