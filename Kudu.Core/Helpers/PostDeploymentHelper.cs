@@ -423,10 +423,6 @@ namespace Kudu.Core.Helpers
                 Trace(TraceEventType.Information, "RemoveAllWorkers, statusCode = {0}", response.StatusCode);
                 response.EnsureSuccessStatusCode();
             }
-<<<<<<< HEAD
-
-            return;
-=======
         }
 
         /// <summary>
@@ -464,7 +460,6 @@ namespace Kudu.Core.Helpers
                     response.EnsureSuccessStatusCode();
                 }
             }
->>>>>>> 7e75ea6273e9179a4863e2bcb35c40eafa7323ac
         }
 
         /// <summary>
