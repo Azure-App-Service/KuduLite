@@ -143,6 +143,12 @@ namespace Kudu.Core.Tracing
             LogKuduTraceEvent(kuduEvent);
         }
 
+        public void LogMessage(EventLevel logLevel, string siteName, string message, string exception)
+        {
+            // Only used in Linux consumption
+            return;
+        }
+
 
         public void LogKuduTraceEvent(KuduEvent kuduEvent)
         {

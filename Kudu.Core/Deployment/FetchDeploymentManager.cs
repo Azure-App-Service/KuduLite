@@ -11,6 +11,7 @@ using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Helpers;
 using Kudu.Core.Hooks;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.LinuxConsumption;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
 
@@ -87,7 +88,9 @@ namespace Kudu.Core.Deployment
             
             // Else if this app is configured with a url in WEBSITE_USE_ZIP, then fail the deployment
             // since this is a RunFromZip site and the deployment has no chance of succeeding.
-            else if (_settings.RunFromRemoteZip())
+            // However, if this is a Linux Consumption function app, we allow KuduLite to change
+            // WEBSITE_RUN_FROM_PACKAGE app setting after a build finishes
+            else if (_settings.RunFromRemoteZip() && !deployInfo.OverwriteWebsiteRunFromPackage)
             {
                 return FetchDeploymentRequestResult.ConflictRunFromRemoteZipConfigured;
             }
@@ -326,7 +329,7 @@ namespace Kudu.Core.Deployment
                     var hooksLock = new LockFile(hooksLockPath, traceFactory);
                     var deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
 
-                    var analytics = new Analytics(settings, new ServerConfiguration(), traceFactory);
+                    var analytics = new Analytics(settings, new ServerConfiguration(SystemEnvironment.Instance), traceFactory);
                     var deploymentStatusManager = new DeploymentStatusManager(environment, analytics, statusLock);
                     var siteBuilderFactory = new SiteBuilderFactory(new BuildPropertyProvider(), environment);
                     var webHooksManager = new WebHooksManager(tracer, environment, hooksLock);

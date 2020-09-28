@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Abstractions;
 using Kudu.Contracts.Tracing;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.LinuxConsumption;
 using Kudu.Core.Tracing;
 using Newtonsoft.Json;
 
@@ -36,7 +37,7 @@ namespace Kudu.Core.Jobs
             _statusFileName = statusFileName;
             TraceFactory = traceFactory;
             Environment = environment;
-            Analytics = new Analytics(null, new ServerConfiguration(), traceFactory);
+            Analytics = new Analytics(null, new ServerConfiguration(SystemEnvironment.Instance), traceFactory);
 
             InstanceId = InstanceIdUtility.GetShortInstanceId();
         }

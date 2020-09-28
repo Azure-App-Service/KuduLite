@@ -105,10 +105,20 @@ fi" + "\n";
                 {
                     FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(PostReceiveHookPath));
 
+                    var command = "";
+                    if(EnvironmentHelper.IsDynamicInstallEnvironment())
+                    {
+                        command = KnownEnvironment.KUDUCOMMAND_DYNAMICINSTALL;
+                    }
+                    else
+                    {
+                        command = KnownEnvironment.KUDUCOMMAND;
+                    }
+
                     var content = @"#!/bin/sh
 read i
 echo $i > pushinfo
-" + KnownEnvironment.KUDUCOMMAND + "\r\n";
+" + command + "\r\n";
 
                     File.WriteAllText(PostReceiveHookPath, content);
                 }
@@ -157,9 +167,9 @@ echo $i > pushinfo
 
                 foreach(var change in changes)
                 {
-                    repo.Index.Add(change);                    
+                    repo.Index.Add(change);
                 }
-                
+
                 if (string.IsNullOrWhiteSpace(authorName) ||
                     string.IsNullOrWhiteSpace(emailAddress))
                 {
@@ -172,7 +182,7 @@ echo $i > pushinfo
                 {
                     var author = new Signature(authorName, emailAddress, DateTimeOffset.UtcNow);
                     var committer = author;
-                    
+
                     repo.Commit(message, author, committer);
                 }
                 return true;
@@ -245,7 +255,7 @@ echo $i > pushinfo
                             LibGit2Sharp.Commands.Fetch(repo, currRemote.Name, refSpecs, null, logMessage);
                         }
                     }
-                    
+
                     using (tracer.Step("LibGit2SharpRepository Update"))
                     {
                         // Are we fetching a tag?
@@ -373,13 +383,13 @@ echo $i > pushinfo
             using (var repo = new LibGit2Sharp.Repository(RepositoryPath))
             {
                 var files = repo.Diff.Compare<TreeChanges>(
-                        repo.Head.Tip.Tree, 
-                        null, 
-                        lookupList, 
+                        repo.Head.Tip.Tree,
+                        null,
+                        lookupList,
                         new CompareOptions() { IncludeUnmodified = true, Similarity = SimilarityOptions.None })
                     .Select(d => Path.Combine(repo.Info.WorkingDirectory, d.Path))
                     .Where(p => p.StartsWith(path, StringComparison.OrdinalIgnoreCase));
-                
+
                 /*
                 var files = repo.Diff.Compare<TreeChanges>(null, DiffTargets.Index, lookupList, compareOptions: new CompareOptions() { IncludeUnmodified = true, Similarity = SimilarityOptions.None })
                                       .Select(d => Path.Combine(repo.Info.WorkingDirectory, d.Path))

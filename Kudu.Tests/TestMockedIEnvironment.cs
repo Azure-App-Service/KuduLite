@@ -12,6 +12,7 @@ namespace Kudu.Tests
         public string _RepositoryPath = "/site/repository";
         public string _WebRootPath = "/site/wwwroot";
         public string _DeploymentsPath = "/site/deployments";
+        public string _artifactsPath = "/site/artifacts";
         public string _DeploymentToolsPath = "/site/deployments/tools";
         public string _SiteExtensionSettingsPath = "/site/siteextensions";
         public string _DiagnosticsPath = "/site/diagnostics";
@@ -42,6 +43,7 @@ namespace Kudu.Tests
         public string RepositoryPath { get => _RepositoryPath; set => _RepositoryPath = value; }
         public string WebRootPath => _WebRootPath;
         public string DeploymentsPath => _DeploymentsPath;
+        public string ArtifactsPath => _artifactsPath;
         public string DeploymentToolsPath => _DeploymentToolsPath;
         public string SiteExtensionSettingsPath => _SiteExtensionSettingsPath;
         public string DiagnosticsPath => _DiagnosticsPath;

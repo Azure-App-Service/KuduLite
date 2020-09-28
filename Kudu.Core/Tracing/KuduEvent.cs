@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Kudu.Core.Tracing
 {
-    class KuduEvent
+    public class KuduEvent
     {
         public int level = (int)EventLevel.Informational;
         public string siteName = string.Empty;
