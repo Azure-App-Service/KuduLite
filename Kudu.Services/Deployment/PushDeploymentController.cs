@@ -69,6 +69,14 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("ZipPushDeploy"))
             {
+                string deploymentId = null;
+                Microsoft.Extensions.Primitives.StringValues idValues;
+
+                if (Request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
+                {
+                    deploymentId = idValues.ElementAt(0);
+                }
+
                 var deploymentInfo = new ArtifactDeploymentInfo(_environment, _traceFactory)
                 {
                     AllowDeploymentWhileScmDisabled = true,
@@ -79,6 +87,7 @@ namespace Kudu.Services.Deployment
                     TargetChangeset =
                         DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed zip file"),
                     CommitId = null,
+                    FixedDeploymentId = deploymentId,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipHandler,
                     DoFullBuildByDefault = false,
@@ -92,7 +101,6 @@ namespace Kudu.Services.Deployment
 
                 if (_settings.RunFromLocalZip())
                 {
-                    // This is used if the deployment is Run-From-Zip
                     // the name of the deployed file in D:\home\data\SitePackages\{name}.zip is the 
                     // timestamp in the format yyyMMddHHmmss. 
                     deploymentInfo.ArtifactFileName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
@@ -119,6 +127,14 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("ZipPushDeployViaUrl"))
             {
+                string deploymentId = null;
+                Microsoft.Extensions.Primitives.StringValues idValues;
+
+                if (Request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
+                {
+                    deploymentId = idValues.ElementAt(0);
+                }
+
                 string zipUrl = GetArtifactURLFromJSON(requestJson);
 
                 var deploymentInfo = new ArtifactDeploymentInfo(_environment, _traceFactory)
@@ -131,6 +147,7 @@ namespace Kudu.Services.Deployment
                     TargetChangeset =
                         DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed zip file"),
                     CommitId = null,
+                    FixedDeploymentId = deploymentId,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipHandler,
                     DoFullBuildByDefault = false,
@@ -157,6 +174,14 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("WarPushDeploy"))
             {
+                string deploymentId = null;
+                Microsoft.Extensions.Primitives.StringValues idValues;
+
+                if (Request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
+                {
+                    deploymentId = idValues.ElementAt(0);
+                }
+
                 var appName = HttpContext.Request.Query["name"].ToString();
                 if (string.IsNullOrWhiteSpace(appName))
                 {
@@ -177,6 +202,7 @@ namespace Kudu.Services.Deployment
                     TargetChangeset =
                         DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed war file"),
                     CommitId = null,
+                    FixedDeploymentId = deploymentId,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipFetch,
                     DoFullBuildByDefault = false,
@@ -226,6 +252,14 @@ namespace Kudu.Services.Deployment
 
             using (_tracer.Step(Constants.OneDeploy))
             {
+                string deploymentId = null;
+                Microsoft.Extensions.Primitives.StringValues idValues;
+
+                if (Request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
+                {
+                    deploymentId = idValues.ElementAt(0);
+                }
+
                 try
                 {
                     if (Request.MediaTypeContains("application/json"))
@@ -288,6 +322,7 @@ namespace Kudu.Services.Deployment
                     TargetRootPath = _environment.WebRootPath,
                     TargetChangeset = DeploymentManager.CreateTemporaryChangeSet(message: Constants.OneDeploy),
                     CommitId = null,
+                    FixedDeploymentId = deploymentId,
                     RepositoryType = RepositoryType.None,
                     RemoteURL = remoteArtifactUrl,
                     Fetch = OneDeployFetch,
@@ -472,7 +507,7 @@ namespace Kudu.Services.Deployment
                     {
                         _tracer.Step("Removing node_modules symlink");
                         // TODO: Add support to remove Unix Symlink File in DeleteFileSafe
-                        // FileSystemHelpers.DeleteFileSafe(nodeModulesSymlinkFile); 
+                        // FileSystemHelpers.DeleteFileSafe(nodeModulesSymlinkFile);
                         FileSystemHelpers.RemoveUnixSymlink(nodeModulesSymlinkFile, TimeSpan.FromSeconds(5));
                     }
                 }
@@ -810,7 +845,7 @@ namespace Kudu.Services.Deployment
         {
             string framework = System.Environment.GetEnvironmentVariable("FRAMEWORK");
             string preserveSymlinks = System.Environment.GetEnvironmentVariable("WEBSITE_ZIP_PRESERVE_SYMLINKS");
-            return !string.IsNullOrEmpty(framework) 
+            return !string.IsNullOrEmpty(framework)
                 && framework.Equals("node", StringComparison.OrdinalIgnoreCase)
                 && !string.IsNullOrEmpty(preserveSymlinks)
                 && preserveSymlinks.Equals("true", StringComparison.OrdinalIgnoreCase);

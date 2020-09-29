@@ -97,13 +97,13 @@ namespace Kudu.Core.Helpers
         {
             get { return System.Environment.GetEnvironmentVariable(Constants.WebSiteElasticScaleEnabled); }
         }
-        
+
         // WEBSITE_INSTANCE_ID not null or empty
         public static bool IsAzureEnvironment()
         {
             return !String.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId));
         }
-        
+
         // WEBSITE_HOME_STAMPNAME = waws-prod-bay-001
         private static string HomeStamp
         {
@@ -120,7 +120,7 @@ namespace Kudu.Core.Helpers
         /// It is written to require least dependencies but framework assemblies.
         /// Caller is responsible for synchronization.
         /// </summary>
-        [SuppressMessage("Microsoft.Usage", "CA1801:Parameter 'siteRestrictedJwt' is never used", 
+        [SuppressMessage("Microsoft.Usage", "CA1801:Parameter 'siteRestrictedJwt' is never used",
         Justification = "Method signature has to be the same because it's called via reflections from web-deploy")]
         public static async Task Run(string requestId, string siteRestrictedJwt, TraceListener tracer)
         {
@@ -152,8 +152,8 @@ namespace Kudu.Core.Helpers
             functionsPath = !string.IsNullOrEmpty(functionsPath)
                 ? functionsPath
                 : System.Environment.ExpandEnvironmentVariables(@"%HOME%\site\wwwroot");
-            
-            // Read host.json 
+
+            // Read host.json
             // Get HubName property for Durable Functions
             Dictionary<string, string> durableConfig = null;
             string hostJson = Path.Combine(functionsPath, Constants.FunctionsHostConfigFile);
@@ -176,7 +176,7 @@ namespace Kudu.Core.Helpers
                 routing["type"] = "routingTrigger";
                 triggers.Add(routing);
             }
-            
+
             // Add hubName, connection, to each Durable Functions trigger
             if (durableConfig != null)
             {
@@ -223,12 +223,12 @@ namespace Kudu.Core.Helpers
             // this couples with sync function triggers
             await SyncLogicAppJson(requestId, tracer);
         }
-        
+
         private static void ReadDurableConfig(string hostConfigPath, out Dictionary<string, string> config)
         {
             config = new Dictionary<string, string>();
             var json = JObject.Parse(File.ReadAllText(hostConfigPath));
-            
+
             JToken durableTaskValue;
             // we will allow case insensitivity given it is likely user hand edited
             // see https://github.com/Azure/azure-functions-durable-extension/issues/111
@@ -240,7 +240,7 @@ namespace Kudu.Core.Helpers
                 {
                     config.Add(Constants.HubName, nameValue.ToString());
                 }
-                
+
                 if (kvp.TryGetValue(Constants.DurableTaskStorageConnectionName, StringComparison.OrdinalIgnoreCase, out nameValue) && nameValue != null)
                 {
                     config.Add(Constants.DurableTaskStorageConnection, nameValue.ToString());
@@ -590,7 +590,7 @@ namespace Kudu.Core.Helpers
         }
 
         // Throws on failure
-        private static async Task PostAsync(string path, string requestId, string content = null)
+        public static async Task PostAsync(string path, string requestId, string content = null)
         {
             var hostOrAuthority = IsLocalHost ? HttpAuthority : HttpHost;
             var scheme = IsLocalHost ? "http" : "https";
@@ -858,7 +858,7 @@ namespace Kudu.Core.Helpers
                 tracer.TraceEvent(null, "PostDeployment", eventType, (int)eventType, format, args);
             }
         }
-        
+
         public static async Task UpdatePackageName(ArtifactDeploymentInfo deploymentInfo, IEnvironment environment, ILogger logger)
         {
             var packageNamePath = Path.Combine(environment.SitePackagesPath, Constants.PackageNameTxt);

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
+using Kudu.Contracts.Deployment;
 using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Helpers;
 using Kudu.Core.Hooks;
@@ -14,6 +15,7 @@ using Kudu.Core.Infrastructure;
 using Kudu.Core.LinuxConsumption;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
+using Newtonsoft.Json;
 
 namespace Kudu.Core.Deployment
 {
@@ -85,7 +87,7 @@ namespace Kudu.Core.Deployment
             {
                 return FetchDeploymentRequestResult.ForbiddenScmDisabled;
             }
-            
+
             // Else if this app is configured with a url in WEBSITE_USE_ZIP, then fail the deployment
             // since this is a RunFromZip site and the deployment has no chance of succeeding.
             // However, if this is a Linux Consumption function app, we allow KuduLite to change
@@ -154,8 +156,8 @@ namespace Kudu.Core.Deployment
             }
         }
 
-        public async Task PerformDeployment(DeploymentInfoBase deploymentInfo, 
-            IDisposable tempDeployment = null, 
+        public async Task PerformDeployment(DeploymentInfoBase deploymentInfo,
+            IDisposable tempDeployment = null,
             ChangeSet tempChangeSet = null)
         {
             DateTime currentMarkerFileUTC;
@@ -181,6 +183,7 @@ namespace Kudu.Core.Deployment
                                                     deploymentInfo.Deployer);
 
                     ILogger innerLogger = null;
+                    DeployStatusApiResult updateStatusObj = null;
                     try
                     {
                         ILogger logger = _deploymentManager.GetLogger(tempChangeSet.Id);
@@ -222,6 +225,12 @@ namespace Kudu.Core.Deployment
                             // Here, we don't need to update the working files, since we know Fetch left them in the correct state
                             // unless for GenericHandler where specific commitId is specified
                             bool deploySpecificCommitId = !String.IsNullOrEmpty(deploymentInfo.CommitId);
+                            updateStatusObj = new DeployStatusApiResult(Constants.BuildInProgress, Constants.BuildInProgress, deploymentInfo.FixedDeploymentId);
+                            if (PostDeploymentHelper.IsAzureEnvironment())
+                            {
+                                Console.WriteLine($" PostAsync - Trying to send {Constants.BuildInProgress} deployment status to {Constants.UpdateDeployStatusPath}");
+                                PostDeploymentHelper.PostAsync(Constants.UpdateDeployStatusPath, _environment.RequestId, JsonConvert.SerializeObject(updateStatusObj));
+                            }
 
                             await _deploymentManager.DeployAsync(
                                 repository,
@@ -231,6 +240,15 @@ namespace Kudu.Core.Deployment
                                 deploymentInfo: deploymentInfo,
                                 needFileUpdate: deploySpecificCommitId,
                                 fullBuildByDefault: deploymentInfo.DoFullBuildByDefault);
+
+                            if (PostDeploymentHelper.IsAzureEnvironment())
+                            {
+                                updateStatusObj.DeploymentStatus = Constants.BuildSuccessful;
+                                updateStatusObj.DeploymentStatusInt = Constants.BuildSuccessful;
+                                Console.WriteLine($" PostAsync - Trying to send {Constants.BuildSuccessful} deployment status to {Constants.UpdateDeployStatusPath}");
+                                PostDeploymentHelper.PostAsync(Constants.UpdateDeployStatusPath, _environment.RequestId, JsonConvert.SerializeObject(updateStatusObj));
+                            }
+
                         }
                     }
                     catch (Exception ex)
@@ -240,8 +258,18 @@ namespace Kudu.Core.Deployment
                             innerLogger.Log(ex);
                         }
 
-                        // In case the commit or perhaps fetch do no-op.
-                        if (deploymentInfo.TargetChangeset != null)
+                        if (PostDeploymentHelper.IsAzureEnvironment() && updateStatusObj != null)
+                        {
+                            // Set deployment status as failure if exception is thrown
+                            updateStatusObj.DeploymentStatus = Constants.BuildFailed;
+                            updateStatusObj.DeploymentStatusInt = Constants.BuildFailed;
+                            PostDeploymentHelper.PostAsync(Constants.UpdateDeployStatusPath, _environment.RequestId, JsonConvert.SerializeObject(updateStatusObj));
+                        }
+                        {
+
+                        }
+                            // In case the commit or perhaps fetch do no-op.
+                            if (deploymentInfo.TargetChangeset != null)
                         {
                             IDeploymentStatusFile statusFile = _status.Open(deploymentInfo.TargetChangeset.Id);
                             if (statusFile != null)
@@ -269,8 +297,8 @@ namespace Kudu.Core.Deployment
                     // if last change is not null and finish successfully, mean there was at least one deployoment happened
                     // since deployment is now done, trigger swap if enabled
                     await PostDeploymentHelper.PerformAutoSwap(
-                        _environment.RequestId, 
-                        new PostDeploymentTraceListener(_tracer, 
+                        _environment.RequestId,
+                        new PostDeploymentTraceListener(_tracer,
                         _deploymentManager.GetLogger(lastChange.Id)));
                 }
             }
@@ -314,7 +342,7 @@ namespace Kudu.Core.Deployment
             // Needed for deployments where deferred deployment is not allowed. Will be set to false if
             // lock contention occurs and AllowDeferredDeployment is false, otherwise true.
             var deploymentWillOccurTcs = new TaskCompletionSource<bool>();
-            
+
             // This task will be let out of scope intentionally
             var deploymentTask = Task.Run(() =>
             {
