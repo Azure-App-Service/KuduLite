@@ -225,9 +225,9 @@ namespace Kudu.Core.Deployment
                             // Here, we don't need to update the working files, since we know Fetch left them in the correct state
                             // unless for GenericHandler where specific commitId is specified
                             bool deploySpecificCommitId = !String.IsNullOrEmpty(deploymentInfo.CommitId);
-                            updateStatusObj = new DeployStatusApiResult(Constants.BuildInProgress, Constants.BuildInProgress, deploymentInfo.FixedDeploymentId);
-                            if (PostDeploymentHelper.IsAzureEnvironment())
+                            if (PostDeploymentHelper.IsAzureEnvironment() && deploymentInfo.FixedDeploymentId != null)
                             {
+                                updateStatusObj = new DeployStatusApiResult(Constants.BuildInProgress, Constants.BuildInProgress, deploymentInfo.FixedDeploymentId);
                                 Console.WriteLine($" PostAsync - Trying to send {Constants.BuildInProgress} deployment status to {Constants.UpdateDeployStatusPath}");
                                 PostDeploymentHelper.PostAsync(Constants.UpdateDeployStatusPath, _environment.RequestId, JsonConvert.SerializeObject(updateStatusObj));
                             }
@@ -241,7 +241,7 @@ namespace Kudu.Core.Deployment
                                 needFileUpdate: deploySpecificCommitId,
                                 fullBuildByDefault: deploymentInfo.DoFullBuildByDefault);
 
-                            if (PostDeploymentHelper.IsAzureEnvironment())
+                            if (updateStatusObj != null)
                             {
                                 updateStatusObj.DeploymentStatus = Constants.BuildSuccessful;
                                 updateStatusObj.DeploymentStatusInt = Constants.BuildSuccessful;
@@ -258,18 +258,17 @@ namespace Kudu.Core.Deployment
                             innerLogger.Log(ex);
                         }
 
-                        if (PostDeploymentHelper.IsAzureEnvironment() && updateStatusObj != null)
+                        if (updateStatusObj != null)
                         {
                             // Set deployment status as failure if exception is thrown
                             updateStatusObj.DeploymentStatus = Constants.BuildFailed;
                             updateStatusObj.DeploymentStatusInt = Constants.BuildFailed;
+                            Console.WriteLine($" PostAsync - Trying to send {Constants.BuildFailed} deployment status to {Constants.UpdateDeployStatusPath}");
                             PostDeploymentHelper.PostAsync(Constants.UpdateDeployStatusPath, _environment.RequestId, JsonConvert.SerializeObject(updateStatusObj));
                         }
-                        {
 
-                        }
-                            // In case the commit or perhaps fetch do no-op.
-                            if (deploymentInfo.TargetChangeset != null)
+                        // In case the commit or perhaps fetch do no-op.
+                        if (deploymentInfo.TargetChangeset != null)
                         {
                             IDeploymentStatusFile statusFile = _status.Open(deploymentInfo.TargetChangeset.Id);
                             if (statusFile != null)

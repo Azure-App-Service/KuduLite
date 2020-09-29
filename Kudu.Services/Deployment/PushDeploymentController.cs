@@ -101,6 +101,7 @@ namespace Kudu.Services.Deployment
 
                 if (_settings.RunFromLocalZip())
                 {
+                    // This is used if the deployment is Run-From-Zip
                     // the name of the deployed file in D:\home\data\SitePackages\{name}.zip is the 
                     // timestamp in the format yyyMMddHHmmss. 
                     deploymentInfo.ArtifactFileName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
