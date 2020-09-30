@@ -79,8 +79,20 @@ namespace Kudu.Services.Deployment
             [FromQuery] string deployer = DefaultDeployer,
             [FromQuery] string message = DefaultMessage)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
             using (_tracer.Step("ZipPushDeploy"))
             {
+                var buildHeader = false;
+
+                if(HttpContext.Request.Headers.ContainsKey("SCM_DO_BUILD_DURING_DEPLOYMENT"))
+                {
+                    string header = HttpContext.Request.Headers["SCM_DO_BUILD_DURING_DEPLOYMENT"];
+                    buildHeader = !String.IsNullOrEmpty(header) && (header == "1" || header.Equals(Boolean.TrueString, StringComparison.OrdinalIgnoreCase));
+                }
+
                 var deploymentInfo = new ZipDeploymentInfo(_environment, _traceFactory)
                 {
                     AllowDeploymentWhileScmDisabled = true,
@@ -97,7 +109,8 @@ namespace Kudu.Services.Deployment
                     Author = author,
                     AuthorEmail = authorEmail,
                     Message = message,
-                    ZipURL = null
+                    ZipURL = null,
+                    ShouldBuildArtifact = buildHeader
                 };
 
                 if (_settings.RunFromLocalZip())
@@ -125,6 +138,11 @@ namespace Kudu.Services.Deployment
             [FromQuery] string deployer = DefaultDeployer,
             [FromQuery] string message = DefaultMessage)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
             using (_tracer.Step("ZipPushDeployViaUrl"))
             {
                 string zipUrl = GetZipURLFromJSON(requestJson);
@@ -162,6 +180,11 @@ namespace Kudu.Services.Deployment
             [FromQuery] string deployer = DefaultDeployer,
             [FromQuery] string message = DefaultMessage)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
             using (_tracer.Step("WarPushDeploy"))
             {
                 var appName = HttpContext.Request.Query["name"].ToString();
@@ -235,6 +258,7 @@ namespace Kudu.Services.Deployment
             }
 
             var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
+
             if (_settings.RunFromLocalZip())
             {
                 await WriteSitePackageZip(deploymentInfo, _tracer);

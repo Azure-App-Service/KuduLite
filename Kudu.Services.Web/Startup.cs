@@ -84,8 +84,8 @@ namespace Kudu.Services.Web
             services.Configure<FormOptions>(options =>
             {
                 options.MultipartBodyLengthLimit = 52428800;
-                options.ValueCountLimit = 500000;
-                options.KeyLengthLimit = 500000;
+                options.ValueCountLimit = 1000000;
+                options.KeyLengthLimit = 1000000;
             });
 
             services.AddRouteAnalyzer();
@@ -518,6 +518,8 @@ namespace Kudu.Services.Web
                     new {controller = "Deployment", action = "GetLogEntry"});
                 routes.MapHttpRouteDual("one-deployment-log-details", "deployments/{id}/log/{logId}",
                     new {controller = "Deployment", action = "GetLogEntryDetails"});
+                routes.MapHttpRouteDual("update-container-tag", "app/update",
+                    new { controller = "Deployment", action = "UpdateContainerTag" });
 
                 // Deployment script
                 routes.MapRoute("get-deployment-script", "api/deploymentscript",

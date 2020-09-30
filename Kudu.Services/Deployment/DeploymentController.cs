@@ -30,6 +30,7 @@ using Microsoft.Net.Http.Headers;
 using Kudu.Services.Zip;
 using System.IO.Compression;
 using Kudu.Core.K8SE;
+using Org.BouncyCastle.Ocsp;
 
 namespace Kudu.Services.Deployment
 {
@@ -139,6 +140,11 @@ namespace Kudu.Services.Deployment
         [HttpPut]
         public async Task<IActionResult> Deploy(string id = null)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
             JObject jsonContent = GetJsonContent();
 
             // Just block here to read the json payload from the body
@@ -402,6 +408,11 @@ namespace Kudu.Services.Deployment
                 _tracer.Trace("Current Etag: {0}, Cached Etag: {1}", currentEtag, cachedDeployments.Etag);
             }
 
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
             // Avoid Caching when on K8
             if (EtagEquals(Request, currentEtag) && !K8SEDeploymentHelper.IsK8SEEnvironment())
             {
@@ -442,6 +453,11 @@ namespace Kudu.Services.Deployment
         [HttpGet]
         public IActionResult GetLogEntry(string id)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
             using (_tracer.Step("DeploymentService.GetLogEntry"))
             {
                 try
@@ -472,6 +488,11 @@ namespace Kudu.Services.Deployment
         [HttpGet]
         public IActionResult GetLogEntryDetails(string id, string logId)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
             using (_tracer.Step("DeploymentService.GetLogEntryDetails"))
             {
                 try
@@ -499,6 +520,11 @@ namespace Kudu.Services.Deployment
         [HttpGet]
         public IActionResult GetResult(string id)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
             using (_tracer.Step("DeploymentService.GetResult"))
             {
                 DeployResult pending;
@@ -556,6 +582,25 @@ namespace Kudu.Services.Deployment
 
             pending = null;
             return false;
+        }
+
+
+        /// <summary>
+        /// Updates Image tag of a custom container app when running in the K8SE Environment
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost]
+        public IActionResult UpdateContainerTag()
+        {
+            if(!K8SEDeploymentHelper.IsK8SEEnvironment()
+                || !Request.Headers.ContainsKey("LINUXFXVERSION")
+                || !Request.Headers["LINUXFXVERSION"].First().StartsWith("DOCKER|"))
+            {
+                return StatusCode(Microsoft.AspNetCore.Http.StatusCodes.Status405MethodNotAllowed);
+            }
+            string linuxFxVersion = Request.Headers["LINUXFXVERSION"].First().Replace("DOCKER|", "");
+            K8SEDeploymentHelper.UpdateImageTag(K8SEDeploymentHelper.GetAppName(Request.HttpContext), linuxFxVersion);
+            return Ok();
         }
 
         /// <summary>

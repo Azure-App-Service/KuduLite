@@ -56,11 +56,15 @@ namespace Kudu.Core.Deployment.Generator
             {
                 PreOryxBuild(context);
 
+                args.Flags = BuildOptimizationsFlags.UseExpressBuild;
+
                 string buildCommand = args.GenerateOryxBuildCommand(context, environment);
                 RunCommand(context, buildCommand, false, "Running oryx build...");
 
                 //
                 // Run express build setups if needed
+                //
+
                 if (args.Flags == BuildOptimizationsFlags.UseExpressBuild)
                 {
                     if (FunctionAppHelper.LooksLikeFunctionApp())
@@ -72,6 +76,10 @@ namespace Kudu.Core.Deployment.Generator
                         ExpressBuilder appServiceExpressBuilder = new ExpressBuilder(environment, settings, propertyProvider, sourcePath);
                         appServiceExpressBuilder.SetupExpressBuilderArtifacts(context.OutputPath, context, args);
                     }
+                }
+                else
+                {
+                    Console.WriteLine("No Express :(");
                 }
             }
             return Task.CompletedTask;

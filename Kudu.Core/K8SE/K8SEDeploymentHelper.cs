@@ -1,4 +1,5 @@
-﻿using Kudu.Contracts.Tracing;
+﻿using Kudu.Contracts.Deployment;
+using Kudu.Contracts.Tracing;
 using Kudu.Core.Deployment;
 using Kudu.Core.Functions;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Web;
 
 namespace Kudu.Core.K8SE
 {
@@ -44,14 +46,32 @@ namespace Kudu.Core.K8SE
         /// </summary>
         /// <param name="appName"></param>
         /// <returns></returns>
-        public static void UpdateBuildNumber(string appName, string buildNumber)
+        public static void UpdateBuildNumber(string appName, BuildMetadata buildMetadata)
+        {
+            var buildPatchJson = $"\"{HttpUtility.JavaScriptStringEncode(JsonConvert.SerializeObject(buildMetadata)).Replace("\\","\\\\")}\"";
+
+            var cmd = new StringBuilder();
+            BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
+            BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+            BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "buildMetadata");
+            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, buildPatchJson);
+            RunBuildCtlCommand(cmd.ToString(), "Updating build version...");
+        }
+
+        /// <summary>
+        /// Updates the Image Tag of the K8SE custom container app
+        /// </summary>
+        /// <param name="appName"></param>
+        /// <param name="imageTag">container image tag of the format registry/<image>:<tag></param>
+        /// <returns></returns>
+        public static void UpdateImageTag(string appName, string imageTag)
         {
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
-            BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "buildVersion");
-            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, buildNumber);
-            RunBuildCtlCommand(cmd.ToString(), "Updating build version...");
+            BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "appImage");
+            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, imageTag);
+            RunBuildCtlCommand(cmd.ToString(), "Updating image tag...");
         }
 
         /// <summary>
@@ -60,9 +80,9 @@ namespace Kudu.Core.K8SE
         /// <param name="appName">The app name to update</param>
         /// <param name="functionTriggers">The IEnumerable<ScaleTrigger></param>
         /// <param name="buildNumber">Build number to update</param>
-        public static void UpdateFunctionAppTriggers(string appName, IEnumerable<ScaleTrigger> functionTriggers, string buildNumber)
+        public static void UpdateFunctionAppTriggers(string appName, IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)
         {
-            var functionAppPatchJson = GetFunctionAppPatchJson(functionTriggers, buildNumber);
+            var functionAppPatchJson = GetFunctionAppPatchJson(functionTriggers, buildMetadata);
             if (string.IsNullOrEmpty(functionAppPatchJson))
             {
                 return;
@@ -118,18 +138,23 @@ namespace Kudu.Core.K8SE
                 // K8SE TODO: move this to resource map
                 throw new InvalidOperationException("Couldn't recognize AppName");
             }
-
-            Console.WriteLine("AppName :::::::: " + appName);
-
             return appName;
         }
 
-        private static string GetFunctionAppPatchJson(IEnumerable<ScaleTrigger> functionTriggers, string buildNumber)
+        private static string GetFunctionAppPatchJson(IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)
         {
             if (functionTriggers == null || !functionTriggers.Any())
             {
                 return null;
             }
+
+            if (buildMetadata == null )
+            {
+                return null;
+            }
+
+            var buildPatchJson = JsonConvert.SerializeObject(buildMetadata);
+            var buildmetaJsonString = JsonConvert.ToString(buildPatchJson);
 
             var patchAppJson = new PatchAppJson
             {
@@ -143,7 +168,7 @@ namespace Kudu.Core.K8SE
                     {
                         PackageRef = new PackageReference
                         {
-                            BuildVersion = buildNumber
+                            BuildVersion = buildmetaJsonString
                         }
                     }
                 }
