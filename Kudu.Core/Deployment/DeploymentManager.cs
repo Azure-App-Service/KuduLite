@@ -284,8 +284,8 @@ namespace Kudu.Core.Deployment
                             logger.Log(Resources.Log_TriggeringContainerRestart);
                         }
 
-                        string appName = _environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0];
-                        DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, deploymentInfo.RepositoryUrl, deploymentInfo.TargetPath);
+                        string appName = _environment.K8SEAppName;
+                        DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, deploymentInfo.RepositoryUrl);
                         logger.Log($"Deployment Pod Rollout Started! Use kubectl watch deplotment {appName} to monitor the rollout status");
                     }
                 }
