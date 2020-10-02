@@ -153,9 +153,6 @@ namespace Kudu.Core.K8SE
                 return null;
             }
 
-            var buildPatchJson = JsonConvert.SerializeObject(buildMetadata);
-            var buildmetaJsonString = JsonConvert.ToString(buildPatchJson);
-
             var patchAppJson = new PatchAppJson
             {
                 PatchSpec = new PatchSpec
@@ -168,7 +165,7 @@ namespace Kudu.Core.K8SE
                     {
                         PackageRef = new PackageReference
                         {
-                            BuildVersion = buildmetaJsonString
+                            BuildVersion = buildMetadata
                         }
                     }
                 }
