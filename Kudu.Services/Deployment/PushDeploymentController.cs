@@ -69,13 +69,7 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("ZipPushDeploy"))
             {
-                string deploymentId = null;
-                Microsoft.Extensions.Primitives.StringValues idValues;
-
-                if (Request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
-                {
-                    deploymentId = idValues.ElementAt(0);
-                }
+                string deploymentId = GetExternalDeploymentId(Request);
 
                 var deploymentInfo = new ArtifactDeploymentInfo(_environment, _traceFactory)
                 {
@@ -128,13 +122,7 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("ZipPushDeployViaUrl"))
             {
-                string deploymentId = null;
-                Microsoft.Extensions.Primitives.StringValues idValues;
-
-                if (Request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
-                {
-                    deploymentId = idValues.ElementAt(0);
-                }
+                string deploymentId = GetExternalDeploymentId(Request);
 
                 string zipUrl = GetArtifactURLFromJSON(requestJson);
 
@@ -175,13 +163,7 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("WarPushDeploy"))
             {
-                string deploymentId = null;
-                Microsoft.Extensions.Primitives.StringValues idValues;
-
-                if (Request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
-                {
-                    deploymentId = idValues.ElementAt(0);
-                }
+                string deploymentId = GetExternalDeploymentId(Request);
 
                 var appName = HttpContext.Request.Query["name"].ToString();
                 if (string.IsNullOrWhiteSpace(appName))
@@ -253,13 +235,7 @@ namespace Kudu.Services.Deployment
 
             using (_tracer.Step(Constants.OneDeploy))
             {
-                string deploymentId = null;
-                Microsoft.Extensions.Primitives.StringValues idValues;
-
-                if (Request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
-                {
-                    deploymentId = idValues.ElementAt(0);
-                }
+                string deploymentId = GetExternalDeploymentId(Request);
 
                 try
                 {
@@ -440,6 +416,19 @@ namespace Kudu.Services.Deployment
 
                 return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
             }
+        }
+
+        private static string GetExternalDeploymentId(HttpRequestMessage request)
+        {
+            string deploymentId = null;
+            Microsoft.Extensions.Primitives.StringValues idValues;
+
+            if (request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
+            {
+                deploymentId = idValues.ElementAt(0);
+            }
+
+            return deploymentId;
         }
 
         private ObjectResult StatusCode400(string message)
