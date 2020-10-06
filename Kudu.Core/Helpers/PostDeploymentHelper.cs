@@ -624,6 +624,18 @@ namespace Kudu.Core.Helpers
                     }
                 }
             }
+            catch(HttpRequestException ex)
+            {
+                if(path.Equals(Constants.UpdateDeployStatusPath, StringComparison.OrdinalIgnoreCase) && statusCode == HttpStatusCode.NotFound)
+                {
+                    // fail silently if 404 is encountered on
+                    Trace(TraceEventType.Warning, $"Call to {path} ended in 404. {ex}");
+                }
+                else
+                {
+                    throw;
+                }
+            }
             finally
             {
                 Trace(TraceEventType.Verbose, "End HttpPost, status: {0}", statusCode);
