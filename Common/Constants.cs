@@ -100,7 +100,7 @@ namespace Kudu
         public const string LogicAppUrlKey = "LOGICAPP_URL";
 
         public const string RestartApiPath = "/api/app/restart";
-        public const string UpdateDeployStatusPath = "/api/app/updatedeploystatus?forceRestart=false";
+        public const string UpdateDeployStatusPath = "/api/app/updatedeploystatus";
 
         // Deployment status API constants
         public const string BuildRequestReceived = "BuildRequestReceived";
