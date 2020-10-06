@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Web;
 
 namespace Kudu.Core.K8SE
 {
@@ -48,13 +47,11 @@ namespace Kudu.Core.K8SE
         /// <returns></returns>
         public static void UpdateBuildNumber(string appName, BuildMetadata buildMetadata)
         {
-            var buildPatchJson = $"\"{HttpUtility.JavaScriptStringEncode(JsonConvert.SerializeObject(buildMetadata)).Replace("\\","\\\\")}\"";
-
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
             BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "buildMetadata");
-            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, buildPatchJson);
+            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, $"\"{GetBuildMetadataStr(buildMetadata)}\"");
             RunBuildCtlCommand(cmd.ToString(), "Updating build version...");
         }
 
@@ -165,7 +162,7 @@ namespace Kudu.Core.K8SE
                     {
                         PackageRef = new PackageReference
                         {
-                            BuildVersion = buildMetadata
+                            BuildMetadata = GetBuildMetadataStr(buildMetadata),
                         }
                     }
                 }
@@ -174,6 +171,11 @@ namespace Kudu.Core.K8SE
             var patchJson = JsonConvert.SerializeObject(patchAppJson, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             var patchJsonString = JsonConvert.ToString(patchJson);
             return patchJsonString;
+        }
+
+        private static string GetBuildMetadataStr(BuildMetadata buildMetadata)
+        {
+            return $"{buildMetadata.AppName}|{buildMetadata.BuildVersion}|{System.Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes(JsonConvert.SerializeObject(buildMetadata)))}";
         }
     }
 }

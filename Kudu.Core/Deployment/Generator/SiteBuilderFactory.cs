@@ -80,14 +80,14 @@ namespace Kudu.Core.Deployment.Generator
                 return new RunFromZipSiteBuilder();
             }
 
-            if (!deploymentInfo.ShouldBuildArtifact && !settings.DoBuildDuringDeployment() && repository.RepositoryType != RepositoryType.Git)
+            if (deploymentInfo != null && (!deploymentInfo.ShouldBuildArtifact && !settings.DoBuildDuringDeployment() && repository.RepositoryType != RepositoryType.Git))
             {
                 var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
                 return new BasicBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);
             }
 
             string enableOryxBuild = System.Environment.GetEnvironmentVariable("ENABLE_ORYX_BUILD");
-            if (!string.IsNullOrEmpty(enableOryxBuild) && (deploymentInfo.ShouldBuildArtifact || settings.DoBuildDuringDeployment()))
+            if (!string.IsNullOrEmpty(enableOryxBuild) && (deploymentInfo != null && deploymentInfo.ShouldBuildArtifact) || settings.DoBuildDuringDeployment())
             {
                 if (StringUtils.IsTrueLike(enableOryxBuild))
                 {

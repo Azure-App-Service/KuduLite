@@ -6,7 +6,7 @@ namespace Kudu.Core.Functions
 
     public class PackageReference
     {
-        [JsonProperty(PropertyName = "buildVersion")]
-        public BuildMetadata BuildVersion { get; set; }
+        [JsonProperty(PropertyName = "buildMetadata")]
+        public string BuildMetadata { get; set; }
     }
 }
