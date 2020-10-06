@@ -227,7 +227,7 @@ namespace Kudu.Core.Deployment
                             bool deploySpecificCommitId = !String.IsNullOrEmpty(deploymentInfo.CommitId);
                             if (PostDeploymentHelper.IsAzureEnvironment() && deploymentInfo.FixedDeploymentId != null)
                             {
-                                updateStatusObj = new DeployStatusApiResult(Constants.BuildInProgress, Constants.BuildInProgress, deploymentInfo.FixedDeploymentId);
+                                updateStatusObj = new DeployStatusApiResult(Constants.BuildInProgress, deploymentInfo.FixedDeploymentId);
                                 Console.WriteLine($" PostAsync - Trying to send {Constants.BuildInProgress} deployment status to {Constants.UpdateDeployStatusPath}");
                                 PostDeploymentHelper.PostAsync(Constants.UpdateDeployStatusPath, _environment.RequestId, JsonConvert.SerializeObject(updateStatusObj));
                             }
@@ -244,7 +244,6 @@ namespace Kudu.Core.Deployment
                             if (updateStatusObj != null)
                             {
                                 updateStatusObj.DeploymentStatus = Constants.BuildSuccessful;
-                                updateStatusObj.DeploymentStatusInt = Constants.BuildSuccessful;
                                 Console.WriteLine($" PostAsync - Trying to send {Constants.BuildSuccessful} deployment status to {Constants.UpdateDeployStatusPath}");
                                 PostDeploymentHelper.PostAsync(Constants.UpdateDeployStatusPath, _environment.RequestId, JsonConvert.SerializeObject(updateStatusObj));
                             }
@@ -262,7 +261,6 @@ namespace Kudu.Core.Deployment
                         {
                             // Set deployment status as failure if exception is thrown
                             updateStatusObj.DeploymentStatus = Constants.BuildFailed;
-                            updateStatusObj.DeploymentStatusInt = Constants.BuildFailed;
                             Console.WriteLine($" PostAsync - Trying to send {Constants.BuildFailed} deployment status to {Constants.UpdateDeployStatusPath}");
                             PostDeploymentHelper.PostAsync(Constants.UpdateDeployStatusPath, _environment.RequestId, JsonConvert.SerializeObject(updateStatusObj));
                         }

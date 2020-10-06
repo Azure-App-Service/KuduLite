@@ -103,11 +103,12 @@ namespace Kudu
         public const string UpdateDeployStatusPath = "/api/app/updatedeploystatus";
 
         // Deployment status API constants
-        public const int BuildRequestReceived = 0;
-        public const int BuildPending = 1;
-        public const int BuildInProgress = 2;
-        public const int BuildSuccessful = 3;
-        public const int BuildFailed = -1;
+        public const string BuildRequestReceived = "BuildRequestReceived";
+        public const string BuildPending = "BuildPending";
+        public const string BuildInProgress = "BuildInProgress";
+        public const string BuildSuccessful = "BuildSuccessful";
+        public const string PostBuildRestartRequired = "PostBuildRestartRequired";
+        public const string BuildFailed = "BuildFailed";
 
         public const string SiteExtensionProvisioningStateCreated = "Created";
         public const string SiteExtensionProvisioningStateAccepted = "Accepted";
