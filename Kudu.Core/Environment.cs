@@ -410,7 +410,7 @@ namespace Kudu.Core
             private set;
         }
 
-        public bool IsOnLinuxConsumption
+        public static bool IsOnLinuxConsumption
         {
             get
             {

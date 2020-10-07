@@ -58,14 +58,15 @@
             <strong>Build</strong>
         </div>
         <div>
-                @version
+            @version
 
-                @if (!string.IsNullOrEmpty(sha))
-                {
-                    <text>
-                    (<a id="sha" href="https://github.com/ProjectKudu/kudu/commit/@sha">@sha.Substring(0, 10)</a>)
-                    </text>
-                }
+            @if (!string.IsNullOrEmpty(sha))
+            {
+                string githubProjectRoot = Kudu.Core.Helpers.OSDetector.IsOnWindows() ? "ProjectKudu/kudu" : "Azure-App-Service/KuduLite";
+                <text>
+                    (<a id="sha" href="https://github.com/@githubProjectRoot/commit/@sha">@sha.Substring(0, 10)</a>)
+                </text>
+            }
         </div>
     </div>
     <div class="row">
@@ -100,24 +101,30 @@
         <li>
             <a href="api/deployments">Deployments</a>
         </li>
-        <li>
-            <a href="api/scm/info">Source control info</a>
-        </li>
-        <li>
-            <a href="api/vfs">Files</a>
-        </li>
-        <li>
-            <a href="api/logs/docker">Current Docker logs</a> (<a href="api/logs/docker/zip">Download as zip</a>)
-        </li>
+        @if (!Kudu.Core.Environment.IsOnLinuxConsumption)
+        {
+            <li>
+                <a href="api/scm/info">Source control info</a>
+            </li>
+            <li>
+                <a href="api/vfs">Files</a>
+            </li>
+            <li>
+                <a href="api/logs/docker">Current Docker logs</a> (<a href="api/logs/docker/zip">Download as zip</a>)
+            </li>
+        }
     </ul>
-    <h3>Browse Directory</h3>
-    <ul>
-        <li>
-            <a href="deploymentlogs">Deployment Logs</a>
-        </li>
-        <li>
-            <a href="wwwroot">Site wwwroot</a>
-        </li>
-    </ul>
+    @if (!Kudu.Core.Environment.IsOnLinuxConsumption)
+    {
+        <h3>Browse Directory</h3>
+        <ul>
+            <li>
+                <a href="deploymentlogs">Deployment Logs</a>
+            </li>
+            <li>
+                <a href="wwwroot">Site wwwroot</a>
+            </li>
+        </ul>
+    }
     <h3>More information about Kudu can be found on the <a href="https://github.com/projectkudu/kudu/wiki">wiki</a>.</h3>
 </div>
