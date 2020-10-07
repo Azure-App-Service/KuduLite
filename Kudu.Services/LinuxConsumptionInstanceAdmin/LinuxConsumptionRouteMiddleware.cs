@@ -40,7 +40,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         };
 
         private readonly RequestDelegate _next;
-        private readonly HashSet<PathString> _allowedPathString;
+        private readonly HashSet<PathString> _allowedPaths;
         private const string DisguisedHostHeader = "DISGUISED-HOST";
         private const string HostHeader = "HOST";
         private const string ForwardedProtocolHeader = "X-Forwarded-Proto";
@@ -56,10 +56,10 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         public LinuxConsumptionRouteMiddleware(RequestDelegate next)
         {
             _next = next;
-            _allowedPathString = new HashSet<PathString>(Whitelist.Count);
+            _allowedPaths = new HashSet<PathString>(Whitelist.Count);
             foreach (string pathString in Whitelist)
             {
-                _allowedPathString.Add(new PathString(pathString));
+                _allowedPaths.Add(new PathString(pathString));
             }
         }
 
@@ -149,7 +149,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             if (IsHomePageRoute(routePath)) {
                 return true;
             }
-            return _allowedPathString.Any((ps) => routePath.StartsWithSegments(ps));
+            return _allowedPaths.Any((ps) => routePath.StartsWithSegments(ps));
         }
 
         private bool IsHomePageRoute(PathString routePath)
