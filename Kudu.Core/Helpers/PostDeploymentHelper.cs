@@ -596,27 +596,19 @@ namespace Kudu.Core.Helpers
             var scheme = IsLocalHost ? "http" : "https";
             var ipAddress = await GetAlternativeIPAddress(hostOrAuthority);
             var statusCode = default(HttpStatusCode);
-            Console.WriteLine($" PostAsync New - Inside, checking ipaddress null - {ipAddress == null}");
+            string resContent = "";
             try
             {
-
-                var httpClientHandler = new HttpClientHandler();
-
-                httpClientHandler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true; // DEBUGGING ONLY
-
-                var httpClient = new HttpClient(httpClientHandler);
-                using (var client = httpClient) //Purva this should be var client = HttpClientFactory()
+                using (var client = HttpClientFactory())
                 {
                     if (ipAddress == null)
                     {
                         Trace(TraceEventType.Verbose, "Begin HttpPost {0}://{1}{2}, x-ms-request-id: {3}", scheme, hostOrAuthority, path, requestId);
-                        Console.WriteLine($"Begin HttpPost with ipAddress==null {scheme}://{hostOrAuthority}{path}, x-ms-request-id: {requestId}");
                         client.BaseAddress = new Uri(string.Format("{0}://{1}", scheme, hostOrAuthority));
                     }
                     else
                     {
                         Trace(TraceEventType.Verbose, "Begin HttpPost {0}://{1}{2}, host: {3}, x-ms-request-id: {4}", scheme, ipAddress, path, hostOrAuthority, requestId);
-                        Console.WriteLine($"Begin HttpPost with ipAddress!=null {scheme}://{ipAddress}{path}, host: {hostOrAuthority}, x-ms-request-id: {requestId}");
                         client.BaseAddress = new Uri(string.Format("{0}://{1}", scheme, ipAddress));
                         client.DefaultRequestHeaders.Host = hostOrAuthority;
                     }
@@ -626,14 +618,25 @@ namespace Kudu.Core.Helpers
                     client.DefaultRequestHeaders.Add(Constants.RequestIdHeader, requestId);
 
                     var payload = new StringContent(content ?? string.Empty, Encoding.UTF8, "application/json");
-                    Console.WriteLine($" PostAsync - sending request {path}");
-
-                    ServicePointManager.ServerCertificateValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
                     using (var response = await client.PostAsync(path, payload))
                     {
-                        Console.WriteLine($" PostAsync - got response");
                         statusCode = response.StatusCode;
+                        if (response.Content != null)
+                        {
+                            resContent = response.Content.ReadAsStringAsync().Result;
+                        }
+
                         response.EnsureSuccessStatusCode();
+                    }
+
+                    if (path.Equals(Constants.UpdateDeployStatusPath) && resContent.Contains("Excessive SCM Site operation requests. Retry after 5 seconds"))
+                    {
+                        // Request was throttled throw an exception
+                        // If max retries aren't reached, this request will be retried
+                        Trace(TraceEventType.Information, $"Call to {path} was throttled. Setting statusCode to {HttpStatusCode.NotAcceptable}");
+
+                        statusCode = HttpStatusCode.NotAcceptable;
+                        throw new HttpRequestException();
                     }
                 }
             }
