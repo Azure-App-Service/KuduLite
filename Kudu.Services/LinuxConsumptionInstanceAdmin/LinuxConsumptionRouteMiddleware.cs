@@ -40,7 +40,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         };
 
         private readonly RequestDelegate _next;
-        private readonly HashSet<PathString> _whitelistedPathString;
+        private readonly HashSet<PathString> _allowedPathString;
         private const string DisguisedHostHeader = "DISGUISED-HOST";
         private const string HostHeader = "HOST";
         private const string ForwardedProtocolHeader = "X-Forwarded-Proto";
@@ -56,10 +56,10 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         public LinuxConsumptionRouteMiddleware(RequestDelegate next)
         {
             _next = next;
-            _whitelistedPathString = new HashSet<PathString>(Whitelist.Count);
+            _allowedPathString = new HashSet<PathString>(Whitelist.Count);
             foreach (string pathString in Whitelist)
             {
-                _whitelistedPathString.Add(new PathString(pathString));
+                _allowedPathString.Add(new PathString(pathString));
             }
         }
 
@@ -91,7 +91,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             }
 
             // Step 2: check if the request endpoint is enabled in Linux Consumption
-            if (!IsRouteWhitelisted(context.Request.Path))
+            if (!IsRouteAllowed(context.Request.Path))
             {
                 context.Response.StatusCode = 404;
                 KuduEventGenerator.Log().ApiEvent(
@@ -141,16 +141,15 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                     return;
                 }
             }
-
             await _next.Invoke(context);
         }
 
-        private bool IsRouteWhitelisted(PathString routePath)
+        private bool IsRouteAllowed(PathString routePath)
         {
             if (IsHomePageRoute(routePath)) {
                 return true;
             }
-            return _whitelistedPathString.Any((ps) => routePath.StartsWithSegments(ps));
+            return _allowedPathString.Any((ps) => routePath.StartsWithSegments(ps));
         }
 
         private bool IsHomePageRoute(PathString routePath)

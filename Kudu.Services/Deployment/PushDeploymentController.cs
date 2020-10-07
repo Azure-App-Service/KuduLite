@@ -87,7 +87,7 @@ namespace Kudu.Services.Deployment
                     Message = message,
                     RemoteURL = null,
                     DoSyncTriggers = syncTriggers,
-                    OverwriteWebsiteRunFromPackage = overwriteWebsiteRunFromPackage && Kudu.Core.Environment.IsOnLinuxConsumption
+                    OverwriteWebsiteRunFromPackage = overwriteWebsiteRunFromPackage && _environment.IsOnLinuxConsumption
                 };
 
                 if (_settings.RunFromLocalZip())
@@ -139,7 +139,7 @@ namespace Kudu.Services.Deployment
                     Message = message,
                     RemoteURL = zipUrl,
                     DoSyncTriggers = syncTriggers,
-                    OverwriteWebsiteRunFromPackage = overwriteWebsiteRunFromPackage && Kudu.Core.Environment.IsOnLinuxConsumption
+                    OverwriteWebsiteRunFromPackage = overwriteWebsiteRunFromPackage && _environment.IsOnLinuxConsumption
                 };
                 return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
             }

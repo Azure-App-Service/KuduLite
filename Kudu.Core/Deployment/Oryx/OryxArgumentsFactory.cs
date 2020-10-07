@@ -8,7 +8,7 @@ namespace Kudu.Core.Deployment.Oryx
         {
             if (FunctionAppHelper.LooksLikeFunctionApp())
             {
-                if (Kudu.Core.Environment.IsOnLinuxConsumption)
+                if (env.IsOnLinuxConsumption)
                 {
                     return new LinuxConsumptionFunctionAppOryxArguments();
                 } else {

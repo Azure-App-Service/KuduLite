@@ -718,7 +718,7 @@ namespace Kudu.Core.Deployment
                         builder.PostBuild(context);
                         await RestartMainSiteIfNeeded(tracer, logger, deploymentInfo);
 
-                        if (FunctionAppHelper.LooksLikeFunctionApp() && Kudu.Core.Environment.IsOnLinuxConsumption)
+                        if (FunctionAppHelper.LooksLikeFunctionApp() && _environment.IsOnLinuxConsumption)
                         {
                             // A Linux consumption function app deployment requires (no matter whether it is oryx build or basic deployment)
                             // 1. packaging the output folder

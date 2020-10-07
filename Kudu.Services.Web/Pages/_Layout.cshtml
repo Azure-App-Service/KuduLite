@@ -65,15 +65,7 @@
                 <a class="navbar-brand" href="~/" style="padding-top: 12px;color:white !important;"><img src="/Content/Images/AppService.png" style="width: 30px; height: 30px"> Azure App Service </a>
             </div>
             <div class="collapse navbar-collapse">
-                @if (!Kudu.Core.Environment.IsOnLinuxConsumption)
-                {
-                    <ul class="nav navbar-nav">
-                        <li><a class="navbar-brand" style="padding-top: 17px" href="~/Env">Environment</a></li>
-                        <li><a class="navbar-brand" style="padding-top: 17px" href="~/webssh/host">SSH</a></li>
-                        <li><a class="navbar-brand" style="padding-top: 17px" href="~/DebugConsole">Bash</a></li>
-                        <li><a class="navbar-brand" style="padding-top: 17px" href="~/api/logstream" title="If no log events are being generated the page may not load.">Log stream</a></li>
-                    </ul>
-                }
+                <partial name="_Layout_NavigationBar" />
                 @{
                     var email = httpContextAccessor.HttpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].ToString();
                     var displayName = httpContextAccessor.HttpContext.Request.Headers["X-MS-CLIENT-DISPLAY-NAME"].ToString() ?? email;

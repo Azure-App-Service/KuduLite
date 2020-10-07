@@ -20,7 +20,7 @@ namespace Kudu.Services.Infrastructure.Authorization
             options.AddPolicy(AuthPolicyNames.LinuxConsumptionRestriction, p =>
             {
                 p.AddInstanceAuthenticationSchemes();
-                if (Kudu.Core.Environment.IsOnLinuxConsumption)
+                if (environment.IsOnLinuxConsumption)
                 {
                     p.AddRequirements(new AuthLevelRequirement(AuthorizationLevel.Admin));
                 }

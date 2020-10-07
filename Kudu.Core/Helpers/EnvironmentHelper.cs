@@ -42,5 +42,14 @@ namespace Kudu.Core.Helpers
             }
             return isXenon;
         }
+
+        // Check if an app is a Linux Consumption function app
+        // This method is similar to 
+        public static bool IsOnLinuxConsumption()
+        {
+            bool isOnAppService = !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId));
+            bool isOnLinuxContainer = !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.ContainerName));
+            return isOnLinuxContainer && !isOnAppService;
+        }
     }
 }
