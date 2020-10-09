@@ -106,7 +106,7 @@ namespace Kudu.Core.Deployment
         
         // Allows the use of a caller-provided GUID for the deployment, rather than
         // a commit hash or a randomly-generated identifier.
-        public string FixedDeploymentId { get; set; } = null;
+        public string DeploymentId { get; set; } = null;
 
         // This config is for Linux Consumption function app only
         // Allow artifact generation even when WEBSITE_RUN_FROM_PACKAGE is set to a Url (RunFromRemoteZip)
