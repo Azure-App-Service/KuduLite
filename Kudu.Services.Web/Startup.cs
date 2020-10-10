@@ -138,7 +138,7 @@ namespace Kudu.Services.Web
             services.AddSingleton(_ => new HttpClient());
             services.AddSingleton<IMeshServiceClient>(s =>
             {
-                if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
+                if (environment.IsOnLinuxConsumption)
                 {
                     var httpClient = s.GetService<HttpClient>();
                     var systemEnvironment = s.GetService<ISystemEnvironment>();
@@ -151,7 +151,7 @@ namespace Kudu.Services.Web
             });
             services.AddSingleton<IMeshPersistentFileSystem>(s =>
             {
-                if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
+                if (environment.IsOnLinuxConsumption)
                 {
                     var meshServiceClient = s.GetService<IMeshServiceClient>();
                     var storageClient = s.GetService<IStorageClient>();
