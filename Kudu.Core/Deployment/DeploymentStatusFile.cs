@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Core.Infrastructure;
@@ -32,6 +33,15 @@ namespace Kudu.Core.Deployment
             {
                 Initialize(document);
             }
+
+            Task ensureLogFileExists = Task.Run(() =>
+                    OperationManager.Attempt(() =>
+                    {
+                        if (!FileSystemHelpers.FileExists(_statusFile))
+                        {
+                            throw new FileNotFoundException("Status file doesn't exist. Will wait for 1 second and retry");
+                        }
+                    }, 3, 1 * 1000));
         }
 
         public static DeploymentStatusFile Create(string id, IEnvironment environment, IOperationLock statusLock)

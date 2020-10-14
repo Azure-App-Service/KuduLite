@@ -1,7 +1,10 @@
-﻿using Kudu.Core.Tracing;
+﻿using Kudu.Core.Infrastructure;
+using Kudu.Core.Tracing;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Kudu.Core.Deployment
 {
@@ -49,6 +52,17 @@ namespace Kudu.Core.Deployment
         {
             try
             {
+                Task ensureLogFileExists = Task.Run(() => 
+                    OperationManager.Attempt(() =>
+                    {
+                        if (!FileSystemHelpers.FileExists(_path))
+                        {
+                            throw new FileNotFoundException();
+                        }
+                    }, 3, 5 * 1000));
+
+                ensureLogFileExists.Wait();
+
                 value = SanitizeValue(value);
                 lock(DocumentLock)
                 {
