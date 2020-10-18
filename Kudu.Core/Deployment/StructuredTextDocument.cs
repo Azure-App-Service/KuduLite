@@ -1,7 +1,10 @@
 ﻿using Kudu.Core.Infrastructure;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Kudu.Core.Deployment
 {
@@ -40,6 +43,24 @@ namespace Kudu.Core.Deployment
         /// <param name="depth">Determines the Parent/Child relationship between log entries. depth = 0 is parent for depth = 1</param>
         public void Write(T value, int depth)
         {
+            try
+            {
+                // If there is a file, lets see if someone has an open handle to it, or if it's
+                // just not visible on cifs share for the local instance yet, we wait for a
+                // second in such case
+                using (FileSystemHelpers.OpenFile(_path, FileMode.Open, FileAccess.Read, FileShare.Read)) { }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Wait for 1 seconds
+                Thread.Sleep(500);
+            }
+            catch(FileNotFoundException)
+            {
+                // Wait for 1 millsecond
+                Thread.Sleep(500);
+            }
+
             var stringValue = _serializer(value);
             ValidateStringMessage(stringValue);
 

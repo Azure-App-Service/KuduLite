@@ -52,16 +52,6 @@ namespace Kudu.Core.Deployment
         {
             try
             {
-                Task ensureLogFileExists = Task.Run(() => 
-                    OperationManager.Attempt(() =>
-                    {
-                        if (!FileSystemHelpers.FileExists(_path))
-                        {
-                            throw new FileNotFoundException();
-                        }
-                    }, 3, 5 * 1000));
-
-                ensureLogFileExists.Wait();
 
                 value = SanitizeValue(value);
                 lock(DocumentLock)
