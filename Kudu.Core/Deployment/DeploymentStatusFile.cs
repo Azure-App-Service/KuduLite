@@ -71,11 +71,7 @@ namespace Kudu.Core.Deployment
 
                 try
                 {
-                    XDocument document = null;
-                    using (var stream = FileSystemHelpers.OpenRead(path))
-                    {
-                        document = XDocument.Load(stream);
-                    }
+                    XDocument document = OperationManager.Attempt(() => LoadXmlStatusFile(path), 3, 1000);
                     return new DeploymentStatusFile(id, environment, statusLock, document);
                 }
                 catch (Exception ex)
@@ -90,6 +86,16 @@ namespace Kudu.Core.Deployment
                     return null;
                 }
             }, "Getting deployment status", DeploymentStatusManager.LockTimeout);
+        }
+
+        private static XDocument LoadXmlStatusFile(string path)
+        {
+            XDocument document = null;
+            using (var stream = FileSystemHelpers.OpenRead(path))
+            {
+                document = XDocument.Load(stream);
+            }
+            return document;
         }
 
         private void Initialize(XDocument document)

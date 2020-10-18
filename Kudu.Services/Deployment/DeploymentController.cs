@@ -488,6 +488,7 @@ namespace Kudu.Services.Deployment
                 if (IsLatestPendingDeployment(ref id, out pending))
                 {
                     Response.GetTypedHeaders().Location = new Uri(Request.GetDisplayUrl());
+                    pending.Status = DeployStatus.Pending;
                     return Accepted(ArmUtils.AddEnvelopeOnArmRequest(pending, Request));
                 }
 
@@ -498,6 +499,11 @@ namespace Kudu.Services.Deployment
                     return NotFound(String.Format(CultureInfo.CurrentCulture,
                                                                        Resources.Error_DeploymentNotFound,
                                                                        id));
+                }
+
+                if(_deploymentLock.IsHeld)
+                {
+                    result.Status = DeployStatus.Pending;
                 }
 
                 Uri baseUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(Request), new Uri(Request.GetDisplayUrl()).AbsolutePath);

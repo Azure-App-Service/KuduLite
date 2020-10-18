@@ -417,12 +417,12 @@ namespace Kudu.Core.Deployment
             {
                 var toDelete = new List<DeployResult>();
                 // If deploying don't purge the temporary deployments
-                if(!IsDeploying)
+                if (!IsDeploying)
                 {
                     toDelete.AddRange(GetPurgeTemporaryDeployments(results));
+                    toDelete.AddRange(GetPurgeFailedDeployments(results));
+                    toDelete.AddRange(GetPurgeObsoleteDeployments(results));
                 }
-                toDelete.AddRange(GetPurgeFailedDeployments(results));
-                toDelete.AddRange(GetPurgeObsoleteDeployments(results));
                 
                 if (toDelete.Any())
                 {
