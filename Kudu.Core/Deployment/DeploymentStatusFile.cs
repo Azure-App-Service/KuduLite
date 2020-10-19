@@ -34,6 +34,7 @@ namespace Kudu.Core.Deployment
                 Initialize(document);
             }
 
+            // Ensure that the status file is created before we enter this code block
             Task ensureLogFileExists = Task.Run(() =>
                     OperationManager.Attempt(() =>
                     {
@@ -71,6 +72,8 @@ namespace Kudu.Core.Deployment
 
                 try
                 {
+                    // In case we read status file in middle of a write, attempt to
+                    // read it again. Don't fail the status get request
                     XDocument document = OperationManager.Attempt(() => LoadXmlStatusFile(path), 5, 250);
                     return new DeploymentStatusFile(id, environment, statusLock, document);
                 }

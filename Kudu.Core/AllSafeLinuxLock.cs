@@ -19,7 +19,7 @@ namespace Kudu.Core
     {
         private ITraceFactory _traceFactory;
         private static readonly string locksPath = "/home/site/locks";
-	    private const int lockTimeout = 1200; //in seconds
+	    private const int defaultLockTimeout = 1500; //in seconds
         private string defaultMsg = Resources.DeploymentLockOccMsg;
         private static string LockExpiry = null;
         private string Msg;
@@ -66,8 +66,12 @@ namespace Kudu.Core
         private static bool IsLockValid()
         {
             if (!FileSystemHelpers.FileExists(locksPath+"/deployment/info.lock")) return false;
+
             // No need to serialize lock expiry object again until the
-            // lock expiry period
+            // lock expiry period, we would use local cache instead
+            // At this point we have already checked for the folder presence
+            // hence to avoid the I/O, don't serialize the lock info until
+            // folder is cleaned up
             if(!string.IsNullOrEmpty(LockExpiry))
             {
                 if(Convert.ToDateTime(LockExpiry) > DateTime.Now)
@@ -102,14 +106,12 @@ namespace Kudu.Core
         private static void CreateLockInfoFile(string operationName)
         {
             FileSystemHelpers.CreateDirectory(locksPath+"/deployment");
-            //Console.WriteLine("CreatingLockDir - Created Actually");
             var lockInfo = new LinuxLockInfo();
             lockInfo.heldByPID = Process.GetCurrentProcess().Id;
             lockInfo.heldByTID = Thread.CurrentThread.ManagedThreadId;
             lockInfo.heldByWorker = System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId);
             lockInfo.heldByOp = operationName;
-            lockInfo.lockExpiry = DateTime.UtcNow.AddSeconds(lockTimeout);
-            //Console.WriteLine("CreatingLockDir - LockInfoObj : "+lockInfo);
+            lockInfo.lockExpiry = DateTime.UtcNow.AddSeconds(defaultLockTimeout);
             var json = JsonConvert.SerializeObject(lockInfo);
             FileSystemHelpers.WriteAllText(locksPath+"/deployment/info.lock",json);
         }
