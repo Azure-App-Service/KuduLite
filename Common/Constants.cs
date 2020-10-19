@@ -100,6 +100,15 @@ namespace Kudu
         public const string LogicAppUrlKey = "LOGICAPP_URL";
 
         public const string RestartApiPath = "/api/app/restart";
+        public const string UpdateDeployStatusPath = "/api/app/updatedeploystatus";
+
+        // Deployment status API constants
+        public const string BuildRequestReceived = "BuildRequestReceived";
+        public const string BuildPending = "BuildPending";
+        public const string BuildInProgress = "BuildInProgress";
+        public const string BuildSuccessful = "BuildSuccessful";
+        public const string PostBuildRestartRequired = "PostBuildRestartRequired";
+        public const string BuildFailed = "BuildFailed";
 
         public const string SiteExtensionProvisioningStateCreated = "Created";
         public const string SiteExtensionProvisioningStateAccepted = "Accepted";
@@ -167,5 +176,7 @@ namespace Kudu
         public const string EnablePersistentStorage = "ENABLE_KUDU_PERSISTENT_STORAGE";
 
         public const string OneDeploy = "OneDeploy";
+
+        public const string ScmDeploymentIdHeader = "SCM-DEPLOYMENT-ID";
     }
 }

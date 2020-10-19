@@ -103,6 +103,10 @@ namespace Kudu.Core.Deployment
         // If DoSyncTriggers is set to true, the after Linux Consumption function app deployment,
         // will initiate a POST request to http://appname.azurewebsites.net/admin/host/synctriggers
         public bool DoSyncTriggers { get; set; }
+        
+        // Allows the use of a caller-provided GUID for the deployment, rather than
+        // a commit hash or a randomly-generated identifier.
+        public string ExternalDeploymentId { get; set; } = null;
 
         // This config is for Linux Consumption function app only
         // Allow artifact generation even when WEBSITE_RUN_FROM_PACKAGE is set to a Url (RunFromRemoteZip)

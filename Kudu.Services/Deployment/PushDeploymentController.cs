@@ -69,6 +69,8 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("ZipPushDeploy"))
             {
+                string deploymentId = GetExternalDeploymentId(Request);
+
                 var deploymentInfo = new ArtifactDeploymentInfo(_environment, _traceFactory)
                 {
                     AllowDeploymentWhileScmDisabled = true,
@@ -79,6 +81,7 @@ namespace Kudu.Services.Deployment
                     TargetChangeset =
                         DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed zip file"),
                     CommitId = null,
+                    ExternalDeploymentId = deploymentId,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipHandler,
                     DoFullBuildByDefault = false,
@@ -93,8 +96,8 @@ namespace Kudu.Services.Deployment
                 if (_settings.RunFromLocalZip())
                 {
                     // This is used if the deployment is Run-From-Zip
-                    // the name of the deployed file in D:\home\data\SitePackages\{name}.zip is the 
-                    // timestamp in the format yyyMMddHHmmss. 
+                    // the name of the deployed file in D:\home\data\SitePackages\{name}.zip is the
+                    // timestamp in the format yyyMMddHHmmss.
                     deploymentInfo.ArtifactFileName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
                     // This is also for Run-From-Zip where we need to extract the triggers
                     // for post deployment sync triggers.
@@ -119,6 +122,8 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("ZipPushDeployViaUrl"))
             {
+                string deploymentId = GetExternalDeploymentId(Request);
+
                 string zipUrl = GetArtifactURLFromJSON(requestJson);
 
                 var deploymentInfo = new ArtifactDeploymentInfo(_environment, _traceFactory)
@@ -131,6 +136,7 @@ namespace Kudu.Services.Deployment
                     TargetChangeset =
                         DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed zip file"),
                     CommitId = null,
+                    ExternalDeploymentId = deploymentId,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipHandler,
                     DoFullBuildByDefault = false,
@@ -157,6 +163,8 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("WarPushDeploy"))
             {
+                string deploymentId = GetExternalDeploymentId(Request);
+
                 var appName = HttpContext.Request.Query["name"].ToString();
                 if (string.IsNullOrWhiteSpace(appName))
                 {
@@ -177,6 +185,7 @@ namespace Kudu.Services.Deployment
                     TargetChangeset =
                         DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed war file"),
                     CommitId = null,
+                    ExternalDeploymentId = deploymentId,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipFetch,
                     DoFullBuildByDefault = false,
@@ -205,7 +214,7 @@ namespace Kudu.Services.Deployment
         //                Request body should contain JSON with configuration as well as the artifact location
         //                Example: { "properties": { "type": "war", "packageUri": "http://foo/bar.war?accessToken=123" } }
         //
-        // Note: As summarized in #1 and #2 above, request body can be either binary content or JSON. 
+        // Note: As summarized in #1 and #2 above, request body can be either binary content or JSON.
         // We interpret the content based on the Content-Type.
         // To keep things simple, we don't use decorated parameters to automatically ready the Request body.
         //
@@ -226,6 +235,8 @@ namespace Kudu.Services.Deployment
 
             using (_tracer.Step(Constants.OneDeploy))
             {
+                string deploymentId = GetExternalDeploymentId(Request);
+
                 try
                 {
                     if (Request.MediaTypeContains("application/json"))
@@ -262,9 +273,9 @@ namespace Kudu.Services.Deployment
                 // 'async' is not a CSharp-ish variable name. And although it is a valid variable name, some
                 // IDEs confuse it to be the 'async' keyword in C#.
                 // On the other hand, isAsync is not a good name for the query-parameter.
-                // So we use 'async' as the query parameter, and then assign it to the C# variable 'isAsync' 
+                // So we use 'async' as the query parameter, and then assign it to the C# variable 'isAsync'
                 // at the earliest. Hereon, we use just 'isAsync'.
-                // 
+                //
                 bool isAsync = async;
 
                 ArtifactType artifactType = ArtifactType.Unknown;
@@ -288,6 +299,7 @@ namespace Kudu.Services.Deployment
                     TargetRootPath = _environment.WebRootPath,
                     TargetChangeset = DeploymentManager.CreateTemporaryChangeSet(message: Constants.OneDeploy),
                     CommitId = null,
+                    ExternalDeploymentId = deploymentId,
                     RepositoryType = RepositoryType.None,
                     RemoteURL = remoteArtifactUrl,
                     Fetch = OneDeployFetch,
@@ -321,7 +333,7 @@ namespace Kudu.Services.Deployment
 
                             deploymentInfo.TargetRootPath = Path.Combine(_environment.WebRootPath, path);
                             deploymentInfo.Fetch = LocalZipHandler;
-                            
+
                             // Legacy war deployment is equivalent to wardeploy
                             // So always do clean deploy.
                             deploymentInfo.CleanupTargetDirectory = true;
@@ -392,7 +404,7 @@ namespace Kudu.Services.Deployment
                     case ArtifactType.Zip:
                         deploymentInfo.Fetch = LocalZipHandler;
                         deploymentInfo.TargetSubDirectoryRelativePath = path;
-                        
+
                         // Deployments for type=zip default to clean=true
                         deploymentInfo.CleanupTargetDirectory = clean.GetValueOrDefault(true);
 
@@ -404,6 +416,19 @@ namespace Kudu.Services.Deployment
 
                 return await PushDeployAsync(deploymentInfo, isAsync, HttpContext);
             }
+        }
+
+        private static string GetExternalDeploymentId(HttpRequest request)
+        {
+            string deploymentId = null;
+            Microsoft.Extensions.Primitives.StringValues idValues;
+
+            if (request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
+            {
+                deploymentId = idValues.ElementAt(0);
+            }
+
+            return deploymentId;
         }
 
         private ObjectResult StatusCode400(string message)
@@ -472,7 +497,7 @@ namespace Kudu.Services.Deployment
                     {
                         _tracer.Step("Removing node_modules symlink");
                         // TODO: Add support to remove Unix Symlink File in DeleteFileSafe
-                        // FileSystemHelpers.DeleteFileSafe(nodeModulesSymlinkFile); 
+                        // FileSystemHelpers.DeleteFileSafe(nodeModulesSymlinkFile);
                         FileSystemHelpers.RemoveUnixSymlink(nodeModulesSymlinkFile, TimeSpan.FromSeconds(5));
                     }
                 }
@@ -610,7 +635,7 @@ namespace Kudu.Services.Deployment
                 // We want to create a directory structure under 'extractTargetDirectory'
                 // such that it exactly matches the directory structure specified
                 // by deploymentInfo.TargetSubDirectoryRelativePath
-                // 
+                //
                 string extractSubDirectoryPath = extractTargetDirectory;
 
                 if (!string.IsNullOrWhiteSpace(deploymentInfo.TargetSubDirectoryRelativePath) && deploymentInfo.Deployer == Constants.OneDeploy)
@@ -662,7 +687,7 @@ namespace Kudu.Services.Deployment
                 var targetInfo = FileSystemHelpers.DirectoryInfoFromDirectoryName(artifactDirectoryStagingPath);
                 if (targetInfo.Exists)
                 {
-                    // If the staging path already exists, rename it so we can delete it later 
+                    // If the staging path already exists, rename it so we can delete it later
                     var moveTarget = Path.Combine(targetInfo.Parent.FullName, Path.GetRandomFileName());
                     using (tracer.Step(string.Format("Renaming ({0}) to ({1})", targetInfo.FullName, moveTarget)))
                     {
@@ -674,7 +699,7 @@ namespace Kudu.Services.Deployment
                 // We want to create a directory structure under 'extractTargetDirectory'
                 // such that it exactly matches the directory structure specified
                 // by deploymentInfo.TargetSubDirectoryRelativePath
-                // 
+                //
                 string stagingSubDirPath = artifactDirectoryStagingPath;
 
                 if (!string.IsNullOrWhiteSpace(artifactDeploymentInfo.TargetSubDirectoryRelativePath))
@@ -682,7 +707,7 @@ namespace Kudu.Services.Deployment
                     stagingSubDirPath = Path.Combine(artifactDirectoryStagingPath, artifactDeploymentInfo.TargetSubDirectoryRelativePath);
                 }
 
-                // Create artifact staging directory hierarchy before later use 
+                // Create artifact staging directory hierarchy before later use
                 Directory.CreateDirectory(stagingSubDirPath);
 
                 var artifactFileStagingPath = Path.Combine(stagingSubDirPath, deploymentInfo.TargetFileName);
@@ -810,7 +835,7 @@ namespace Kudu.Services.Deployment
         {
             string framework = System.Environment.GetEnvironmentVariable("FRAMEWORK");
             string preserveSymlinks = System.Environment.GetEnvironmentVariable("WEBSITE_ZIP_PRESERVE_SYMLINKS");
-            return !string.IsNullOrEmpty(framework) 
+            return !string.IsNullOrEmpty(framework)
                 && framework.Equals("node", StringComparison.OrdinalIgnoreCase)
                 && !string.IsNullOrEmpty(preserveSymlinks)
                 && preserveSymlinks.Equals("true", StringComparison.OrdinalIgnoreCase);
