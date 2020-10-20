@@ -337,7 +337,7 @@ namespace Kudu.Services.Web
             if (Directory.Exists(System.Environment.ExpandEnvironmentVariables(@"%HOME%"))) return;
 
             //For Debug
-            System.Environment.SetEnvironmentVariable("HOME", OSDetector.IsOnWindows() ? @"F:\kudu-debug" : "/home");
+            System.Environment.SetEnvironmentVariable("HOME", OSDetector.IsOnWindows() ? @"C:\kudu-debug" : "/home");
 
             /*
             // If MapPath("/_app") returns a valid folder, set %HOME% to that, regardless of

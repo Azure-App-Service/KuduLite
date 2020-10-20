@@ -4,8 +4,64 @@
 @using Microsoft.Extensions.FileProviders;
 
 
-<script>
+<link href="~/css/dropzone.min.css" rel="stylesheet" />
+<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
 
+<h4>File Manager</h4>
+
+@*anchor tag to return back to previous directory; span - 'spaddPath' is used to keep track of current directory.*@
+<h6><a id="aCurPath" style="color:#0062cc; font-weight:bold;" href="#">...</a><span id="spaddPath"></span></h6>
+<form id="upload-widget" method="post" action="/upload" class="dropzone" style="border:none; padding:none;">
+    <div id="divFileManager">
+    </div>
+</form>
+
+@*Calling dropzone JavaScript*@
+<script src="~/Content/Scripts/dropzone.min.js"></script>
+
+<script type="text/javascript">
+    Dropzone.options.uploadWidget = {
+        addRemoveLinks: true,
+        disablePreview: true,
+        dictDefaultMessage: 'Drag a File/Folder here to upload, or click to select one',
+        accept: function (file, done) {
+            $('.dz-preview.dz-file-preview').css("display", "none"); //removing preview element of dropzone
+            // Create a FormData object.
+            var formData = new FormData();
+            formData.append('file', file);
+            if (file.fullPath == undefined) {
+                var url = '/api/vfs/' + curPath + file.name;
+            }
+            else {
+                var url = '/api/vfs/' + curPath + file.fullPath;
+            }
+
+            if (formData) {
+                $.ajax({
+                    url: url,
+                    type: "PUT",
+                    enctype: 'application/x-www-form-urlencoded; charset=UTF-8',
+                    //headers: {
+                    //    "Content-Type": "multipart/form-data"
+                    //},
+                    data: file,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        $(".dz-default.dz-message").css("display", "block");
+                        $.get(("/api/vfs" + curPath.trim()), null, function (data) {
+                            generateDynamicTable(data);
+                        });
+                    },
+                    error: function (error) {
+                        alert("Error while PUT request!");
+                    }
+                });
+            }
+        }
+    };
+</script>
+<script>
     var root = "/";
     var curPath = "/";
 
@@ -120,10 +176,20 @@
 
             //add the dynamically created table to the div - divFileManager.
             var divContainer = document.getElementById("divFileManager");
-            divContainer.innerHTML = "";
-            divContainer.appendChild(table);
+            if (divContainer != null) {
+                if (divContainer.innerHTML.length > 0) {
+                    divContainer.innerHTML = "";
+                }
+                divContainer.appendChild(table);
+                reStructure();
+            }
 
         }
+    }
+
+    //function to put file manager div after dropzone div
+    function reStructure() {
+        $("#divFileManager").insertAfter(".dz-default.dz-message");
     }
 
     //Tracking click event on file/folder name - would be used for in page edit of files.
@@ -210,21 +276,3 @@
         document.body.removeChild(element);
     });
 </script>
-
-<h4>Upload File/s</h4>
-@*Using Form - Submit to upload file/s to directory - makes server side to fileUpload Controller*@
-<form method="post" enctype="multipart/form-data" asp-controller="fileUpload" asp-action="UploadFile">
-    <input name="Name" id="Path" style="display:none;" class="form-control" />
-    <input name="FileToUpload" type="file" class="btn bkg-light-gray border-0 btn-sm" multiple />
-    <input type="submit" value="Upload" class="btn btn-primary btn-sm" />
-</form>
-<br />
-
-<h4>File List</h4>
-
-@*anchor tag to return back to previous directory; span - 'spaddPath' is used to keep track of current directory.*@
-<h6><a id="aCurPath" style="color:#0062cc; font-weight:bold;" href="#">...</a><span id="spaddPath"></span></h6>
-<div id="divFileManager">
-</div>
-
-
