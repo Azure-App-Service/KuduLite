@@ -23,7 +23,9 @@
     <title>Azure App Service</title>
     <link href="//functionscdn.azureedge.net/public/kudu/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet" />
     <script type="text/javascript" src="//ajax.aspnetcdn.com/ajax/jquery/jquery-2.1.0.min.js"></script>
+    <script>window.jQuery || document.write('<script src="/Content/Scripts/jquery-2.1.0.min.js">\x3C/script>')</script>
     <script type="text/javascript" src="//functionscdn.azureedge.net/public/kudu/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <script>window.jQuery || document.write('<script src="/Content/Scripts/bootstrap-3.1.1.min.js">\x3C/script>')</script>
     @RenderSection("PageHead", required: false)
     <style type="text/css">
         body {
@@ -32,13 +34,13 @@
     </style>
     @* // CORE TODO VirtualPathUtility no longer exists *@
     @*<script type="text/javascript">
-        appRoot = "@System.Web.VirtualPathUtility.ToAbsolute("~/")";
-        $(document).ajaxError(function (event, jqxhr, settings, thrownError) {
-            if (jqxhr.status === 403) {
-                $('#403-error-modal').modal();
-            }
-        });
-    </script>*@
+            appRoot = "@System.Web.VirtualPathUtility.ToAbsolute("~/")";
+            $(document).ajaxError(function (event, jqxhr, settings, thrownError) {
+                if (jqxhr.status === 403) {
+                    $('#403-error-modal').modal();
+                }
+            });
+        </script>*@
     @if (Kudu.Core.Helpers.OSDetector.IsOnWindows())
     {
         <script>
@@ -53,6 +55,14 @@
     }
 </head>
 <body>
+    <!-- Fallback to local copy if CDN not availaible -->
+    <div id="bootstrapCssTest" class="hidden"></div>
+    <script type="text/javascript">
+
+        if ($('#bootstrapCssTest').is(':visible') === true) {
+            $('<link href="/Content/Styles/bootstrap-3.3.1.min.css" rel="stylesheet" type="text/css" />').appendTo('head');
+        }
+    </script>
     <nav class="navbar navbar-default navbar-fixed-top navbar-inverse" role="navigation">
         <div class="container">
             <div class="navbar-header">
@@ -85,24 +95,23 @@
             </div>
         </div>
     </nav>
-<!-- 403 error modal -->
-<div class="modal fade" id="403-error-modal" tabindex="-1" role="dialog" aria-labelledby="errorTitle" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title" id="errorTitle">Session expired</h4>
-            </div>
-            <div class="modal-body">
-                Your session has expired. Please refresh your browser.
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <!-- 403 error modal -->
+    <div class="modal fade" id="403-error-modal" tabindex="-1" role="dialog" aria-labelledby="errorTitle" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="errorTitle">Session expired</h4>
+                </div>
+                <div class="modal-body">
+                    Your session has expired. Please refresh your browser.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
-
-@RenderBody()
+    @RenderBody()
 </body>
 </html>
