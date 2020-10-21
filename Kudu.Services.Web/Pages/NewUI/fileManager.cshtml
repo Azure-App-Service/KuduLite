@@ -1,0 +1,278 @@
+﻿@page
+@using Kudu.Core;
+@using Kudu.Services
+@using Microsoft.Extensions.FileProviders;
+
+
+<link href="~/css/dropzone.min.css" rel="stylesheet" />
+<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+
+<h4>File Manager</h4>
+
+@*anchor tag to return back to previous directory; span - 'spaddPath' is used to keep track of current directory.*@
+<h6><a id="aCurPath" style="color:#0062cc; font-weight:bold;" href="#">...</a><span id="spaddPath"></span></h6>
+<form id="upload-widget" method="post" action="/upload" class="dropzone" style="border:none; padding:none;">
+    <div id="divFileManager">
+    </div>
+</form>
+
+@*Calling dropzone JavaScript*@
+<script src="~/Content/Scripts/dropzone.min.js"></script>
+
+<script type="text/javascript">
+    Dropzone.options.uploadWidget = {
+        addRemoveLinks: true,
+        disablePreview: true,
+        dictDefaultMessage: 'Drag a File/Folder here to upload, or click to select one',
+        accept: function (file, done) {
+            $('.dz-preview.dz-file-preview').css("display", "none"); //removing preview element of dropzone
+            // Create a FormData object.
+            var formData = new FormData();
+            formData.append('file', file);
+            if (file.fullPath == undefined) {
+                var url = '/api/vfs/' + curPath + file.name;
+            }
+            else {
+                var url = '/api/vfs/' + curPath + file.fullPath;
+            }
+
+            if (formData) {
+                $.ajax({
+                    url: url,
+                    type: "PUT",
+                    enctype: 'application/x-www-form-urlencoded; charset=UTF-8',
+                    //headers: {
+                    //    "Content-Type": "multipart/form-data"
+                    //},
+                    data: file,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        $(".dz-default.dz-message").css("display", "block");
+                        $.get(("/api/vfs" + curPath.trim()), null, function (data) {
+                            generateDynamicTable(data);
+                        });
+                    },
+                    error: function (error) {
+                        alert("Error while PUT request!");
+                    }
+                });
+            }
+        }
+    };
+</script>
+<script>
+    var root = "/";
+    var curPath = "/";
+
+    $.get("/api/vfs", null, function (data) {
+        generateDynamicTable(data);
+    });
+
+    function generateDynamicTable(fileContent) {
+        var dataFileManager = fileContent.length + 1;
+
+        if (dataFileManager > 0) {
+
+            //generation of dynamic table, based on data.
+            var table = document.createElement("table");
+            table.id = "fileManagerTable";
+            table.className = "table table-striped table-bordered table-hover table-condensed table-responsive";
+            table.style.width = '90%';
+            table.style.display = 'table';
+
+            // retrieve column header
+            var col = []; // define an empty array
+            for (var i = 0; i < dataFileManager; i++) {
+                for (var key in fileContent[i]) {
+                    if (col.indexOf(key) === -1) {
+                        col.push(key);
+                    }
+                }
+            }
+
+            // CREATE TABLE HEAD .
+            var tHead = document.createElement("thead");
+
+
+            //Add table header row
+            var hRow = document.createElement("tr");
+
+            //Add an empty default column for the table
+            var emptyHeader = document.createElement("th");
+            emptyHeader.style.width = "10%";
+            hRow.appendChild(emptyHeader);
+
+            //Adding column headers (with header names) to the table.
+            for (var i = 0; i < col.length; i++) {
+                var th = document.createElement("th");
+                if ((col[i] != "name") && (col[i] != "size") && (col[i] != "mtime")) {
+                    th.innerHTML = col[i];
+                    th.style.display = "none";
+                }
+                if (col[i] == "name") {
+                    th.style.width = "50%";
+                    th.innerText = "Name";
+                }
+                if (col[i] == "size") {
+                    th.style.width = "20%";
+                    th.innerText = "Size";
+                }
+                if (col[i] == "mtime") {
+                    th.style.width = "20%";
+                    th.innerText = "Modified Time";
+                }
+                th.style.padding = "0px";
+                hRow.appendChild(th);
+            }
+            tHead.appendChild(hRow);
+            table.appendChild(tHead);
+
+            //creating table body.
+            var tBody = document.createElement("tbody");
+
+            //Adding column to the rows for the respective table.
+            for (var i = 0; i < dataFileManager; i++) {
+
+                var bRow = document.createElement("tr"); //Create a row for each record.
+
+                for (var j = -1; j < col.length; j++) {
+                    if (fileContent[i] != undefined) { //checking the default row added for blank folders - skip assignment if data does not exist.
+                        var td = document.createElement("td");
+                        if (j == -1) {
+                            td.innerHTML = "<i class='fa fa-times' style='cursor:pointer;' id='delIcon' title='delete' aria-hidden='true'></i>&nbsp;&nbsp;" +
+                                "<a id='dwnIcon' href='#'><i class='fa fa-download' aria-hidden='true'></i></a>";
+                        }
+                        else if (j == 0) {
+                            //check to set the name of the file/folder
+                            if ((fileContent[i][col[4]]).indexOf("directory") > 0) {
+                                td.innerHTML = "<span><i class='fa fa-folder' aria-hidden='true'></i></span>&nbsp;" +
+                                    "<a name='fname' href='#'>" + fileContent[i][col[j]] + "</a>";
+                            }
+                            else {
+                                td.innerHTML = "<span><i class='fa fa-file' aria-hidden='true'></i></span>&nbsp;" +
+                                    "<a name='fname' href='#'>" + fileContent[i][col[j]] + "</a>";
+                            }
+                        }
+                        else if (j == 1) {
+                            //check to set the size of the file/folder
+                            td.innerHTML = "<span name='fsize'>" + fileContent[i][col[j]] ? (Math.ceil(fileContent[i][col[j]] / 1024) + ' KB') : '' + "</span>";
+                        }
+                        else if (j == 2) {
+                            //check to set the modified time of the file/folder
+                            td.innerHTML = "<span name='fmdtime'>" + ((fileContent[i][col[j]] && new Date(fileContent[i][col[j]])) || new Date()).toLocaleString() + "</span>";
+                        }
+                        else {
+                            td.innerHTML = fileContent[i][col[j]];
+                            td.style.display = "none";
+                        }
+                        bRow.appendChild(td);
+                    }
+                }
+                tBody.appendChild(bRow)
+            }
+            table.appendChild(tBody);
+
+
+            //add the dynamically created table to the div - divFileManager.
+            var divContainer = document.getElementById("divFileManager");
+            if (divContainer != null) {
+                if (divContainer.innerHTML.length > 0) {
+                    divContainer.innerHTML = "";
+                }
+                divContainer.appendChild(table);
+                reStructure();
+            }
+
+        }
+    }
+
+    //function to put file manager div after dropzone div
+    function reStructure() {
+        $("#divFileManager").insertAfter(".dz-default.dz-message");
+    }
+
+    //Tracking click event on file/folder name - would be used for in page edit of files.
+    $(document).on("click", "a[name='fname']", function (e) {
+        if ((e.currentTarget.parentElement.parentElement.cells[5].innerHTML).indexOf("directory") > 0) {
+            curPath = curPath + e.currentTarget.parentElement.parentElement.cells[1].innerText.trim() + "/";
+            $("#Path").val(curPath);
+            $.get(e.currentTarget.parentElement.parentElement.cells[6].innerHTML, null, function (data) {
+                generateDynamicTable(data);
+                //$("#spaddPath").text(root);
+                if ($("#spaddPath").text() == "/") {
+                    $("#spaddPath").text(curPath);
+                }
+                else {
+                    $("#spaddPath").text() == "/"
+                    $("#spaddPath").text(curPath);
+                }
+            });
+        }
+        else {
+            $.get(e.currentTarget.parentElement.parentElement.cells[6].innerHTML, null, function (data) {
+                e.currentTarget.href = e.currentTarget.parentElement.parentElement.cells[6].innerHTML;
+                window.open(
+                    e.currentTarget.href,
+                    '_blank'
+                );
+            });
+        }
+    });
+
+    //Click event of anchor tag - aCurPath; sets the path to previous directory.
+    $(document).on("click", "a[id='aCurPath']", function (e) {
+        if ($("#spaddPath").text() != '') {
+            curPath = curPath.split("/");
+            curPath.pop();
+            curPath.pop();
+            curPath = curPath.join("/").trim() + "/";
+            $.get(("/api/vfs" + curPath), null, function (data) {
+                generateDynamicTable(data);
+                $("#spaddPath").text(curPath);
+            });
+        }
+    });
+
+    //Tracking click event of delete Icon
+    $(document).on("click", "i[id='delIcon']", function (e) {
+        var url = e.currentTarget.parentElement.parentElement.cells[6].innerHTML;
+
+        if (e.currentTarget.parentElement.parentElement.cells[5].innerHTML === "inode/directory") {
+            url += "?recursive=true";
+        }
+        $.ajax({
+            url: url,
+            method: "DELETE",
+            headers: {
+                "If-Match": "*"
+            },
+            success: function (result) {
+                $.get(("/api/vfs" + curPath.trim()), null, function (data) {
+                    generateDynamicTable(data);
+                });
+            },
+            error: function (error) {
+                alert("Error in delete request!");
+            }
+        });
+    });
+
+    //Tracking click event of download Icon
+    $(document).on("click", "a[id='dwnIcon']", function (e) {
+        var element = document.createElement('a');
+        if ((e.currentTarget.parentElement.parentElement.cells[5].innerHTML).indexOf("directory") > 0) {
+            var zipUrl = (e.currentTarget.parentElement.parentElement.cells[6].innerText).replace("/vfs/", "/zip/")
+            element.setAttribute('href', zipUrl);
+            element.setAttribute('download', e.currentTarget.parentElement.parentElement.cells[1].innerText.trim() + ".zip");
+        }
+        else {
+            element.setAttribute('href', e.currentTarget.parentElement.parentElement.cells[6].innerText);
+            element.setAttribute('download', e.currentTarget.parentElement.parentElement.cells[1].innerText.trim());
+        }
+        element.style.display = 'none';
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+    });
+</script>
