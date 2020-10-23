@@ -179,11 +179,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 
         private bool IsHomePageWithoutAuthentication(AuthenticateResult authenticationResult, PathString routePath)
         {
-            if (!authenticationResult.Succeeded && IsHomePageRoute(routePath))
-            {
-                return true;
-            }
-            return false;
+            return !authenticationResult.Succeeded && IsHomePageRoute(routePath);
         }
 
         private static string SanitizeScmUrl(string malformedUrl)
