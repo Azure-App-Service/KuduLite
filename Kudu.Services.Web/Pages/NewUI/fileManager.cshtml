@@ -16,8 +16,8 @@
     </div>
 </form>
 
-@*Calling dropzone JavaScript*@
-<script src="~/Content/Scripts/dropzone.min.js"></script>
+@*Calling dragdrop JavaScript*@
+<script src="~/Content/Scripts/dragdrop.js"></script>
 
 <script type="text/javascript">
     Dropzone.options.uploadWidget = {
@@ -41,9 +41,9 @@
                     url: url,
                     type: "PUT",
                     enctype: 'application/x-www-form-urlencoded; charset=UTF-8',
-                    //headers: {
-                    //    "Content-Type": "multipart/form-data"
-                    //},
+                    headers: {
+                        "If-Match": "*"
+                    },
                     data: file,
                     processData: false,
                     contentType: false,
@@ -54,7 +54,7 @@
                         });
                     },
                     error: function (error) {
-                        alert("Error while PUT request!");
+                        alert("Error while uploading!");
                     }
                 });
             }
