@@ -293,8 +293,8 @@ namespace Kudu.Core.Infrastructure
                 FileSystemHelpers.DeleteFile(_path);
                 OperationManager.Attempt(() =>
                     // throws exception if file is still present
-                    IsLockFileRemoved()
-                , 5, 250);
+                    TryRemovedLockFile()
+                , 10, 250);
             }
             catch (Exception ex)
             {
@@ -311,7 +311,7 @@ namespace Kudu.Core.Infrastructure
             }
         }
 
-        private void IsLockFileRemoved()
+        private void TryRemovedLockFile()
         {
             if (!FileSystemHelpers.FileExists(_path))
             {

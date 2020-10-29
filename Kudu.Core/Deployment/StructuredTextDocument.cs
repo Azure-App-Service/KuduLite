@@ -53,12 +53,12 @@ namespace Kudu.Core.Deployment
             catch (UnauthorizedAccessException)
             {
                 // Wait for 1 seconds
-                Thread.Sleep(500);
+                Thread.Sleep(1000);
             }
             catch(FileNotFoundException)
             {
-                // Wait for 1 millsecond
-                Thread.Sleep(500);
+                // Wait for 1 second
+                Thread.Sleep(1000);
             }
 
             var stringValue = _serializer(value);
