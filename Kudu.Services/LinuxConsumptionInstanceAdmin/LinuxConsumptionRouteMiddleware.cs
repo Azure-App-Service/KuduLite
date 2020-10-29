@@ -15,6 +15,7 @@ using Kudu.Core.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Services.Infrastructure;
 using Microsoft.AspNetCore.Http.Extensions;
+using System.Text;
 
 namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 {
@@ -107,8 +108,27 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             }
 
             // Step 3: check if the request matches authorization policy
+            // If the home page is requested without authentication (e.g. ControllerPing), return 200 with hint.
+            // If the home page is requested with authentication (e.g. Customer Browser Access), return 200 with homepage content.
             AuthenticateResult authenticationResult = await context.AuthenticateAsync(ArmAuthenticationDefaults.AuthenticationScheme);
-            if (!authenticationResult.Succeeded)
+            if (IsHomePageWithoutAuthentication(authenticationResult, context.Request.Path))
+            {
+                byte[] data = Encoding.UTF8.GetBytes("Please use /basicAuth endpoint or AAD to authenticate SCM site");
+                context.Response.StatusCode = 200;
+                context.Response.ContentType = "text/plain; charset=UTF-8";
+                await context.Response.Body.WriteAsync(data, 0, data.Length);
+                KuduEventGenerator.Log().ApiEvent(
+                    ServerConfiguration.GetApplicationName(),
+                    "AccessLinuxConsumptionHomePageWithoutAuthentication",
+                    context.Request.GetEncodedPathAndQuery(),
+                    context.Request.Method,
+                    System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
+                    context.Response.StatusCode,
+                    (DateTime.UtcNow - requestTime).Milliseconds,
+                    context.Request.GetUserAgent());
+                return;
+            }
+            else if (!authenticationResult.Succeeded)
             {
                 context.Response.StatusCode = 401;
                 KuduEventGenerator.Log().ApiEvent(
@@ -155,6 +175,11 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         private bool IsHomePageRoute(PathString routePath)
         {
             return routePath.ToString() == HomePageRoute;
+        }
+
+        private bool IsHomePageWithoutAuthentication(AuthenticateResult authenticationResult, PathString routePath)
+        {
+            return !authenticationResult.Succeeded && IsHomePageRoute(routePath);
         }
 
         private static string SanitizeScmUrl(string malformedUrl)
