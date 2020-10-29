@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Core.Infrastructure;
@@ -32,6 +33,16 @@ namespace Kudu.Core.Deployment
             {
                 Initialize(document);
             }
+
+            // Ensure that the status file is created before we enter this code block
+            Task ensureLogFileExists = Task.Run(() =>
+                    OperationManager.Attempt(() =>
+                    {
+                        if (!FileSystemHelpers.FileExists(_statusFile))
+                        {
+                            throw new FileNotFoundException("Status file doesn't exist. Will wait for 1 second and retry");
+                        }
+                    }, 5, 250));
         }
 
         public static DeploymentStatusFile Create(string id, IEnvironment environment, IOperationLock statusLock)
@@ -61,11 +72,9 @@ namespace Kudu.Core.Deployment
 
                 try
                 {
-                    XDocument document = null;
-                    using (var stream = FileSystemHelpers.OpenRead(path))
-                    {
-                        document = XDocument.Load(stream);
-                    }
+                    // In case we read status file in middle of a write, attempt to
+                    // read it again. Don't fail the status get request
+                    XDocument document = OperationManager.Attempt(() => LoadXmlStatusFile(path), 5, 250);
                     return new DeploymentStatusFile(id, environment, statusLock, document);
                 }
                 catch (Exception ex)
@@ -80,6 +89,16 @@ namespace Kudu.Core.Deployment
                     return null;
                 }
             }, "Getting deployment status", DeploymentStatusManager.LockTimeout);
+        }
+
+        private static XDocument LoadXmlStatusFile(string path)
+        {
+            XDocument document = null;
+            using (var stream = FileSystemHelpers.OpenRead(path))
+            {
+                document = XDocument.Load(stream);
+            }
+            return document;
         }
 
         private void Initialize(XDocument document)

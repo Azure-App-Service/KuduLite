@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
@@ -146,7 +144,10 @@ namespace Kudu.Core.Infrastructure
             {
 
                 FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_path));
-
+                if (FileSystemHelpers.FileExists(_path))
+                {
+                    return false;
+                }
                 lockStream = FileSystemHelpers.OpenFile(_path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
 
                 WriteLockInfo(operationName, lockStream);
@@ -287,17 +288,17 @@ namespace Kudu.Core.Infrastructure
         private void DeleteFileSafe()
         {
             // Only clean up lock on Windows Env
-            // When running on Mono with SMB share, delete action would cause wierd behavior on later OpenWrite action if a file has already been opened by another process
-            if (OSDetector.IsOnWindows())
+            try
             {
-                try
-                {
-                    FileSystemHelpers.DeleteFile(_path);
-                }
-                catch (Exception ex)
-                {
-                    TraceIfUnknown(ex);
-                }
+                FileSystemHelpers.DeleteFile(_path);
+                OperationManager.Attempt(() =>
+                    // throws exception if file is still present
+                    TryRemovedLockFile()
+                , 10, 250);
+            }
+            catch (Exception ex)
+            {
+                TraceIfUnknown(ex);
             }
         }
 
@@ -307,6 +308,20 @@ namespace Kudu.Core.Infrastructure
             {
                 // trace unexpected exception
                 _traceFactory.GetTracer().TraceError(ex);
+            }
+        }
+
+        private void TryRemovedLockFile()
+        {
+            if (!FileSystemHelpers.FileExists(_path))
+            {
+                return;
+            }
+            FileSystemHelpers.DeleteFile(_path);
+            // check if file still exists
+            if (FileSystemHelpers.FileExists(_path))
+            {
+                throw new Exception("Tried removing but the lock file still exists, would retry the removal");
             }
         }
 
