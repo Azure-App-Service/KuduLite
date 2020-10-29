@@ -642,11 +642,11 @@ namespace Kudu.Core.Helpers
             }
             catch (HttpRequestException ex)
             {
-                if (path.Equals(Constants.UpdateDeployStatusPath, StringComparison.OrdinalIgnoreCase) && statusCode == HttpStatusCode.NotFound)
+                if (path.Equals(Constants.UpdateDeployStatusPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    // Fail silently if 404 is encountered.
-                    // This will only happen transiently during a platform upgrade if new bits aren't on the FrontEnd yet.
-                    Trace(TraceEventType.Warning, $"Call to {path} ended in 404. {ex}");
+                    // Fail silently if call to update dpeloyment status fails.
+                    // This makes sure we do not fail the build if this call fails
+                    Trace(TraceEventType.Warning, $"Call to {path} ended in an exception. {ex}");
                 }
                 else
                 {
