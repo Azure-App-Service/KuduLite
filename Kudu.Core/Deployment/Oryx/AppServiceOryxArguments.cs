@@ -49,7 +49,7 @@ namespace Kudu.Core.Deployment
             // Parse Build Flags
             Flags = BuildFlagsHelper.Parse(buildFlags);
 
-            // Set language specific 
+            // Set language specific
             SetLanguageOptions();
         }
 
@@ -246,7 +246,7 @@ namespace Kudu.Core.Deployment
                     }
                     else if (Language == Framework.Python)
                     {
-                        OryxArgumentsHelper.AddPythonCompressOption(args, "tar-gz");
+                        OryxArgumentsHelper.AddPythonCompressOption(args);
                     }
 
                     break;
@@ -259,7 +259,7 @@ namespace Kudu.Core.Deployment
                     }
                     else if (Language == Framework.Python)
                     {
-                        OryxArgumentsHelper.AddPythonCompressOption(args, "zip");
+                        OryxArgumentsHelper.AddPythonCompressOption(args);
                     }
 
                     break;
