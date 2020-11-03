@@ -321,7 +321,9 @@ namespace Kudu.Core.Deployment
             catch (Exception ex)
             {
                 _tracer.TraceError($"Failed to request a post deployment status. Number of attempts: {attemptCount}. Exception: {ex}");
-                throw;
+                // Do not throw the exception
+                // We fail silently so that we do not fail the build altogether if this call fails
+                //throw;
             }
         }
 
