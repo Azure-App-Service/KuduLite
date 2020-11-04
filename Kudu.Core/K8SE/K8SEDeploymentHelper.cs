@@ -94,14 +94,13 @@ namespace Kudu.Core.K8SE
 
         private static string RunBuildCtlCommand(string args, string msg)
         {
-            var escapedArgs = args.Replace("\"", "\\\"");
             Console.WriteLine($"{msg} : {args}");
             var process = new Process()
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "/bin/bash",
-                    Arguments = $"-c \"{escapedArgs}\"",
+                    Arguments = $"-c \"{args}\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -168,9 +167,9 @@ namespace Kudu.Core.K8SE
                 }
             };
 
-            var patchJson = JsonConvert.SerializeObject(patchAppJson, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-            var patchJsonString = JsonConvert.ToString(patchJson);
-            return patchJsonString;
+            var str= System.Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes(JsonConvert.SerializeObject(patchAppJson)));
+            Console.WriteLine("Test Str:     " + str);
+            return str;
         }
 
         private static string GetBuildMetadataStr(BuildMetadata buildMetadata)
