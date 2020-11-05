@@ -1,10 +1,12 @@
-﻿namespace Kudu.Core.Functions
+﻿using Kudu.Contracts.Deployment;
+
+namespace Kudu.Core.Functions
 {
     using Newtonsoft.Json;
 
     public class PackageReference
     {
-        [JsonProperty(PropertyName = "buildVersion")]
-        public string BuildVersion { get; set; }
+        [JsonProperty(PropertyName = "buildMetadata")]
+        public string BuildMetadata { get; set; }
     }
 }

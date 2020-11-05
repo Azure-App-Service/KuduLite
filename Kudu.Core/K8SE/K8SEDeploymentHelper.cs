@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Web;
 
 namespace Kudu.Core.K8SE
 {
@@ -48,13 +47,11 @@ namespace Kudu.Core.K8SE
         /// <returns></returns>
         public static void UpdateBuildNumber(string appName, BuildMetadata buildMetadata)
         {
-            var buildPatchJson = $"\"{HttpUtility.JavaScriptStringEncode(JsonConvert.SerializeObject(buildMetadata)).Replace("\\","\\\\")}\"";
-
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
             BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "buildMetadata");
-            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, buildPatchJson);
+            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, $"\"{GetBuildMetadataStr(buildMetadata)}\"");
             RunBuildCtlCommand(cmd.ToString(), "Updating build version...");
         }
 
@@ -97,14 +94,13 @@ namespace Kudu.Core.K8SE
 
         private static string RunBuildCtlCommand(string args, string msg)
         {
-            var escapedArgs = args.Replace("\"", "\\\"");
             Console.WriteLine($"{msg} : {args}");
             var process = new Process()
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "/bin/bash",
-                    Arguments = $"-c \"{escapedArgs}\"",
+                    Arguments = $"-c \"{args}\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -153,9 +149,6 @@ namespace Kudu.Core.K8SE
                 return null;
             }
 
-            var buildPatchJson = JsonConvert.SerializeObject(buildMetadata);
-            var buildmetaJsonString = JsonConvert.ToString(buildPatchJson);
-
             var patchAppJson = new PatchAppJson
             {
                 PatchSpec = new PatchSpec
@@ -168,15 +161,20 @@ namespace Kudu.Core.K8SE
                     {
                         PackageRef = new PackageReference
                         {
-                            BuildVersion = buildmetaJsonString
+                            BuildMetadata = GetBuildMetadataStr(buildMetadata),
                         }
                     }
                 }
             };
 
-            var patchJson = JsonConvert.SerializeObject(patchAppJson, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
-            var patchJsonString = JsonConvert.ToString(patchJson);
-            return patchJsonString;
+            var str= System.Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes(JsonConvert.SerializeObject(patchAppJson)));
+            Console.WriteLine("Test Str:     " + str);
+            return str;
+        }
+
+        private static string GetBuildMetadataStr(BuildMetadata buildMetadata)
+        {
+            return $"{buildMetadata.AppName}|{buildMetadata.BuildVersion}|{System.Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes(JsonConvert.SerializeObject(buildMetadata)))}";
         }
     }
 }

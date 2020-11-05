@@ -31,7 +31,7 @@ namespace Kudu.Core.Infrastructure
         {
             if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
-                string appName = environment.SiteRootPath.Replace("/home/apps/", "").Split("/")[0];
+                string appName = environment.K8SEAppName;
                 string buildNumber = environment.CurrId;
                 var functionTriggers = FunctionTriggerProvider.GetFunctionTriggers<IEnumerable<ScaleTrigger>>("keda", repositoryUrl);
                 var buildMetadata = new BuildMetadata()

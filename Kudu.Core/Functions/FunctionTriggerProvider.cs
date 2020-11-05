@@ -11,7 +11,7 @@
         /// <returns>The josn string of triggers in function.json</returns>
         public static T GetFunctionTriggers<T>(string providerName, string functionzipFilePath)
         {
-            if (string.IsNullOrWhiteSpace(providerName))
+            if (string.IsNullOrWhiteSpace(providerName) || string.IsNullOrWhiteSpace(functionzipFilePath))
             {
                 return default;
             }
