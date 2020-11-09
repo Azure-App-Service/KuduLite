@@ -1,10 +1,11 @@
-﻿@page
+@page
 @using Kudu.Core;
 @using Kudu.Services
 @using Microsoft.Extensions.FileProviders;
 
 
 <link href="~/css/dropzone.min.css" rel="stylesheet" />
+<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
 
 <h4>File Manager</h4>
 
@@ -15,8 +16,8 @@
     </div>
 </form>
 
-@*Calling dropzone JavaScript*@
-<script src="~/Content/Scripts/dropzone.min.js"></script>
+@*Calling dragdrop JavaScript*@
+<script src="~/Content/Scripts/dragdrop.js"></script>
 
 <script type="text/javascript">
     Dropzone.options.uploadWidget = {
@@ -53,7 +54,7 @@
                         });
                     },
                     error: function (error) {
-                        alert("Error while PUT request!");
+                        alert("Error while uploading!");
                     }
                 });
             }
