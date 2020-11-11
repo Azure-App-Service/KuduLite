@@ -3,23 +3,36 @@
 @using Kudu.Services
 @using Microsoft.Extensions.FileProviders;
 
-
 <link href="~/css/dropzone.min.css" rel="stylesheet" />
 
 <h4>File Manager</h4>
 
 @*anchor tag to return back to previous directory; span - 'spaddPath' is used to keep track of current directory.*@
 <h6><a id="aCurPath" style="color:#0062cc; font-weight:bold;" href="#">...</a><span id="spaddPath"></span></h6>
-<form id="upload-widget" method="post" action="/upload" class="dropzone" style="border:none; padding:none;">
-    <div id="divFileManager">
-    </div>
-</form>
+
+@*Adding sections upload file and upload zip to different divs of a table*@
+<table class="table-responsive">
+    <tr>
+        <td width="80%">
+            <form id="upload-widget" method="post" action="/upload" class="dropzone" style="border:none; padding:none;">
+                <div id="divFileManager">
+                </div>
+            </form>
+        </td>
+        <td style="border-left:1px dotted;">
+            <form id="upload-widget-zip" method="post" action="/upload" class="dropzone" style="border: none; padding:none;">
+            </form>
+        </td>
+    </tr>
+</table>
 
 @*Calling dropzone JavaScript*@
 <script src="~/Content/Scripts/dropzone.min.js"></script>
 
 <script type="text/javascript">
-    Dropzone.options.uploadWidget = {
+    Dropzone.autoDiscover = false;
+    var myDropzone1 = new Dropzone(
+        '#upload-widget', {
         addRemoveLinks: true,
         disablePreview: true,
         dictDefaultMessage: 'Drag a File/Folder here to upload, or click to select one',
@@ -41,6 +54,7 @@
                     type: "PUT",
                     enctype: 'application/x-www-form-urlencoded; charset=UTF-8',
                     headers: {
+                        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
                         "If-Match": "*"
                     },
                     data: file,
@@ -58,7 +72,52 @@
                 });
             }
         }
-    };
+    });
+</script>
+<script type="text/javascript">
+    var myDropzone2 = new Dropzone(
+        '#upload-widget-zip', {
+        addRemoveLinks: true,
+        disablePreview: true,
+        dictDefaultMessage: 'Drag a Zip File here to extract & upload, or click to select one',
+        accept: function (file, done) {
+            $('.dz-preview.dz-file-preview').css("display", "none"); //removing preview element of dropzone
+            // Create a FormData object.
+            var formData = new FormData();
+            formData.append('file', file);
+            if (file.fullPath == undefined) {
+                var url = '/api/zip' + curPath + file.name;
+            }
+            else {
+                var url = '/api/zip' + curPath + file.fullPath;
+            }
+
+            url = url.replace(".zip", "");
+
+            if (formData) {
+                $.ajax({
+                    url: url,
+                    type: "PUT",
+                    enctype: 'application/x-www-form-urlencoded; charset=UTF-8',
+                    headers: {
+                        "If-Match": "*"
+                    },
+                    data: file,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        $(".dz-default.dz-message").css("display", "block");
+                        //$.get(("/api/vfs" + curPath.trim()), null, function (data) {
+                        //    generateDynamicTable(data);
+                        //});
+                    },
+                    error: function (error) {
+                        alert("Error while PUT request!");
+                    }
+                });
+            }
+        }
+    });
 </script>
 <script>
     var root = "/";
@@ -77,7 +136,7 @@
             var table = document.createElement("table");
             table.id = "fileManagerTable";
             table.className = "table table-striped table-bordered table-hover table-condensed table-responsive";
-            table.style.width = '90%';
+            table.style.width = '100%';
             table.style.display = 'table';
 
             // retrieve column header
@@ -188,7 +247,7 @@
 
     //function to put file manager div after dropzone div
     function reStructure() {
-        $("#divFileManager").insertAfter(".dz-default.dz-message");
+        $("#divFileManager").insertAfter(".dz-default.dz-message:first");
     }
 
     //Tracking click event on file/folder name - would be used for in page edit of files.
