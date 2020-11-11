@@ -12,6 +12,8 @@
       "commandName": "IISExpress",
       "launchBrowser": true,
       "environmentVariables": {
+        "K8SE_BUILD_SERVICE": "yes",
+        "HOME": "C:\\work\\function-apps\\HttpFunApp1\\bin\\Debug\\netcoreapp2.2",
         "ASPNETCORE_ENVIRONMENT": "Production"
       },
       "applicationUrl": "http://0.0.0.0:16018/"
