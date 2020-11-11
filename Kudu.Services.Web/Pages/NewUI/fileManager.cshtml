@@ -85,14 +85,24 @@
             // Create a FormData object.
             var formData = new FormData();
             formData.append('file', file);
-            if (file.fullPath == undefined) {
-                var url = '/api/zip' + curPath + file.name;
+            if (file.name.indexOf(".zip") > 0) {
+                if (file.fullPath == undefined) {
+                    var url = '/api/zip' + curPath + file.name;
+                    url = url.replace(".zip", "/");
+                }
+                else {
+                    var url = '/api/zip' + curPath + file.fullPath;
+                    url = url.replace(".zip", "/");
+                }
             }
             else {
-                var url = '/api/zip' + curPath + file.fullPath;
+                if (file.fullPath == undefined) {
+                    var url = '/api/vfs' + curPath + file.name;
+                }
+                else {
+                    var url = '/api/vfs' + curPath + file.fullPath;
+                }
             }
-
-            url = url.replace(".zip", "");
 
             if (formData) {
                 $.ajax({
@@ -100,6 +110,7 @@
                     type: "PUT",
                     enctype: 'application/x-www-form-urlencoded; charset=UTF-8',
                     headers: {
+                        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
                         "If-Match": "*"
                     },
                     data: file,
@@ -107,9 +118,9 @@
                     contentType: false,
                     success: function (res) {
                         $(".dz-default.dz-message").css("display", "block");
-                        //$.get(("/api/vfs" + curPath.trim()), null, function (data) {
-                        //    generateDynamicTable(data);
-                        //});
+                        $.get(("/api/vfs" + curPath.trim()), null, function (data) {
+                            generateDynamicTable(data);
+                        });
                     },
                     error: function (error) {
                         alert("Error while PUT request!");
