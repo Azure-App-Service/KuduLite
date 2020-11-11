@@ -13,7 +13,7 @@
         {
             if (string.IsNullOrWhiteSpace(providerName) || string.IsNullOrWhiteSpace(functionzipFilePath))
             {
-                return default;
+                return default(T);
             }
 
             switch (providerName.ToLower())

@@ -114,7 +114,7 @@ namespace Kudu.Core.Functions
             return zipEnetry.FullName.Split('/').Length == 2 ? zipEnetry.FullName.Split('/')[0] : zipEnetry.FullName.Split('\\')[0];
         }
 
-        private static string GetKedaTriggerType(string triggerType)
+        public static string GetKedaTriggerType(string triggerType)
         {
             if (string.IsNullOrEmpty(triggerType))
             {
@@ -142,6 +142,9 @@ namespace Kudu.Core.Functions
 
                 case "rabbitmqtrigger":
                     return "rabbitmq";
+
+                case "httpTrigger":
+                    return "httpTrigger";
 
                 default:
                     return triggerType;
