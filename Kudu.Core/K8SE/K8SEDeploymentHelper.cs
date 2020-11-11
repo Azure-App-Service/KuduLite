@@ -137,6 +137,12 @@ namespace Kudu.Core.K8SE
             return appName;
         }
 
+        public static string GetAppNamespace(HttpContext context)
+        {
+            var appNamepace = context.Request.Headers["K8SE_APP_NAMESPACE"].ToString();
+            return appNamepace;
+        }
+
         private static string GetFunctionAppPatchJson(IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)
         {
             if (functionTriggers == null || !functionTriggers.Any())

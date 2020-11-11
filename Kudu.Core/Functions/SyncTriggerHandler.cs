@@ -54,6 +54,11 @@ namespace Kudu.Core.Functions
             var scaleTriggers = new List<ScaleTrigger>();
             try
             {
+                if (string.IsNullOrEmpty(functionTriggersPayload))
+                {
+                    return new Tuple<IEnumerable<ScaleTrigger>, string>(null, "Function trigger payload is null or empty.");
+                }
+
                 var triggersJson = JArray.Parse(functionTriggersPayload);
                 foreach (JObject trigger in triggersJson)
                 {

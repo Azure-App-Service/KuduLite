@@ -52,12 +52,19 @@ namespace Kudu.Services.Function
                     return result;
                 }
 
-                var syncTriggerHandler = new SyncTriggerHandler(_environment, _tracer);
-                var errorMessage = await syncTriggerHandler.SyncTriggers(triggerPayload);
-                if (!string.IsNullOrEmpty(errorMessage))
+                try
                 {
-                    result = BadRequest(errorMessage);
-                    return result;
+                    var syncTriggerHandler = new SyncTriggerHandler(_environment, _tracer);
+                    var errorMessage = await syncTriggerHandler.SyncTriggers(triggerPayload);
+                    if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        result = BadRequest(errorMessage);
+                        return result;
+                    }
+                }
+                catch (Exception e)
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError, e.ToString());
                 }
             }
 
