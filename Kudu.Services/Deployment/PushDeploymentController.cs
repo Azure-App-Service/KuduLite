@@ -31,7 +31,9 @@ namespace Kudu.Services.Deployment
 {
     public class PushDeploymentController : Controller
     {
-        private const string DefaultDeployer = "Push-Deployer";
+        private const string ZipDeploy = "ZipDeploy";
+        private const string ZipDeployUrl = "ZipDeploy-via-url";
+        private const string WarDeploy = "WarDeploy";
         private const string DefaultMessage = "Created via a push deployment";
 
         private readonly IEnvironment _environment;
@@ -64,7 +66,7 @@ namespace Kudu.Services.Deployment
             [FromQuery] bool overwriteWebsiteRunFromPackage = false,
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
-            [FromQuery] string deployer = DefaultDeployer,
+            [FromQuery] string deployer = ZipDeploy,
             [FromQuery] string message = DefaultMessage)
         {
             using (_tracer.Step("ZipPushDeploy"))
@@ -117,7 +119,7 @@ namespace Kudu.Services.Deployment
             [FromQuery] bool overwriteWebsiteRunFromPackage = false,
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
-            [FromQuery] string deployer = DefaultDeployer,
+            [FromQuery] string deployer = ZipDeployUrl,
             [FromQuery] string message = DefaultMessage)
         {
             using (_tracer.Step("ZipPushDeployViaUrl"))
@@ -158,7 +160,7 @@ namespace Kudu.Services.Deployment
             [FromQuery] bool isAsync = false,
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
-            [FromQuery] string deployer = DefaultDeployer,
+            [FromQuery] string deployer = WarDeploy,
             [FromQuery] string message = DefaultMessage)
         {
             using (_tracer.Step("WarPushDeploy"))

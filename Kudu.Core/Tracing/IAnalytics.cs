@@ -18,5 +18,7 @@ namespace Kudu.Core.Tracing
         void DeprecatedApiUsed(string route, string userAgent, string method, string path);
 
         void SiteExtensionEvent(string method, string path, string result, string deploymentDurationInMilliseconds, string Message);
+
+        void DeploymentCompleted(string siteName, string kind, string requestId, string status, string details);
     }
 }

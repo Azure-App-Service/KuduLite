@@ -33,6 +33,7 @@ namespace Kudu.Core.Tracing
                     }
                     else
                     {
+                        // Log4Net logger output to a file when running on Linux
                         _eventGenerator = new Log4NetEventGenerator();
                     }
                 }

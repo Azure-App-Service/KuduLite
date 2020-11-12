@@ -57,6 +57,8 @@ namespace Kudu
 
         public const string DummyRazorExtension = ".kudu777";
 
+        public const string ScmDeploymentKind = "ScmDeploymentKind";
+
         // Kudu trace text file related
         public const string DeploymentTracePath = LogFilesPath + @"/kudu/deployment";
 

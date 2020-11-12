@@ -406,6 +406,9 @@ namespace Kudu.Core.Deployment
 
             // Cleaup old deployments
             PurgeAndGetDeployments();
+
+            // Report deployment completion
+            DeploymentCompletedInfo.Persist(_environment.RequestId, status, _analytics);
         }
 
         // since the expensive part (reading all files) is done,

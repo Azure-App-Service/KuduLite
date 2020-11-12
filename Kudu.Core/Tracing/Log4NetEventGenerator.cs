@@ -33,6 +33,19 @@ namespace Kudu.Core.Tracing
             LogKuduTraceEvent(kuduEvent);
         }
 
+        public void DeploymentCompleted(string siteName, string kind, string requestId, string status, string details)
+        {
+            KuduEvent kuduEvent = new KuduEvent
+            {
+                siteName = siteName,
+                deploymentDetails = details,
+                deploymentStatus = status,
+                requestId = requestId,
+            };
+
+            LogKuduTraceEvent(kuduEvent);
+        }
+
         public void WebJobStarted(string siteName, string jobName, string scriptExtension, string jobType, string siteMode, string error, string trigger)
         {
             KuduEvent kuduEvent = new KuduEvent
