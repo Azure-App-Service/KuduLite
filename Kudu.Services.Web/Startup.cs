@@ -608,6 +608,9 @@ namespace Kudu.Services.Web
                 routes.MapHttpRouteDual("diagnostics-set-setting", "diagnostics/settings",
                     new {controller = "Diagnostics", action = "Set"},
                     new {verb = new HttpMethodRouteConstraint("POST")});
+                routes.MapHttpRouteDual("diagnostics-get-application-dump", "diagnostics/collect-app-dump",
+                    new { controller = "Diagnostics", action = "CollectApplicationDump" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
                 routes.MapHttpRouteDual("diagnostics-get-all-settings", "diagnostics/settings",
                     new {controller = "Diagnostics", action = "GetAll"},
                     new {verb = new HttpMethodRouteConstraint("GET")});

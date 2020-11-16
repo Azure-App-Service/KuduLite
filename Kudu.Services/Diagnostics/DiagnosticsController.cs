@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Kudu.Services.Infrastructure;
 using System.Threading.Tasks;
+using Kudu.Core.Commands;
 
 namespace Kudu.Services.Performance
 {
@@ -42,6 +43,10 @@ namespace Kudu.Services.Performance
         private readonly ITracer _tracer;
         private readonly IApplicationLogsReader _applicationLogsReader;
         private readonly IEnvironment _environment;
+        private static Progress<ScriptOutputLine> progress = new Progress<ScriptOutputLine>(output =>
+        {
+            Console.WriteLine("SSH DUMP : "+output);
+        });
 
         public DiagnosticsController(IEnvironment environment, ITracer tracer, IApplicationLogsReader applicationLogsReader)
         {
@@ -81,6 +86,16 @@ namespace Kudu.Services.Performance
             {
                 FileDownloadName = String.Format("dump-{0:MM-dd-HH-mm-ss}.zip", DateTime.UtcNow)
             };
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CollectApplicationDump()
+        {
+            using (_tracer.Step("DiagnosticsController.CollectApplicationDump"))
+            {
+                await SSHCommandExecutor.ExecuteAsync(progress, new System.Threading.CancellationToken());
+                return Ok("Dump generated successfully");
+            }
         }
 
         [HttpGet]
