@@ -25,7 +25,7 @@ namespace Kudu.Core.Commands
 
             SshClient sshclient = new SshClient(ipAddress, sshPort, "root", "Docker!");
             sshclient.Connect();
-            using (var sshCommand = sshclient.CreateCommand("sh /dump.sh"))
+            using (var sshCommand = sshclient.CreateCommand("sh /diagnostics/take-dump.sh"))
             {
                 var asyncResult = sshCommand.BeginExecute();
                 var stdoutStreamReader = new StreamReader(sshCommand.OutputStream);
