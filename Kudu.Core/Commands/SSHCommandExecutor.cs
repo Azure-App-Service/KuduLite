@@ -1,5 +1,6 @@
 ﻿using Renci.SshNet;
 using System;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,9 +24,10 @@ namespace Kudu.Core.Commands
                 sshPort = Int32.Parse(ipAddrPortStr[1]);
             }
 
+            var taskId = DateTime.Now.ToString("yyyyMMdd.HHmm", CultureInfo.InvariantCulture);
             SshClient sshclient = new SshClient(ipAddress, sshPort, "root", "Docker!");
             sshclient.Connect();
-            using (var sshCommand = sshclient.CreateCommand("sh /diagnostics/take-dump.sh"))
+            using (var sshCommand = sshclient.CreateCommand($"sh /diagnostics/take-dump.sh {taskId}"))
             {
                 var asyncResult = sshCommand.BeginExecute();
                 var stdoutStreamReader = new StreamReader(sshCommand.OutputStream);
@@ -50,6 +52,7 @@ namespace Kudu.Core.Commands
                     progress,
                     cancellationToken);
             }
+            sshclient.Disconnect();
         }
 
         private static async Task CheckOutputAndReportProgress(
