@@ -45,7 +45,7 @@ namespace Kudu.Services.Performance
         private readonly IEnvironment _environment;
         private static Progress<ScriptOutputLine> progress = new Progress<ScriptOutputLine>(output =>
         {
-            Console.WriteLine("SSH DUMP : "+output);
+            Console.WriteLine("SSH DUMP : "+output.Line+"\n\n");
         });
 
         public DiagnosticsController(IEnvironment environment, ITracer tracer, IApplicationLogsReader applicationLogsReader)
