@@ -85,7 +85,10 @@ namespace Kudu.Services.Zip
             }
             var zipArchive = new ZipArchive(Request.Body, ZipArchiveMode.Read);
             zipArchive.Extract(localFilePath);
-            PermissionHelper.ChmodRecursive("777", localFilePath, _tracer, TimeSpan.FromSeconds(30));
+            if (!OSDetector.IsOnWindows())
+            {
+                PermissionHelper.ChmodRecursive("777", localFilePath, _tracer, TimeSpan.FromSeconds(30));
+            }
             return Task.FromResult((IActionResult)Ok());
         }
 
