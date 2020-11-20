@@ -63,7 +63,6 @@ var myDropzone2 = new Dropzone(
     disablePreview: true,
     dictDefaultMessage: 'Drag a Zip File here to extract & upload, or click to select one',
     accept: function (file, done) {
-        debugger;
         $('.dz-preview.dz-file-preview').css("display", "none"); //removing preview element of dropzone
         showhidepaKmanLoader(true);
         progressBarDisplay(true);
@@ -351,7 +350,6 @@ $(document).on("click", "i[id='editIcon']", function (e) {
     $("#containerFileManager").css('display', 'none');
 
     if ($('.edit-view').is(':visible')) {
-        debugger;
         editor.setValue('');
         var url = e.currentTarget.parentElement.parentElement.cells[6].innerHTML;
         var filename = e.currentTarget.parentElement.parentElement.cells[1].innerText.trim();
@@ -475,7 +473,6 @@ editor.commands.addCommand({
 });
 
 this.saveItem = function () {
-    debugger;
     var text = editor.getValue();
     statusbar.savingChanges();
     this.setContent(this, text)
@@ -592,7 +589,6 @@ function copyProgressHandlingFunction(e, uniqueUrl, forceUpdateModal) {
 // Hook the little pencil glyph and apply Ace syntax mode based on file extension
 //$('.edit').on('click', '.fa-pencil', function () {
 $("#editIcon").click(function () {
-    debugger;
     if ($('.edit-view').is(':visible')) {
         var filename;
         try {
