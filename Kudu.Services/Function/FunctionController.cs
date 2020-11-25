@@ -2,6 +2,7 @@
 using Kudu.Core;
 using Kudu.Core.Functions;
 using Kudu.Core.K8SE;
+using Kudu.Core.Kube;
 using Kudu.Core.Tracing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,7 @@ using Remotion.Linq.Parsing.Structure.IntermediateModel;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -38,6 +40,21 @@ namespace Kudu.Services.Function
         [HttpPut]
         public async Task<IActionResult> SyncTrigger()
         {
+            try
+            {
+                var headers = Request.Headers.ToDictionary(a => a.Key, a => a.Value.AsEnumerable());
+                var authResult = await SyncTriggerAuthenticator.AuthenticateCaller(headers);
+                if (!authResult)
+                {
+                    return StatusCode(StatusCodes.Status401Unauthorized, "Invalid authetication token in the header");
+                }
+            }
+            catch (Exception e)
+            {
+                return StatusCode(StatusCodes.Status401Unauthorized, e.Message);
+            }
+
+
             IActionResult result = Ok();
             using (_tracer.Step("FunctionController.SyncTrigger()"))
             {
