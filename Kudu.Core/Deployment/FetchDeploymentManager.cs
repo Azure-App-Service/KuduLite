@@ -209,6 +209,26 @@ namespace Kudu.Core.Deployment
                         // The branch or commit id to deploy
                         string deployBranch = !String.IsNullOrEmpty(deploymentInfo.CommitId) ? deploymentInfo.CommitId : targetBranch;
 
+                        try
+                        {
+                            _tracer.Trace($"Before sending {Constants.BuildRequestReceived} status to /api/updatedeploystatus");
+                            if (PostDeploymentHelper.IsAzureEnvironment())
+                            {
+                                // Parse the changesetId into a GUID
+                                // The FE hook allows only GUID as a deployment id
+                                // If the id is already in GUID format nothing will happen
+                                // If it doesn't have the necessary format for a GUID, and exception will be thrown
+                                var changeSet = repository.GetChangeSet(deployBranch);
+                                updateStatusObj = new DeployStatusApiResult(Constants.BuildRequestReceived, Guid.Parse(changeSet.Id).ToString());
+                                await SendDeployStatusUpdate(updateStatusObj);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            _tracer.TraceError($"Exception while sending {Constants.BuildRequestReceived} status to /api/updatedeploystatus. " +
+                                $"Entry in the operations table for the deployment status may not have been created. {e}");
+                        }
+
                         // In case the commit or perhaps fetch do no-op.
                         if (deploymentInfo.TargetChangeset != null && ShouldDeploy(repository, deploymentInfo, deployBranch))
                         {
@@ -225,9 +245,9 @@ namespace Kudu.Core.Deployment
                             // Here, we don't need to update the working files, since we know Fetch left them in the correct state
                             // unless for GenericHandler where specific commitId is specified
                             bool deploySpecificCommitId = !String.IsNullOrEmpty(deploymentInfo.CommitId);
-                            if (PostDeploymentHelper.IsAzureEnvironment() && deploymentInfo.ExternalDeploymentId != null)
+                            if (updateStatusObj != null)
                             {
-                                updateStatusObj = new DeployStatusApiResult(Constants.BuildInProgress, deploymentInfo.ExternalDeploymentId);
+                                updateStatusObj.DeploymentStatus = Constants.BuildInProgress;
                                 await SendDeployStatusUpdate(updateStatusObj);
                             }
 
@@ -304,7 +324,7 @@ namespace Kudu.Core.Deployment
         /// </summary>
         /// <param name="updateStatusObj">Obj containing status to save to DB</param>
         /// <returns></returns>
-        private async Task SendDeployStatusUpdate(DeployStatusApiResult updateStatusObj)
+        private async Task<bool> SendDeployStatusUpdate(DeployStatusApiResult updateStatusObj)
         {
             int attemptCount = 0;
             try
@@ -313,10 +333,15 @@ namespace Kudu.Core.Deployment
                 {
                     attemptCount++;
 
-                    _tracer.Trace($" PostAsync - Trying to send {updateStatusObj.DeploymentStatus} deployment status to {Constants.UpdateDeployStatusPath}");
+                    _tracer.Trace($" PostAsync - Trying to send {updateStatusObj.DeploymentStatus} deployment status to {Constants.UpdateDeployStatusPath}. " +
+                        $"DeploymentId is {updateStatusObj.DeploymentId}");
+
                     await PostDeploymentHelper.PostAsync(Constants.UpdateDeployStatusPath, _environment.RequestId, JsonConvert.SerializeObject(updateStatusObj));
 
                 }, 3, 5*1000);
+
+                // If no exception is thrown, the operation was a success
+                return true;
             }
             catch (Exception ex)
             {
@@ -324,6 +349,8 @@ namespace Kudu.Core.Deployment
                 // Do not throw the exception
                 // We fail silently so that we do not fail the build altogether if this call fails
                 //throw;
+
+                return false;
             }
         }
 
