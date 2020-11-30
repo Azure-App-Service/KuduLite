@@ -52,7 +52,7 @@ namespace Kudu.Services.DebugExtension
                 HttpContext.Request.Headers["WEBSHITE_SSH_PASSWORD"] = "Docker!";
                 HttpContext.Request.Headers["WEBSHITE_SSH_IP"] = instance.IpAddress;
 
-                var targetUri = BuildTargetUri(HttpContext.Request);
+                var targetUri = BuildTargetUri(HttpContext.Request, instanceId);
                 var targetRequestMessage = CreateTargetMessage(HttpContext, targetUri);
 
                 using (var responseMessage = await _httpClient.SendAsync(targetRequestMessage, HttpCompletionOption.ResponseHeadersRead, HttpContext.RequestAborted))
@@ -121,11 +121,11 @@ namespace Kudu.Services.DebugExtension
             return new HttpMethod(method);
         }
 
-        private Uri BuildTargetUri(HttpRequest request)
+        private Uri BuildTargetUri(HttpRequest request, string instanceId)
         {
             Uri targetUri = null;
 
-            if (request.Path.StartsWithSegments("/webssh", out var remainingPath))
+            if (request.Path.StartsWithSegments($"/instance/{instanceId}", out var remainingPath))
             {
                 Console.WriteLine("PATH STRING : " + remainingPath);
                 targetUri = new Uri("localhost:3000" + remainingPath);
