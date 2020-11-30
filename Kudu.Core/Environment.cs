@@ -42,6 +42,7 @@ namespace Kudu.Core
         private readonly string _sitePackagesPath;
         private readonly string _secondaryJobsBinariesPath;
         private readonly string _k8seAppName;
+        private readonly string _k8seAppNamespace;
 
 
         // This ctor is used only in unit tests
@@ -63,7 +64,8 @@ namespace Kudu.Core
                 string sitePackagesPath,
                 string requestId,
                 IHttpContextAccessor httpContextAccessor,
-                string k8seAppName = null)
+                string k8seAppName = null,
+                string k8seAppNamespace = null)
         {
             if (repositoryPath == null)
             {
@@ -103,6 +105,7 @@ namespace Kudu.Core
             RequestId = !string.IsNullOrEmpty(requestId) ? requestId : Guid.Empty.ToString();
             _httpContextAccessor = httpContextAccessor;
             _k8seAppName = k8seAppName;
+            _k8seAppNamespace = k8seAppNamespace;
         }
 
         public Environment(
@@ -112,7 +115,8 @@ namespace Kudu.Core
                 string requestId,
                 string kuduConsoleFullPath,
                 IHttpContextAccessor httpContextAccessor,
-                string k8seAppName = null)
+                string k8seAppName = null,
+                string k8seAppNamespace = null)
         {
             RootPath = rootPath;
 
@@ -128,6 +132,7 @@ namespace Kudu.Core
             _diagnosticsPath = Path.Combine(SiteRootPath, Constants.DiagnosticsPath);
             _locksPath = Path.Combine(SiteRootPath, Constants.LocksPath);
             _k8seAppName = k8seAppName;
+            _k8seAppNamespace = k8seAppNamespace;
 
             if (OSDetector.IsOnWindows())
             {
@@ -468,7 +473,8 @@ namespace Kudu.Core
             }
         }
 
-        public bool IsK8SEApp {
+        public bool IsK8SEApp
+        {
             get
             {
                 return K8SEDeploymentHelper.IsK8SEEnvironment();
@@ -482,6 +488,14 @@ namespace Kudu.Core
             get
             {
                 return _k8seAppName;
+            }
+        }
+
+        public string K8SEAppNamespace
+        {
+            get
+            {
+                return _k8seAppNamespace;
             }
         }
 

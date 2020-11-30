@@ -11,7 +11,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
         [Fact]
         public void DefaultTest()
         {
-            IOryxArguments args = new LinuxConsumptionFunctionAppOryxArguments();
+            IOryxArguments args = new LinuxConsumptionFunctionAppOryxArguments(TestMockedEnvironment.GetMockedEnvironment());
             Assert.False(args.RunOryxBuild);
             Assert.True(args.SkipKuduSync);
             Assert.Equal(BuildOptimizationsFlags.Off, args.Flags);
@@ -22,7 +22,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
                 BuildTempPath = "BuildTempPath", // Should be ignored
                 OutputPath = "OutputPath"
             };
-            string command = args.GenerateOryxBuildCommand(mockedContext);
+            string command = args.GenerateOryxBuildCommand(mockedContext, TestMockedEnvironment.GetMockedEnvironment());
             Assert.Equal("oryx build RepositoryPath -o RepositoryPath", command);
         }
 
@@ -41,7 +41,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
 
             using (new TestScopedEnvironmentVariable(mockedEnvironment))
             {
-                IOryxArguments args = new LinuxConsumptionFunctionAppOryxArguments();
+                IOryxArguments args = new LinuxConsumptionFunctionAppOryxArguments(TestMockedEnvironment.GetMockedEnvironment());
                 Assert.Equal(expectedRunOryxBuild, args.RunOryxBuild);
                 Assert.Equal(expectedSkipKuduSync, args.SkipKuduSync);
                 Assert.Equal(expectedFlags, args.Flags);
@@ -74,8 +74,8 @@ namespace Kudu.Tests.Core.Deployment.Oryx
 
             using (new TestScopedEnvironmentVariable(mockedEnvironment))
             {
-                IOryxArguments args = new LinuxConsumptionFunctionAppOryxArguments();
-                string command = args.GenerateOryxBuildCommand(mockedContext);
+                IOryxArguments args = new LinuxConsumptionFunctionAppOryxArguments(TestMockedEnvironment.GetMockedEnvironment());
+                string command = args.GenerateOryxBuildCommand(mockedContext, TestMockedEnvironment.GetMockedEnvironment());
                 Assert.Equal(expected_command, command);
             }
         }

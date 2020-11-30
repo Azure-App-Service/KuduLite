@@ -40,13 +40,14 @@ namespace Kudu.Services.Web
         public async Task Invoke(HttpContext context, IEnvironment environment, IServerConfiguration serverConfig)
         {
             string appName = K8SEDeploymentHelper.GetAppName(context);
+            string appNamenamespace = K8SEDeploymentHelper.GetAppNamespace(context);
 
             string homeDir = "";
             string siteRepoDir = "";
             if (OSDetector.IsOnWindows())
             {
                 // K8SE TODO : Move to constants
-                homeDir = "F:\\repos\\apps\\";
+                homeDir = "C:\\repos\\apps\\";
                 siteRepoDir = "\\site\\repository";
             }
             else
@@ -57,11 +58,16 @@ namespace Kudu.Services.Web
             }
 
             // Cache the App Environment for this request
-            context.Items.Add("environment", GetEnvironment(homeDir, appName));
+            context.Items.Add("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace));
 
             // Cache the appName for this request
             context.Items.Add("appName", appName);
 
+            // Cache the appNamenamespace for this request if it's not empty or null
+            if (!string.IsNullOrEmpty(appNamenamespace))
+            {
+                context.Items.Add("appNamespace", appNamenamespace);
+            }
 
             string[] pathParts = context.Request.Path.ToString().Split("/");
 
@@ -101,7 +107,8 @@ namespace Kudu.Services.Web
             string home,
             string appName,
             IDeploymentSettingsManager settings = null,
-            HttpContext httpContext = null)
+            HttpContext httpContext = null,
+            string appNamespace = null)
         {
             var root = KubeMiddleware.ResolveRootPath(home, appName);
             var siteRoot = Path.Combine(root, Constants.SiteFolder);
@@ -112,7 +119,7 @@ namespace Kudu.Services.Web
             var kuduConsoleFullPath =
                 Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
             return new Core.Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId,
-                kuduConsoleFullPath, null, appName);
+                kuduConsoleFullPath, null, appName, appNamespace);
         }
 
         /// <summary>

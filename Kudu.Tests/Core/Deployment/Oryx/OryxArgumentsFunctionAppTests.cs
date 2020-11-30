@@ -11,7 +11,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
         [Fact]
         public void DefaultTest()
         {
-            IOryxArguments args = new FunctionAppOryxArguments();
+            IOryxArguments args = new FunctionAppOryxArguments(TestMockedEnvironment.GetMockedEnvironment());
             Assert.False(args.RunOryxBuild);
             Assert.False(args.SkipKuduSync);
             Assert.Equal(BuildOptimizationsFlags.None, args.Flags);
@@ -22,7 +22,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
                 BuildTempPath = "BuildTempPath",
                 OutputPath = "OutputPath"
             };
-            string command = args.GenerateOryxBuildCommand(mockedContext);
+            string command = args.GenerateOryxBuildCommand(mockedContext, TestMockedEnvironment.GetMockedEnvironment());
             Assert.Equal("oryx build OutputPath -o OutputPath -i BuildTempPath", command);
         }
 
@@ -41,7 +41,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
 
             using (new TestScopedEnvironmentVariable(mockedEnvironment))
             {
-                IOryxArguments args = new FunctionAppOryxArguments();
+                IOryxArguments args = new FunctionAppOryxArguments(TestMockedEnvironment.GetMockedEnvironment());
                 Assert.Equal(expectedRunOryxBuild, args.RunOryxBuild);
                 Assert.Equal(expectedSkipKuduSync, args.SkipKuduSync);
                 Assert.Equal(expectedFlags, args.Flags);
@@ -74,8 +74,8 @@ namespace Kudu.Tests.Core.Deployment.Oryx
 
             using (new TestScopedEnvironmentVariable(mockedEnvironment))
             {
-                IOryxArguments args = new FunctionAppOryxArguments();
-                string command = args.GenerateOryxBuildCommand(mockedContext);
+                IOryxArguments args = new FunctionAppOryxArguments(TestMockedEnvironment.GetMockedEnvironment());
+                string command = args.GenerateOryxBuildCommand(mockedContext, TestMockedEnvironment.GetMockedEnvironment());
                 Assert.Equal(expected_command, command);
             }
         }
@@ -98,8 +98,8 @@ namespace Kudu.Tests.Core.Deployment.Oryx
 
             using (new TestScopedEnvironmentVariable(mockedEnvironment))
             {
-                IOryxArguments args = new FunctionAppOryxArguments();
-                string command = args.GenerateOryxBuildCommand(mockedContext);
+                IOryxArguments args = new FunctionAppOryxArguments(TestMockedEnvironment.GetMockedEnvironment());
+                string command = args.GenerateOryxBuildCommand(mockedContext, TestMockedEnvironment.GetMockedEnvironment());
                 Assert.True(args.RunOryxBuild);
                 Assert.True(args.SkipKuduSync);
                 Assert.Equal("oryx build RepositoryPath -o /tmp/build/expressbuild --platform nodejs --platform-version 8.15 -i BuildTempPath",
