@@ -40,6 +40,23 @@ namespace Kudu.Core.K8SE
         }
 
         /// <summary>
+        /// Calls into buildctl to get a list of instaces for an app
+        /// </summary>
+        /// <param name="appName"></param>
+        /// <returns></returns>
+        public static List<PodInstance> GetInstances(string appName)
+        {
+            var cmd = new StringBuilder();
+            BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "get");
+            BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+            BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "podInstances");
+            var instList = RunBuildCtlCommand(cmd.ToString(), "Getting app instances...");
+            byte[] data = Convert.FromBase64String(instList);
+            string json = Encoding.UTF8.GetString(data);
+            return JsonConvert.DeserializeObject<List<PodInstance>>(json);
+        }
+
+        /// <summary>
         /// Calls into buildctl to update a BuildVersion of
         /// the K8SE App
         /// </summary>
