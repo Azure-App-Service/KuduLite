@@ -57,7 +57,7 @@ namespace Kudu.Services.Web.Tracing
             catch (Exception ex)
             {
                 await Task.Run(() => LogException(context, ex));
-                ExceptionDispatchInfo.Capture(ex.InnerException ?? ex).Throw();
+                //ExceptionDispatchInfo.Capture(ex.InnerException ?? ex).Throw();
             }
             // At the end of the pipe
             EndRequest(context);
