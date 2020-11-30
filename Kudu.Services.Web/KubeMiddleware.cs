@@ -10,6 +10,9 @@ using System.Text;
 using Kudu.Core.Helpers;
 using System.IO;
 using Kudu.Core.K8SE;
+using System.Linq;
+using System.Collections.Generic;
+using System.Runtime.Caching;
 
 namespace Kudu.Services.Web
 {
@@ -21,6 +24,12 @@ namespace Kudu.Services.Web
         private const string KuduConsoleFilename = "kudu.dll";
         private const string KuduConsoleRelativePath = "KuduConsole";
         private readonly RequestDelegate _next;
+        ObjectCache cache = MemoryCache.Default;
+        private static CacheItemPolicy cacheItemPolicy = new CacheItemPolicy
+        {
+            AbsoluteExpiration = DateTimeOffset.Now.AddMinutes(60.0),
+
+        };
 
         /// <summary>
         /// Filter out unnecessary routes for Linux Consumption
@@ -62,25 +71,55 @@ namespace Kudu.Services.Web
 
             // Cache the appName for this request
             context.Items.Add("appName", appName);
+            PodInstance instance = null;
+            if (context.Request.Path.Value.StartsWith("/instances/", StringComparison.OrdinalIgnoreCase)
+                && context.Request.Path.Value.IndexOf("/webssh") > 0)
+            {
+                List<PodInstance> instances;
+                var cachedInstances = cache.Get(appName);
+                if (cachedInstances == null)
+                {
+                    instances = K8SEDeploymentHelper.GetInstances(K8SEDeploymentHelper.GetAppName(context));
+                }
+                else
+                {
+                    instances = (List<PodInstance>)cachedInstances;
+                }
 
-            var instance = new PodInstance()
-            {
-                Name = "codeapp-sample-8994dbf4d-vsdr5",
-                IpAddress = "10.244.1.62",
-                NodeName = "node",
-            };
+                int idx = context.Request.Path.Value.IndexOf("/webssh");
+                string instanceId = context.Request.Path.Value.Substring(0, idx).Replace("/instances/", "");
+                Console.WriteLine($"\n\n\n\n inst id {instanceId}");
+                if (instances.Count > 0)
+                {
+                    instance = instances.Where(i => i.Name.Equals(instanceId, System.StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+                }
 
-            if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_USER"))
-            {
-                context.Request.Headers.Add("WEBSITE_SSH_USER", "root");
-            }
-            if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_PASSWORD"))
-            {
-                context.Request.Headers.Add("WEBSITE_SSH_PASSWORD", "Docker!");
-            }
-            if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_IP"))
-            {
-                context.Request.Headers.Add("WEBSITE_SSH_IP", instance.IpAddress);
+                if (instances.Count > 0 && instanceId.Equals("any", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    instance = instances[0];
+                }
+
+                if (instance == null)
+                {
+                    context.Response.StatusCode = StatusCodes.Status402PaymentRequired;
+                    //await context.Response.WriteAsync("Instance not found");
+                    return;
+                }
+
+                int idx2 = context.Request.Path.Value.IndexOf("/webssh");
+                context.Request.Path = context.Request.Path.Value.Substring(idx2);
+                if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_USER"))
+                {
+                    context.Request.Headers.Add("WEBSITE_SSH_USER", "root");
+                }
+                if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_PASSWORD"))
+                {
+                    context.Request.Headers.Add("WEBSITE_SSH_PASSWORD", "Docker!");
+                }
+                if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_IP"))
+                {
+                    context.Request.Headers.Add("WEBSITE_SSH_IP", instance.IpAddress);
+                }
             }
 
             // Cache the appNamenamespace for this request if it's not empty or null

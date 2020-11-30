@@ -94,12 +94,112 @@ namespace Kudu.Services.DebugExtension
         }
         */
 
-        [Route("{instanceId}/webssh/{subpath}")]
+        /*
+        [Route("{instanceId}/gcdump")]
+        public async Task<string> GetGCDump(string instanceId)
+        {
+            var httpClientHandler = new HttpClientHandler
+            {
+                AllowAutoRedirect = false
+            };
+            var webRequest = new HttpClient(httpClientHandler);
+
+            var buffer = new byte[4 * 1024];
+            var localResponse = HttpContext.Response;
+            try
+            {
+                using (var remoteStream = await webRequest.GetStreamAsync(url))
+                {
+                    var bytesRead = remoteStream.Read(buffer, 0, buffer.Length);
+
+                    localResponse.Clear();
+                    localResponse.ContentType = "application/octet-stream";
+                    var uri = "";
+                    var scheme = HttpContext.Request.Scheme;
+                    if (scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
+                    {
+                        scheme = "http";
+                    }
+                    if (HttpContext.Request.Path.StartsWithSegments($"/instances/{instanceId}", out var remainingPath))
+                    {
+                        Console.WriteLine("PATH STRING : " + remainingPath);
+                        uri = $"{scheme}://localhost:3000" + remainingPath);
+                    }
+                    var fileName = Path.GetFileName(url);
+                    localResponse.Headers.Add("Content-Disposition", "attachment; filename=" + fileName);
+
+                    if (remoteStream.Length != -1)
+                        localResponse.ContentLength = remoteStream.Length;
+
+                    while (bytesRead > 0) // && localResponse.IsClientConnected)
+                    {
+                        await localResponse.Body.WriteAsync(buffer, 0, bytesRead);
+                        bytesRead = remoteStream.Read(buffer, 0, buffer.Length);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                // Do some logging here
+            }
+        }
+
+        [Route("{instanceId}/dump")]
+        public async Task<string> GetDump(string instanceId)
+        {
+            var httpClientHandler = new HttpClientHandler
+            {
+                AllowAutoRedirect = false
+            };
+            var webRequest = new HttpClient(httpClientHandler);
+
+            var buffer = new byte[4 * 1024];
+            var localResponse = HttpContext.Response;
+            try
+            {
+                using (var remoteStream = await webRequest.GetStreamAsync(url))
+                {
+                    var bytesRead = remoteStream.Read(buffer, 0, buffer.Length);
+
+                    localResponse.Clear();
+                    localResponse.ContentType = "application/octet-stream";
+                    var uri = "";
+                    var scheme = HttpContext.Request.Scheme;
+                    if (scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
+                    {
+                        scheme = "http";
+                    }
+                    if (HttpContext.Request.Path.StartsWithSegments($"/instances/{instanceId}", out var remainingPath))
+                    {
+                        Console.WriteLine("PATH STRING : " + remainingPath);
+                        uri = $"{scheme}://localhost:3000" + remainingPath);
+                    }
+                    var fileName = Path.GetFileName(url);
+                    localResponse.Headers.Add("Content-Disposition", "attachment; filename=" + fileName);
+
+                    if (remoteStream.Length != -1)
+                        localResponse.ContentLength = remoteStream.Length;
+
+                    while (bytesRead > 0) // && localResponse.IsClientConnected)
+                    {
+                        await localResponse.Body.WriteAsync(buffer, 0, bytesRead);
+                        bytesRead = remoteStream.Read(buffer, 0, buffer.Length);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                // Do some logging here
+            }
+        }
+        */
+
+        /*
         public async Task<string> SSH(string instanceId, string subpath)
         {
             if(K8SEDeploymentHelper.IsK8SEEnvironment())
             {
-                /*
+                
                 var instances = K8SEDeploymentHelper.GetInstances(K8SEDeploymentHelper.GetAppName(HttpContext));
                 PodInstance instance = null;
                 if (instances.Count > 0)
@@ -116,7 +216,7 @@ namespace Kudu.Services.DebugExtension
                 {
                     return "Invalid instance";
                 }
-                */
+                
                 var instance = new PodInstance()
                 {
                     Name = "codeapp-sample-8994dbf4d-vsdr5",
@@ -133,10 +233,12 @@ namespace Kudu.Services.DebugExtension
                     //CopyFromTargetResponseHeaders(HttpContext, responseMessage);
                     await responseMessage.Content.CopyToAsync(HttpContext.Response.Body);
                 }
+                
             }
             return null;
         }
 
+        */
         private HttpRequestMessage CreateTargetMessage(HttpContext context, Uri targetUri, PodInstance instance)
         {
             var requestMessage = new HttpRequestMessage();

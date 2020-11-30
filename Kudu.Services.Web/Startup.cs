@@ -358,6 +358,8 @@ namespace Kudu.Services.Web
                 app.UseKubeMiddleware();
             }
 
+            ProxyRequestIfRelativeUrlMatches(@"/webssh", "http", "127.0.0.1", KuduWebUtil.GetWebSSHProxyPort(), app);
+
             app.MapWhen(containsRelativeProvisionPath, application => application.Run(async context =>
             {
                 FileSystemHelpers.EnsureDirectory("/home/apps/"+context.Request.Path.Value.Replace("/api/provision/", ""));
@@ -384,8 +386,6 @@ namespace Kudu.Services.Web
             applicationLifetime.ApplicationStopping.Register(OnShutdown);
 
             app.UseStaticFiles();
-
-           //ProxyRequestIfRelativeUrlMatches(@"/webssh", "http", "127.0.0.1", KuduWebUtil.GetWebSSHProxyPort() , app);
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 
@@ -714,7 +714,7 @@ namespace Kudu.Services.Web
             IApplicationBuilder app)
         {
             var containsRelativePath = new Func<HttpContext, bool>(i =>
-                i.Request.Path.Value.StartsWith(relativeUrl, StringComparison.OrdinalIgnoreCase));
+                i.Request.Path.Value.StartsWith("/webssh", StringComparison.OrdinalIgnoreCase));
             app.MapWhen(containsRelativePath, builder => builder.RunProxy(new ProxyOptions
             {
                 Scheme = scheme,
