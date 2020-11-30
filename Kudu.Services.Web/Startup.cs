@@ -376,16 +376,16 @@ namespace Kudu.Services.Web
 
             app.UseResponseCompression();
 
-            var containsRelativePath3 = new Func<HttpContext, bool>(i =>
-                i.Request.Path.Value.StartsWith("/AppServiceTunnel/Tunnel.ashx", StringComparison.OrdinalIgnoreCase));
+            //var containsRelativePath3 = new Func<HttpContext, bool>(i =>
+            //    i.Request.Path.Value.StartsWith("/AppServiceTunnel/Tunnel.ashx", StringComparison.OrdinalIgnoreCase));
 
-            app.MapWhen(containsRelativePath3, builder => builder.UseMiddleware<DebugExtensionMiddleware>());
+            //app.MapWhen(containsRelativePath3, builder => builder.UseMiddleware<DebugExtensionMiddleware>());
 
             applicationLifetime.ApplicationStopping.Register(OnShutdown);
 
             app.UseStaticFiles();
 
-            ProxyRequestIfRelativeUrlMatches(@"/webssh", "http", "127.0.0.1", KuduWebUtil.GetWebSSHProxyPort() , app);
+           //ProxyRequestIfRelativeUrlMatches(@"/webssh", "http", "127.0.0.1", KuduWebUtil.GetWebSSHProxyPort() , app);
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 
@@ -722,7 +722,7 @@ namespace Kudu.Services.Web
             {
                 Scheme = scheme,
                 Host = host,
-                Port = port
+                Port = port,
             }));
         }
 
