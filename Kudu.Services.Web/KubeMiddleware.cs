@@ -63,6 +63,26 @@ namespace Kudu.Services.Web
             // Cache the appName for this request
             context.Items.Add("appName", appName);
 
+            var instance = new PodInstance()
+            {
+                Name = "codeapp-sample-8994dbf4d-vsdr5",
+                IpAddress = "10.244.1.62",
+                NodeName = "node",
+            };
+
+            if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_USER"))
+            {
+                context.Request.Headers.Add("WEBSITE_SSH_USER", "root");
+            }
+            if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_PASSWORD"))
+            {
+                context.Request.Headers.Add("WEBSITE_SSH_PASSWORD", "Docker!");
+            }
+            if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_IP"))
+            {
+                context.Request.Headers.Add("WEBSITE_SSH_IP", instance.IpAddress);
+            }
+
             // Cache the appNamenamespace for this request if it's not empty or null
             if (!string.IsNullOrEmpty(appNamenamespace))
             {
