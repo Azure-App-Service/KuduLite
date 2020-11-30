@@ -33,6 +33,7 @@
     <PackageReference Include="Microsoft.Diagnostics.Runtime" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="4.0.1" />
     <PackageReference Include="XmlSettings" Version="0.1.3" />
+    <PackageReference Include="System.Runtime.Caching" Version="0.1.3" />
   </ItemGroup>
   <Target Name="_IncludePrePublishGeneratedContent" BeforeTargets="GetCopyToPublishDirectoryItems" Condition=" '$(EnableDefaultItems)' == 'true' And '$(EnableDefaultContentItems)' == 'true' " />
   <ItemGroup>

@@ -11,6 +11,8 @@ using System.Text;
 using Kudu.Core.Helpers;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
+using System.Runtime.Caching;
 using System.Runtime.CompilerServices;
 using Kudu.Core.K8SE;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +28,12 @@ namespace Kudu.Services.Web
         private const string KuduConsoleFilename = "kudu.dll";
         private const string KuduConsoleRelativePath = "KuduConsole";
         private readonly RequestDelegate _next;
+        ObjectCache cache = MemoryCache.Default;
+        private static CacheItemPolicy cacheItemPolicy = new CacheItemPolicy
+        {
+            AbsoluteExpiration = DateTimeOffset.Now.AddMinutes(60.0),
+
+        };
 
         /// <summary>
         /// Filter out unnecessary routes for Linux Consumption
@@ -67,29 +75,65 @@ namespace Kudu.Services.Web
             context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appType));
 
             // Cache the appName for this request
+<<<<<<< HEAD
             context.Items.TryAdd("appName", appName);
 
             // Add All AppSettings to the context.
             K8SEDeploymentHelper.UpdateContextWithAppSettings(context);
 
             var instance = new PodInstance()
+=======
+            context.Items.Add("appName", appName);
+            PodInstance instance = null;
+            if (context.Request.Path.Value.StartsWith("/instances/", StringComparison.OrdinalIgnoreCase)
+                && context.Request.Path.Value.IndexOf("/webssh") > 0)
+>>>>>>> f9921c9... Move proxy to startup
             {
-                Name = "codeapp-sample-8994dbf4d-vsdr5",
-                IpAddress = "10.244.1.62",
-                NodeName = "node",
-            };
+                List<PodInstance> instances;
+                var cachedInstances = cache.Get(appName);
+                if (cachedInstances == null)
+                {
+                    instances = K8SEDeploymentHelper.GetInstances(K8SEDeploymentHelper.GetAppName(context));
+                }
+                else
+                {
+                    instances = (List<PodInstance>)cachedInstances;
+                }
 
-            if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_USER"))
-            {
-                context.Request.Headers.Add("WEBSITE_SSH_USER", "root");
-            }
-            if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_PASSWORD"))
-            {
-                context.Request.Headers.Add("WEBSITE_SSH_PASSWORD", "Docker!");
-            }
-            if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_IP"))
-            {
-                context.Request.Headers.Add("WEBSITE_SSH_IP", instance.IpAddress);
+                int idx = context.Request.Path.Value.IndexOf("/webssh");
+                string instanceId = context.Request.Path.Value.Substring(0, idx).Replace("/instances/", "");
+                Console.WriteLine($"\n\n\n\n inst id {instanceId}");
+                if (instances.Count > 0)
+                {
+                    instance = instances.Where(i => i.Name.Equals(instanceId, System.StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+                }
+
+                if (instances.Count > 0 && instanceId.Equals("any", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    instance = instances[0];
+                }
+
+                if (instance == null)
+                {
+                    context.Response.StatusCode = StatusCodes.Status402PaymentRequired;
+                    //await context.Response.WriteAsync("Instance not found");
+                    return;
+                }
+
+                int idx2 = context.Request.Path.Value.IndexOf("/webssh");
+                context.Request.Path = context.Request.Path.Value.Substring(idx2);
+                if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_USER"))
+                {
+                    context.Request.Headers.Add("WEBSITE_SSH_USER", "root");
+                }
+                if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_PASSWORD"))
+                {
+                    context.Request.Headers.Add("WEBSITE_SSH_PASSWORD", "Docker!");
+                }
+                if (!context.Request.Headers.ContainsKey("WEBSITE_SSH_IP"))
+                {
+                    context.Request.Headers.Add("WEBSITE_SSH_IP", instance.IpAddress);
+                }
             }
 
             // Cache the appNamenamespace for this request if it's not empty or null
