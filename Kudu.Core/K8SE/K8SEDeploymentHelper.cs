@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Caching;
 using System.Text;
 
 namespace Kudu.Core.K8SE
@@ -17,6 +18,12 @@ namespace Kudu.Core.K8SE
 
         public static ITracer _tracer;
         public static ILogger _logger;
+        private static ObjectCache cache = MemoryCache.Default;
+        private static CacheItemPolicy instanceCachePolicy = new CacheItemPolicy
+        {
+            AbsoluteExpiration = DateTimeOffset.Now.AddSeconds(30.0),
+
+        };
 
         // K8SE_BUILD_SERVICE not null or empty
         public static bool IsK8SEEnvironment()
@@ -46,14 +53,21 @@ namespace Kudu.Core.K8SE
         /// <returns></returns>
         public static List<PodInstance> GetInstances(string appName)
         {
-            var cmd = new StringBuilder();
-            BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "get");
-            BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
-            BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "podInstances");
-            var instList = RunBuildCtlCommand(cmd.ToString(), "Getting app instances...");
-            byte[] data = Convert.FromBase64String(instList);
-            string json = Encoding.UTF8.GetString(data);
-            return JsonConvert.DeserializeObject<List<PodInstance>>(json);
+            var cachedInstances = cache.Get(appName);
+            if (cachedInstances == null)
+            {
+                var cmd = new StringBuilder();
+                BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "get");
+                BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+                BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "podInstances");
+                var instList = RunBuildCtlCommand(cmd.ToString(), "Getting app instances...");
+                byte[] data = Convert.FromBase64String(instList);
+                string json = Encoding.UTF8.GetString(data);
+                cachedInstances = JsonConvert.DeserializeObject<List<PodInstance>>(json);
+                cache.Add(appName, cachedInstances, instanceCachePolicy);
+            }
+
+            return (List<PodInstance>)cachedInstances;
         }
 
         /// <summary>

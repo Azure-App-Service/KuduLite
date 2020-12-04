@@ -24,12 +24,6 @@ namespace Kudu.Services.Web
         private const string KuduConsoleFilename = "kudu.dll";
         private const string KuduConsoleRelativePath = "KuduConsole";
         private readonly RequestDelegate _next;
-        ObjectCache cache = MemoryCache.Default;
-        private static CacheItemPolicy cacheItemPolicy = new CacheItemPolicy
-        {
-            AbsoluteExpiration = DateTimeOffset.Now.AddMinutes(60.0),
-
-        };
 
         /// <summary>
         /// Filter out unnecessary routes for Linux Consumption
@@ -75,16 +69,7 @@ namespace Kudu.Services.Web
             if (context.Request.Path.Value.StartsWith("/instances/", StringComparison.OrdinalIgnoreCase)
                 && context.Request.Path.Value.IndexOf("/webssh") > 0)
             {
-                List<PodInstance> instances;
-                var cachedInstances = cache.Get(appName);
-                if (cachedInstances == null)
-                {
-                    instances = K8SEDeploymentHelper.GetInstances(K8SEDeploymentHelper.GetAppName(context));
-                }
-                else
-                {
-                    instances = (List<PodInstance>)cachedInstances;
-                }
+                List<PodInstance> instances = K8SEDeploymentHelper.GetInstances(appName);
 
                 int idx = context.Request.Path.Value.IndexOf("/webssh");
                 string instanceId = context.Request.Path.Value.Substring(0, idx).Replace("/instances/", "");
@@ -101,8 +86,8 @@ namespace Kudu.Services.Web
 
                 if (instance == null)
                 {
-                    context.Response.StatusCode = StatusCodes.Status402PaymentRequired;
-                    //await context.Response.WriteAsync("Instance not found");
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
+                    await context.Response.WriteAsync("Instance not found");
                     return;
                 }
 

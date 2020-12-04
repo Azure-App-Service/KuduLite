@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -53,6 +54,45 @@ namespace Kudu.Services.DebugExtension
         }
 
         /*
+        [Route("{instanceId}/gcdump")]
+
+        public async Task<HttpResponseMessage> GetGcDump(string instanceId)
+        {
+            var instances = K8SEDeploymentHelper.GetInstances(K8SEDeploymentHelper.GetAppName(HttpContext));
+            PodInstance instance = null;
+            if (instances.Count > 0)
+            {
+                instance = instances.Where(i => i.Name.Equals(instanceId, System.StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+            }
+
+            if (instances.Count > 0 && instanceId.Equals("any", System.StringComparison.OrdinalIgnoreCase))
+            {
+                instance = instances[0];
+            }
+
+            if (instance == null)
+            {
+                return NotFound("Invalid instance");
+            }
+
+            var httpClientHandler = new HttpClientHandler
+            {
+                AllowAutoRedirect = false
+            };
+            using (var httpClient = new HttpClient())
+            {
+                string absoluteUrl = _baseUri.ToString() + "/" + url + Request.RequestUri.Query;
+                var proxyRequest = new HttpRequestMessage(Request.Method, absoluteUrl);
+                foreach (var header in Request.Headers)
+                {
+                    proxyRequest.Headers.Add(header.Key, header.Value);
+                }
+
+                return await httpClient.SendAsync(proxyRequest, HttpCompletionOption.ResponseContentRead);
+            }
+        }
+
+        
         [Route("{instanceId}/remotedebug")]
         public IActionResult RemoteDebug(string instanceId)
         {
@@ -143,16 +183,34 @@ namespace Kudu.Services.DebugExtension
                 // Do some logging here
             }
         }
+        
 
-        [Route("{instanceId}/dump")]
-        public async Task<string> GetDump(string instanceId)
+        [Route("{instanceId}/gcdump")]
+        public async Task<string> GetGcDump(string instanceId)
         {
+            var instances = K8SEDeploymentHelper.GetInstances(K8SEDeploymentHelper.GetAppName(HttpContext));
+            PodInstance instance = null;
+            if (instances.Count > 0)
+            {
+                instance = instances.Where(i => i.Name.Equals(instanceId, System.StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+            }
+
+            if (instances.Count > 0 && instanceId.Equals("any", System.StringComparison.OrdinalIgnoreCase))
+            {
+                instance = instances[0];
+            }
+
+            if (instance == null)
+            {
+                return "Invalid instance";
+            }
+
             var httpClientHandler = new HttpClientHandler
             {
                 AllowAutoRedirect = false
             };
             var webRequest = new HttpClient(httpClientHandler);
-
+            var url = $"http://{instance.IpAddress}:1601/dump";
             var buffer = new byte[4 * 1024];
             var localResponse = HttpContext.Response;
             try
@@ -162,7 +220,7 @@ namespace Kudu.Services.DebugExtension
                     var bytesRead = remoteStream.Read(buffer, 0, buffer.Length);
 
                     localResponse.Clear();
-                    localResponse.ContentType = "application/octet-stream";
+                    localResponse.ContentType = "application/octet-stream";  
                     var uri = "";
                     var scheme = HttpContext.Request.Scheme;
                     if (scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
@@ -172,7 +230,9 @@ namespace Kudu.Services.DebugExtension
                     if (HttpContext.Request.Path.StartsWithSegments($"/instances/{instanceId}", out var remainingPath))
                     {
                         Console.WriteLine("PATH STRING : " + remainingPath);
-                        uri = $"{scheme}://localhost:3000" + remainingPath);
+                        uri = $"{scheme}://{instance.IpAddress}:1601{remainingPath}";
+                        Console.WriteLine($"PATH STRING : {scheme}://{instance.IpAddress}:1601{remainingPath}");
+
                     }
                     var fileName = Path.GetFileName(url);
                     localResponse.Headers.Add("Content-Disposition", "attachment; filename=" + fileName);
@@ -185,6 +245,8 @@ namespace Kudu.Services.DebugExtension
                         await localResponse.Body.WriteAsync(buffer, 0, bytesRead);
                         bytesRead = remoteStream.Read(buffer, 0, buffer.Length);
                     }
+
+                    return File(bytesRead, "application/vnd.openxmlformats", "fileName.xlsx");
                 }
             }
             catch (Exception e)
@@ -192,7 +254,6 @@ namespace Kudu.Services.DebugExtension
                 // Do some logging here
             }
         }
-        */
 
         /*
         public async Task<string> SSH(string instanceId, string subpath)
