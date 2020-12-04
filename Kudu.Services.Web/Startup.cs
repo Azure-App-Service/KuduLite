@@ -45,6 +45,8 @@ using ILogger = Kudu.Core.Deployment.ILogger;
 using Microsoft.AspNetCore.Authentication;
 using Kudu.Services.Web.Services;
 using Kudu.Core.K8SE;
+using System.Net.Http;
+using Microsoft.AspNetCore.Routing;
 
 namespace Kudu.Services.Web
 {
@@ -338,6 +340,8 @@ namespace Kudu.Services.Web
             {
                 KeepAliveInterval = TimeSpan.FromSeconds(15)
             };
+            app.UseMiddleware<InstanceMiddleware>();
+
             app.UseWebSockets(webSocketOptions);
 
             var containsRelativePath = new Func<HttpContext, bool>(i =>
