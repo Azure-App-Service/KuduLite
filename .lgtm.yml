@@ -1,0 +1,26 @@
+extraction:
+  csharp:
+    # The `prepare` step exists for customization on LGTM.com only.
+    # prepare:
+    #   packages:
+    #     - example_package
+    # Add an `after-prepare` step if you need to run commands after the `prepare` step.
+    # Each command should be listed on a separate line.
+    after_prepare:
+      - export PATH=$LGTM_WORKSPACE/tools:$PATH
+    # The `index` step builds the code and extracts information during the build
+    # process.
+    index:
+      # Override the autobuild process by specifying a list of custom build commands
+      # to use instead. 
+      build_command:
+        - dotnet build Kudu.Services.Web/Kudu.Services.Web.csproj
+      # Specify .NET Core settings.
+      dotnet:
+        # Specify the version of .NET Core SDK to use.
+        # Default: The version installed on the build machine.
+        version: 2.2
+      # Specify additional options for the extractor,
+      # for example --fast to perform a faster extraction that produces a smaller 
+      # database.
+      extractor: "--fast"
