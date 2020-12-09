@@ -1,8 +1,6 @@
-name: .NET Core
+name: PR Validation
 
 on:
-  push:
-    branches: [ dev ]
   pull_request:
     branches: [ dev ]
 
@@ -20,4 +18,4 @@ jobs:
     - name: Install dependencies
       run: dotnet restore
     - name: Build
-      run: dotnet build ./Kudu.Services.Web/Kudu.Services.Web.csproj --configuration Release --no-restore
+      run: dotnet publish ./Kudu.Services.Web/Kudu.Services.Web.csproj --configuration Release --no-restore
