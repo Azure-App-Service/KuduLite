@@ -19,7 +19,7 @@ extraction:
       dotnet:
         # Specify the version of .NET Core SDK to use.
         # Default: The version installed on the build machine.
-        version: 2.2.8
+        version: 2.2.207
       # Specify additional options for the extractor,
       # for example --fast to perform a faster extraction that produces a smaller 
       # database.
