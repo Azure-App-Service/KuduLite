@@ -1,4 +1,4 @@
-name: Dev Merge Validation
+name: Build
 
 on:
   push:
