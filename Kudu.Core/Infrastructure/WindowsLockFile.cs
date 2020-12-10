@@ -95,14 +95,12 @@ namespace Kudu.Core.Infrastructure
         {
             get
             {
-                /*
                 // If there's no file then there's no process holding onto it
                 if (!FileSystemHelpers.FileExists(_path))
                 {
                     _traceFactory.GetTracer().Trace("Lock '{0}' no file. no one holding the lock", _path);
                     return false;
                 }
-                */
 
                 try
                 {
@@ -148,11 +146,13 @@ namespace Kudu.Core.Infrastructure
             {
                 _traceFactory.GetTracer().Trace("Lock '{0}' - trying to lock", _path);
                 FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_path));
+                /*
                 if (FileSystemHelpers.FileExists(_path))
                 {
                     _traceFactory.GetTracer().Trace("Lock '{0}' lock file exists. Returning false to lock", _path);
                     return false;
                 }
+                */
                 lockStream = FileSystemHelpers.OpenFile(_path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                 _traceFactory.GetTracer().Trace("Lock '{0}' writing lock file", _path);
                 WriteLockInfo(operationName, lockStream);
