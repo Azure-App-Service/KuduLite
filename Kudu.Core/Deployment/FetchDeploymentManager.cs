@@ -465,6 +465,8 @@ namespace Kudu.Core.Deployment
                                 FileSystemHelpers.SetLastWriteTimeUtc(fetchDeploymentManager._markerFilePath, DateTime.UtcNow);
                             }
                         }
+
+                        throw;
                     }
                 }
                 catch (Exception ex)

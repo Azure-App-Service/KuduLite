@@ -95,12 +95,14 @@ namespace Kudu.Core.Infrastructure
         {
             get
             {
+                /*
                 // If there's no file then there's no process holding onto it
                 if (!FileSystemHelpers.FileExists(_path))
                 {
                     _traceFactory.GetTracer().Trace("Lock '{0}' no file. no one holding the lock", _path);
                     return false;
                 }
+                */
 
                 try
                 {
