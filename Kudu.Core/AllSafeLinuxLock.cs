@@ -120,6 +120,7 @@ namespace Kudu.Core
         
         public bool Lock(string operationName)
         {
+            _traceFactory.GetTracer().Trace("Acquiring Deployment Lock");
             if (FileSystemHelpers.DirectoryExists(locksPath+"/deployment"))
             {
                 // Directory exists implies a lock exists
@@ -127,11 +128,11 @@ namespace Kudu.Core
                 // If it exists check the expiry
                 if (IsHeld)
                 {
-                    //Console.WriteLine("LockOp - Lock Already Held");
+                    _traceFactory.GetTracer().Trace("Cannot Acquire Deployment Lock already held");
                     return false;
                 }
             }
-            //Console.WriteLine("LockOp - Creating Lock");
+            _traceFactory.GetTracer().Trace("Acquired Deployment Lock");
             CreateLockInfoFile(operationName);
             return true;
         }

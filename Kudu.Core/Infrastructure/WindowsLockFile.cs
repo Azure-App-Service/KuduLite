@@ -139,15 +139,12 @@ namespace Kudu.Core.Infrastructure
 
         public virtual bool Lock(string operationName)
         {
+            _traceFactory.GetTracer().Trace($"Acquiring lock {_path}");
             Stream lockStream = null;
             try
             {
 
                 FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_path));
-                if (FileSystemHelpers.FileExists(_path))
-                {
-                    return false;
-                }
                 lockStream = FileSystemHelpers.OpenFile(_path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
 
                 WriteLockInfo(operationName, lockStream);
@@ -156,7 +153,7 @@ namespace Kudu.Core.Infrastructure
 
                 _lockStream = lockStream;
                 lockStream = null;
-
+                _traceFactory.GetTracer().Trace($"Lock Acquired {_path}");
                 return true;
             }
             catch (UnauthorizedAccessException)
@@ -263,6 +260,7 @@ namespace Kudu.Core.Infrastructure
 
         public virtual void Release()
         {
+            _traceFactory.GetTracer().Trace($"Releasing lock {_path}");
             // Normally, this should never be null here, but currently some LiveScmEditorController code calls Release() incorrectly
             if (_lockStream == null)
             {

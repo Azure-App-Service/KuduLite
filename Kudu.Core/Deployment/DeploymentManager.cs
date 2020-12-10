@@ -416,14 +416,11 @@ namespace Kudu.Core.Deployment
             if (results.Any())
             {
                 var toDelete = new List<DeployResult>();
-                // If deploying don't purge the temporary deployments
-                if (!IsDeploying)
-                {
-                    toDelete.AddRange(GetPurgeTemporaryDeployments(results));
-                    toDelete.AddRange(GetPurgeFailedDeployments(results));
-                    toDelete.AddRange(GetPurgeObsoleteDeployments(results));
-                }
-                
+                // Reverting to ANT 90 behavior
+                toDelete.AddRange(GetPurgeTemporaryDeployments(results));
+                toDelete.AddRange(GetPurgeFailedDeployments(results));
+                toDelete.AddRange(GetPurgeObsoleteDeployments(results));
+
                 if (toDelete.Any())
                 {
                     var tracer = _traceFactory.GetTracer();
