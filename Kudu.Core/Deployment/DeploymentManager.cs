@@ -346,8 +346,13 @@ namespace Kudu.Core.Deployment
                 statusFile.StatusText = statusText;
                 statusFile.IsTemporary = changeSet.IsTemporary;
                 statusFile.IsReadOnly = changeSet.IsReadOnly;
+                tracer.Step("Saving Status Lock file");
+                Console.WriteLine($"Saving Status Lock file: {DateTime.Now.ToString()}");
                 statusFile.Save();
             }
+
+            tracer.Step("Status Lock file saved");
+            Console.WriteLine($"Status Lock File Saved: {DateTime.Now.ToString()}");
 
             tempChangeSet = changeSet;
 

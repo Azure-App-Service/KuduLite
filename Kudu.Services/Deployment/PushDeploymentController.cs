@@ -560,6 +560,8 @@ namespace Kudu.Services.Deployment
                 }
             }
 
+            _traceFactory.GetTracer().Trace("PUSH Deployment Controller: Zip File downloaded.... now starting the fetch deployment");
+
             var result =
                 await _deploymentManager.FetchDeploy(deploymentInfo, isAsync, UriHelper.GetRequestUri(Request), "HEAD");
 

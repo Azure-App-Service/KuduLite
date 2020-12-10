@@ -195,8 +195,11 @@ namespace Kudu.Core.Deployment
                     new XElement("is_readonly", IsReadOnly.ToString())
                 ));
 
+            //tracer.Step("Status Lock file saved");
+            Console.WriteLine($"Before Status Lock Operation: {DateTime.Now.ToString()}");
             _statusLock.LockOperation(() =>
             {
+                Console.WriteLine($"Status Lock acquired: {DateTime.Now.ToString()}");
                 using (Stream stream = FileSystemHelpers.CreateFile(_statusFile))
                 {
                     document.Save(stream);

@@ -376,8 +376,10 @@ namespace Kudu.Core.Deployment
             Uri uri,
             bool waitForTempDeploymentCreation)
         {
+            Console.WriteLine($"Inside Perform Background Deployment {DateTime.Now.ToString()}");
             var tracer = traceLevel <= TraceLevel.Off ? NullTracer.Instance : new CascadeTracer(new XmlTracer(environment.TracePath, traceLevel), new ETWTracer(environment.RequestId, "POST"));
             var traceFactory = new TracerFactory(() => tracer);
+            tracer.Step("Inside Perform Background Deployment ");
 
             var backgroundTrace = tracer.Step(XmlTracer.BackgroundTrace, new Dictionary<string, string>
             {
@@ -396,6 +398,7 @@ namespace Kudu.Core.Deployment
             // This task will be let out of scope intentionally
             var deploymentTask = Task.Run(() =>
             {
+                Console.WriteLine($"Deployment Task {DateTime.Now.ToString()}");
                 try
                 {
                     // lock related
@@ -421,6 +424,9 @@ namespace Kudu.Core.Deployment
                         // Perform deployment
                         deploymentLock.LockOperation(() =>
                         {
+
+                            tracer.Step("Inside after deployment lock acquire");
+                            Console.WriteLine($"Inside after deployment lock acquire {DateTime.Now.ToString()}");
                             deploymentWillOccurTcs.TrySetResult(true);
 
                             ChangeSet tempChangeSet = null;

@@ -37,6 +37,7 @@ namespace Kudu.Core
                     try
                     {
                         var ret = IsLockValid();
+                        _traceFactory.GetTracer().Trace("DEPLOYMENTLOCK is lock valid? {0}", ret);
                         return ret;
                     }
                     catch (Exception ex)
@@ -54,6 +55,7 @@ namespace Kudu.Core
                         // Avoid deadlock by releasing this lock/removing the dir
                         if (exception!=null)
                         {
+                            _traceFactory.GetTracer().Trace("DEPLOYMENTLOCK: Avoiding deadlock and removing lockfile?");
                             //Console.WriteLine("IsHeld - there were exceptions twice -releasing the lock - ie deleting the lock directory");
                             FileSystemHelpers.DeleteDirectorySafe(locksPath+"/deployment");
                         }
@@ -65,8 +67,10 @@ namespace Kudu.Core
 
         private static bool IsLockValid()
         {
-            if (!FileSystemHelpers.FileExists(locksPath+"/deployment/info.lock")) return false;
-
+            if (!FileSystemHelpers.FileExists(locksPath + "/deployment/info.lock"))
+            {
+                return false;
+            }
             // No need to serialize lock expiry object again until the
             // lock expiry period, we would use local cache instead
             // At this point we have already checked for the folder presence
@@ -103,8 +107,9 @@ namespace Kudu.Core
             return false;
         }
 
-        private static void CreateLockInfoFile(string operationName)
+        private void CreateLockInfoFile(string operationName)
         {
+            _traceFactory.GetTracer().Trace("Acquiring Deployment Lock ");
             FileSystemHelpers.CreateDirectory(locksPath+"/deployment");
             var lockInfo = new LinuxLockInfo();
             lockInfo.heldByPID = Process.GetCurrentProcess().Id;
@@ -156,7 +161,6 @@ namespace Kudu.Core
                 //Console.WriteLine("Releasing Lock - RemovingDir");
                 _traceFactory.GetTracer().Trace("Releasing Lock ");
                 FileSystemHelpers.DeleteDirectorySafe(locksPath+"/deployment");
-                
             }
             else
             {

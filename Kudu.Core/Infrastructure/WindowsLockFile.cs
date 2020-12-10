@@ -98,6 +98,7 @@ namespace Kudu.Core.Infrastructure
                 // If there's no file then there's no process holding onto it
                 if (!FileSystemHelpers.FileExists(_path))
                 {
+                    _traceFactory.GetTracer().Trace("Lock '{0}' no file. no one holding the lock", _path);
                     return false;
                 }
 
@@ -109,6 +110,7 @@ namespace Kudu.Core.Infrastructure
                 }
                 catch (UnauthorizedAccessException)
                 {
+                    _traceFactory.GetTracer().Trace("Lock '{0}' unauthorized access exception to open the lock file. returning false", _path);
                     // if it is ReadOnly file system, we will skip the lock
                     // which will enable all read action
                     // for write action, it will fail with UnauthorizedAccessException when perform actual write operation
@@ -142,14 +144,15 @@ namespace Kudu.Core.Infrastructure
             Stream lockStream = null;
             try
             {
-
+                _traceFactory.GetTracer().Trace("Lock '{0}' - trying to lock", _path);
                 FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_path));
                 if (FileSystemHelpers.FileExists(_path))
                 {
+                    _traceFactory.GetTracer().Trace("Lock '{0}' lock file exists. Returning false to lock", _path);
                     return false;
                 }
                 lockStream = FileSystemHelpers.OpenFile(_path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-
+                _traceFactory.GetTracer().Trace("Lock '{0}' writing lock file", _path);
                 WriteLockInfo(operationName, lockStream);
 
                 OnLockAcquired();
@@ -174,6 +177,7 @@ namespace Kudu.Core.Infrastructure
             }
             catch (IOException ex)
             {
+                _traceFactory.GetTracer().Trace("Lock '{0}' IO Exception: {1}", _path, ex.ToString());
                 if (!_ensureLock)
                 {
                     // if not enough disk space, no one has the lock.
@@ -187,6 +191,7 @@ namespace Kudu.Core.Infrastructure
             }
             finally
             {
+                _traceFactory.GetTracer().Trace("Lock '{0}' CLOSING lockstream", _path);
                 if (lockStream != null)
                 {
                     lockStream.Close();
@@ -263,6 +268,8 @@ namespace Kudu.Core.Infrastructure
 
         public virtual void Release()
         {
+            _traceFactory.GetTracer().Trace("Lock '{0}' RELEASE LOCK FILE", _path);
+
             // Normally, this should never be null here, but currently some LiveScmEditorController code calls Release() incorrectly
             if (_lockStream == null)
             {
@@ -274,7 +281,7 @@ namespace Kudu.Core.Infrastructure
             _lockStream = null;
             temp.Close();
 
-            // cleanup inactive lock file.  technically, it is not needed
+            // cleanup inactive lock file. technically, it is not needed
             // we just want to see the lock folder is clean, if no active lock.
             DeleteFileSafe();
 
@@ -287,6 +294,8 @@ namespace Kudu.Core.Infrastructure
         // it does not handled IOException due to 'file in used'.
         private void DeleteFileSafe()
         {
+            _traceFactory.GetTracer().Trace("Lock '{0}' DELETING LOCK FILE", _path);
+
             // Only clean up lock on Windows Env
             try
             {
