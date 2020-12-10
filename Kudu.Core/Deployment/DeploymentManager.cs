@@ -895,15 +895,20 @@ namespace Kudu.Core.Deployment
             {
                 return statusFile;
             }
+
             // There's an incomplete deployment, yet nothing is going on, mark this deployment as failed
-            // since it probably means something died
+            // since it probably means something died, give a 60 seconds wait before marking it failed
             if (!isDeploying)
             {
-                _traceFactory.GetTracer().Step("Deployment Lock Failure");
-                ILogger logger = GetLogger(id);
-                logger.LogUnexpectedError();
-                //_traceFactory.GetTracer().Step("Unexpected Error "+statusFile.Message);
-                MarkStatusComplete(statusFile, success: false);
+                if (statusFile != null
+                    && statusFile.ReceivedTime != null
+                    && statusFile.ReceivedTime < DateTime.Now.AddSeconds(-60))
+                {
+                    _traceFactory.GetTracer().Step("Deployment Lock Failure");
+                    ILogger logger = GetLogger(id);
+                    logger.LogUnexpectedError();
+                    MarkStatusComplete(statusFile, success: false);
+                }
             }
 
             return statusFile;
