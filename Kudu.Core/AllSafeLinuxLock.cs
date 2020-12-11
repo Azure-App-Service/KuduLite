@@ -139,12 +139,6 @@ namespace Kudu.Core
                 }
             }
             CreateLockInfoFile(operationName);
-            if (!FileSystemHelpers.DirectoryExists(locksPath + "/deployment"))
-            {
-                _traceFactory.GetTracer().Trace("Deployment lock directory doesn't exist retrying");
-                CreateLockInfoFile(operationName);
-            }
-
             _traceFactory.GetTracer().Trace("Acquired Deployment Lock");
             return true;
         }

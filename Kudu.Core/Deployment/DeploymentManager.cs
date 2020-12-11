@@ -416,9 +416,9 @@ namespace Kudu.Core.Deployment
             if (results.Any())
             {
                 var toDelete = new List<DeployResult>();
-                if(!IsDeploying)
+                // If deploying don't purge the temporary deployments
+                if (!IsDeploying)
                 {
-                    // Reverting to ANT 90 behavior
                     toDelete.AddRange(GetPurgeTemporaryDeployments(results));
                     toDelete.AddRange(GetPurgeFailedDeployments(results));
                     toDelete.AddRange(GetPurgeObsoleteDeployments(results));
@@ -900,12 +900,12 @@ namespace Kudu.Core.Deployment
             }
 
             // There's an incomplete deployment, yet nothing is going on, mark this deployment as failed
-            // since it probably means something died, give a 60 seconds wait before marking it failed
+            // since it probably means something died, give a 120 seconds wait before marking it failed
             if (!isDeploying)
             {
                 if (statusFile != null
                     && statusFile.ReceivedTime != null
-                    && statusFile.ReceivedTime < DateTime.Now.AddSeconds(-60))
+                    && statusFile.ReceivedTime < DateTime.Now.AddSeconds(-120))
                 {
                     _traceFactory.GetTracer().Step("Deployment Lock Failure");
                     ILogger logger = GetLogger(id);
