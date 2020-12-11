@@ -261,7 +261,12 @@ namespace Kudu.Core.Deployment
                             IDeploymentStatusFile statusFile = _status.Open(deploymentInfo.TargetChangeset.Id);
                             if (statusFile != null)
                             {
+                                _tracer.Trace("Marking deployment as failed");
                                 statusFile.MarkFailed();
+                            }
+                            else
+                            {
+                                _tracer.Trace("Could not find status file to mark the deployment failed");
                             }
                         }
 
@@ -275,6 +280,7 @@ namespace Kudu.Core.Deployment
                         throw;
                     }
 
+                    _tracer.Trace("Cleaning up temporary deployment - fetch deployment was successful");
                     // only clean up temp deployment if successful
                     tempDeployment.Dispose();
                 }
@@ -399,6 +405,7 @@ namespace Kudu.Core.Deployment
                             ChangeSet tempChangeSet = null;
                             if (waitForTempDeploymentCreation)
                             {
+                                tracer.Trace("Creating temporary deployment - FetchDeploymentManager");
                                 // create temporary deployment before the actual deployment item started
                                 // this allows portal ui to readily display on-going deployment (not having to wait for fetch to complete).
                                 // in addition, it captures any failure that may occur before the actual deployment item started
@@ -432,6 +439,9 @@ namespace Kudu.Core.Deployment
                                 FileSystemHelpers.SetLastWriteTimeUtc(fetchDeploymentManager._markerFilePath, DateTime.UtcNow);
                             }
                         }
+
+                        // this would ensure the catch block traces the exception
+                        throw;
                     }
                 }
                 catch (Exception ex)

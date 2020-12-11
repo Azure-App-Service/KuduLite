@@ -41,12 +41,18 @@ namespace Kudu.Core
                     }
                     catch (Exception ex)
                     {
+                        _traceFactory.GetTracer().Trace("Error determining if deployment lock is valid");
+                        _traceFactory.GetTracer().TraceError(ex);
                         // Exception where file is corrupt
                         // Wait for a second, if the file is being written
                         //Console.WriteLine("IsHeld - There was an Exception - Sleeping for a second ");
                         Thread.Sleep(1000);
                         exception = ex;
-                        return IsLockValid();
+                        if(IsLockValid())
+                        {
+                            exception = null;
+                            return true;
+                        }
                     }
                     finally
                     {
@@ -54,7 +60,7 @@ namespace Kudu.Core
                         // Avoid deadlock by releasing this lock/removing the dir
                         if (exception!=null)
                         {
-                            //Console.WriteLine("IsHeld - there were exceptions twice -releasing the lock - ie deleting the lock directory");
+                            _traceFactory.GetTracer().Trace("IsHeld - there were exceptions twice -releasing the lock - ie deleting the lock directory");
                             FileSystemHelpers.DeleteDirectorySafe(locksPath+"/deployment");
                         }
                     }
@@ -120,6 +126,7 @@ namespace Kudu.Core
         
         public bool Lock(string operationName)
         {
+            _traceFactory.GetTracer().Trace("Acquiring Deployment Lock");
             if (FileSystemHelpers.DirectoryExists(locksPath+"/deployment"))
             {
                 // Directory exists implies a lock exists
@@ -127,12 +134,12 @@ namespace Kudu.Core
                 // If it exists check the expiry
                 if (IsHeld)
                 {
-                    //Console.WriteLine("LockOp - Lock Already Held");
+                    _traceFactory.GetTracer().Trace("Cannot Acquire Deployment Lock already held");
                     return false;
                 }
             }
-            //Console.WriteLine("LockOp - Creating Lock");
             CreateLockInfoFile(operationName);
+            _traceFactory.GetTracer().Trace("Acquired Deployment Lock");
             return true;
         }
 
@@ -154,13 +161,13 @@ namespace Kudu.Core
             if (FileSystemHelpers.DirectoryExists(locksPath+"/deployment"))
             {
                 //Console.WriteLine("Releasing Lock - RemovingDir");
-                _traceFactory.GetTracer().Trace("Releasing Lock ");
+                _traceFactory.GetTracer().Trace("Releasing Deployment Lock");
                 FileSystemHelpers.DeleteDirectorySafe(locksPath+"/deployment");
                 
             }
             else
             {
-                Console.WriteLine("ReleasingLock - There is NO LOCK HELD | ERROR");
+                _traceFactory.GetTracer().Trace("Releasing Deployment Lock - There is NO LOCK HELD | ERROR");
             }
         }
 
