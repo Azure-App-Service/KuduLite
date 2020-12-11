@@ -144,10 +144,6 @@ namespace Kudu.Core.Infrastructure
             {
 
                 FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_path));
-                if (FileSystemHelpers.FileExists(_path))
-                {
-                    return false;
-                }
                 lockStream = FileSystemHelpers.OpenFile(_path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
 
                 WriteLockInfo(operationName, lockStream);
@@ -293,7 +289,7 @@ namespace Kudu.Core.Infrastructure
                 OperationManager.Attempt(() =>
                     // throws exception if file is still present
                     TryRemovedLockFile()
-                , 5, 250);
+                , 2, 250);
             }
             catch (Exception ex)
             {

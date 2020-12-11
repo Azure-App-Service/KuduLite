@@ -42,7 +42,7 @@ namespace Kudu.Core.Deployment
                         {
                             throw new FileNotFoundException("Status file doesn't exist. Will wait for 1 second and retry");
                         }
-                    }, 5, 250));
+                    }, 2, 250));
         }
 
         public static DeploymentStatusFile Create(string id, IEnvironment environment, IOperationLock statusLock)
@@ -74,7 +74,7 @@ namespace Kudu.Core.Deployment
                 {
                     // In case we read status file in middle of a write, attempt to
                     // read it again. Don't fail the status get request
-                    XDocument document = OperationManager.Attempt(() => LoadXmlStatusFile(path), 5, 250);
+                    XDocument document = OperationManager.Attempt(() => LoadXmlStatusFile(path), 2, 250);
                     return new DeploymentStatusFile(id, environment, statusLock, document);
                 }
                 catch (Exception ex)
