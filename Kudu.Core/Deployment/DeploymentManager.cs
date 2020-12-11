@@ -416,10 +416,13 @@ namespace Kudu.Core.Deployment
             if (results.Any())
             {
                 var toDelete = new List<DeployResult>();
-                // Reverting to ANT 90 behavior
-                toDelete.AddRange(GetPurgeTemporaryDeployments(results));
-                toDelete.AddRange(GetPurgeFailedDeployments(results));
-                toDelete.AddRange(GetPurgeObsoleteDeployments(results));
+                if(!IsDeploying)
+                {
+                    // Reverting to ANT 90 behavior
+                    toDelete.AddRange(GetPurgeTemporaryDeployments(results));
+                    toDelete.AddRange(GetPurgeFailedDeployments(results));
+                    toDelete.AddRange(GetPurgeObsoleteDeployments(results));
+                }
 
                 if (toDelete.Any())
                 {
