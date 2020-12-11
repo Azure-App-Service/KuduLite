@@ -144,10 +144,6 @@ namespace Kudu.Core.Infrastructure
             {
 
                 FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_path));
-                if (FileSystemHelpers.FileExists(_path))
-                {
-                    return false;
-                }
                 lockStream = FileSystemHelpers.OpenFile(_path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
 
                 WriteLockInfo(operationName, lockStream);
