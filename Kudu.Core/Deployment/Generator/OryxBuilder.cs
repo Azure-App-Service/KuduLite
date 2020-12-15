@@ -73,7 +73,8 @@ namespace Kudu.Core.Deployment.Generator
                         ExpressBuilder appServiceExpressBuilder = new ExpressBuilder(environment, settings, propertyProvider, sourcePath);
                         appServiceExpressBuilder.SetupExpressBuilderArtifacts(context.OutputPath, context, args);
                     }
-                }else if(args.Flags == BuildOptimizationsFlags.DeploymentV2)
+                }
+                else if(args.Flags == BuildOptimizationsFlags.DeploymentV2)
                 {
                     SetupAppServiceArtifacts(context);
                 }
@@ -97,6 +98,12 @@ namespace Kudu.Core.Deployment.Generator
 
         private void SetupAppServiceArtifacts(DeploymentContext context)
         {
+            var tempArtifactDir = context.BuildTempPath;
+            string framework = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.FrameworkSetting);
+            if(framework.StartsWith("DOTNETCORE", StringComparison.OrdinalIgnoreCase))
+            {
+                tempArtifactDir = Path.Combine(context.BuildTempPath, "oryx-out");
+            }
             string sitePackages = "/home/data/SitePackages";
             string deploymentsPath = $"/home/site/deployments/";
             string artifactPath = $"/home/site/deployments/{context.CommitId}/artifact";
@@ -110,7 +117,7 @@ namespace Kudu.Core.Deployment.Generator
 
             string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath,
                 context.BuildTempPath, zipAppName, BuildArtifactType.Zip, numBuildArtifacts: -1);
-            var copyExe = ExternalCommandFactory.BuildExternalCommandExecutable(context.BuildTempPath, artifactPath, context.Logger);
+            var copyExe = ExternalCommandFactory.BuildExternalCommandExecutable(tempArtifactDir, artifactPath, context.Logger);
             var copyToPath = Path.Combine(artifactPath, zipAppName);
 
             try
