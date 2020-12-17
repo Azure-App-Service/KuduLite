@@ -42,6 +42,9 @@ namespace Kudu.Console
                 log4net.Config.XmlConfigurator.Configure(repo, log4netConfig["log4net"]);
             }
 
+            // signify the deployment is done by git push
+            System.Environment.SetEnvironmentVariable(Constants.ScmDeploymentKind, "GitPush");
+
             // Turn flag on in app.config to wait for debugger on launch
             if (ConfigurationManager.AppSettings["WaitForDebuggerOnStart"] == "true")
             {

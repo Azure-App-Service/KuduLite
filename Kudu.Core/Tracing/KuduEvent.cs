@@ -32,6 +32,8 @@ namespace Kudu.Core.Tracing
         public string verb = string.Empty;
         public int statusCode = 0;
         public long latencyInMilliseconds = 0;
+        public string deploymentDetails = string.Empty;
+        public string deploymentStatus = string.Empty;
 
         public override string ToString()
         {
