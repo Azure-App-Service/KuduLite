@@ -178,5 +178,8 @@ namespace Kudu
         public const string OneDeploy = "OneDeploy";
 
         public const string ScmDeploymentIdHeader = "SCM-DEPLOYMENT-ID";
+
+        public const string KuduBuildVersionAppSetting = "KUDU_BUILD_VERSION";
+        public const string PythonKuduBuild90 = "0.0.1";
     }
 }
