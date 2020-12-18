@@ -31,9 +31,17 @@ namespace Kudu.Core.Deployment.Oryx
             args.AppendFormat(" -p compress_node_modules={0}", format);
         }
 
-        internal static void AddPythonCompressOption(StringBuilder args)
+        internal static void AddPythonCompressOption(StringBuilder args, string format)
         {
-            args.Append(" --compress-destination-dir");
+            string pythonBuildVersion = System.Environment.GetEnvironmentVariable(Constants.KuduBuildVersionAppSetting);
+            if(!string.IsNullOrEmpty(pythonBuildVersion) && pythonBuildVersion.Trim().Equals(Constants.PythonKuduBuild90))
+            {
+                args.AppendFormat(" -p compress_virtualenv={0}", format);
+            }
+            else
+            {
+                args.Append(" --compress-destination-dir");
+            }
         }
 
         internal static void AddPythonVirtualEnv(StringBuilder args, string virtualEnv)
