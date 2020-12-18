@@ -289,7 +289,7 @@ namespace Kudu.Core.Infrastructure
                 OperationManager.Attempt(() =>
                     // throws exception if file is still present
                     TryRemovedLockFile()
-                , 5, 250);
+                , 2, 250);
             }
             catch (Exception ex)
             {
