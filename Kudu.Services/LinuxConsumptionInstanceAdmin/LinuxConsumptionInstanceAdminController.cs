@@ -106,5 +106,24 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                ? Accepted()
                : StatusCode(StatusCodes.Status409Conflict, "Instance already assigned");
         }
+
+        /// <summary>
+        /// A http health endpoint for liveness probe. 
+        /// </summary>
+        [HttpGet]
+        public IActionResult HttpHealthCheck()
+        {
+            return Ok();
+        }
+
+        /// <summary>
+        /// Returns eviction status of the container. Currently no-op. Returns 204 
+        /// </summary>
+        [HttpGet]
+        [Authorize(Policy = AuthPolicyNames.AdminAuthLevel)]
+        public IActionResult EvictionStatus()
+        {
+            return StatusCode(StatusCodes.Status204NoContent); ;
+        }
     }
 }

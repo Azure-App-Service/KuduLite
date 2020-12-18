@@ -36,6 +36,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             "/api/isdeploying",
             "/api/settings",
             "/admin/instance",
+            "/admin/proxy",
             "/deployments",
             "/zipdeploy"
         };
