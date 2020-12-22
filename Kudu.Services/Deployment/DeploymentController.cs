@@ -593,7 +593,7 @@ namespace Kudu.Services.Deployment
         {
             var lastModifiedTime = DateTime.Now;
             var statusFileLastModifiedTimeTask = Task.Run(() => _status.LastModifiedTime);
-            if (statusFileLastModifiedTimeTask.Wait(TimeSpan.FromSeconds(5)))
+            if (statusFileLastModifiedTimeTask.Wait(TimeSpan.FromSeconds(30)))
             {
                 // if this doesn't return in 5 seconds
                 // we would assume the status file was just modified
