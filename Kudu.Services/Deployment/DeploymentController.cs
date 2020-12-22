@@ -600,9 +600,6 @@ namespace Kudu.Services.Deployment
                 // we also mitigate the status file lock by removing
                 // the lock file here
                 lastModifiedTime = statusFileLastModifiedTimeTask.Result;
-                // Acquiring status lock should not take this long,
-                // try to clean up the lock file
-                FileSystemHelpers.DeleteFileSafe(Path.Combine(_environment.SiteRootPath, Constants.LockPath, Constants.StatusLockFile));
             }
             return new EntityTagHeaderValue(String.Format("\"{0:x}\"", new Uri(request.GetDisplayUrl()).PathAndQuery.GetHashCode() ^ lastModifiedTime.Ticks));
         }
