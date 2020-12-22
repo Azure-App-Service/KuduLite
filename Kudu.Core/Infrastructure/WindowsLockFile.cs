@@ -282,18 +282,21 @@ namespace Kudu.Core.Infrastructure
         // it does not handled IOException due to 'file in used'.
         private void DeleteFileSafe()
         {
-            // Only clean up lock on Windows Env
-            try
+            if (OSDetector.IsOnWindows())
             {
-                FileSystemHelpers.DeleteFile(_path);
-                OperationManager.Attempt(() =>
-                    // throws exception if file is still present
-                    TryRemovedLockFile()
-                , 5, 250);
-            }
-            catch (Exception ex)
-            {
-                TraceIfUnknown(ex);
+                // Only clean up lock on Windows Env
+                try
+                {
+                    FileSystemHelpers.DeleteFile(_path);
+                    OperationManager.Attempt(() =>
+                        // throws exception if file is still present
+                        TryRemovedLockFile()
+                    , 5, 250);
+                }
+                catch (Exception ex)
+                {
+                    TraceIfUnknown(ex);
+                }
             }
         }
 
