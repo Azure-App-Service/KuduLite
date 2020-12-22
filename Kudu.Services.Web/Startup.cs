@@ -517,6 +517,12 @@ namespace Kudu.Services.Web
                 routes.MapRoute("admin-instance-assign", "admin/instance/assign",
                     new {controller = "LinuxConsumptionInstanceAdmin", action = "AssignAsync" },
                     new {verb = new HttpMethodRouteConstraint("POST")});
+                routes.MapRoute("admin-proxy-health-check", "admin/proxy/health-check",
+                    new { controller = "LinuxConsumptionInstanceAdmin", action = "HttpHealthCheck" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapRoute("admin-proxy-eviction-status", "admin/proxy/eviction-status",
+                   new { controller = "LinuxConsumptionInstanceAdmin", action = "EvictionStatus" },
+                   new { verb = new HttpMethodRouteConstraint("GET") });
 
                 // Live Command Line
                 routes.MapHttpRouteDual("execute-command", "command",
