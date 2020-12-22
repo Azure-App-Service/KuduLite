@@ -60,6 +60,9 @@ namespace Kudu.Core.Deployment.Generator
                 string buildCommand = args.GenerateOryxBuildCommand(context);
                 RunCommand(context, buildCommand, false, "Running oryx build...");
 
+                // Clear out old deployment site packages
+                ClearOutSitePackages();
+
                 //
                 // Run express build setups if needed
                 if (args.Flags == BuildOptimizationsFlags.UseExpressBuild)
@@ -92,6 +95,22 @@ namespace Kudu.Core.Deployment.Generator
                 {
                     FileSystemHelpers.DeleteDirectorySafe(pythonPackagesDir);
                 }
+            }
+        }
+
+        private static void ClearOutSitePackages()
+        {
+            // Cleanup site packages of old deployment artifacts if present
+            // These files should only be created by DeploymentV2 and ExpressBuild scenario
+            // If those flags are on, the files get regenerated
+
+            string sitePackages = "/home/data/SitePackages";
+            string[] filesInSitePackages = { "packagepath.txt", "packagename.txt" };
+
+            foreach (string fileName in filesInSitePackages)
+            {
+                string filePath = Path.Combine(sitePackages, fileName);
+                FileSystemHelpers.DeleteFileSafe(filePath);
             }
         }
 
@@ -182,7 +201,7 @@ namespace Kudu.Core.Deployment.Generator
                 switch(artifactType)
                 {
                     case BuildArtifactType.Zip:
-                        exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"zip -r -0 -q {file} .");
+                        exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"zip --symlinks -r -0 -q {file} .");
                         break;
                     case BuildArtifactType.Squashfs:
                         exe.ExecuteWithProgressWriter(context.Logger, context.Tracer, $"mksquashfs . {file} -noappend");
