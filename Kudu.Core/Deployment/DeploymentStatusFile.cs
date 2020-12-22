@@ -61,7 +61,8 @@ namespace Kudu.Core.Deployment
 
         public static DeploymentStatusFile Open(string id, IEnvironment environment, IAnalytics analytics, IOperationLock statusLock)
         {
-            return statusLock.LockOperation(() =>
+            Console.WriteLine($"DeploymentStatusFile: Open {id}, Before Lock");
+            var ret = statusLock.LockOperation(() =>
             {
                 string path = Path.Combine(environment.DeploymentsPath, id, StatusFile);
 
@@ -89,6 +90,8 @@ namespace Kudu.Core.Deployment
                     return null;
                 }
             }, "Getting deployment status", DeploymentStatusManager.LockTimeout);
+            Console.WriteLine($"DeploymentStatusFile: Open {id}, After Lock");
+            return ret;
         }
 
         private static XDocument LoadXmlStatusFile(string path)
@@ -172,6 +175,7 @@ namespace Kudu.Core.Deployment
 
         public void Save()
         {
+            Console.WriteLine("DeploymentStatusFile: Save Enter");
             if (String.IsNullOrEmpty(Id))
             {
                 throw new InvalidOperationException();
@@ -195,6 +199,7 @@ namespace Kudu.Core.Deployment
                     new XElement("is_readonly", IsReadOnly.ToString())
                 ));
 
+            Console.WriteLine("DeploymentStatusFile: Save, Before Lock");
             _statusLock.LockOperation(() =>
             {
                 using (Stream stream = FileSystemHelpers.CreateFile(_statusFile))
@@ -212,6 +217,7 @@ namespace Kudu.Core.Deployment
                     FileSystemHelpers.WriteAllText(_activeFile, String.Empty);
                 }
             }, "Updating deployment status", DeploymentStatusManager.LockTimeout);
+            Console.WriteLine("DeploymentStatusFile: Save, After Lock");
         }
 
         private static string GetOptionalElementValue(XElement element, string localName, string namespaceName = null)

@@ -51,11 +51,13 @@ namespace Kudu.Core.Infrastructure
             {
                 if (IsHeld)
                 {
+                    Console.WriteLine("IsHeld: true");
                     var info = ReadLockInfo();
                     _traceFactory.GetTracer().Trace("Lock '{0}' is currently held by '{1}' operation started at {2}.", _path, info.OperationName, info.AcquiredDateTime);
                     return info;
                 }
 
+                Console.WriteLine("IsHeld: false");
                 // lock info represent no owner
                 return new OperationLockInfo();
             }
@@ -106,6 +108,7 @@ namespace Kudu.Core.Infrastructure
                     // If there is a file, lets see if someone has an open handle to it, or if it's
                     // just hanging there for no reason
                     using (FileSystemHelpers.OpenFile(_path, FileMode.Open, FileAccess.Read, FileShare.Read)) { }
+                    Console.WriteLine("IsHeld: File Open Read Successful");
                 }
                 catch (UnauthorizedAccessException)
                 {
@@ -145,7 +148,7 @@ namespace Kudu.Core.Infrastructure
 
                 FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_path));
                 lockStream = FileSystemHelpers.OpenFile(_path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-
+                Console.WriteLine("Lock: File Open ReadWrite Successful");
                 WriteLockInfo(operationName, lockStream);
 
                 OnLockAcquired();
@@ -215,13 +218,16 @@ namespace Kudu.Core.Infrastructure
             var bytes = Encoding.UTF8.GetBytes(json.ToString());
             lockStream.Write(bytes, 0, bytes.Length);
             lockStream.Flush();
+            Console.WriteLine("Lock: WriteLockInfo Successful");
         }
 
         private OperationLockInfo ReadLockInfo()
         {
             try
             {
-                return JsonConvert.DeserializeObject<OperationLockInfo>(FileSystemHelpers.ReadAllTextFromFile(_path)) ?? new OperationLockInfo { OperationName = "unknown" };
+                var ret = JsonConvert.DeserializeObject<OperationLockInfo>(FileSystemHelpers.ReadAllTextFromFile(_path)) ?? new OperationLockInfo { OperationName = "unknown" };
+                Console.WriteLine("Lock: ReadLockInfo Successful");
+                return ret;
             }
             catch (Exception ex)
             {
@@ -240,6 +246,8 @@ namespace Kudu.Core.Infrastructure
         /// <returns>Task indicating the task of acquiring the lock.</returns>
         public Task LockAsync(string operationName)
         {
+            // INVESTIGATION: ADD TRACE
+            Console.WriteLine($"Lock: LockAsync {operationName}");
             if (_lockFileWatcher == null)
             {
                 throw new InvalidOperationException(Resources.Error_AsyncLockNotInitialized);
@@ -274,6 +282,7 @@ namespace Kudu.Core.Infrastructure
             DeleteFileSafe();
 
             OnLockRelease();
+            Console.WriteLine("Lock: Release Successful");
         }
 
         public IRepositoryFactory RepositoryFactory { get; set; }

@@ -33,18 +33,20 @@ namespace Kudu.Core.Deployment
 
         public IDeploymentStatusFile Create(string id)
         {
+            Console.WriteLine($"IDeploymentStatusFile: Create");
             return DeploymentStatusFile.Create(id, _environment, _statusLock);
         }
 
         public IDeploymentStatusFile Open(string id)
         {
+            Console.WriteLine($"IDeploymentStatusFile: Open");
             return DeploymentStatusFile.Open(id, _environment, _analytics, _statusLock);
         }
 
         public void Delete(string id)
         {
             string path = Path.Combine(_environment.DeploymentsPath, id);
-
+            Console.WriteLine($"DeploymentStatusManager: Delete {id}, Before Lock");
             _statusLock.LockOperation(() =>
             {
                 FileSystemHelpers.DeleteDirectorySafe(path, ignoreErrors: true);
@@ -59,6 +61,7 @@ namespace Kudu.Core.Deployment
                     FileSystemHelpers.WriteAllText(_activeFile, String.Empty);
                 }
             }, "Deleting deployment", LockTimeout);
+            Console.WriteLine($"DeploymentStatusManager: Delete {id}, After Lock");
         }
 
         public IOperationLock Lock
@@ -70,7 +73,8 @@ namespace Kudu.Core.Deployment
         {
             get
             {
-                return _statusLock.LockOperation(() =>
+                Console.WriteLine($"DeploymentStatusManager: ActiveDeploymentId Get, Before Lock");
+                var ret = _statusLock.LockOperation(() =>
                 {
                     if (FileSystemHelpers.FileExists(_activeFile))
                     {
@@ -79,10 +83,15 @@ namespace Kudu.Core.Deployment
 
                     return null;
                 }, "Getting active deployment id", LockTimeout);
+                Console.WriteLine($"DeploymentStatusManager: ActiveDeploymentId Get, After Lock");
+                return ret;
             }
             set
             {
+                Console.WriteLine($"DeploymentStatusManager: ActiveDeploymentId, Before Lock");
                 _statusLock.LockOperation(() => FileSystemHelpers.WriteAllText(_activeFile, value), "Updating active deployment id", LockTimeout);
+                Console.WriteLine($"DeploymentStatusManager: ActiveDeploymentId, After Lock");
+
             }
         }
 
@@ -91,7 +100,8 @@ namespace Kudu.Core.Deployment
         {
             get
             {
-                return _statusLock.LockOperation(() =>
+                Console.WriteLine($"DeploymentStatusManager: LastModifiedTime, Before Lock");
+                var ret = _statusLock.LockOperation(() =>
                 {
                     if (FileSystemHelpers.FileExists(_activeFile))
                     {
@@ -102,6 +112,8 @@ namespace Kudu.Core.Deployment
                         return DateTime.MinValue;
                     }
                 }, "Getting last deployment modified time", LockTimeout);
+                Console.WriteLine($"DeploymentStatusManager: LastModifiedTime, After Lock");
+                return ret;
             }
         }
     }
