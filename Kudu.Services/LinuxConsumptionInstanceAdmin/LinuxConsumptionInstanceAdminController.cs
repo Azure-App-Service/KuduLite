@@ -123,7 +123,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         [Authorize(Policy = AuthPolicyNames.AdminAuthLevel)]
         public IActionResult EvictionStatus()
         {
-            return StatusCode(StatusCodes.Status204NoContent); ;
+            return StatusCode(StatusCodes.Status204NoContent);
         }
     }
 }
