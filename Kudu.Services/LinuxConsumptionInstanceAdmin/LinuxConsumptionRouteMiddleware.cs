@@ -50,7 +50,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 
         private static Regex malformedScmHostnameRegex = new Regex(@"^~\d+");
         private static string HomePageRoute = "/";
-        private static string HealthCheckRoute = "/admin/proxy/health-check";
+        private static string HealthCheckRoute = "/admin/proxy/http-health";
 
         /// <summary>
         /// Filter out unnecessary routes for Linux Consumption
