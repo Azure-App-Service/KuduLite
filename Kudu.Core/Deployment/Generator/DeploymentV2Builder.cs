@@ -9,9 +9,11 @@ namespace Kudu.Core.Deployment.Generator
 {
     public class DeploymentV2Builder : ExternalCommandBuilder
     {
+        private string repositoryPath;
         public DeploymentV2Builder(IEnvironment environment, IDeploymentSettingsManager settings, IBuildPropertyProvider propertyProvider, string sourcePath)
         : base(environment, settings, propertyProvider, sourcePath)
         {
+            repositoryPath = sourcePath;
         }
 
         public override Task Build(DeploymentContext context)
@@ -36,10 +38,11 @@ namespace Kudu.Core.Deployment.Generator
             FileSystemHelpers.EnsureDirectory(artifactPath);
 
             string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
-
-            string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath,
-                context.BuildTempPath, zipAppName, BuildArtifactType.Zip, numBuildArtifacts: -1);
-            var copyExe = ExternalCommandFactory.BuildExternalCommandExecutable(context.RepositoryPath, artifactPath, context.Logger);
+            context.Logger.Log($"Repository path is {repositoryPath}");
+            string createdZip = PackageArtifactFromFolder(context, repositoryPath,
+                repositoryPath, zipAppName, BuildArtifactType.Zip, numBuildArtifacts: -1);
+            context.Logger.Log($"Copying the deployment artifact to {zipAppName} file");
+            var copyExe = ExternalCommandFactory.BuildExternalCommandExecutable(repositoryPath, artifactPath, context.Logger);
             var copyToPath = Path.Combine(artifactPath, zipAppName);
 
             try
@@ -99,7 +102,7 @@ namespace Kudu.Core.Deployment.Generator
             {
                 DeploymentHelper.PurgeBuildArtifactsIfNecessary(artifactDirectory, artifactType, context.Tracer, numBuildArtifacts);
             }
-
+            context.Logger.Log($"Packaged zip file {file}");
             return file;
         }
     }

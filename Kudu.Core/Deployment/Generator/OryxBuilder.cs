@@ -115,8 +115,8 @@ namespace Kudu.Core.Deployment.Generator
 
             string zipAppName = $"{DateTime.UtcNow.ToString("yyyyMMddHHmmss")}.zip";
 
-            string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath,
-                context.BuildTempPath, zipAppName, BuildArtifactType.Zip, numBuildArtifacts: -1);
+            string createdZip = PackageArtifactFromFolder(context, tempArtifactDir,
+                tempArtifactDir, zipAppName, BuildArtifactType.Zip, numBuildArtifacts: -1);
             var copyExe = ExternalCommandFactory.BuildExternalCommandExecutable(tempArtifactDir, artifactPath, context.Logger);
             var copyToPath = Path.Combine(artifactPath, zipAppName);
 
