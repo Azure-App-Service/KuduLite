@@ -67,7 +67,14 @@ namespace Kudu.Core.Deployment.Generator
             if (!settings.DoBuildDuringDeployment())
             {
                 var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
-                return new BasicBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);
+                if (DeploymentHelper.IsDeploymentV2Request())
+                {
+                    return new DeploymentV2Builder(_environment, settings, _propertyProvider, repositoryRoot);
+                }
+                else
+                {
+                    return new BasicBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);
+                }
             }
 
             // Check if we really need a builder for this
