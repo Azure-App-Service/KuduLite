@@ -144,10 +144,6 @@ namespace Kudu.Core.Infrastructure
             {
 
                 FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_path));
-                if (FileSystemHelpers.FileExists(_path))
-                {
-                    return false;
-                }
                 lockStream = FileSystemHelpers.OpenFile(_path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
 
                 WriteLockInfo(operationName, lockStream);
@@ -156,7 +152,6 @@ namespace Kudu.Core.Infrastructure
 
                 _lockStream = lockStream;
                 lockStream = null;
-
                 return true;
             }
             catch (UnauthorizedAccessException)
@@ -287,18 +282,21 @@ namespace Kudu.Core.Infrastructure
         // it does not handled IOException due to 'file in used'.
         private void DeleteFileSafe()
         {
-            // Only clean up lock on Windows Env
-            try
+            if (OSDetector.IsOnWindows())
             {
-                FileSystemHelpers.DeleteFile(_path);
-                OperationManager.Attempt(() =>
-                    // throws exception if file is still present
-                    TryRemovedLockFile()
-                , 10, 250);
-            }
-            catch (Exception ex)
-            {
-                TraceIfUnknown(ex);
+                // Only clean up lock on Windows Env
+                try
+                {
+                    FileSystemHelpers.DeleteFile(_path);
+                    OperationManager.Attempt(() =>
+                        // throws exception if file is still present
+                        TryRemovedLockFile()
+                    , 5, 250);
+                }
+                catch (Exception ex)
+                {
+                    TraceIfUnknown(ex);
+                }
             }
         }
 

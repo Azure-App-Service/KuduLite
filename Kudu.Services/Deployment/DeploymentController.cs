@@ -593,16 +593,13 @@ namespace Kudu.Services.Deployment
         {
             var lastModifiedTime = DateTime.Now;
             var statusFileLastModifiedTimeTask = Task.Run(() => _status.LastModifiedTime);
-            if (statusFileLastModifiedTimeTask.Wait(TimeSpan.FromSeconds(5)))
+            if (statusFileLastModifiedTimeTask.Wait(TimeSpan.FromSeconds(30)))
             {
                 // if this doesn't return in 5 seconds
                 // we would assume the status file was just modified
                 // we also mitigate the status file lock by removing
                 // the lock file here
                 lastModifiedTime = statusFileLastModifiedTimeTask.Result;
-                // Acquiring status lock should not take this long,
-                // try to clean up the lock file
-                FileSystemHelpers.DeleteFileSafe(Path.Combine(_environment.SiteRootPath, Constants.LockPath, Constants.StatusLockFile));
             }
             return new EntityTagHeaderValue(String.Format("\"{0:x}\"", new Uri(request.GetDisplayUrl()).PathAndQuery.GetHashCode() ^ lastModifiedTime.Ticks));
         }
