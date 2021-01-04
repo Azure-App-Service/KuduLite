@@ -113,9 +113,19 @@ namespace Kudu.Services.Performance
 
                 foreach (var filename in currentDockerLogFilenames.Take(10))
                 {
-                    using (var file = System.IO.File.OpenRead(filename))
+                    // LWAS can have file open handle during a rollover,
+                    // this is to prevent this api from throwing an exception in
+                    // such a situation
+                    try
                     {
-                        // This space intentionally left blank
+                        using (var file = System.IO.File.OpenRead(filename))
+                        {
+                            // This space intentionally left blank
+                        }
+                    }
+                    catch(Exception ex)
+                    {
+                        _tracer.TraceError(ex);
                     }
                 }
 
