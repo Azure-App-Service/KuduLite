@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
@@ -87,8 +88,15 @@ namespace Kudu.Services.Web.Tracing
 
         private void BeginRequest(HttpContext httpContext)
         {
-            var httpRequest = httpContext.Request; 
-           
+            var httpRequest = httpContext.Request;
+
+            // If an external deployment ID is injected, inject it back into the response
+            string deploymentId = GetExternalDeploymentId(httpRequest);
+            if(string.IsNullOrEmpty(deploymentId))
+            {
+                httpContext.Response.Headers.Add(Constants.ScmDeploymentIdHeader, deploymentId);
+            }
+
             _lastRequestDateTime = DateTime.UtcNow;
 
             /* CORE TODO missing functionality:
@@ -390,6 +398,19 @@ namespace Kudu.Services.Web.Tracing
                 // this is temporary hack for host name invalid due to ~ (http://~1hostname/)
                 // we don't know how to repro it yet.
             }
+        }
+
+        private static string GetExternalDeploymentId(HttpRequest request)
+        {
+            string deploymentId = null;
+            Microsoft.Extensions.Primitives.StringValues idValues;
+
+            if (request.Headers.TryGetValue(Constants.ScmDeploymentIdHeader, out idValues) && idValues.Count() > 0)
+            {
+                deploymentId = idValues.ElementAt(0);
+            }
+
+            return deploymentId;
         }
     }
 
