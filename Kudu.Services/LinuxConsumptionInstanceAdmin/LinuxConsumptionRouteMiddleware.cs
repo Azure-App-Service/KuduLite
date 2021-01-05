@@ -50,6 +50,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 
         private static Regex malformedScmHostnameRegex = new Regex(@"^~\d+");
         private static string HomePageRoute = "/";
+        private static string HealthCheckRoute = "/admin/proxy/http-health";
 
         /// <summary>
         /// Filter out unnecessary routes for Linux Consumption
@@ -112,7 +113,8 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             // If the home page is requested without authentication (e.g. ControllerPing), return 200 with hint.
             // If the home page is requested with authentication (e.g. Customer Browser Access), return 200 with homepage content.
             AuthenticateResult authenticationResult = await context.AuthenticateAsync(ArmAuthenticationDefaults.AuthenticationScheme);
-            if (IsHomePageWithoutAuthentication(authenticationResult, context.Request.Path))
+            if (IsHomePageWithoutAuthentication(authenticationResult, context.Request.Path) ||
+                IsHealthCheckPageWithoutAuthentication(authenticationResult, context.Request.Path))
             {
                 byte[] data = Encoding.UTF8.GetBytes("Please use /basicAuth endpoint or AAD to authenticate SCM site");
                 context.Response.StatusCode = 200;
@@ -181,6 +183,12 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         private bool IsHomePageWithoutAuthentication(AuthenticateResult authenticationResult, PathString routePath)
         {
             return !authenticationResult.Succeeded && IsHomePageRoute(routePath);
+        }
+
+        private bool IsHealthCheckPageWithoutAuthentication(AuthenticateResult authenticationResult, PathString routePath)
+        {
+            return !authenticationResult.Succeeded && 
+                string.Equals(routePath.ToString(), HealthCheckRoute, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string SanitizeScmUrl(string malformedUrl)

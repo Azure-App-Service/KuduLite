@@ -117,13 +117,13 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         }
 
         /// <summary>
-        /// Returns eviction status of the container. Currently no-op. Returns 204 
+        /// Returns eviction status of the container. Currently no-op.
         /// </summary>
         [HttpGet]
         [Authorize(Policy = AuthPolicyNames.AdminAuthLevel)]
         public IActionResult EvictionStatus()
         {
-            return StatusCode(StatusCodes.Status204NoContent); ;
+            return Json(false);
         }
     }
 }
