@@ -7,12 +7,15 @@ using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
+using Kudu.Contracts.Deployment;
 using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Helpers;
 using Kudu.Core.Hooks;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.LinuxConsumption;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
+using Newtonsoft.Json;
 
 namespace Kudu.Core.Deployment
 {
@@ -84,10 +87,12 @@ namespace Kudu.Core.Deployment
             {
                 return FetchDeploymentRequestResult.ForbiddenScmDisabled;
             }
-            
+
             // Else if this app is configured with a url in WEBSITE_USE_ZIP, then fail the deployment
             // since this is a RunFromZip site and the deployment has no chance of succeeding.
-            else if (_settings.RunFromRemoteZip())
+            // However, if this is a Linux Consumption function app, we allow KuduLite to change
+            // WEBSITE_RUN_FROM_PACKAGE app setting after a build finishes
+            else if (_settings.RunFromRemoteZip() && !deployInfo.OverwriteWebsiteRunFromPackage)
             {
                 return FetchDeploymentRequestResult.ConflictRunFromRemoteZipConfigured;
             }
@@ -151,8 +156,8 @@ namespace Kudu.Core.Deployment
             }
         }
 
-        public async Task PerformDeployment(DeploymentInfoBase deploymentInfo, 
-            IDisposable tempDeployment = null, 
+        public async Task PerformDeployment(DeploymentInfoBase deploymentInfo,
+            IDisposable tempDeployment = null,
             ChangeSet tempChangeSet = null)
         {
             DateTime currentMarkerFileUTC;
@@ -178,6 +183,7 @@ namespace Kudu.Core.Deployment
                                                     deploymentInfo.Deployer);
 
                     ILogger innerLogger = null;
+                    DeployStatusApiResult updateStatusObj = null;
                     try
                     {
                         ILogger logger = _deploymentManager.GetLogger(tempChangeSet.Id);
@@ -203,6 +209,26 @@ namespace Kudu.Core.Deployment
                         // The branch or commit id to deploy
                         string deployBranch = !String.IsNullOrEmpty(deploymentInfo.CommitId) ? deploymentInfo.CommitId : targetBranch;
 
+                        try
+                        {
+                            _tracer.Trace($"Before sending {Constants.BuildRequestReceived} status to /api/updatedeploystatus");
+                            if (PostDeploymentHelper.IsAzureEnvironment())
+                            {
+                                // Parse the changesetId into a GUID
+                                // The FE hook allows only GUID as a deployment id
+                                // If the id is already in GUID format nothing will happen
+                                // If it doesn't have the necessary format for a GUID, and exception will be thrown
+                                var changeSet = repository.GetChangeSet(deployBranch);
+                                updateStatusObj = new DeployStatusApiResult(Constants.BuildRequestReceived, Guid.Parse(changeSet.Id).ToString());
+                                await SendDeployStatusUpdate(updateStatusObj);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            _tracer.TraceError($"Exception while sending {Constants.BuildRequestReceived} status to /api/updatedeploystatus. " +
+                                $"Entry in the operations table for the deployment status may not have been created. {e}");
+                        }
+
                         // In case the commit or perhaps fetch do no-op.
                         if (deploymentInfo.TargetChangeset != null && ShouldDeploy(repository, deploymentInfo, deployBranch))
                         {
@@ -219,6 +245,11 @@ namespace Kudu.Core.Deployment
                             // Here, we don't need to update the working files, since we know Fetch left them in the correct state
                             // unless for GenericHandler where specific commitId is specified
                             bool deploySpecificCommitId = !String.IsNullOrEmpty(deploymentInfo.CommitId);
+                            if (updateStatusObj != null)
+                            {
+                                updateStatusObj.DeploymentStatus = Constants.BuildInProgress;
+                                await SendDeployStatusUpdate(updateStatusObj);
+                            }
 
                             await _deploymentManager.DeployAsync(
                                 repository,
@@ -228,6 +259,13 @@ namespace Kudu.Core.Deployment
                                 deploymentInfo: deploymentInfo,
                                 needFileUpdate: deploySpecificCommitId,
                                 fullBuildByDefault: deploymentInfo.DoFullBuildByDefault);
+
+                            if (updateStatusObj != null)
+                            {
+                                updateStatusObj.DeploymentStatus = Constants.BuildSuccessful;
+                                await SendDeployStatusUpdate(updateStatusObj);
+                            }
+
                         }
                     }
                     catch (Exception ex)
@@ -243,13 +281,26 @@ namespace Kudu.Core.Deployment
                             IDeploymentStatusFile statusFile = _status.Open(deploymentInfo.TargetChangeset.Id);
                             if (statusFile != null)
                             {
+                                _tracer.Trace("Marking deployment as failed");
                                 statusFile.MarkFailed();
                             }
+                            else
+                            {
+                                _tracer.Trace("Could not find status file to mark the deployment failed");
+                            }
+                        }
+
+                        if (updateStatusObj != null)
+                        {
+                            // Set deployment status as failure if exception is thrown
+                            updateStatusObj.DeploymentStatus = Constants.BuildFailed;
+                            await SendDeployStatusUpdate(updateStatusObj);
                         }
 
                         throw;
                     }
 
+                    _tracer.Trace("Cleaning up temporary deployment - fetch deployment was successful");
                     // only clean up temp deployment if successful
                     tempDeployment.Dispose();
                 }
@@ -266,10 +317,46 @@ namespace Kudu.Core.Deployment
                     // if last change is not null and finish successfully, mean there was at least one deployoment happened
                     // since deployment is now done, trigger swap if enabled
                     await PostDeploymentHelper.PerformAutoSwap(
-                        _environment.RequestId, 
-                        new PostDeploymentTraceListener(_tracer, 
+                        _environment.RequestId,
+                        new PostDeploymentTraceListener(_tracer,
                         _deploymentManager.GetLogger(lastChange.Id)));
                 }
+            }
+        }
+
+        /// <summary>
+        /// This method tries to send the deployment status update through frontend to be saved to db
+        /// Since frontend throttling is in place, we retry 3 times with 5 sec gaps in between
+        /// </summary>
+        /// <param name="updateStatusObj">Obj containing status to save to DB</param>
+        /// <returns></returns>
+        private async Task<bool> SendDeployStatusUpdate(DeployStatusApiResult updateStatusObj)
+        {
+            int attemptCount = 0;
+            try
+            {
+                await OperationManager.AttemptAsync(async () =>
+                {
+                    attemptCount++;
+
+                    _tracer.Trace($" PostAsync - Trying to send {updateStatusObj.DeploymentStatus} deployment status to {Constants.UpdateDeployStatusPath}. " +
+                        $"DeploymentId is {updateStatusObj.DeploymentId}");
+
+                    await PostDeploymentHelper.PostAsync(Constants.UpdateDeployStatusPath, _environment.RequestId, JsonConvert.SerializeObject(updateStatusObj));
+
+                }, 3, 5*1000);
+
+                // If no exception is thrown, the operation was a success
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _tracer.TraceError($"Failed to request a post deployment status. Number of attempts: {attemptCount}. Exception: {ex}");
+                // Do not throw the exception
+                // We fail silently so that we do not fail the build altogether if this call fails
+                //throw;
+
+                return false;
             }
         }
 
@@ -311,7 +398,7 @@ namespace Kudu.Core.Deployment
             // Needed for deployments where deferred deployment is not allowed. Will be set to false if
             // lock contention occurs and AllowDeferredDeployment is false, otherwise true.
             var deploymentWillOccurTcs = new TaskCompletionSource<bool>();
-            
+
             // This task will be let out of scope intentionally
             var deploymentTask = Task.Run(() =>
             {
@@ -326,7 +413,7 @@ namespace Kudu.Core.Deployment
                     var hooksLock = new LockFile(hooksLockPath, traceFactory);
                     var deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
 
-                    var analytics = new Analytics(settings, new ServerConfiguration(), traceFactory);
+                    var analytics = new Analytics(settings, new ServerConfiguration(SystemEnvironment.Instance), traceFactory);
                     var deploymentStatusManager = new DeploymentStatusManager(environment, analytics, statusLock);
                     var siteBuilderFactory = new SiteBuilderFactory(new BuildPropertyProvider(), environment);
                     var webHooksManager = new WebHooksManager(tracer, environment, hooksLock);
@@ -345,6 +432,7 @@ namespace Kudu.Core.Deployment
                             ChangeSet tempChangeSet = null;
                             if (waitForTempDeploymentCreation)
                             {
+                                tracer.Trace("Creating temporary deployment - FetchDeploymentManager");
                                 // create temporary deployment before the actual deployment item started
                                 // this allows portal ui to readily display on-going deployment (not having to wait for fetch to complete).
                                 // in addition, it captures any failure that may occur before the actual deployment item started
@@ -378,6 +466,9 @@ namespace Kudu.Core.Deployment
                                 FileSystemHelpers.SetLastWriteTimeUtc(fetchDeploymentManager._markerFilePath, DateTime.UtcNow);
                             }
                         }
+
+                        // this would ensure the catch block traces the exception
+                        throw;
                     }
                 }
                 catch (Exception ex)

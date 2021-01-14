@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using Kudu.Core.Deployment.Oryx;
 using LibGit2Sharp;
@@ -49,7 +50,7 @@ namespace Kudu.Core.Deployment
             // Parse Build Flags
             Flags = BuildFlagsHelper.Parse(buildFlags);
 
-            // Set language specific 
+            // Set language specific
             SetLanguageOptions();
         }
 
@@ -158,7 +159,7 @@ namespace Kudu.Core.Deployment
                     if (Flags == BuildOptimizationsFlags.UseExpressBuild || Flags == BuildOptimizationsFlags.DeploymentV2)
                     {
                         // We don't want to copy the built artifacts to wwwroot for ExpressBuild scenario
-                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath);
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: Path.Combine(context.BuildTempPath, "oryx-out"));
                     }
                     else
                     {

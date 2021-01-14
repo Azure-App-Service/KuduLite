@@ -104,5 +104,21 @@ namespace Kudu.Core.Infrastructure
                 return default(T);
             }
         }
+
+        public static async Task<TResult> ExecuteWithTimeout<TResult>(Task<TResult> task, TimeSpan timeout)
+        {
+            var timeoutCancellationTokenSource = new CancellationTokenSource();
+
+            var completedTask = await Task.WhenAny(task, Task.Delay(timeout, timeoutCancellationTokenSource.Token));
+            if (completedTask == task)
+            {
+                timeoutCancellationTokenSource.Cancel();
+                return await task;
+            }
+            else
+            {
+                throw new TimeoutException("The operation has timed out.");
+            }
+        }
     }
 }

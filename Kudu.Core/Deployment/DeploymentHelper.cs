@@ -54,6 +54,17 @@ namespace Kudu.Core.Deployment
             return false;
         }
 
+        public static bool IsDeploymentV2Request()
+        {
+            var buildFlag = System.Environment.GetEnvironmentVariable(OryxBuildConstants.OryxEnvVars.BuildFlagsSetting);
+            if(!string.IsNullOrEmpty(buildFlag)
+                && string.Equals(buildFlag, "DeploymentV2", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+            return false;
+        }
+
         public static void PurgeOldDeploymentsIfNecessary(string deploymentsPath, ITracer tracer, int totalAllowedDeployments)
         {
             IEnumerable<string> deploymentNames = FileSystemHelpers.GetDirectories(deploymentsPath);

@@ -1,18 +1,31 @@
 ﻿using System;
+using Kudu.Core.LinuxConsumption;
 
 namespace Kudu.Core.Infrastructure
 {
     public class ServerConfiguration : IServerConfiguration
     {
+        private readonly ISystemEnvironment _environment;
         private string _applicationName;
+
+        public ServerConfiguration(ISystemEnvironment environment)
+        {
+            _environment = environment;
+        }
 
         public string ApplicationName
         {
             get
             {
+                // No caching on consumption sku since the container starts in placeholder mode
+                if (_environment.IsOnLinuxConsumption())
+                {
+                    return GetApplicationName(_environment);
+                }
+
                 if (_applicationName == null)
                 {
-                    _applicationName = GetApplicationName();
+                    _applicationName = GetApplicationName(_environment);
                 }
                 return _applicationName;
             }
@@ -30,9 +43,13 @@ namespace Kudu.Core.Infrastructure
             }
         }
 
-        public static string GetApplicationName()
+        // todo: Make systemEnvironment a mandatory parameter.
+        public static string GetApplicationName(ISystemEnvironment systemEnvironment = null)
         {
-            var applicationName = System.Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME");
+            var applicationName = systemEnvironment != null
+                ? systemEnvironment.GetEnvironmentVariable(Constants.WebsiteSiteName)
+                : System.Environment.GetEnvironmentVariable(Constants.WebsiteSiteName);
+
             if (!string.IsNullOrEmpty(applicationName))
             {
                 // Yank everything after the first underscore to work around
@@ -46,7 +63,10 @@ namespace Kudu.Core.Infrastructure
                 return applicationName;
             }
 
-            applicationName = System.Environment.GetEnvironmentVariable("APP_POOL_ID");
+            applicationName = systemEnvironment != null
+                ? systemEnvironment.GetEnvironmentVariable("APP_POOL_ID")
+                : System.Environment.GetEnvironmentVariable("APP_POOL_ID");
+
             if (applicationName != null)
             {
                 return applicationName;

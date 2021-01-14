@@ -7,6 +7,7 @@
         string RepositoryPath { get; set; }     // e.g. /site/repository
         string WebRootPath { get; }             // e.g. /site/wwwroot
         string DeploymentsPath { get; }         // e.g. /site/deployments
+        string ArtifactsPath { get; }          // e.g /site/artifacts
         string DeploymentToolsPath { get; }     // e.g. /site/deployments/tools
         string SiteExtensionSettingsPath { get; }     // e.g. /site/siteextensions
         string DiagnosticsPath { get; }         // e.g. /site/diagnostics
@@ -30,6 +31,6 @@
         string RequestId { get; }               // e.g. x-arr-log-id or x-ms-request-id header value
         string KuduConsoleFullPath { get; }     // e.g. KuduConsole/kudu.dll
         string SitePackagesPath { get; }        // e.g. /data/SitePackages
-        bool IsOnLinuxConsumption { get; }      // e.g. True on Linux Consumption. False on App Service.
+        bool IsOnLinuxConsumption { get; }      // Check if the application is a Linux Consumption function app
     }
 }

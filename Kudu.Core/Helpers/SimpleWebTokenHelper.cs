@@ -20,6 +20,8 @@ namespace Kudu.Core.Helpers
         /// <param name="key">Optional key to encrypt the token with</param>
         /// <returns>a SWT signed by this app</returns>
         public static string CreateToken(DateTime validUntil, byte[] key = null) => Encrypt($"exp={validUntil.Ticks}", key);
+        public static string CreateEncryptedBlobSas(string blobSas, byte[] key = null) => Encrypt(blobSas, key);
+
          [SuppressMessage("Microsoft.Usage", "CA2202:Object 'cipherStream' and 'cryptoStream' can be disposed mo re than once",
             Justification = "MemoeryStream, CryptoStream, and BinaryWriter handle multiple disposal correctly. The alternative is pretty ugly code for clearing each variable, checking for null, and manual dispose.")]
         public static string Encrypt(string value, byte[] key = null)

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Kudu.Contracts.Deployment;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
@@ -293,11 +294,23 @@ namespace Kudu.Core.Deployment
             }
         }
 
-        public async Task RestartMainSiteIfNeeded(ITracer tracer, ILogger logger)
+        public async Task RestartMainSiteIfNeeded(ITracer tracer, ILogger logger, DeploymentInfoBase deploymentInfo)
         {
             // If post-deployment restart is disabled, do nothing.
             if (!_settings.RestartAppOnGitDeploy())
             {
+                return;
+            }
+
+            // Proceed only if 'restart' is allowed for this deployment
+            if (deploymentInfo != null && !deploymentInfo.RestartAllowed)
+            {
+                return;
+            }
+
+            if (deploymentInfo != null && deploymentInfo.Deployer == Constants.OneDeploy)
+            {
+                await PostDeploymentHelper.RestartMainSiteAsync(_environment.RequestId, new PostDeploymentTraceListener(tracer, logger));
                 return;
             }
 
@@ -403,10 +416,14 @@ namespace Kudu.Core.Deployment
             if (results.Any())
             {
                 var toDelete = new List<DeployResult>();
-                toDelete.AddRange(GetPurgeTemporaryDeployments(results));
-                toDelete.AddRange(GetPurgeFailedDeployments(results));
-                toDelete.AddRange(GetPurgeObsoleteDeployments(results));
-                
+                // If deploying don't purge the temporary deployments
+                if (!IsDeploying)
+                {
+                    toDelete.AddRange(GetPurgeTemporaryDeployments(results));
+                    toDelete.AddRange(GetPurgeFailedDeployments(results));
+                    toDelete.AddRange(GetPurgeObsoleteDeployments(results));
+                }
+
                 if (toDelete.Any())
                 {
                     var tracer = _traceFactory.GetTracer();
@@ -632,7 +649,7 @@ namespace Kudu.Core.Deployment
                 {
                     using (tracer.Step("Determining deployment builder"))
                     {
-                        builder = _builderFactory.CreateBuilder(tracer, innerLogger, perDeploymentSettings, repository);
+                        builder = _builderFactory.CreateBuilder(tracer, innerLogger, perDeploymentSettings, repository, deploymentInfo);
                         deploymentAnalytics.ProjectType = builder.ProjectType;
                         tracer.Trace("Builder is {0}", builder.GetType().Name);
                     }
@@ -703,8 +720,7 @@ namespace Kudu.Core.Deployment
                     {
                         await builder.Build(context);
                         builder.PostBuild(context);
-
-                        await RestartMainSiteIfNeeded(tracer, logger);
+                        await RestartMainSiteIfNeeded(tracer, logger, deploymentInfo);
 
                         if (FunctionAppHelper.LooksLikeFunctionApp() && _environment.IsOnLinuxConsumption)
                         {
@@ -712,7 +728,12 @@ namespace Kudu.Core.Deployment
                             // 1. packaging the output folder
                             // 2. upload the artifact to user's storage account
                             // 3. reset the container workers after deployment
-                            await LinuxConsumptionDeploymentHelper.SetupLinuxConsumptionFunctionAppDeployment(_environment, _settings, context, deploymentInfo.DoSyncTriggers);
+                            await LinuxConsumptionDeploymentHelper.SetupLinuxConsumptionFunctionAppDeployment(
+                                env: _environment,
+                                settings: _settings,
+                                context: context,
+                                shouldSyncTriggers: deploymentInfo.DoSyncTriggers,
+                                shouldUpdateWebsiteRunFromPackage: deploymentInfo.OverwriteWebsiteRunFromPackage);
                         }
 
                         await PostDeploymentHelper.SyncFunctionsTriggers(
@@ -720,14 +741,11 @@ namespace Kudu.Core.Deployment
                             new PostDeploymentTraceListener(tracer, logger), 
                             deploymentInfo?.SyncFunctionsTriggersPath);
 
-                        if (_settings.TouchWatchedFileAfterDeployment())
+                        TouchWatchedFileIfNeeded(_settings, deploymentInfo, context);
+
+                        if (_settings.RunFromLocalZip() && deploymentInfo is ArtifactDeploymentInfo)
                         {
-                            TryTouchWatchedFile(context, deploymentInfo);
-                        }
-                        
-                        if (_settings.RunFromLocalZip() && deploymentInfo is ZipDeploymentInfo)
-                        {
-                            await PostDeploymentHelper.UpdatePackageName(deploymentInfo as ZipDeploymentInfo, _environment, logger);
+                            await PostDeploymentHelper.UpdatePackageName(deploymentInfo as ArtifactDeploymentInfo, _environment, logger);
                         }
 
                         FinishDeployment(id, deployStep);
@@ -753,6 +771,19 @@ namespace Kudu.Core.Deployment
             {
                 // Clean the temp folder up
                 CleanBuild(tracer, buildTempPath);
+            }
+        }
+
+        private static void TouchWatchedFileIfNeeded(IDeploymentSettingsManager settings, DeploymentInfoBase deploymentInfo, DeploymentContext context)
+        {
+            if (deploymentInfo != null && !deploymentInfo.WatchedFileEnabled)
+            {
+                return;
+            }
+
+            if (settings.TouchWatchedFileAfterDeployment())
+            {
+                TryTouchWatchedFile(context, deploymentInfo);
             }
         }
 
@@ -808,17 +839,22 @@ namespace Kudu.Core.Deployment
 
         private static string GetOutputPath(DeploymentInfoBase deploymentInfo, IEnvironment environment, IDeploymentSettingsManager perDeploymentSettings)
         {
-            string targetPath = perDeploymentSettings.GetTargetPath();
+            string targetSubDirectoryRelativePath = perDeploymentSettings.GetTargetPath();
             
-            if (string.IsNullOrWhiteSpace(targetPath))
+            if (string.IsNullOrWhiteSpace(targetSubDirectoryRelativePath))
             {
-                targetPath = deploymentInfo?.TargetPath;
+                targetSubDirectoryRelativePath = deploymentInfo?.TargetSubDirectoryRelativePath;
             }
-            
-            if (!string.IsNullOrWhiteSpace(targetPath))
+
+            if (deploymentInfo?.Deployer == Constants.OneDeploy)
             {
-                targetPath = targetPath.Trim('\\', '/');
-                return Path.GetFullPath(Path.Combine(environment.WebRootPath, targetPath));
+                return string.IsNullOrWhiteSpace(deploymentInfo?.TargetRootPath) ? environment.WebRootPath : deploymentInfo.TargetRootPath;
+            }
+
+            if (!string.IsNullOrWhiteSpace(targetSubDirectoryRelativePath))
+            {
+                targetSubDirectoryRelativePath = targetSubDirectoryRelativePath.Trim('\\', '/');
+                return Path.GetFullPath(Path.Combine(environment.WebRootPath, targetSubDirectoryRelativePath));
             }
 
             return environment.WebRootPath;
@@ -862,15 +898,20 @@ namespace Kudu.Core.Deployment
             {
                 return statusFile;
             }
+
             // There's an incomplete deployment, yet nothing is going on, mark this deployment as failed
-            // since it probably means something died
+            // since it probably means something died, give a 120 seconds wait before marking it failed
             if (!isDeploying)
             {
-                _traceFactory.GetTracer().Step("Deployment Lock Failure");
-                ILogger logger = GetLogger(id);
-                logger.LogUnexpectedError();
-                //_traceFactory.GetTracer().Step("Unexpected Error "+statusFile.Message);
-                MarkStatusComplete(statusFile, success: false);
+                if (statusFile != null
+                    && statusFile.ReceivedTime != null
+                    && statusFile.ReceivedTime < DateTime.Now.AddSeconds(-120))
+                {
+                    _traceFactory.GetTracer().Step("Deployment Lock Failure");
+                    ILogger logger = GetLogger(id);
+                    logger.LogUnexpectedError();
+                    MarkStatusComplete(statusFile, success: false);
+                }
             }
 
             return statusFile;

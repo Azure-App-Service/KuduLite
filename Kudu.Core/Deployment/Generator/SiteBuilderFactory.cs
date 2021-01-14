@@ -23,7 +23,7 @@ namespace Kudu.Core.Deployment.Generator
             _environment = environment;
         }
 
-        public ISiteBuilder CreateBuilder(ITracer tracer, ILogger logger, IDeploymentSettingsManager settings, IRepository repository)
+        public ISiteBuilder CreateBuilder(ITracer tracer, ILogger logger, IDeploymentSettingsManager settings, IRepository repository, DeploymentInfoBase deploymentInfo)
         {
             string repositoryRoot = repository.RepositoryPath;
 
@@ -53,6 +53,12 @@ namespace Kudu.Core.Deployment.Generator
                 targetProjectPath = Path.GetFullPath(Path.Combine(repositoryRoot, targetProjectPath.TrimStart('/', '\\')));
             }
 
+            if (deploymentInfo != null && deploymentInfo.Deployer == Constants.OneDeploy)
+            {
+                var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
+                return new OneDeployBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath, deploymentInfo);
+            }
+
             if (settings.RunFromLocalZip())
             {
                 return new RunFromZipSiteBuilder();
@@ -61,7 +67,14 @@ namespace Kudu.Core.Deployment.Generator
             if (!settings.DoBuildDuringDeployment())
             {
                 var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
-                return new BasicBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);
+                if (DeploymentHelper.IsDeploymentV2Request())
+                {
+                    return new DeploymentV2Builder(_environment, settings, _propertyProvider, repositoryRoot);
+                }
+                else
+                {
+                    return new BasicBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);
+                }
             }
 
             // Check if we really need a builder for this
@@ -85,6 +98,12 @@ namespace Kudu.Core.Deployment.Generator
             else if (FunctionAppHelper.LooksLikeFunctionApp())
             {
                 return new OryxBuilder(_environment, settings, _propertyProvider, repositoryRoot);
+            }
+
+            string framework = System.Environment.GetEnvironmentVariable("FRAMEWORK");
+            if(framework.Equals("ruby", StringComparison.OrdinalIgnoreCase))
+            {
+                return new RubySiteBuilder(_environment, settings, _propertyProvider, repositoryRoot, targetProjectPath);
             }
 
             if (!String.IsNullOrEmpty(targetProjectPath))

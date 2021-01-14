@@ -15,6 +15,7 @@ using Kudu.Core.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Services.Infrastructure;
 using Microsoft.AspNetCore.Http.Extensions;
+using System.Text;
 
 namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 {
@@ -25,17 +26,23 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
     {
         private static readonly HashSet<string> Whitelist = new HashSet<string>
         {
+            // Home Page Resources
+            "/favicon.ico",
+            "/Content/Images",
+
+            // API Endpoints
             "/api/zipdeploy",
             "/api/deployments",
             "/api/isdeploying",
             "/api/settings",
             "/admin/instance",
+            "/admin/proxy",
             "/deployments",
             "/zipdeploy"
         };
 
         private readonly RequestDelegate _next;
-        private readonly HashSet<PathString> _whitelistedPathString;
+        private readonly HashSet<PathString> _allowedPaths;
         private const string DisguisedHostHeader = "DISGUISED-HOST";
         private const string HostHeader = "HOST";
         private const string ForwardedProtocolHeader = "X-Forwarded-Proto";
@@ -43,7 +50,7 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
 
         private static Regex malformedScmHostnameRegex = new Regex(@"^~\d+");
         private static string HomePageRoute = "/";
-        private static string FaviconRoute = "/favicon.ico";
+        private static string HealthCheckRoute = "/admin/proxy/http-health";
 
         /// <summary>
         /// Filter out unnecessary routes for Linux Consumption
@@ -52,10 +59,10 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
         public LinuxConsumptionRouteMiddleware(RequestDelegate next)
         {
             _next = next;
-            _whitelistedPathString = new HashSet<PathString>(Whitelist.Count);
+            _allowedPaths = new HashSet<PathString>(Whitelist.Count);
             foreach (string pathString in Whitelist)
             {
-                _whitelistedPathString.Add(new PathString(pathString));
+                _allowedPaths.Add(new PathString(pathString));
             }
         }
 
@@ -86,24 +93,8 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                 context.Request.Scheme = value;
             }
 
-            // Step 2: check if it is homepage route or favicon route, always return 200
-            if (IsHomePageRoute(context.Request.Path) || IsFavIconRoute(context.Request.Path))
-            {
-                context.Response.StatusCode = 200;
-                KuduEventGenerator.Log().ApiEvent(
-                    ServerConfiguration.GetApplicationName(),
-                    "LinuxConsumptionEndpoint",
-                    context.Request.GetEncodedPathAndQuery(),
-                    context.Request.Method,
-                    System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
-                    context.Response.StatusCode,
-                    (DateTime.UtcNow - requestTime).Milliseconds,
-                    context.Request.GetUserAgent());
-                return;
-            }
-
-            // Step 3: check if the request endpoint is enabled in Linux Consumption
-            if (!IsRouteWhitelisted(context.Request.Path))
+            // Step 2: check if the request endpoint is enabled in Linux Consumption
+            if (!IsRouteAllowed(context.Request.Path))
             {
                 context.Response.StatusCode = 404;
                 KuduEventGenerator.Log().ApiEvent(
@@ -118,9 +109,29 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                 return;
             }
 
-            // Step 4: check if the request matches authorization policy
+            // Step 3: check if the request matches authorization policy
+            // If the home page is requested without authentication (e.g. ControllerPing), return 200 with hint.
+            // If the home page is requested with authentication (e.g. Customer Browser Access), return 200 with homepage content.
             AuthenticateResult authenticationResult = await context.AuthenticateAsync(ArmAuthenticationDefaults.AuthenticationScheme);
-            if (!authenticationResult.Succeeded)
+            if (IsHomePageWithoutAuthentication(authenticationResult, context.Request.Path) ||
+                IsHealthCheckPageWithoutAuthentication(authenticationResult, context.Request.Path))
+            {
+                byte[] data = Encoding.UTF8.GetBytes("Please use /basicAuth endpoint or AAD to authenticate SCM site");
+                context.Response.StatusCode = 200;
+                context.Response.ContentType = "text/plain; charset=UTF-8";
+                await context.Response.Body.WriteAsync(data, 0, data.Length);
+                KuduEventGenerator.Log().ApiEvent(
+                    ServerConfiguration.GetApplicationName(),
+                    "AccessLinuxConsumptionHomePageWithoutAuthentication",
+                    context.Request.GetEncodedPathAndQuery(),
+                    context.Request.Method,
+                    System.Environment.GetEnvironmentVariable("x-ms-request-id") ?? string.Empty,
+                    context.Response.StatusCode,
+                    (DateTime.UtcNow - requestTime).Milliseconds,
+                    context.Request.GetUserAgent());
+                return;
+            }
+            else if (!authenticationResult.Succeeded)
             {
                 context.Response.StatusCode = 401;
                 KuduEventGenerator.Log().ApiEvent(
@@ -153,13 +164,15 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
                     return;
                 }
             }
-
             await _next.Invoke(context);
         }
 
-        private bool IsRouteWhitelisted(PathString routePath)
+        private bool IsRouteAllowed(PathString routePath)
         {
-            return _whitelistedPathString.Any((ps) => routePath.StartsWithSegments(ps));
+            if (IsHomePageRoute(routePath)) {
+                return true;
+            }
+            return _allowedPaths.Any((ps) => routePath.StartsWithSegments(ps));
         }
 
         private bool IsHomePageRoute(PathString routePath)
@@ -167,9 +180,15 @@ namespace Kudu.Services.LinuxConsumptionInstanceAdmin
             return routePath.ToString() == HomePageRoute;
         }
 
-        private bool IsFavIconRoute(PathString routePath)
+        private bool IsHomePageWithoutAuthentication(AuthenticateResult authenticationResult, PathString routePath)
         {
-            return routePath.ToString() == FaviconRoute;
+            return !authenticationResult.Succeeded && IsHomePageRoute(routePath);
+        }
+
+        private bool IsHealthCheckPageWithoutAuthentication(AuthenticateResult authenticationResult, PathString routePath)
+        {
+            return !authenticationResult.Succeeded && 
+                string.Equals(routePath.ToString(), HealthCheckRoute, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string SanitizeScmUrl(string malformedUrl)

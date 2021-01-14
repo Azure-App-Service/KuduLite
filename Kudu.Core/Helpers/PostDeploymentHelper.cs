@@ -97,13 +97,13 @@ namespace Kudu.Core.Helpers
         {
             get { return System.Environment.GetEnvironmentVariable(Constants.WebSiteElasticScaleEnabled); }
         }
-        
+
         // WEBSITE_INSTANCE_ID not null or empty
         public static bool IsAzureEnvironment()
         {
             return !String.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId));
         }
-        
+
         // WEBSITE_HOME_STAMPNAME = waws-prod-bay-001
         private static string HomeStamp
         {
@@ -120,7 +120,7 @@ namespace Kudu.Core.Helpers
         /// It is written to require least dependencies but framework assemblies.
         /// Caller is responsible for synchronization.
         /// </summary>
-        [SuppressMessage("Microsoft.Usage", "CA1801:Parameter 'siteRestrictedJwt' is never used", 
+        [SuppressMessage("Microsoft.Usage", "CA1801:Parameter 'siteRestrictedJwt' is never used",
         Justification = "Method signature has to be the same because it's called via reflections from web-deploy")]
         public static async Task Run(string requestId, string siteRestrictedJwt, TraceListener tracer)
         {
@@ -152,8 +152,8 @@ namespace Kudu.Core.Helpers
             functionsPath = !string.IsNullOrEmpty(functionsPath)
                 ? functionsPath
                 : System.Environment.ExpandEnvironmentVariables(@"%HOME%\site\wwwroot");
-            
-            // Read host.json 
+
+            // Read host.json
             // Get HubName property for Durable Functions
             Dictionary<string, string> durableConfig = null;
             string hostJson = Path.Combine(functionsPath, Constants.FunctionsHostConfigFile);
@@ -176,7 +176,7 @@ namespace Kudu.Core.Helpers
                 routing["type"] = "routingTrigger";
                 triggers.Add(routing);
             }
-            
+
             // Add hubName, connection, to each Durable Functions trigger
             if (durableConfig != null)
             {
@@ -223,12 +223,12 @@ namespace Kudu.Core.Helpers
             // this couples with sync function triggers
             await SyncLogicAppJson(requestId, tracer);
         }
-        
+
         private static void ReadDurableConfig(string hostConfigPath, out Dictionary<string, string> config)
         {
             config = new Dictionary<string, string>();
             var json = JObject.Parse(File.ReadAllText(hostConfigPath));
-            
+
             JToken durableTaskValue;
             // we will allow case insensitivity given it is likely user hand edited
             // see https://github.com/Azure/azure-functions-durable-extension/issues/111
@@ -240,7 +240,7 @@ namespace Kudu.Core.Helpers
                 {
                     config.Add(Constants.HubName, nameValue.ToString());
                 }
-                
+
                 if (kvp.TryGetValue(Constants.DurableTaskStorageConnectionName, StringComparison.OrdinalIgnoreCase, out nameValue) && nameValue != null)
                 {
                     config.Add(Constants.DurableTaskStorageConnection, nameValue.ToString());
@@ -410,8 +410,7 @@ namespace Kudu.Core.Helpers
 
             // Generate RemoveAllWorker request URI
             string baseUrl = $"http://{websiteHostname}/operations/removeworker/{sitename}/allStandard?token={authTokenEncoded}";
-            Uri baseUri = null;
-            if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out baseUri))
+            if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out Uri baseUri))
             {
                 throw new ArgumentException($"Malformed URI is used in RemoveAllWorkers");
             }
@@ -424,8 +423,43 @@ namespace Kudu.Core.Helpers
                 Trace(TraceEventType.Information, "RemoveAllWorkers, statusCode = {0}", response.StatusCode);
                 response.EnsureSuccessStatusCode();
             }
-            
-            return;
+        }
+
+        /// <summary>
+        /// Update WEBSITE_RUN_FROM_PACKAGE to point to the latest blob
+        /// </summary>
+        /// <param name="blobSas">The unencrypted sas uri points to the destination blob</param>
+        /// <exception cref="ArgumentException">Thrown when SetRunFromPkg url is malformed.</exception>
+        /// <exception cref="HttpRequestException">Thrown when request to SetRunFromPkg is not OK.</exception>
+        public static async Task UpdateWebsiteRunFromPackage(string blobSas, DeploymentContext context)
+        {
+            // Generate URL encoded blobSas
+            string encryptedBlobSas = GetBlobSasEncryptedToken(blobSas);
+            string encryptedBlobSasEncoded = HttpUtility.UrlEncode(encryptedBlobSas);
+
+            // Generate web request protocol
+            string protocol = Environment.SkipSslValidation ? "http" : "https";
+
+            // Generate update app setting request
+            string baseUrl = $"{protocol}://{HttpHost}/operations/set-run-from-pkg?run-from-pkg-path={encryptedBlobSasEncoded}";
+            if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out Uri baseUri))
+            {
+                throw new ArgumentException($"Malformed URI is used in SetRunFromPkg");
+            }
+
+            // Initiate web request
+            Trace(TraceEventType.Information, "Calling scm SetRunFromPkg to update WEBSITE_RUN_FROM_PACKAGE for the function app");
+            using (var client = HttpClientFactory())
+            using (var request = new HttpRequestMessage(HttpMethod.Post, baseUri))
+            {
+                request.Headers.Add(Constants.SiteRestrictedToken, GetWebsiteAuthToken());
+                using (var response = await client.SendAsync(request))
+                {
+                    Trace(TraceEventType.Information, "SetRunFromPkg, statusCode = {0}", response.StatusCode);
+                    context.Logger.Log($"response.StatusCode = {response.StatusCode}");
+                    response.EnsureSuccessStatusCode();
+                }
+            }
         }
 
         /// <summary>
@@ -461,6 +495,12 @@ namespace Kudu.Core.Helpers
             string websiteAuthEncryptionKey = System.Environment.GetEnvironmentVariable(SettingsKeys.AuthEncryptionKey);
             DateTime expiry = DateTime.UtcNow.AddMinutes(5);
             return SimpleWebTokenHelper.CreateToken(expiry, websiteAuthEncryptionKey.ToKeyBytes());
+        }
+
+        private static string GetBlobSasEncryptedToken(string blobSas)
+        {
+            string websiteAuthEncryptionKey = System.Environment.GetEnvironmentVariable(SettingsKeys.AuthEncryptionKey);
+            return SimpleWebTokenHelper.CreateEncryptedBlobSas(blobSas, websiteAuthEncryptionKey.ToKeyBytes());
         }
 
         private static void VerifyEnvironments()
@@ -550,12 +590,13 @@ namespace Kudu.Core.Helpers
         }
 
         // Throws on failure
-        private static async Task PostAsync(string path, string requestId, string content = null)
+        public static async Task PostAsync(string path, string requestId, string content = null)
         {
             var hostOrAuthority = IsLocalHost ? HttpAuthority : HttpHost;
             var scheme = IsLocalHost ? "http" : "https";
             var ipAddress = await GetAlternativeIPAddress(hostOrAuthority);
             var statusCode = default(HttpStatusCode);
+            string resContent = "";
             try
             {
                 using (var client = HttpClientFactory())
@@ -580,8 +621,36 @@ namespace Kudu.Core.Helpers
                     using (var response = await client.PostAsync(path, payload))
                     {
                         statusCode = response.StatusCode;
+                        if (response.Content != null)
+                        {
+                            resContent = response.Content.ReadAsStringAsync().Result;
+                        }
+
                         response.EnsureSuccessStatusCode();
                     }
+
+                    if (path.Equals(Constants.UpdateDeployStatusPath) && resContent.Contains("Excessive SCM Site operation requests. Retry after 5 seconds"))
+                    {
+                        // Request was throttled throw an exception
+                        // If max retries aren't reached, this request will be retried
+                        Trace(TraceEventType.Information, $"Call to {path} was throttled. Setting statusCode to {HttpStatusCode.NotAcceptable}");
+
+                        statusCode = HttpStatusCode.NotAcceptable;
+                        throw new HttpRequestException();
+                    }
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                if (path.Equals(Constants.UpdateDeployStatusPath, StringComparison.OrdinalIgnoreCase) && statusCode == HttpStatusCode.NotFound)
+                {
+                    // Fail silently if 404 is encountered.
+                    // This will only happen transiently during a platform upgrade if new bits aren't on the FrontEnd yet.
+                    Trace(TraceEventType.Warning, $"Call to {path} ended in 404. {ex}");
+                }
+                else
+                {
+                    throw;
                 }
             }
             finally
@@ -818,12 +887,12 @@ namespace Kudu.Core.Helpers
                 tracer.TraceEvent(null, "PostDeployment", eventType, (int)eventType, format, args);
             }
         }
-        
-        public static async Task UpdatePackageName(ZipDeploymentInfo deploymentInfo, IEnvironment environment, ILogger logger)
+
+        public static async Task UpdatePackageName(ArtifactDeploymentInfo deploymentInfo, IEnvironment environment, ILogger logger)
         {
             var packageNamePath = Path.Combine(environment.SitePackagesPath, Constants.PackageNameTxt);
-            logger.Log($"Updating {packageNamePath} with deployment {deploymentInfo.ZipName}");
-            await FileSystemHelpers.WriteAllTextToFileAsync(packageNamePath, deploymentInfo.ZipName);
+            logger.Log($"Updating {packageNamePath} with deployment {deploymentInfo.ArtifactFileName}");
+            await FileSystemHelpers.WriteAllTextToFileAsync(packageNamePath, deploymentInfo.ArtifactFileName);
         }
     }
 }

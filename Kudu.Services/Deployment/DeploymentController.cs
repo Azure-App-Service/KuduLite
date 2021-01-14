@@ -488,6 +488,7 @@ namespace Kudu.Services.Deployment
                 if (IsLatestPendingDeployment(ref id, out pending))
                 {
                     Response.GetTypedHeaders().Location = new Uri(Request.GetDisplayUrl());
+                    pending.Status = DeployStatus.Pending;
                     return Accepted(ArmUtils.AddEnvelopeOnArmRequest(pending, Request));
                 }
 
@@ -498,6 +499,11 @@ namespace Kudu.Services.Deployment
                     return NotFound(String.Format(CultureInfo.CurrentCulture,
                                                                        Resources.Error_DeploymentNotFound,
                                                                        id));
+                }
+
+                if(_deploymentLock.IsHeld)
+                {
+                    result.Status = DeployStatus.Pending;
                 }
 
                 Uri baseUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(Request), new Uri(Request.GetDisplayUrl()).AbsolutePath);
@@ -585,7 +591,17 @@ namespace Kudu.Services.Deployment
 
         private EntityTagHeaderValue GetCurrentEtag(HttpRequest request)
         {
-            return new EntityTagHeaderValue(String.Format("\"{0:x}\"", new Uri(request.GetDisplayUrl()).PathAndQuery.GetHashCode() ^ _status.LastModifiedTime.Ticks));
+            var lastModifiedTime = DateTime.Now;
+            var statusFileLastModifiedTimeTask = Task.Run(() => _status.LastModifiedTime);
+            if (statusFileLastModifiedTimeTask.Wait(TimeSpan.FromSeconds(30)))
+            {
+                // if this doesn't return in 5 seconds
+                // we would assume the status file was just modified
+                // we also mitigate the status file lock by removing
+                // the lock file here
+                lastModifiedTime = statusFileLastModifiedTimeTask.Result;
+            }
+            return new EntityTagHeaderValue(String.Format("\"{0:x}\"", new Uri(request.GetDisplayUrl()).PathAndQuery.GetHashCode() ^ lastModifiedTime.Ticks));
         }
 
         private static bool EtagEquals(HttpRequest request, EntityTagHeaderValue currentEtag)

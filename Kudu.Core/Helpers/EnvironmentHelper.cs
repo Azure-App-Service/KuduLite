@@ -23,7 +23,13 @@ namespace Kudu.Core.Helpers
 
             return binPath;
         }
-        
+
+        public static bool IsDynamicInstallEnvironment()
+        {
+            var dynEnvVarValue = System.Environment.GetEnvironmentVariable("DYNAMIC_INSTALL_ENABLED");
+            return dynEnvVarValue != null && string.Equals(dynEnvVarValue, "true", StringComparison.OrdinalIgnoreCase);
+        }
+
         // Is this a Windows Containers site?
         public static bool IsWindowsContainers()
         {
@@ -35,6 +41,15 @@ namespace Kudu.Core.Helpers
                 isXenon = (parsedXenon == 1);
             }
             return isXenon;
+        }
+
+        // Check if an app is a Linux Consumption function app
+        // This method is similar to 
+        public static bool IsOnLinuxConsumption()
+        {
+            bool isOnAppService = !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId));
+            bool isOnLinuxContainer = !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.ContainerName));
+            return isOnLinuxContainer && !isOnAppService;
         }
     }
 }

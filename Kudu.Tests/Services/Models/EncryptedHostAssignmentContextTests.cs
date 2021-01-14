@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Text;
 using Kudu.Services.Models;
@@ -8,7 +9,6 @@ namespace Kudu.Tests.Services.Models
 {
     public class EncryptedHostAssignmentContextTests
     {
-        private const string _encryptionKey = "MDEyMzQ1Njc4OUFCQ0RFRjAxMjM0NTY3ODlBQkNERUY=";
         private const string _lastModifiedTime = "2019-01-15T15:53:00";
         private HostAssignmentContext _context = new HostAssignmentContext() {
             SiteId = 10,
@@ -29,24 +29,30 @@ namespace Kudu.Tests.Services.Models
         [Fact]
         public void EncryptedContextShouldExistAfterCreate()
         {
-            var result = EncryptedHostAssignmentContext.Create(_context, _encryptionKey);
+            var result = EncryptedHostAssignmentContext.Create(_context, GetMockedEncryptionKey());
             Assert.NotEmpty(result.EncryptedContext);
         }
 
         [Fact]
         public void DecryptedContextShouldMatchByEqual()
         {
-            var encrypted = EncryptedHostAssignmentContext.Create(_context, _encryptionKey);
-            var decrypted = encrypted.Decrypt(_encryptionKey);
+            var encrypted = EncryptedHostAssignmentContext.Create(_context, GetMockedEncryptionKey());
+            var decrypted = encrypted.Decrypt(GetMockedEncryptionKey());
             Assert.True(_context.Equals(decrypted));
         }
 
         [Fact]
         public void DecryptedContextShouldMatchEnvironments()
         {
-            var encrypted = EncryptedHostAssignmentContext.Create(_context, _encryptionKey);
-            var decrypted = encrypted.Decrypt(_encryptionKey);
+            var encrypted = EncryptedHostAssignmentContext.Create(_context, GetMockedEncryptionKey());
+            var decrypted = encrypted.Decrypt(GetMockedEncryptionKey());
             Assert.Equal(_context.Environment, decrypted.Environment);
+        }
+
+        private string GetMockedEncryptionKey()
+        {
+            var bytes = Encoding.ASCII.GetBytes("0123456789ABCDEF0123456789ABCDEF");
+            return Convert.ToBase64String(bytes);
         }
     }
 }

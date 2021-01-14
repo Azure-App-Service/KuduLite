@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Diagnostics.Tracing;
 
 namespace Kudu.Core.Tracing
 {
@@ -44,6 +45,12 @@ namespace Kudu.Core.Tracing
         public void ApiEvent(string siteName, string Message, string address, string verb, string requestId, int statusCode, long latencyInMilliseconds, string userAgent)
         {
             KuduEventSource.Log.ApiEvent(siteName, Message, address, verb, requestId, statusCode, latencyInMilliseconds, userAgent);
+        }
+
+        public void LogMessage(EventLevel logLevel, string siteName, string message, string exception)
+        {
+            // Only used in Linux consumption currently
+            return;
         }
     }
 }

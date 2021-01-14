@@ -5,7 +5,7 @@ using Kudu.Core.Settings;
 
 namespace Kudu.Core.Tracing
 {
-    class LinuxContainerEventGenerator : IKuduEventGenerator
+    public class LinuxContainerEventGenerator : IKuduEventGenerator
     {
         private readonly Action<string> _writeEvent;
         private readonly bool _consoleEnabled = true;
@@ -137,6 +137,19 @@ namespace Kudu.Core.Tracing
                 statusCode = statusCode,
                 latencyInMilliseconds = latencyInMilliseconds, 
                 userAgent = userAgent
+            };
+
+            LogKuduTraceEvent(kuduEvent);
+        }
+
+        public void LogMessage(EventLevel logLevel, string siteName, string message, string exception)
+        {
+            var kuduEvent = new KuduEvent
+            {
+                level = (int)logLevel,
+                siteName = siteName,
+                Message = message,
+                exception = exception
             };
 
             LogKuduTraceEvent(kuduEvent);
