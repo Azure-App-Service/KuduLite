@@ -16,6 +16,7 @@ using Kudu.Core.LinuxConsumption;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
 using Newtonsoft.Json;
+using Microsoft.AspNetCore.Http;
 
 namespace Kudu.Core.Deployment
 {
@@ -219,7 +220,7 @@ namespace Kudu.Core.Deployment
                                 // If the id is already in GUID format nothing will happen
                                 // If it doesn't have the necessary format for a GUID, and exception will be thrown
                                 var changeSet = repository.GetChangeSet(deployBranch);
-                                updateStatusObj = new DeployStatusApiResult(Constants.BuildRequestReceived, Guid.Parse(changeSet.Id).ToString());
+                                updateStatusObj = new DeployStatusApiResult(Constants.BuildRequestReceived, deploymentInfo.DeploymentTrackingId);
                                 await SendDeployStatusUpdate(updateStatusObj);
                             }
                         }
