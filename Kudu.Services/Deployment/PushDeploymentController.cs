@@ -556,9 +556,9 @@ namespace Kudu.Services.Deployment
                     // best effort
                 }
 
-                using (_tracer.Step("Writing zip file to {0}", zipFilePath))
+                using (_tracer.Step("Writing artifact to {0}", artifactTempPath))
                 {
-                    if (deploymentInfo.ZipURL != null)
+                    if (deploymentInfo.RemoteURL != null)
                     {
                         using (_tracer.Step("Writing zip file from packageUri to {0}", artifactTempPath))
                         {
@@ -595,8 +595,6 @@ namespace Kudu.Services.Deployment
                     }
 
                     deploymentInfo.RepositoryUrl = artifactTempPath;
-
-                    }
                 }
             }
 
@@ -641,7 +639,6 @@ namespace Kudu.Services.Deployment
                     return BadRequest();
             }
         }
-
 
         private Task LocalZipFetch(IRepository repository, DeploymentInfoBase deploymentInfo, string targetBranch,
             ILogger logger, ITracer tracer)
