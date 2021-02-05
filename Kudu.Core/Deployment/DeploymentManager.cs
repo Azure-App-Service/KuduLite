@@ -899,14 +899,28 @@ namespace Kudu.Core.Deployment
                 return statusFile;
             }
 
-            // There's an incomplete deployment, yet nothing is going on, mark this deployment as failed
-            // since it probably means something died, give a 120 seconds wait before marking it failed
+        // There's an incomplete deployment, yet nothing is going on, mark this deployment as failed
+        // since it probably means something died, give a 180 seconds wait before marking it failed
+	    int invalidationSeconds = 180;
+	    try
+	    {
+	    	string invMinsStr = System.Environment.GetEnvironmentVariable("SCM_DEP_LOCK_INVALIDATION_MINS");
+		    if(!string.IsNullOrEmpty(invMinsStr))
+		    {
+			    int invMins = Int32.Parse(invMinsStr);
+			    invalidationSeconds = invMins * 60;
+		    }
+	    }
+	    catch (Exception)
+	    {
+	   	_traceFactory.GetTracer().Step("Defaulting to lock invalidation time 4 mins"); 
+	    }
             if (!isDeploying)
             {
                 if (statusFile != null
                     && statusFile.ReceivedTime != null
-                    && statusFile.ReceivedTime < DateTime.Now.AddSeconds(-120))
-                {
+                    && statusFile.ReceivedTime < DateTime.Now.AddSeconds(-1*invalidationSeconds))
+		{
                     _traceFactory.GetTracer().Step("Deployment Lock Failure");
                     ILogger logger = GetLogger(id);
                     logger.LogUnexpectedError();
