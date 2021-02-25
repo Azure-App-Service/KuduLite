@@ -156,7 +156,8 @@ namespace Kudu.Services.Deployment
         {
             using (_tracer.Step("ZipPushDeployViaUrl"))
             {
-                string zipUrl = GetArtifactURLFromJSON(requestJson);
+                // ARM Request payload is wrapped in properties {'properties':{'uri':''}}
+                string zipUrl = ArmUtils.IsArmRequest(Request) ? GetArticfactURLFromARMJSON(requestJson) : GetArtifactURLFromJSON(requestJson);
 
                 var deploymentInfo = new ArtifactDeploymentInfo(_environment, _traceFactory)
                 {
@@ -318,7 +319,7 @@ namespace Kudu.Services.Deployment
                             ignoreStack = requestJson.Value<bool>("ignorestack");
                         }
 
-                        remoteArtifactUrl = GetArtifactURLFromJSON(requestJson);
+                        remoteArtifactUrl = ArmUtils.IsArmRequest(Request) ? GetArticfactURLFromARMJSON(requestJson) : GetArtifactURLFromJSON(requestJson);
                     }
                 }
                 catch (Exception ex)
@@ -484,6 +485,28 @@ namespace Kudu.Services.Deployment
         private ObjectResult StatusCode400(string message)
         {
             return StatusCode(StatusCodes.Status400BadRequest, message);
+        }
+
+        private string GetArticfactURLFromARMJSON(JObject requestObject)
+        {
+            using (_tracer.Step("Reading the artifact URL from the ARM request JSON"))
+            {
+                try
+                {
+                    // ARM template should have properties field and a packageUri field inside the properties field.
+                    string packageUri = requestObject.Value<JObject>("properties").Value<string>("packageUri");
+                    if (string.IsNullOrEmpty(packageUri))
+                    {
+                        throw new ArgumentException("Invalid Url in the JSON request");
+                    }
+                    return packageUri;
+                }
+                catch (Exception ex)
+                {
+                    _tracer.TraceError(ex, "Error reading the URL from the JSON {0}", requestObject.ToString());
+                    throw;
+                }
+            }
         }
 
         private string GetArtifactURLFromJSON(JObject requestObject)
