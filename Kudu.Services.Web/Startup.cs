@@ -60,6 +60,7 @@ namespace Kudu.Services.Web
             Console.WriteLine(@"Startup : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
             Configuration = configuration;
             _hostingEnvironment = hostingEnvironment;
+	    Console.WriteLine("Hello World 12345");
         }
 
         private IConfiguration Configuration { get; }
