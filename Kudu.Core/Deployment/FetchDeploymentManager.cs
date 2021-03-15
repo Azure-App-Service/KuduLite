@@ -212,22 +212,18 @@ namespace Kudu.Core.Deployment
 
                         try
                         {
-                            _tracer.Trace($"Before sending {Constants.BuildRequestReceived} status to /api/updatedeploystatus");
                             if (PostDeploymentHelper.IsAzureEnvironment())
                             {
-                                // Parse the changesetId into a GUID
-                                // The FE hook allows only GUID as a deployment id
-                                // If the id is already in GUID format nothing will happen
-                                // If it doesn't have the necessary format for a GUID, and exception will be thrown
-                                var changeSet = repository.GetChangeSet(deployBranch);
-                                var trackingId = Guid.Parse(changeSet.Id).ToString();
-                                if(deploymentInfo != null
+                                if (deploymentInfo != null
                                     && !string.IsNullOrEmpty(deploymentInfo.DeploymentTrackingId))
                                 {
-                                    trackingId = deploymentInfo.DeploymentTrackingId;
+                                    _tracer.Trace($"Before sending {Constants.BuildRequestReceived} status to /api/updatedeploystatus");
+
+                                    // Only send an updatedeploystatus request if DeploymentTrackingId is non null
+                                    // This signifies the client has opted in for these deployment updates for this deploy request
+                                    updateStatusObj = new DeployStatusApiResult(Constants.BuildRequestReceived, deploymentInfo.DeploymentTrackingId);
+                                    await SendDeployStatusUpdate(updateStatusObj);
                                 }
-                                updateStatusObj = new DeployStatusApiResult(Constants.BuildRequestReceived, trackingId);
-                                await SendDeployStatusUpdate(updateStatusObj);
                             }
                         }
                         catch (Exception e)
