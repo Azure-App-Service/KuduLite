@@ -26,7 +26,7 @@ namespace Kudu.Core.Helpers
 
         public static bool IsDynamicInstallEnvironment()
         {
-            var dynEnvVarValue = System.Environment.GetEnvironmentVariable("DYNAMIC_INSTALL_ENABLED");
+            var dynEnvVarValue = System.Environment.GetEnvironmentVariable("ENABLE_DYNAMIC_INSTALL");
             return dynEnvVarValue != null && string.Equals(dynEnvVarValue, "true", StringComparison.OrdinalIgnoreCase);
         }
 
@@ -44,7 +44,7 @@ namespace Kudu.Core.Helpers
         }
 
         // Check if an app is a Linux Consumption function app
-        // This method is similar to 
+        // This method is similar to
         public static bool IsOnLinuxConsumption()
         {
             bool isOnAppService = !string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable(Constants.AzureWebsiteInstanceId));
