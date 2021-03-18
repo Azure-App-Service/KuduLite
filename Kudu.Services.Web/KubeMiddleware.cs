@@ -58,9 +58,17 @@ namespace Kudu.Services.Web
             }
 
             // Cache the App Environment for this request
+            if (context.Items.ContainsKey("environment"))
+            {
+                context.Items.Remove("environment");
+            }
             context.Items.Add("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace));
 
             // Cache the appName for this request
+            if (context.Items.ContainsKey("appName"))
+            {
+                context.Items.Remove("appName");
+            }
             context.Items.Add("appName", appName);
 
             // Cache the appNamenamespace for this request if it's not empty or null
