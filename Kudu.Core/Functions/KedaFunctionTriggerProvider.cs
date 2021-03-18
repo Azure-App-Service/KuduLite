@@ -207,6 +207,8 @@ namespace Kudu.Core.Functions
                     Type = "mssql",
                     Metadata = new Dictionary<string, string>
                     {
+                        ["query"] = "SELECT dt.GetScaleMetric()",
+                        ["targetValue"] = "1", // super-conservative default
                         ["connectionStringFromEnv"] = storageProviderConfig?["connectionStringName"]?.ToString(),
                     }
                 };

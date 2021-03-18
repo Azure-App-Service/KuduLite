@@ -32,8 +32,15 @@ namespace Kudu.Tests.Core.Function
                 Assert.Equal(2, result.Count());
 
                 ScaleTrigger mssqlTrigger = Assert.Single(result, trigger => trigger.Type.Equals("mssql", StringComparison.OrdinalIgnoreCase));
+                string query = Assert.Contains("query", mssqlTrigger.Metadata);
+                Assert.False(string.IsNullOrEmpty(query));
+
+                string targetValue = Assert.Contains("targetValue", mssqlTrigger.Metadata);
+                Assert.False(string.IsNullOrEmpty(targetValue));
+                Assert.True(double.TryParse(targetValue, out _));
+
                 string connectionStringName = Assert.Contains("connectionStringFromEnv", mssqlTrigger.Metadata);
-                Assert.Equal("SQLDB_Connection", connectionStringName);
+                Assert.Equal("SQLDB_Connection", connectionStringName);                
 
                 ScaleTrigger httpTrigger = Assert.Single(result, trigger => trigger.Type.Equals("httpTrigger", StringComparison.OrdinalIgnoreCase));
                 string functionName = Assert.Contains("functionName", httpTrigger.Metadata);
