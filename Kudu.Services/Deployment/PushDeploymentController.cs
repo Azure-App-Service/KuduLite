@@ -65,7 +65,8 @@ namespace Kudu.Services.Deployment
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
             [FromQuery] string deployer = DefaultDeployer,
-            [FromQuery] string message = DefaultMessage)
+            [FromQuery] string message = DefaultMessage,
+            [FromQuery] bool trackDeploymentProgress = false)
         {
             using (_tracer.Step("ZipPushDeploy"))
             {
@@ -79,7 +80,7 @@ namespace Kudu.Services.Deployment
                     TargetChangeset =
                         DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed zip file"),
                     CommitId = null,
-                    DeploymentTrackingId = Guid.NewGuid().ToString(),
+                    DeploymentTrackingId = trackDeploymentProgress ? Guid.NewGuid().ToString() : null,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipHandler,
                     DoFullBuildByDefault = false,
@@ -116,7 +117,8 @@ namespace Kudu.Services.Deployment
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
             [FromQuery] string deployer = DefaultDeployer,
-            [FromQuery] string message = DefaultMessage)
+            [FromQuery] string message = DefaultMessage,
+            [FromQuery] bool trackDeploymentProgress = false)
         {
             using (_tracer.Step("ZipPushDeployViaUrl"))
             {
@@ -133,7 +135,7 @@ namespace Kudu.Services.Deployment
                     TargetChangeset =
                         DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed zip file"),
                     CommitId = null,
-                    DeploymentTrackingId = Guid.NewGuid().ToString(),
+                    DeploymentTrackingId = trackDeploymentProgress ? Guid.NewGuid().ToString() : null,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipHandler,
                     DoFullBuildByDefault = false,
@@ -156,7 +158,8 @@ namespace Kudu.Services.Deployment
             [FromQuery] string author = null,
             [FromQuery] string authorEmail = null,
             [FromQuery] string deployer = DefaultDeployer,
-            [FromQuery] string message = DefaultMessage)
+            [FromQuery] string message = DefaultMessage,
+            [FromQuery] bool trackDeploymentProgress = false)
         {
             using (_tracer.Step("WarPushDeploy"))
             {
@@ -180,7 +183,7 @@ namespace Kudu.Services.Deployment
                     TargetChangeset =
                         DeploymentManager.CreateTemporaryChangeSet(message: "Deploying from pushed war file"),
                     CommitId = null,
-                    DeploymentTrackingId = Guid.NewGuid().ToString(),
+                    DeploymentTrackingId = trackDeploymentProgress ? Guid.NewGuid().ToString() : null,
                     RepositoryType = RepositoryType.None,
                     Fetch = LocalZipFetch,
                     DoFullBuildByDefault = false,
@@ -223,7 +226,8 @@ namespace Kudu.Services.Deployment
             [FromQuery] string path = null,
             [FromQuery] bool? restart = true,
             [FromQuery] bool? clean = null,
-            [FromQuery] bool ignoreStack = false
+            [FromQuery] bool ignoreStack = false,
+            [FromQuery] bool trackDeploymentProgress = false
             )
         {
             string remoteArtifactUrl = null;
@@ -292,7 +296,7 @@ namespace Kudu.Services.Deployment
                     TargetRootPath = _environment.WebRootPath,
                     TargetChangeset = DeploymentManager.CreateTemporaryChangeSet(message: Constants.OneDeploy),
                     CommitId = null,
-                    DeploymentTrackingId = Guid.NewGuid().ToString(),
+                    DeploymentTrackingId = trackDeploymentProgress ? Guid.NewGuid().ToString() : null,
                     RepositoryType = RepositoryType.None,
                     RemoteURL = remoteArtifactUrl,
                     Fetch = OneDeployFetch,
