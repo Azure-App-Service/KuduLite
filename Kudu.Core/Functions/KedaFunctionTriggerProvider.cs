@@ -69,13 +69,18 @@ namespace Kudu.Core.Functions
 
             bool IsHostJson(string fullName)
             {
-                return fullName.Equals("host.json", StringComparison.OrdinalIgnoreCase);
+                return fullName.Equals(Constants.FunctionsHostConfigFile, StringComparison.OrdinalIgnoreCase);
             }
+
+            bool IsDurable(FunctionTrigger function) => 
+                function.Type.Equals("orchestrationTrigger", StringComparison.OrdinalIgnoreCase) ||
+                function.Type.Equals("activityTrigger", StringComparison.OrdinalIgnoreCase) ||
+                function.Type.Equals("entityTrigger", StringComparison.OrdinalIgnoreCase);
 
             return kedaScaleTriggers;
         }
 
-        public IEnumerable<FunctionTrigger> ParseFunctionJson(string functionName, string functionJson)
+        private IEnumerable<FunctionTrigger> ParseFunctionJson(string functionName, string functionJson)
         {
             var json = JObject.Parse(functionJson);
             if (json.TryGetValue("disabled", out JToken value))
@@ -179,11 +184,6 @@ namespace Kudu.Core.Functions
             }
         }
         
-        private static bool IsDurable(FunctionTrigger function) => 
-            function.Type.Equals("orchestrationTrigger", StringComparison.OrdinalIgnoreCase) ||
-            function.Type.Equals("activityTrigger", StringComparison.OrdinalIgnoreCase) ||
-            function.Type.Equals("entityTrigger", StringComparison.OrdinalIgnoreCase);
-
         private static bool TryGetDurableKedaTrigger(string hostJsonText, out ScaleTrigger scaleTrigger)
         {
             scaleTrigger = null;
@@ -195,11 +195,12 @@ namespace Kudu.Core.Functions
             JObject hostJson = JObject.Parse(hostJsonText);
 
             // Reference: https://docs.microsoft.com/azure/azure-functions/durable/durable-functions-bindings#durable-functions-2-0-host-json
-            JObject storageProviderConfig = hostJson.SelectToken("extensions.durableTask.storageProvider") as JObject;
+            string durableStorageProviderPath = $"{Constants.Extensions}.{Constants.DurableTask}.{Constants.DurableTaskStorageProvider}";
+            JObject storageProviderConfig = hostJson.SelectToken(durableStorageProviderPath) as JObject;
             string storageType = storageProviderConfig?["type"]?.ToString();
 
             // Custom storage types are supported starting in Durable Functions v2.4.2
-            if (string.Equals(storageType, "MicrosoftSQL", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(storageType, Constants.DurableTaskMicrosoftSqlProviderType, StringComparison.OrdinalIgnoreCase))
             {
                 scaleTrigger = new ScaleTrigger
                 {
@@ -209,7 +210,7 @@ namespace Kudu.Core.Functions
                     {
                         ["query"] = "SELECT dt.GetScaleMetric()",
                         ["targetValue"] = "1", // super-conservative default
-                        ["connectionStringFromEnv"] = storageProviderConfig?["connectionStringName"]?.ToString(),
+                        ["connectionStringFromEnv"] = storageProviderConfig?[Constants.DurableTaskSqlConnectionName]?.ToString(),
                     }
                 };
             }
@@ -221,7 +222,7 @@ namespace Kudu.Core.Functions
             return scaleTrigger != null;
         }
 
-        public class FunctionTrigger
+        private class FunctionTrigger
         {
             public FunctionTrigger(string functionName, JObject binding, string type)
             {
