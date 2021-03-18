@@ -144,6 +144,7 @@ namespace Kudu
         public const string DurableTaskSqlConnectionName = "connectionStringName";
         public const string DurableTaskStorageProvider = "storageProvider";
         public const string DurableTaskMicrosoftSqlProviderType = "MicrosoftSQL";
+        public const string MicrosoftSqlScaler = "mssql";
         public const string DurableTask = "durableTask";
         public const string Extensions = "extensions";
         public const string SitePackages = "SitePackages";

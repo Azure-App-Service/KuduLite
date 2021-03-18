@@ -205,7 +205,7 @@ namespace Kudu.Core.Functions
                 scaleTrigger = new ScaleTrigger
                 {
                     // MSSQL scaler reference: https://keda.sh/docs/2.2/scalers/mssql/
-                    Type = "mssql",
+                    Type = Constants.MicrosoftSqlScaler,
                     Metadata = new Dictionary<string, string>
                     {
                         ["query"] = "SELECT dt.GetScaleMetric()",
