@@ -51,7 +51,7 @@ namespace Kudu.Core.K8SE
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
             BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "buildMetadata");
-            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, $"\"{GetBuildMetadataStr(buildMetadata)}\"");
+            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, $"\\\"{GetBuildMetadataStr(buildMetadata)}\\\"");
             RunBuildCtlCommand(cmd.ToString(), "Updating build version...");
         }
 
