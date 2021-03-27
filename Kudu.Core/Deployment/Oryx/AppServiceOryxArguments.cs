@@ -271,6 +271,10 @@ namespace Kudu.Core.Deployment
 
                 case BuildOptimizationsFlags.DeploymentV2:
                     OryxArgumentsHelper.AddTempDirectoryOption(args, context.BuildTempPath);
+                    if (Language == Framework.Python)
+                    {
+                        OryxArgumentsHelper.AddPythonCompressOption(args, "zip");
+                    }
                     break;
             }
 
