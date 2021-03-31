@@ -1,4 +1,5 @@
 using Kudu.Core.Functions;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -40,7 +41,7 @@ namespace Kudu.Tests.Core.Function
                 Assert.True(double.TryParse(targetValue, out _));
 
                 string connectionStringName = Assert.Contains("connectionStringFromEnv", mssqlTrigger.Metadata);
-                Assert.Equal("SQLDB_Connection", connectionStringName);                
+                Assert.Equal("SQLDB_Connection", connectionStringName);
 
                 ScaleTrigger httpTrigger = Assert.Single(result, trigger => trigger.Type.Equals("httpTrigger", StringComparison.OrdinalIgnoreCase));
                 string functionName = Assert.Contains("functionName", httpTrigger.Metadata);
@@ -59,6 +60,53 @@ namespace Kudu.Tests.Core.Function
             {
                 streamWriter.Write(content);
             }
+        }
+
+         public void PopulateMetadataDictionary_KedaV1_CorrectlyPopulatesRabbitMQMetadata()
+        {
+            string jsonText = @"
+            {
+                ""type"": ""rabbitMQTrigger"",
+                ""connectionStringSetting"": ""RabbitMQConnection"",
+                ""queueName"": ""myQueue"",
+                ""name"": ""message""
+            }";
+
+            JToken jsonObj = JToken.Parse(jsonText);
+
+            IDictionary<string, string> metadata = KedaFunctionTriggerProvider.PopulateMetadataDictionary(jsonObj);
+
+            Assert.Equal(4, metadata.Count);
+            Assert.True(metadata.ContainsKey("type"));
+            Assert.True(metadata.ContainsKey("host"));
+            Assert.True(metadata.ContainsKey("name"));
+            Assert.True(metadata.ContainsKey("queueName"));
+            Assert.Equal("rabbitMQTrigger", metadata["type"]);
+            Assert.Equal("RabbitMQConnection", metadata["host"]);
+            Assert.Equal("message", metadata["name"]);
+            Assert.Equal("myQueue", metadata["queueName"]);
+        }
+
+        [Fact]
+        public void PopulateMetadataDictionary_KedaV2_CorrectlyPopulatesRabbitMQMetadata()
+        {
+            string jsonText = @"
+            {
+                ""type"": ""rabbitMQTrigger"",
+                ""connectionStringSetting"": ""RabbitMQConnection"",
+                ""queueName"": ""myQueue"",
+                ""name"": ""message""
+            }";
+
+            JToken jsonObj = JToken.Parse(jsonText);
+
+            IDictionary<string, string> metadata = KedaFunctionTriggerProvider.PopulateMetadataDictionary(jsonObj);
+
+            Assert.Equal(2, metadata.Count);
+            Assert.True(metadata.ContainsKey("queueName"));
+            Assert.True(metadata.ContainsKey("hostFromEnv"));
+            Assert.Equal("myQueue", metadata["queueName"]);
+            Assert.Equal("RabbitMQConnection", metadata["hostFromEnv"]);
         }
     }
 }
