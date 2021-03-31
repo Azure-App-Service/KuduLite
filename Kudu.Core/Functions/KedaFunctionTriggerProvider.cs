@@ -10,7 +10,7 @@ using System.Text;
 namespace Kudu.Core.Functions
 {
     /// <summary>
-    /// Returns "<see cref="IEnumerable<ScaleTrigger>"/> for KEDA scalers" 
+    /// Returns "<see cref="IEnumerable<ScaleTrigger>"/> for KEDA scalers"
     /// </summary>
     public class KedaFunctionTriggerProvider
     {
@@ -72,7 +72,7 @@ namespace Kudu.Core.Functions
                 return fullName.Equals(Constants.FunctionsHostConfigFile, StringComparison.OrdinalIgnoreCase);
             }
 
-            bool IsDurable(FunctionTrigger function) => 
+            bool IsDurable(FunctionTrigger function) =>
                 function.Type.Equals("orchestrationTrigger", StringComparison.OrdinalIgnoreCase) ||
                 function.Type.Equals("activityTrigger", StringComparison.OrdinalIgnoreCase) ||
                 function.Type.Equals("entityTrigger", StringComparison.OrdinalIgnoreCase);
@@ -122,17 +122,8 @@ namespace Kudu.Core.Functions
                 var scaleTrigger = new ScaleTrigger
                 {
                     Type = GetKedaTriggerType(function.Type),
-                    Metadata = new Dictionary<string, string>()
+                    Metadata = PopulateMetadataDictionary(function.Binding)
                 };
-                foreach (var property in function.Binding)
-                {
-                    if (property.Value.Type == JTokenType.String)
-                    {
-                        scaleTrigger.Metadata.Add(property.Key, property.Value.ToString());
-                    }
-                }
-
-                scaleTrigger.Metadata.Add("functionName", function.FunctionName);
                 yield return scaleTrigger;
             }
         }
@@ -183,7 +174,7 @@ namespace Kudu.Core.Functions
                     return triggerType;
             }
         }
-        
+
         private static bool TryGetDurableKedaTrigger(string hostJsonText, out ScaleTrigger scaleTrigger)
         {
             scaleTrigger = null;
@@ -222,6 +213,55 @@ namespace Kudu.Core.Functions
             return scaleTrigger != null;
         }
 
+        // match https://github.com/Azure/azure-functions-core-tools/blob/6bfab24b2743f8421475d996402c398d2fe4a9e0/src/Azure.Functions.Cli/Kubernetes/KEDA/V2/KedaV2Resource.cs#L91
+        public static IDictionary<string, string> PopulateMetadataDictionary(JToken t)
+        {
+            const string ConnectionField = "connection";
+            const string ConnectionFromEnvField = "connectionFromEnv";
+
+            IDictionary<string, string> metadata = t.ToObject<Dictionary<string, JToken>>()
+                .Where(i => i.Value.Type == JTokenType.String)
+                .ToDictionary(k => k.Key, v => v.Value.ToString());
+
+            var triggerType = t["type"].ToString().ToLower();
+
+            switch (triggerType)
+            {
+                case TriggerTypes.AzureBlobStorage:
+                case TriggerTypes.AzureStorageQueue:
+                    metadata[ConnectionFromEnvField] = metadata[ConnectionField] ?? "AzureWebJobsStorage";
+                    metadata.Remove(ConnectionField);
+                    break;
+                case TriggerTypes.AzureServiceBus:
+                    metadata[ConnectionFromEnvField] = metadata[ConnectionField] ?? "AzureWebJobsServiceBus";
+                    metadata.Remove(ConnectionField);
+                    break;
+                case TriggerTypes.AzureEventHubs:
+                    metadata[ConnectionFromEnvField] = metadata[ConnectionField];
+                    metadata.Remove(ConnectionField);
+                    break;
+
+                case TriggerTypes.Kafka:
+                    metadata["bootstrapServers"] = metadata["brokerList"];
+                    metadata.Remove("brokerList");
+                    metadata.Remove("protocol");
+                    metadata.Remove("authenticationMode");
+                    break;
+
+                case TriggerTypes.RabbitMq:
+                    metadata["hostFromEnv"] = metadata["connectionStringSetting"];
+                    metadata.Remove("connectionStringSetting");
+                    break;
+            }
+
+            // Clean-up for all triggers
+
+            metadata.Remove("type");
+            metadata.Remove("name");
+
+            return metadata;
+        }
+
         private class FunctionTrigger
         {
             public FunctionTrigger(string functionName, JObject binding, string type)
@@ -234,6 +274,16 @@ namespace Kudu.Core.Functions
             public string FunctionName { get; }
             public JObject Binding { get; }
             public string Type { get; }
+        }
+
+        public class TriggerTypes
+        {
+            public const string AzureBlobStorage = "blobtrigger";
+            public const string AzureEventHubs = "eventhubtrigger";
+            public const string AzureServiceBus = "servicebustrigger";
+            public const string AzureStorageQueue = "queuetrigger";
+            public const string Kafka = "kafkatrigger";
+            public const string RabbitMq = "rabbitmqtrigger";
         }
     }
 }
