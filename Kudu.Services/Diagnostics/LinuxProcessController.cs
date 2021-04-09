@@ -1,5 +1,10 @@
+using System;
+using System.Collections;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net;
+using Kudu.Contracts.Diagnostics;
+using Kudu.Services.Arm;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kudu.Services.Performance
@@ -90,6 +95,17 @@ namespace Kudu.Services.Performance
         {
             Response.StatusCode = (int)HttpStatusCode.BadRequest;
             return new JsonResult(ERRORMSG);
+        }
+
+        [HttpGet]
+        public IActionResult GetEnvironments(int id, string filter)
+        {
+            var envs = System.Environment.GetEnvironmentVariables()
+                .Cast<DictionaryEntry>().ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value.ToString())
+                .Where(p => string.Equals("all", filter, StringComparison.OrdinalIgnoreCase) || p.Key.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToDictionary(p => p.Key, p => p.Value);
+
+            return Ok(ArmUtils.AddEnvelopeOnArmRequest(new ProcessEnvironmentInfo(filter, envs), Request));
         }
     }
 }
