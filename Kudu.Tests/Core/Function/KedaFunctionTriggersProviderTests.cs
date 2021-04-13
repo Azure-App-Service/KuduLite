@@ -23,13 +23,12 @@ namespace Kudu.Tests.Core.Function
                 CreateJsonFileEntry(archive, "f1/function.json", @"{""bindings"":[{""type"":""orchestrationTrigger"",""name"":""context""}],""disabled"":false}");
                 CreateJsonFileEntry(archive, "f2/function.json", @"{""bindings"":[{""type"":""entityTrigger"",""name"":""ctx""}],""disabled"":false}");
                 CreateJsonFileEntry(archive, "f3/function.json", @"{""bindings"":[{""type"":""activityTrigger"",""name"":""input""}],""disabled"":false}");
-                CreateJsonFileEntry(archive, "f4/function.json", @"{""bindings"":[{""type"":""httpTrigger"",""methods"":[""post""],""authLevel"":""anonymous"",""name"":""req""}],""disabled"":false}");
+                CreateJsonFileEntry(archive, "f4/function.json", @"{""bindings"":[{""type"":""queueTrigger"",""connection"":""AzureWebjobsStorage"",""queueName"":""queue"",""name"":""queueItem""}],""disabled"":false}");
             }
 
             try
             {
-                var provider = new KedaFunctionTriggerProvider();
-                IEnumerable<ScaleTrigger> result = provider.GetFunctionTriggers(zipFilePath);
+                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath);
                 Assert.Equal(2, result.Count());
 
                 ScaleTrigger mssqlTrigger = Assert.Single(result, trigger => trigger.Type.Equals("mssql", StringComparison.OrdinalIgnoreCase));
@@ -43,8 +42,8 @@ namespace Kudu.Tests.Core.Function
                 string connectionStringName = Assert.Contains("connectionStringFromEnv", mssqlTrigger.Metadata);
                 Assert.Equal("SQLDB_Connection", connectionStringName);
 
-                ScaleTrigger httpTrigger = Assert.Single(result, trigger => trigger.Type.Equals("httpTrigger", StringComparison.OrdinalIgnoreCase));
-                string functionName = Assert.Contains("functionName", httpTrigger.Metadata);
+                ScaleTrigger queueTrigger = Assert.Single(result, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));
+                string functionName = Assert.Contains("functionName", queueTrigger.Metadata);
                 Assert.Equal("f4", functionName);
             }
             finally
@@ -74,7 +73,7 @@ namespace Kudu.Tests.Core.Function
 
             JToken jsonObj = JToken.Parse(jsonText);
 
-            IDictionary<string, string> metadata = KedaFunctionTriggerProvider.PopulateMetadataDictionary(jsonObj);
+            IDictionary<string, string> metadata = KedaFunctionTriggerProvider.PopulateMetadataDictionary(jsonObj, "f1");
 
             Assert.Equal(4, metadata.Count);
             Assert.True(metadata.ContainsKey("type"));
@@ -100,13 +99,33 @@ namespace Kudu.Tests.Core.Function
 
             JToken jsonObj = JToken.Parse(jsonText);
 
-            IDictionary<string, string> metadata = KedaFunctionTriggerProvider.PopulateMetadataDictionary(jsonObj);
+            IDictionary<string, string> metadata = KedaFunctionTriggerProvider.PopulateMetadataDictionary(jsonObj, "f1");
 
-            Assert.Equal(2, metadata.Count);
+            Assert.Equal(3, metadata.Count);
             Assert.True(metadata.ContainsKey("queueName"));
             Assert.True(metadata.ContainsKey("hostFromEnv"));
             Assert.Equal("myQueue", metadata["queueName"]);
             Assert.Equal("RabbitMQConnection", metadata["hostFromEnv"]);
+        }
+
+        [Fact]
+        public void PopulateMetadataDictionary_KedaV2_OnlyKedaSupportedTriggers()
+        {
+            string jsonText = @"
+            {
+                ""functionName"": ""f1"",
+                ""bindings"": [{
+                    ""type"": ""httpTrigger"",
+                    ""methods"": [""GET""],
+                    ""authLevel"": ""anonymous""
+                }]
+            }";
+
+            var jsonObj = JObject.Parse(jsonText);
+
+            var triggers = KedaFunctionTriggerProvider.GetFunctionTriggers(new[] { jsonObj }, string.Empty);
+
+            Assert.Equal(0, triggers.Count());
         }
     }
 }
