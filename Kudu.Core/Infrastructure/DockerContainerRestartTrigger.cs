@@ -33,7 +33,7 @@ namespace Kudu.Core.Infrastructure
             {
                 string appName = environment.K8SEAppName;
                 string buildNumber = environment.CurrId;
-                var functionTriggers = FunctionTriggerProvider.GetFunctionTriggers<IEnumerable<ScaleTrigger>>("keda", repositoryUrl);
+                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(repositoryUrl);
                 var buildMetadata = new BuildMetadata()
                 {
                     AppName = appName,
@@ -41,7 +41,7 @@ namespace Kudu.Core.Infrastructure
                     AppSubPath = appSubPath
                 };
 
-                //Only for function apps functionTriggers will be non-null/non-empty 
+                //Only for function apps functionTriggers will be non-null/non-empty
                 if (functionTriggers?.Any() == true)
                 {
                     K8SEDeploymentHelper.UpdateFunctionAppTriggers(appName, functionTriggers, buildMetadata);

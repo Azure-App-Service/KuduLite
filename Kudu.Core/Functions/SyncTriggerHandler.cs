@@ -51,7 +51,7 @@ namespace Kudu.Core.Functions
 
         public Tuple<IEnumerable<ScaleTrigger>, string> GetScaleTriggers(string functionTriggersPayload)
         {
-            var scaleTriggers = new List<ScaleTrigger>();
+            IEnumerable<ScaleTrigger> scaleTriggers = new List<ScaleTrigger>();
             try
             {
                 if (string.IsNullOrEmpty(functionTriggersPayload))
@@ -59,30 +59,10 @@ namespace Kudu.Core.Functions
                     return new Tuple<IEnumerable<ScaleTrigger>, string>(null, "Function trigger payload is null or empty.");
                 }
 
-                var triggersJson = JArray.Parse(functionTriggersPayload);
-                foreach (JObject trigger in triggersJson)
-                {
-                    var type = (string)trigger["type"];
-                    if (type.EndsWith("Trigger", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var scaleTrigger = new ScaleTrigger
-                        {
-                            Type = KedaFunctionTriggerProvider.GetKedaTriggerType(type),
-                            Metadata = new Dictionary<string, string>()
-                        };
+                var triggersJson = JArray.Parse(functionTriggersPayload).Select(o => o.ToObject<JObject>());
 
-                        foreach (var property in trigger)
-                        {
-                            if (property.Value.Type == JTokenType.String)
-                            {
-                                scaleTrigger.Metadata.Add(property.Key, property.Value.ToString());
-                            }
-                        }
-
-                        scaleTriggers.Add(scaleTrigger);
-                    }
-                }
-
+                // TODO: https://github.com/Azure/azure-functions-host/issues/7288 should change how we parse hostJsonText here.
+                scaleTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(triggersJson, string.Empty);
                 if (!scaleTriggers.Any())
                 {
                     return new Tuple<IEnumerable<ScaleTrigger>, string>(null, "No triggers in the payload");

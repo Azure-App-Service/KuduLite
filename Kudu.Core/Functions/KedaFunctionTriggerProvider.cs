@@ -1,20 +1,15 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Text;
 
 namespace Kudu.Core.Functions
 {
-    /// <summary>
-    /// Returns "<see cref="IEnumerable<ScaleTrigger>"/> for KEDA scalers"
-    /// </summary>
-    public class KedaFunctionTriggerProvider
+    public static class KedaFunctionTriggerProvider
     {
-        public IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath)
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath)
         {
             if (!File.Exists(zipFilePath))
             {
@@ -43,22 +38,10 @@ namespace Kudu.Core.Functions
                     {
                         using (var reader = new StreamReader(stream))
                         {
-                            triggerBindings.AddRange(ParseFunctionJson(GetFunctionName(entry), reader.ReadToEnd()));
+                            triggerBindings.AddRange(ParseFunctionJson(GetFunctionName(entry), JObject.Parse(reader.ReadToEnd())));
                         }
                     }
                 }
-            }
-
-            var durableTriggers = triggerBindings.Where(b => IsDurable(b));
-            var standardTriggers = triggerBindings.Where(b => !IsDurable(b));
-
-            var kedaScaleTriggers = new List<ScaleTrigger>();
-            kedaScaleTriggers.AddRange(GetStandardScaleTriggers(standardTriggers));
-
-            // Durable Functions triggers are treated as a group and get configuration from host.json
-            if (durableTriggers.Any() && TryGetDurableKedaTrigger(hostJsonText, out ScaleTrigger durableScaleTrigger))
-            {
-                kedaScaleTriggers.Add(durableScaleTrigger);
             }
 
             bool IsFunctionJson(string fullName)
@@ -72,6 +55,32 @@ namespace Kudu.Core.Functions
                 return fullName.Equals(Constants.FunctionsHostConfigFile, StringComparison.OrdinalIgnoreCase);
             }
 
+            return CreateScaleTriggers(triggerBindings, hostJsonText);
+        }
+
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(IEnumerable<JObject> functionsJson, string hostJsonText)
+        {
+            var triggerBindings = functionsJson
+            .Select(o => ParseFunctionJson(o["functionName"]?.ToString(), o))
+            .SelectMany(i => i);
+
+            return CreateScaleTriggers(triggerBindings, hostJsonText);
+        }
+
+        internal static IEnumerable<ScaleTrigger> CreateScaleTriggers(IEnumerable<FunctionTrigger> triggerBindings, string hostJsonText)
+        {
+            var durableTriggers = triggerBindings.Where(b => IsDurable(b));
+            var standardTriggers = triggerBindings.Where(b => !IsDurable(b));
+
+            var kedaScaleTriggers = new List<ScaleTrigger>();
+            kedaScaleTriggers.AddRange(GetStandardScaleTriggers(standardTriggers));
+
+            // Durable Functions triggers are treated as a group and get configuration from host.json
+            if (durableTriggers.Any() && TryGetDurableKedaTrigger(hostJsonText, out ScaleTrigger durableScaleTrigger))
+            {
+                kedaScaleTriggers.Add(durableScaleTrigger);
+            }
+
             bool IsDurable(FunctionTrigger function) =>
                 function.Type.Equals("orchestrationTrigger", StringComparison.OrdinalIgnoreCase) ||
                 function.Type.Equals("activityTrigger", StringComparison.OrdinalIgnoreCase) ||
@@ -80,10 +89,9 @@ namespace Kudu.Core.Functions
             return kedaScaleTriggers;
         }
 
-        private IEnumerable<FunctionTrigger> ParseFunctionJson(string functionName, string functionJson)
+        internal static IEnumerable<FunctionTrigger> ParseFunctionJson(string functionName, JObject functionJson)
         {
-            var json = JObject.Parse(functionJson);
-            if (json.TryGetValue("disabled", out JToken value))
+            if (functionJson.TryGetValue("disabled", out JToken value))
             {
                 string stringValue = value.ToString();
                 if (!bool.TryParse(stringValue, out bool disabled))
@@ -99,13 +107,13 @@ namespace Kudu.Core.Functions
                 }
             }
 
-            var excluded = json.TryGetValue("excluded", out value) && (bool)value;
+            var excluded = functionJson.TryGetValue("excluded", out value) && (bool)value;
             if (excluded)
             {
                 yield break;
             }
 
-            foreach (JObject binding in (JArray)json["bindings"])
+            foreach (JObject binding in (JArray)functionJson["bindings"])
             {
                 var type = (string)binding["type"];
                 if (type.EndsWith("Trigger", StringComparison.OrdinalIgnoreCase))
@@ -115,20 +123,24 @@ namespace Kudu.Core.Functions
             }
         }
 
-        private static IEnumerable<ScaleTrigger> GetStandardScaleTriggers(IEnumerable<FunctionTrigger> standardTriggers)
+        internal static IEnumerable<ScaleTrigger> GetStandardScaleTriggers(IEnumerable<FunctionTrigger> standardTriggers)
         {
             foreach (FunctionTrigger function in standardTriggers)
             {
-                var scaleTrigger = new ScaleTrigger
+                var triggerType = GetKedaTriggerType(function.Type);
+                if (!string.IsNullOrEmpty(triggerType))
                 {
-                    Type = GetKedaTriggerType(function.Type),
-                    Metadata = PopulateMetadataDictionary(function.Binding)
-                };
-                yield return scaleTrigger;
+                    var scaleTrigger = new ScaleTrigger
+                    {
+                        Type = triggerType,
+                        Metadata = PopulateMetadataDictionary(function.Binding, function.FunctionName)
+                    };
+                    yield return scaleTrigger;
+                }
             }
         }
 
-        private static string GetFunctionName(ZipArchiveEntry zipEntry)
+        internal static string GetFunctionName(ZipArchiveEntry zipEntry)
         {
             if (string.IsNullOrWhiteSpace(zipEntry?.FullName))
             {
@@ -138,7 +150,7 @@ namespace Kudu.Core.Functions
             return zipEntry.FullName.Split('/').Length == 2 ? zipEntry.FullName.Split('/')[0] : zipEntry.FullName.Split('\\')[0];
         }
 
-        public static string GetKedaTriggerType(string triggerType)
+        internal static string GetKedaTriggerType(string triggerType)
         {
             if (string.IsNullOrEmpty(triggerType))
             {
@@ -167,15 +179,12 @@ namespace Kudu.Core.Functions
                 case "rabbitmqtrigger":
                     return "rabbitmq";
 
-                case "httpTrigger":
-                    return "httpTrigger";
-
                 default:
-                    return triggerType;
+                    return string.Empty;
             }
         }
 
-        private static bool TryGetDurableKedaTrigger(string hostJsonText, out ScaleTrigger scaleTrigger)
+        internal static bool TryGetDurableKedaTrigger(string hostJsonText, out ScaleTrigger scaleTrigger)
         {
             scaleTrigger = null;
             if (string.IsNullOrEmpty(hostJsonText))
@@ -214,7 +223,7 @@ namespace Kudu.Core.Functions
         }
 
         // match https://github.com/Azure/azure-functions-core-tools/blob/6bfab24b2743f8421475d996402c398d2fe4a9e0/src/Azure.Functions.Cli/Kubernetes/KEDA/V2/KedaV2Resource.cs#L91
-        public static IDictionary<string, string> PopulateMetadataDictionary(JToken t)
+        internal static IDictionary<string, string> PopulateMetadataDictionary(JToken t, string functionName)
         {
             const string ConnectionField = "connection";
             const string ConnectionFromEnvField = "connectionFromEnv";
@@ -259,10 +268,11 @@ namespace Kudu.Core.Functions
             metadata.Remove("type");
             metadata.Remove("name");
 
+            metadata["functionName"] = functionName;
             return metadata;
         }
 
-        private class FunctionTrigger
+        internal class FunctionTrigger
         {
             public FunctionTrigger(string functionName, JObject binding, string type)
             {
@@ -276,7 +286,7 @@ namespace Kudu.Core.Functions
             public string Type { get; }
         }
 
-        public class TriggerTypes
+        static class TriggerTypes
         {
             public const string AzureBlobStorage = "blobtrigger";
             public const string AzureEventHubs = "eventhubtrigger";
