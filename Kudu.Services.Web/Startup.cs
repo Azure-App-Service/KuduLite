@@ -678,6 +678,9 @@ namespace Kudu.Services.Web
                 routes.MapHttpProcessesRoute("one-process-module", "/{id}/modules/{baseAddress}",
                     new {controller = processControllerName, action = "GetModule"},
                     new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpProcessesRoute("all-envs", "/{id}/environments/{filter}",
+                    new { controller = processControllerName, action = "GetEnvironments" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
 
                 // Runtime
                 routes.MapHttpRouteDual("runtime", "diagnostics/runtime",
