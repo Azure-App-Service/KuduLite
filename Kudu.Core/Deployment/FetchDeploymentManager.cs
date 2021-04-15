@@ -139,6 +139,8 @@ namespace Kudu.Core.Deployment
             _tracer.Trace("Attempting to fetch target branch {0}", targetBranch);
             try
             {
+                //return PerformDeployment(deployInfo);
+
                 return await _deploymentLock.LockOperation(async () =>
                 {
                     if (PostDeploymentHelper.IsAutoSwapOngoing())
@@ -149,6 +151,7 @@ namespace Kudu.Core.Deployment
                     await PerformDeployment(deployInfo);
                     return FetchDeploymentRequestResult.RanSynchronously;
                 }, "Performing continuous deployment", TimeSpan.Zero);
+                
             }
             catch (LockOperationException)
             {
@@ -210,7 +213,9 @@ namespace Kudu.Core.Deployment
 
                         try
                         {
+                            Console.WriteLine("Fetch started.....");
                             await deploymentInfo.Fetch(repository, deploymentInfo, targetBranch, innerLogger, _tracer);
+                            Console.WriteLine("Fetch done");
                         }
                         catch (BranchNotFoundException)
                         {
@@ -241,6 +246,7 @@ namespace Kudu.Core.Deployment
                             // unless for GenericHandler where specific commitId is specified
                             bool deploySpecificCommitId = !String.IsNullOrEmpty(deploymentInfo.CommitId);
 
+                            Console.WriteLine("Waiting for DeployAsync");
                             await _deploymentManager.DeployAsync(
                                 repository,
                                 changeSet,
@@ -249,10 +255,12 @@ namespace Kudu.Core.Deployment
                                 deploymentInfo: deploymentInfo,
                                 needFileUpdate: deploySpecificCommitId,
                                 fullBuildByDefault: deploymentInfo.DoFullBuildByDefault);
+                            Console.WriteLine("Done DeployAsync" + ":" + DateTime.UtcNow.ToString());
                         }
                     }
                     catch (Exception ex)
                     {
+                        Console.WriteLine("Got an exception:" + ex.Message);
                         if (innerLogger != null)
                         {
                             innerLogger.Log(ex);
@@ -262,6 +270,7 @@ namespace Kudu.Core.Deployment
                         if (deploymentInfo.TargetChangeset != null)
                         {
                             IDeploymentStatusFile statusFile = _status.Open(deploymentInfo.TargetChangeset.Id, _environment);
+                            Console.WriteLine("open statusFile and mark as failed");
                             if (statusFile != null)
                             {
                                 statusFile.MarkFailed();
@@ -342,6 +351,9 @@ namespace Kudu.Core.Deployment
                     // lock related
                     string lockPath = Path.Combine(environment.SiteRootPath, Constants.LockPath);
                     string deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
+
+                    Console.WriteLine("In FetchDeploymentManager, deploymentLockPath=" + deploymentLockPath);
+
                     string statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
                     string hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
                     var statusLock = new LockFile(statusLockPath, traceFactory);

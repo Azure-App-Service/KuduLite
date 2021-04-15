@@ -82,6 +82,7 @@ namespace Kudu.Console
             string lockPath = Path.Combine(env.SiteRootPath, Constants.LockPath);
             string deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
 
+            System.Console.WriteLine("In Program, deploymentLockPath=" + deploymentLockPath);
             IOperationLock deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
 
             if (deploymentLock.IsHeld)

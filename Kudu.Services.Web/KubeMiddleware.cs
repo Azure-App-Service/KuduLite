@@ -42,6 +42,7 @@ namespace Kudu.Services.Web
             string appName = K8SEDeploymentHelper.GetAppName(context);
             string appNamenamespace = K8SEDeploymentHelper.GetAppNamespace(context);
 
+            Console.WriteLine("In Middleware, appName=" + appName);
             string homeDir = "";
             string siteRepoDir = "";
             if (OSDetector.IsOnWindows())

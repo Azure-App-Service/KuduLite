@@ -17,25 +17,42 @@ namespace Kudu.Contracts.Infrastructure
                                          TimeSpan timeout)
         {
             var elapsed = TimeSpan.Zero;
+            var ignoreMsg = false;
+
+            if(operationName.Contains("status"))
+            {
+                ignoreMsg = true;
+            }
+
+            if (!ignoreMsg)
+                Console.WriteLine("trying to acquire lock:" + operationName + ":" + DateTime.UtcNow.ToString() + "on lockObj:" + lockObj);
 
             while (!lockObj.Lock(operationName))
             {
                 if (elapsed >= timeout)
                 {
+                    if (!ignoreMsg)
+                        Console.WriteLine(" ######### tryLock = false on lockObj:" + lockObj +",op=" + operation);
                     return false;
                 }
 
+              //  Console.WriteLine("trying to acquire lock, retrying after sleeping for " + timeout.TotalMilliseconds + " ms");
                 Thread.Sleep(_sleepInterval);
                 elapsed += _sleepInterval;
             }
             
             try
-            {   
+            {
+                //Console.WriteLine("tryLockOp got lock, now performing the task");
                 operation();
+                //Console.WriteLine("trying to acquire lock returning true after completing the task");
                 return true;
             }
             finally
             {
+                if (!ignoreMsg)
+                    Console.WriteLine("releasing lock:" + operationName + ":" + DateTime.UtcNow.ToString() + "on lockObj:" + lockObj);
+
                 lockObj.Release();
             }
         }
@@ -56,6 +73,10 @@ namespace Kudu.Contracts.Infrastructure
         public static T LockOperation<T>(this IOperationLock lockObj, Func<T> operation, string operationName, TimeSpan timeout)
         {
             T result = default(T);
+
+            if(!operationName.Contains("status"))
+                Console.WriteLine("acquiring lock on " + lockObj +", operationName=" + operationName);
+            
             bool success = lockObj.TryLockOperation(() => result = operation(), operationName, timeout);
 
             if (!success)
@@ -63,7 +84,7 @@ namespace Kudu.Contracts.Infrastructure
                 var lockInfo = lockObj.LockInfo;
                 throw new LockOperationException(String.Format(CultureInfo.CurrentCulture, Resources.Error_OperationLockTimeout, operationName, operationName,""));
             }
-
+            
             return result;
         }
 

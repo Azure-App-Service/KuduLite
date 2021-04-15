@@ -144,10 +144,11 @@ namespace Kudu.Core.Infrastructure
             Stream lockStream = null;
             try
             {
-
                 FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(_path));
 
+                Console.WriteLine(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + ". Trying to Open file:" + _path);
                 lockStream = FileSystemHelpers.OpenFile(_path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                Console.WriteLine(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + ". Opened file" + _path);
 
                 WriteLockInfo(operationName, lockStream);
 
