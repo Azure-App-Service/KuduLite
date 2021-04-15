@@ -33,7 +33,7 @@ namespace Kudu.Core.Infrastructure
             {
                 string appName = environment.K8SEAppName;
                 string buildNumber = environment.CurrId;
-                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(repositoryUrl);
+                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(repositoryUrl, appName);
                 var buildMetadata = new BuildMetadata()
                 {
                     AppName = appName,

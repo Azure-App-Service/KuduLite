@@ -28,7 +28,7 @@ namespace Kudu.Tests.Core.Function
 
             try
             {
-                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath);
+                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath, string.Empty);
                 Assert.Equal(2, result.Count());
 
                 ScaleTrigger mssqlTrigger = Assert.Single(result, trigger => trigger.Type.Equals("mssql", StringComparison.OrdinalIgnoreCase));
@@ -45,6 +45,40 @@ namespace Kudu.Tests.Core.Function
                 ScaleTrigger queueTrigger = Assert.Single(result, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));
                 string functionName = Assert.Contains("functionName", queueTrigger.Metadata);
                 Assert.Equal("f4", functionName);
+            }
+            finally
+            {
+                File.Delete(zipFilePath);
+            }
+        }
+
+        [Theory]
+        [InlineData("flowc1712a574433c1djobtriggers00", "10", "haassyad-scaling-lima", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.ScaleMonitor.KEDA.TargetQueueLength"":10}}}}")]
+        [InlineData("flowdc234f1fbd9ff3fjobtriggers00", "20", "n/a", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.HostId"":""haassyad-applicationinsights""}}}}")]
+        public void WorkflowApp( string expectedQueueName, string expectedQueueLength, string appName, string hostJsonText)
+        {
+            // Generate a zip archive with a host.json with workflow extension enabled
+            string zipFilePath = Path.GetTempFileName();
+            using (var fileStream = File.OpenWrite(zipFilePath))
+            using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                CreateJsonFileEntry(archive, "host.json", hostJsonText);
+            }
+
+            try
+            {
+                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath, appName);
+                Assert.Single(result);
+
+                ScaleTrigger queueTrigger = Assert.Single(result, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));
+                var actualQueueName = Assert.Contains("queueName", queueTrigger.Metadata);
+                Assert.Equal(actualQueueName, expectedQueueName);
+
+                var actualQueueLength = Assert.Contains("queueLength", queueTrigger.Metadata);
+                Assert.Equal(actualQueueLength, expectedQueueLength);
+
+                string connectionStringFromEnv = Assert.Contains("connectionStringFromEnv", queueTrigger.Metadata);
+                Assert.Equal("AzureWebJobsStorage", connectionStringFromEnv);
             }
             finally
             {
