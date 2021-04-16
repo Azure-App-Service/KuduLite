@@ -243,7 +243,6 @@ namespace Kudu.Core.Functions
         /// <returns>true if a scale trigger was found</returns>
         internal static bool TryGetWorkflowKedaTrigger(string hostJsonText, string appName, out ScaleTrigger scaleTrigger)
         {
-            // Check if an app is a workflow app
             JObject hostJson = JObject.Parse(hostJsonText);
             // Check the host.json file for workflow settings.
             var workflowSettingsPath = $"{Constants.Extensions}.{Constants.WorkflowExtensionName}.{Constants.WorkflowSettingsName}";
