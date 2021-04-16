@@ -64,9 +64,6 @@ namespace Kudu.Services.Web
             // Cache the appName for this request
             context.Items.Add("appName", appName);
 
-            // Cache the appKind for this request
-            context.Items.Add("appKind", appKind);
-
             // Cache the appNamenamespace for this request if it's not empty or null
             if (!string.IsNullOrEmpty(appNamenamespace))
             {
