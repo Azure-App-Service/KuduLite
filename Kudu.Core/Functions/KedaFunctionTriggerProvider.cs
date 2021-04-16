@@ -200,6 +200,7 @@ namespace Kudu.Core.Functions
             string storageType = storageProviderConfig?["type"]?.ToString();
 
             // Custom storage types are supported starting in Durable Functions v2.4.2
+            // Minimum required version of Microsoft.DurableTask.SqlServer.AzureFunctions is v0.7.0-alpha
             if (string.Equals(storageType, Constants.DurableTaskMicrosoftSqlProviderType, StringComparison.OrdinalIgnoreCase))
             {
                 scaleTrigger = new ScaleTrigger
@@ -208,8 +209,9 @@ namespace Kudu.Core.Functions
                     Type = Constants.MicrosoftSqlScaler,
                     Metadata = new Dictionary<string, string>
                     {
-                        ["query"] = "SELECT dt.GetScaleMetric()",
-                        ["targetValue"] = "1", // super-conservative default
+                        // Durable SQL scaling: https://microsoft.github.io/durabletask-mssql/#/scaling?id=worker-auto-scale
+                        ["query"] = "SELECT dt.GetScaleRecommendation(10, 1)", // max 10 orchestrations and 1 activity per replica
+                        ["targetValue"] = "1",
                         ["connectionStringFromEnv"] = storageProviderConfig?[Constants.DurableTaskSqlConnectionName]?.ToString(),
                     }
                 };
