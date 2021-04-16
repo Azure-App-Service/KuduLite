@@ -244,9 +244,10 @@ namespace Kudu.Core.Functions
         internal static bool TryGetWorkflowKedaTrigger(string hostJsonText, string appName, out ScaleTrigger scaleTrigger)
         {
             JObject hostJson = JObject.Parse(hostJsonText);
+
             // Check the host.json file for workflow settings.
-            var workflowSettingsPath = $"{Constants.Extensions}.{Constants.WorkflowExtensionName}.{Constants.WorkflowSettingsName}";
-            JObject workflowSettings = hostJson.SelectToken(workflowSettingsPath) as JObject;
+            JObject workflowSettings = hostJson
+                .SelectToken(path: $"{Constants.Extensions}.{Constants.WorkflowExtensionName}.{Constants.WorkflowSettingsName}") as JObject;
 
             // Get the queue length if specified, otherwise default to arbitrary value.
             var queueLengthObject = workflowSettings?["Runtime.ScaleMonitor.KEDA.TargetQueueLength"];
@@ -276,7 +277,7 @@ namespace Kudu.Core.Functions
                 }
             };
 
-            return scaleTrigger != null;
+            return true;
         }
 
         // match https://github.com/Azure/azure-functions-core-tools/blob/6bfab24b2743f8421475d996402c398d2fe4a9e0/src/Azure.Functions.Cli/Kubernetes/KEDA/V2/KedaV2Resource.cs#L91
