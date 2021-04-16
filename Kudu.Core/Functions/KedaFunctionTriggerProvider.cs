@@ -10,7 +10,7 @@ namespace Kudu.Core.Functions
 {
     public static class KedaFunctionTriggerProvider
     {
-        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, string appName = null)
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, string appName = null, string appKind = null)
         {
             if (!File.Exists(zipFilePath))
             {
@@ -58,10 +58,13 @@ namespace Kudu.Core.Functions
 
             var triggers = CreateScaleTriggers(triggerBindings, hostJsonText).ToList();
 
-            // NOTE(haassyad) Check if the host json has the workflow extension loaded. If so we will add a queue scale trigger for the job dispatcher queue.
-            if (TryGetWorkflowKedaTrigger(hostJsonText, appName, out ScaleTrigger workflowScaleTrigger))
+            if (appKind?.ToLowerInvariant() == Constants.WorkflowAppKind.ToLowerInvariant())
             {
-                triggers.Add(workflowScaleTrigger);
+                // NOTE(haassyad) Check if the host json has the workflow extension loaded. If so we will add a queue scale trigger for the job dispatcher queue.
+                if (TryGetWorkflowKedaTrigger(hostJsonText, appName, out ScaleTrigger workflowScaleTrigger))
+                {
+                    triggers.Add(workflowScaleTrigger);
+                }
             }
 
             return triggers;
@@ -240,45 +243,39 @@ namespace Kudu.Core.Functions
         /// <returns>true if a scale trigger was found</returns>
         internal static bool TryGetWorkflowKedaTrigger(string hostJsonText, string appName, out ScaleTrigger scaleTrigger)
         {
-            scaleTrigger = null;
-
             // Check if an app is a workflow app
             JObject hostJson = JObject.Parse(hostJsonText);
-            var extensionId = hostJson["extensionBundle"]?["id"]?.ToString();
-            if (extensionId == Constants.WorkflowExtensionBundle) // TODO(check app setting) APP_KIND
+            // Check the host.json file for workflow settings.
+            var workflowSettingsPath = $"{Constants.Extensions}.{Constants.WorkflowExtensionName}.{Constants.WorkflowSettingsName}";
+            JObject workflowSettings = hostJson.SelectToken(workflowSettingsPath) as JObject;
+
+            // Get the queue length if specified, otherwise default to arbitrary value.
+            var queueLengthObject = workflowSettings?["Runtime.ScaleMonitor.KEDA.TargetQueueLength"];
+            var queueLength = queueLengthObject != null ? queueLengthObject.ToString() : "20";
+
+            // Get the host id if specified, otherwise default to app name.
+            var hostIdObject = workflowSettings?["Runtime.HostId"];
+            var hostId = hostIdObject != null ? hostIdObject.ToString() : appName;
+
+            // Hash the host id.
+            var hostSpecificStorageId = StringHelper
+                .EscapeAndTrimStorageKeyPrefix(HashHelper.MurmurHash64(hostId).ToString("X"), 32)
+                .ToLowerInvariant();
+
+            var queuePrefix = $"flow{hostSpecificStorageId}jobtriggers";
+
+            scaleTrigger = new ScaleTrigger
             {
-                // Check the host.json file for workflow settings.
-                var workflowSettingsPath = $"{Constants.Extensions}.{Constants.WorkflowExtensionName}.{Constants.WorkflowSettingsName}";
-                JObject workflowSettings = hostJson.SelectToken(workflowSettingsPath) as JObject;
-
-                // Get the queue length if specified, otherwise default to arbitrary value.
-                var queueLengthObject = workflowSettings?["Runtime.ScaleMonitor.KEDA.TargetQueueLength"];
-                var queueLength = queueLengthObject != null ? queueLengthObject.ToString() : "20";
-
-                // Get the host id if specified, otherwise default to app name.
-                var hostIdObject = workflowSettings?["Runtime.HostId"];
-                var hostId = hostIdObject != null ? hostIdObject.ToString() : appName;
-
-                // Hash the host id.
-                var hostSpecificStorageId = StringHelper
-                    .EscapeAndTrimStorageKeyPrefix(HashHelper.MurmurHash64(hostId).ToString("X"), 32)
-                    .ToLowerInvariant();
-
-                var queuePrefix = $"flow{hostSpecificStorageId}jobtriggers";
-
-                scaleTrigger = new ScaleTrigger
+                // Azure queue scaler reference: https://keda.sh/docs/2.2/scalers/azure-storage-queue/
+                Type = Constants.AzureQueueScaler,
+                Metadata = new Dictionary<string, string>
                 {
-                    // Azure queue scaler reference: https://keda.sh/docs/2.2/scalers/azure-storage-queue/
-                    Type = Constants.AzureQueueScaler,
-                    Metadata = new Dictionary<string, string>
-                    {
-                        // NOTE(haassyad): We only have one queue partition in single tenant.
-                        ["queueName"] = StringHelper.GetWorkflowQueueNameInternal(queuePrefix, 1),
-                        ["queueLength"] = queueLength,
-                        ["connectionStringFromEnv"] = "AzureWebJobsStorage",
-                    }
-                };
-            }
+                    // NOTE(haassyad): We only have one queue partition in single tenant.
+                    ["queueName"] = StringHelper.GetWorkflowQueueNameInternal(queuePrefix, 1),
+                    ["queueLength"] = queueLength,
+                    ["connectionStringFromEnv"] = "AzureWebJobsStorage",
+                }
+            };
 
             return scaleTrigger != null;
         }

@@ -53,9 +53,9 @@ namespace Kudu.Tests.Core.Function
         }
 
         [Theory]
-        [InlineData("flowc1712a574433c1djobtriggers00", "10", "haassyad-scaling-lima", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.ScaleMonitor.KEDA.TargetQueueLength"":10}}}}")]
-        [InlineData("flowdc234f1fbd9ff3fjobtriggers00", "20", "n/a", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.HostId"":""haassyad-applicationinsights""}}}}")]
-        public void WorkflowApp( string expectedQueueName, string expectedQueueLength, string appName, string hostJsonText)
+        [InlineData("flowc1712a574433c1djobtriggers00", "10", "haassyad-scaling-lima", "workflowApp", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.ScaleMonitor.KEDA.TargetQueueLength"":10}}}}")]
+        [InlineData("flowdc234f1fbd9ff3fjobtriggers00", "20", "n/a", "workflowApp", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.HostId"":""haassyad-applicationinsights""}}}}")]
+        public void WorkflowApp( string expectedQueueName, string expectedQueueLength, string appName, string appKind, string hostJsonText)
         {
             // Generate a zip archive with a host.json with workflow extension enabled
             string zipFilePath = Path.GetTempFileName();
@@ -67,7 +67,7 @@ namespace Kudu.Tests.Core.Function
 
             try
             {
-                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath, appName);
+                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath, appName, appKind);
                 Assert.Single(result);
 
                 ScaleTrigger queueTrigger = Assert.Single(result, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));

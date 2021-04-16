@@ -41,6 +41,7 @@ namespace Kudu.Services.Web
         {
             string appName = K8SEDeploymentHelper.GetAppName(context);
             string appNamenamespace = K8SEDeploymentHelper.GetAppNamespace(context);
+            string appKind = K8SEDeploymentHelper.GetAppKind(context);
 
             string homeDir = "";
             string siteRepoDir = "";
@@ -58,10 +59,13 @@ namespace Kudu.Services.Web
             }
 
             // Cache the App Environment for this request
-            context.Items.Add("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace));
+            context.Items.Add("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appKind));
 
             // Cache the appName for this request
             context.Items.Add("appName", appName);
+
+            // Cache the appKind for this request
+            context.Items.Add("appKind", appKind);
 
             // Cache the appNamenamespace for this request if it's not empty or null
             if (!string.IsNullOrEmpty(appNamenamespace))
@@ -108,7 +112,8 @@ namespace Kudu.Services.Web
             string appName,
             IDeploymentSettingsManager settings = null,
             HttpContext httpContext = null,
-            string appNamespace = null)
+            string appNamespace = null,
+            string appKind = null)
         {
             var root = KubeMiddleware.ResolveRootPath(home, appName);
             var siteRoot = Path.Combine(root, Constants.SiteFolder);
@@ -119,7 +124,7 @@ namespace Kudu.Services.Web
             var kuduConsoleFullPath =
                 Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
             return new Core.Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId,
-                kuduConsoleFullPath, null, appName, appNamespace);
+                kuduConsoleFullPath, null, appName, appNamespace, appKind);
         }
 
         /// <summary>
