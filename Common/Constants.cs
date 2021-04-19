@@ -145,7 +145,11 @@ namespace Kudu
         public const string DurableTaskStorageProvider = "storageProvider";
         public const string DurableTaskMicrosoftSqlProviderType = "mssql";
         public const string MicrosoftSqlScaler = "mssql";
+        public const string AzureQueueScaler = "azure-queue";
         public const string DurableTask = "durableTask";
+        public const string WorkflowAppKind = "workflowApp";
+        public const string WorkflowExtensionName = "workflow";
+        public const string WorkflowSettingsName = "Settings";
         public const string Extensions = "extensions";
         public const string SitePackages = "SitePackages";
         public const string PackageNameTxt = "packagename.txt";

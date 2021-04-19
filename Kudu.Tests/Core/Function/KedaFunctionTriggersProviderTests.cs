@@ -52,6 +52,40 @@ namespace Kudu.Tests.Core.Function
             }
         }
 
+        [Theory]
+        [InlineData("flowc1712a574433c1djobtriggers00", "10", "haassyad-scaling-lima", "workflowApp", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.ScaleMonitor.KEDA.TargetQueueLength"":10}}}}")]
+        [InlineData("flowdc234f1fbd9ff3fjobtriggers00", "20", "n/a", "workflowApp", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.HostId"":""haassyad-applicationinsights""}}}}")]
+        public void WorkflowApp( string expectedQueueName, string expectedQueueLength, string appName, string appKind, string hostJsonText)
+        {
+            // Generate a zip archive with a host.json with workflow extension enabled
+            string zipFilePath = Path.GetTempFileName();
+            using (var fileStream = File.OpenWrite(zipFilePath))
+            using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                CreateJsonFileEntry(archive, "host.json", hostJsonText);
+            }
+
+            try
+            {
+                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath, appName, appKind);
+                Assert.Single(result);
+
+                ScaleTrigger queueTrigger = Assert.Single(result, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));
+                var actualQueueName = Assert.Contains("queueName", queueTrigger.Metadata);
+                Assert.Equal(actualQueueName, expectedQueueName);
+
+                var actualQueueLength = Assert.Contains("queueLength", queueTrigger.Metadata);
+                Assert.Equal(actualQueueLength, expectedQueueLength);
+
+                string connectionStringFromEnv = Assert.Contains("connectionStringFromEnv", queueTrigger.Metadata);
+                Assert.Equal("AzureWebJobsStorage", connectionStringFromEnv);
+            }
+            finally
+            {
+                File.Delete(zipFilePath);
+            }
+        }
+
         private static void CreateJsonFileEntry(ZipArchive archive, string path, string content)
         {
             using (Stream entryStream = archive.CreateEntry(path).Open())
