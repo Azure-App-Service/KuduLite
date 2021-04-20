@@ -34,5 +34,6 @@
         bool IsOnLinuxConsumption { get; }      // e.g. True on Linux Consumption. False on App Service.
         bool IsK8SEApp { get; }
         string K8SEAppName { get;  }
+        string K8SEAppKind { get; }
     }
 }

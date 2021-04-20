@@ -1,4 +1,5 @@
 using Kudu.Core.Functions;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,17 +19,16 @@ namespace Kudu.Tests.Core.Function
             using (var fileStream = File.OpenWrite(zipFilePath))
             using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: true))
             {
-                CreateJsonFileEntry(archive, "host.json", @"{""version"":""2.0"",""extensions"":{""durableTask"":{""hubName"":""DFTest"",""storageProvider"":{""type"":""MicrosoftSQL"",""connectionStringName"":""SQLDB_Connection""}}}}");
+                CreateJsonFileEntry(archive, "host.json", @"{""version"":""2.0"",""extensions"":{""durableTask"":{""hubName"":""DFTest"",""storageProvider"":{""type"":""mssql"",""connectionStringName"":""SQLDB_Connection""}}}}");
                 CreateJsonFileEntry(archive, "f1/function.json", @"{""bindings"":[{""type"":""orchestrationTrigger"",""name"":""context""}],""disabled"":false}");
                 CreateJsonFileEntry(archive, "f2/function.json", @"{""bindings"":[{""type"":""entityTrigger"",""name"":""ctx""}],""disabled"":false}");
                 CreateJsonFileEntry(archive, "f3/function.json", @"{""bindings"":[{""type"":""activityTrigger"",""name"":""input""}],""disabled"":false}");
-                CreateJsonFileEntry(archive, "f4/function.json", @"{""bindings"":[{""type"":""httpTrigger"",""methods"":[""post""],""authLevel"":""anonymous"",""name"":""req""}],""disabled"":false}");
+                CreateJsonFileEntry(archive, "f4/function.json", @"{""bindings"":[{""type"":""queueTrigger"",""connection"":""AzureWebjobsStorage"",""queueName"":""queue"",""name"":""queueItem""}],""disabled"":false}");
             }
 
             try
             {
-                var provider = new KedaFunctionTriggerProvider();
-                IEnumerable<ScaleTrigger> result = provider.GetFunctionTriggers(zipFilePath);
+                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath);
                 Assert.Equal(2, result.Count());
 
                 ScaleTrigger mssqlTrigger = Assert.Single(result, trigger => trigger.Type.Equals("mssql", StringComparison.OrdinalIgnoreCase));
@@ -40,11 +40,45 @@ namespace Kudu.Tests.Core.Function
                 Assert.True(double.TryParse(targetValue, out _));
 
                 string connectionStringName = Assert.Contains("connectionStringFromEnv", mssqlTrigger.Metadata);
-                Assert.Equal("SQLDB_Connection", connectionStringName);                
+                Assert.Equal("SQLDB_Connection", connectionStringName);
 
-                ScaleTrigger httpTrigger = Assert.Single(result, trigger => trigger.Type.Equals("httpTrigger", StringComparison.OrdinalIgnoreCase));
-                string functionName = Assert.Contains("functionName", httpTrigger.Metadata);
+                ScaleTrigger queueTrigger = Assert.Single(result, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));
+                string functionName = Assert.Contains("functionName", queueTrigger.Metadata);
                 Assert.Equal("f4", functionName);
+            }
+            finally
+            {
+                File.Delete(zipFilePath);
+            }
+        }
+
+        [Theory]
+        [InlineData("flowc1712a574433c1djobtriggers00", "10", "haassyad-scaling-lima", "workflowApp", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.ScaleMonitor.KEDA.TargetQueueLength"":10}}}}")]
+        [InlineData("flowdc234f1fbd9ff3fjobtriggers00", "20", "n/a", "workflowApp", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.HostId"":""haassyad-applicationinsights""}}}}")]
+        public void WorkflowApp( string expectedQueueName, string expectedQueueLength, string appName, string appKind, string hostJsonText)
+        {
+            // Generate a zip archive with a host.json with workflow extension enabled
+            string zipFilePath = Path.GetTempFileName();
+            using (var fileStream = File.OpenWrite(zipFilePath))
+            using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                CreateJsonFileEntry(archive, "host.json", hostJsonText);
+            }
+
+            try
+            {
+                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath, appName, appKind);
+                Assert.Single(result);
+
+                ScaleTrigger queueTrigger = Assert.Single(result, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));
+                var actualQueueName = Assert.Contains("queueName", queueTrigger.Metadata);
+                Assert.Equal(actualQueueName, expectedQueueName);
+
+                var actualQueueLength = Assert.Contains("queueLength", queueTrigger.Metadata);
+                Assert.Equal(actualQueueLength, expectedQueueLength);
+
+                string connectionStringFromEnv = Assert.Contains("connectionStringFromEnv", queueTrigger.Metadata);
+                Assert.Equal("AzureWebJobsStorage", connectionStringFromEnv);
             }
             finally
             {
@@ -59,6 +93,73 @@ namespace Kudu.Tests.Core.Function
             {
                 streamWriter.Write(content);
             }
+        }
+
+         public void PopulateMetadataDictionary_KedaV1_CorrectlyPopulatesRabbitMQMetadata()
+        {
+            string jsonText = @"
+            {
+                ""type"": ""rabbitMQTrigger"",
+                ""connectionStringSetting"": ""RabbitMQConnection"",
+                ""queueName"": ""myQueue"",
+                ""name"": ""message""
+            }";
+
+            JToken jsonObj = JToken.Parse(jsonText);
+
+            IDictionary<string, string> metadata = KedaFunctionTriggerProvider.PopulateMetadataDictionary(jsonObj, "f1");
+
+            Assert.Equal(4, metadata.Count);
+            Assert.True(metadata.ContainsKey("type"));
+            Assert.True(metadata.ContainsKey("host"));
+            Assert.True(metadata.ContainsKey("name"));
+            Assert.True(metadata.ContainsKey("queueName"));
+            Assert.Equal("rabbitMQTrigger", metadata["type"]);
+            Assert.Equal("RabbitMQConnection", metadata["host"]);
+            Assert.Equal("message", metadata["name"]);
+            Assert.Equal("myQueue", metadata["queueName"]);
+        }
+
+        [Fact]
+        public void PopulateMetadataDictionary_KedaV2_CorrectlyPopulatesRabbitMQMetadata()
+        {
+            string jsonText = @"
+            {
+                ""type"": ""rabbitMQTrigger"",
+                ""connectionStringSetting"": ""RabbitMQConnection"",
+                ""queueName"": ""myQueue"",
+                ""name"": ""message""
+            }";
+
+            JToken jsonObj = JToken.Parse(jsonText);
+
+            IDictionary<string, string> metadata = KedaFunctionTriggerProvider.PopulateMetadataDictionary(jsonObj, "f1");
+
+            Assert.Equal(3, metadata.Count);
+            Assert.True(metadata.ContainsKey("queueName"));
+            Assert.True(metadata.ContainsKey("hostFromEnv"));
+            Assert.Equal("myQueue", metadata["queueName"]);
+            Assert.Equal("RabbitMQConnection", metadata["hostFromEnv"]);
+        }
+
+        [Fact]
+        public void PopulateMetadataDictionary_KedaV2_OnlyKedaSupportedTriggers()
+        {
+            string jsonText = @"
+            {
+                ""functionName"": ""f1"",
+                ""bindings"": [{
+                    ""type"": ""httpTrigger"",
+                    ""methods"": [""GET""],
+                    ""authLevel"": ""anonymous""
+                }]
+            }";
+
+            var jsonObj = JObject.Parse(jsonText);
+
+            var triggers = KedaFunctionTriggerProvider.GetFunctionTriggers(new[] { jsonObj }, string.Empty);
+
+            Assert.Equal(0, triggers.Count());
         }
     }
 }
