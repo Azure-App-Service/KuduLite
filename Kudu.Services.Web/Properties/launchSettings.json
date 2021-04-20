@@ -22,6 +22,7 @@
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {
+        "K8SE_BUILD_SERVICE": "true",
         "ASPNETCORE_ENVIRONMENT": "Production"
       },
       "applicationUrl": "http://0.0.0.0:16018/"

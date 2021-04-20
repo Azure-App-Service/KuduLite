@@ -258,8 +258,6 @@ namespace Kudu.Services.Deployment
                 FileSystemHelpers.DeleteFileSafe(oryxManifestFile);
             }
 
-            //            var zipDir = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + "");
-            //            var zipFilePath = Path.Combine(zipDir, Guid.NewGuid() + ".zip");
             var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
             Console.WriteLine("PushDeploymentController.zipFilePath=" + zipFilePath);
             if (_settings.RunFromLocalZip())
@@ -312,7 +310,6 @@ namespace Kudu.Services.Deployment
                     }
                     else
                     {
-                        //FileSystemHelpers.CreateDirectory(zipDir);
                         using (var file = System.IO.File.Create(zipFilePath))
                         {
                             Stopwatch stopwatch = new Stopwatch();

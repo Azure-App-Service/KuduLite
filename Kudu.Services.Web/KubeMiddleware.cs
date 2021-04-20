@@ -42,8 +42,6 @@ namespace Kudu.Services.Web
             string appName = K8SEDeploymentHelper.GetAppName(context);
             string appNamenamespace = K8SEDeploymentHelper.GetAppNamespace(context);
             string appKind = K8SEDeploymentHelper.GetAppKind(context);
-
-            Console.WriteLine("In Middleware, appName=" + appName);
             string homeDir = "";
             string siteRepoDir = "";
             if (OSDetector.IsOnWindows())
@@ -60,10 +58,16 @@ namespace Kudu.Services.Web
             }
 
             // Cache the App Environment for this request
-            context.Items.Add("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appKind));
+            if (!context.Items.ContainsKey("environment"))
+            {
+                context.Items.Add("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appKind));
+            }
 
             // Cache the appName for this request
-            context.Items.Add("appName", appName);
+            if (!context.Items.ContainsKey("appName"))
+            {
+                context.Items.Add("appName", appName);
+            }
 
             // Cache the appNamenamespace for this request if it's not empty or null
             if (!string.IsNullOrEmpty(appNamenamespace))
