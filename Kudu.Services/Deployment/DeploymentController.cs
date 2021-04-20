@@ -154,6 +154,7 @@ namespace Kudu.Services.Deployment
 
                 try
                 {
+                    Console.WriteLine("Ashok....In DeploymentController");
                     await _deploymentLock.LockOperationAsync(async () =>
                     {
                         try
@@ -219,6 +220,7 @@ namespace Kudu.Services.Deployment
 
                             try
                             {
+                                Console.WriteLine("In DeploymentController, calling DeployAsync");
                                 await _deploymentManager.DeployAsync(repository, changeSet, username, clean, deploymentInfo: null, needFileUpdate: needFileUpdate);
                             }
                             catch (DeploymentFailedException ex)
@@ -274,9 +276,13 @@ namespace Kudu.Services.Deployment
         {
             var id = deployResult.Id;
             string path = Path.Combine(_environment.DeploymentsPath, id);
+            Console.WriteLine("DeploymentController.CreateDeployment: id=" + id +",path=" + path);
+
             IDeploymentStatusFile statusFile = _status.Open(id, _environment);
+
             if (statusFile != null)
             {
+                Console.WriteLine("statusFile.StartTime=" + statusFile.StartTime);
                 return StatusCode(StatusCodes.Status409Conflict, String.Format("Deployment with id '{0}' exists", id));
             }
 

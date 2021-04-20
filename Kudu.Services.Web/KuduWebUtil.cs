@@ -76,8 +76,11 @@ namespace Kudu.Services.Web
         // </remarks>
         private static void SetupLocks(ITraceFactory traceFactory, IEnvironment environment)
         {
-            var lockPath = Path.Combine(environment.SiteRootPath, Constants.LockPath);
+            var lockPath = Path.Combine(environment.SiteRootPath, Constants.LockPath);            
             var deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
+            
+            Console.WriteLine("In WebUtil.SetupLocks, deploymentLockPath=" + deploymentLockPath);
+
             var statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
             var sshKeyLockPath = Path.Combine(lockPath, Constants.SSHKeyLockFile);
             var hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);

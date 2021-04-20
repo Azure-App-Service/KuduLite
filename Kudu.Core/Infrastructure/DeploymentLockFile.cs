@@ -20,6 +20,7 @@ namespace Kudu.Core.Infrastructure
 
         public static DeploymentLockFile GetInstance(string path, ITraceFactory traceFactory)
         {
+            Console.WriteLine("In DeploymentLockFile, Creating with path=" + path);
             if (_deploymentLockFile == null)
             {
                 _deploymentLockFile = new DeploymentLockFile(path,traceFactory);

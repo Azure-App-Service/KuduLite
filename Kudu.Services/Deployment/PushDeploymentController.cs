@@ -23,6 +23,7 @@ using Kudu.Core.Helpers;
 using System.Threading;
 using System.Collections;
 using Kudu.Core.K8SE;
+using System.Diagnostics;
 
 namespace Kudu.Services.Deployment
 {
@@ -258,7 +259,7 @@ namespace Kudu.Services.Deployment
             }
 
             var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
-
+            Console.WriteLine("PushDeploymentController.zipFilePath=" + zipFilePath);
             if (_settings.RunFromLocalZip())
             {
                 await WriteSitePackageZip(deploymentInfo, _tracer);
@@ -311,7 +312,13 @@ namespace Kudu.Services.Deployment
                     {
                         using (var file = System.IO.File.Create(zipFilePath))
                         {
+                            Stopwatch stopwatch = new Stopwatch();
+                            stopwatch.Start();
+                            
                             await Request.Body.CopyToAsync(file);
+
+                            stopwatch.Stop();
+                            Console.WriteLine("ashok:request: zip file:" + zipFilePath + ", took(ms) =" + stopwatch.ElapsedMilliseconds);
                         }
                     }
                 }
@@ -359,6 +366,7 @@ namespace Kudu.Services.Deployment
         private Task LocalZipFetch(IRepository repository, DeploymentInfoBase deploymentInfo, string targetBranch,
             ILogger logger, ITracer tracer)
         {
+            Console.WriteLine("In LocalZipFetch");
             var zipDeploymentInfo = (ZipDeploymentInfo) deploymentInfo;
 
             // For this kind of deployment, RepositoryUrl is a local path.
@@ -518,8 +526,11 @@ namespace Kudu.Services.Deployment
         {
             // Best effort. Using the "Safe" variants does retries and swallows exceptions but
             // we may catch something non-obvious.
+            Console.WriteLine("In PushDeploymentController: fileToKeep=" + fileToKeep + ",dirToKeep=" + dirToKeep);
             try
             {
+
+                Console.WriteLine("DelDirFiles. _environment.ZipTempPath=" + _environment.ZipTempPath);
                 var files = FileSystemHelpers.GetFiles(_environment.ZipTempPath, "*")
                     .Where(p => !PathUtilityFactory.Instance.PathsEquals(p, fileToKeep));
 

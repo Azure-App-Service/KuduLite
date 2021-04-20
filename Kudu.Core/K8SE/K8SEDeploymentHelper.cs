@@ -51,7 +51,7 @@ namespace Kudu.Core.K8SE
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
             BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "buildMetadata");
-            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, $"\"{GetBuildMetadataStr(buildMetadata)}\"");
+            BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, $"\\\"{GetBuildMetadataStr(buildMetadata)}\\\"");
             RunBuildCtlCommand(cmd.ToString(), "Updating build version...");
         }
 
@@ -135,6 +135,19 @@ namespace Kudu.Core.K8SE
                 throw new InvalidOperationException("Couldn't recognize AppName");
             }
             return appName;
+        }
+
+        public static string GetAppKind(HttpContext context)
+        {
+            var appKind = context.Request.Headers["K8SE_APP_KIND"].ToString();
+
+            if (string.IsNullOrEmpty(appKind))
+            {
+                context.Response.StatusCode = 401;
+                // K8SE TODO: move this to resource map
+                throw new InvalidOperationException("Couldn't recognize AppKind");
+            }
+            return appKind;
         }
 
         public static string GetAppNamespace(HttpContext context)

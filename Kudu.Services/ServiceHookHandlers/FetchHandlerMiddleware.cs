@@ -76,6 +76,7 @@ namespace Kudu.Services
                 // CORE TODO make sure .Query has the same semantics as the old .QueryString (null, empty, etc.)
                 bool asyncRequested = String.Equals(context.Request.Query["isAsync"], "true", StringComparison.OrdinalIgnoreCase);
 
+                Console.WriteLine("FetchHandlerMiddleware....calling FetchDeploy");
                 var response = await manager.FetchDeploy(deployInfo, asyncRequested, UriHelper.GetRequestUri(context.Request), targetBranch);
 
                 switch (response)
