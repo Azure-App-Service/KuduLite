@@ -43,6 +43,7 @@ namespace Kudu.Core
         private readonly string _secondaryJobsBinariesPath;
         private readonly string _k8seAppName;
         private readonly string _k8seAppNamespace;
+        private readonly string _k8seAppKind;
 
 
         // This ctor is used only in unit tests
@@ -65,7 +66,8 @@ namespace Kudu.Core
                 string requestId,
                 IHttpContextAccessor httpContextAccessor,
                 string k8seAppName = null,
-                string k8seAppNamespace = null)
+                string k8seAppNamespace = null,
+                string k8seAppKind = null)
         {
             if (repositoryPath == null)
             {
@@ -106,6 +108,7 @@ namespace Kudu.Core
             _httpContextAccessor = httpContextAccessor;
             _k8seAppName = k8seAppName;
             _k8seAppNamespace = k8seAppNamespace;
+            _k8seAppKind = k8seAppKind;
         }
 
         public Environment(
@@ -116,7 +119,8 @@ namespace Kudu.Core
                 string kuduConsoleFullPath,
                 IHttpContextAccessor httpContextAccessor,
                 string k8seAppName = null,
-                string k8seAppNamespace = null)
+                string k8seAppNamespace = null,
+                string k8seAppKind = null)
         {
             RootPath = rootPath;
 
@@ -133,6 +137,7 @@ namespace Kudu.Core
             _locksPath = Path.Combine(SiteRootPath, Constants.LocksPath);
             _k8seAppName = k8seAppName;
             _k8seAppNamespace = k8seAppNamespace;
+            _k8seAppKind = k8seAppKind;
 
             if (OSDetector.IsOnWindows())
             {
@@ -496,6 +501,14 @@ namespace Kudu.Core
             get
             {
                 return _k8seAppNamespace;
+            }
+        }
+
+        public string K8SEAppKind
+        {
+            get
+            {
+                return _k8seAppKind;
             }
         }
 

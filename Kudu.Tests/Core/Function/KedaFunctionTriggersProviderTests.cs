@@ -19,11 +19,12 @@ namespace Kudu.Tests.Core.Function
             using (var fileStream = File.OpenWrite(zipFilePath))
             using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: true))
             {
-                CreateJsonFileEntry(archive, "host.json", @"{""version"":""2.0"",""extensions"":{""durableTask"":{""hubName"":""DFTest"",""storageProvider"":{""type"":""MicrosoftSQL"",""connectionStringName"":""SQLDB_Connection""}}}}");
+                CreateJsonFileEntry(archive, "host.json", @"{""version"":""2.0"",""extensions"":{""durableTask"":{""hubName"":""DFTest"",""storageProvider"":{""type"":""mssql"",""connectionStringName"":""SQLDB_Connection""}}}}");
                 CreateJsonFileEntry(archive, "f1/function.json", @"{""bindings"":[{""type"":""orchestrationTrigger"",""name"":""context""}],""disabled"":false}");
                 CreateJsonFileEntry(archive, "f2/function.json", @"{""bindings"":[{""type"":""entityTrigger"",""name"":""ctx""}],""disabled"":false}");
                 CreateJsonFileEntry(archive, "f3/function.json", @"{""bindings"":[{""type"":""activityTrigger"",""name"":""input""}],""disabled"":false}");
                 CreateJsonFileEntry(archive, "f4/function.json", @"{""bindings"":[{""type"":""queueTrigger"",""connection"":""AzureWebjobsStorage"",""queueName"":""queue"",""name"":""queueItem""}],""disabled"":false}");
+                CreateJsonFileEntry(archive, "f5/function.json", @"{""bindings"":[{""type"":""httpTrigger"",""methods"":[""post""],""authLevel"":""anonymous"",""name"":""req""}],""disabled"":false}");
             }
 
             try
@@ -45,6 +46,44 @@ namespace Kudu.Tests.Core.Function
                 ScaleTrigger queueTrigger = Assert.Single(result, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));
                 string functionName = Assert.Contains("functionName", queueTrigger.Metadata);
                 Assert.Equal("f4", functionName);
+
+                ScaleTrigger httpTrigger = Assert.Single(result, trigger => trigger.Type.Equals("httpTrigger", StringComparison.OrdinalIgnoreCase));
+                functionName = Assert.Contains("functionName", httpTrigger.Metadata);
+                Assert.Equal("f5", functionName);
+            }
+            finally
+            {
+                File.Delete(zipFilePath);
+            }
+        }
+
+        [Theory]
+        [InlineData("flowc1712a574433c1djobtriggers00", "10", "haassyad-scaling-lima", "workflowApp", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.ScaleMonitor.KEDA.TargetQueueLength"":10}}}}")]
+        [InlineData("flowdc234f1fbd9ff3fjobtriggers00", "20", "n/a", "workflowApp", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.HostId"":""haassyad-applicationinsights""}}}}")]
+        public void WorkflowApp( string expectedQueueName, string expectedQueueLength, string appName, string appKind, string hostJsonText)
+        {
+            // Generate a zip archive with a host.json with workflow extension enabled
+            string zipFilePath = Path.GetTempFileName();
+            using (var fileStream = File.OpenWrite(zipFilePath))
+            using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: true))
+            {
+                CreateJsonFileEntry(archive, "host.json", hostJsonText);
+            }
+
+            try
+            {
+                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath, appName, appKind);
+                Assert.Single(result);
+
+                ScaleTrigger queueTrigger = Assert.Single(result, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));
+                var actualQueueName = Assert.Contains("queueName", queueTrigger.Metadata);
+                Assert.Equal(actualQueueName, expectedQueueName);
+
+                var actualQueueLength = Assert.Contains("queueLength", queueTrigger.Metadata);
+                Assert.Equal(actualQueueLength, expectedQueueLength);
+
+                string connectionStringFromEnv = Assert.Contains("connectionStringFromEnv", queueTrigger.Metadata);
+                Assert.Equal("AzureWebJobsStorage", connectionStringFromEnv);
             }
             finally
             {
@@ -115,7 +154,7 @@ namespace Kudu.Tests.Core.Function
             {
                 ""functionName"": ""f1"",
                 ""bindings"": [{
-                    ""type"": ""httpTrigger"",
+                    ""type"": ""eventGridTrigger"",
                     ""methods"": [""GET""],
                     ""authLevel"": ""anonymous""
                 }]

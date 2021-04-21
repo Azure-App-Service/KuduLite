@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Kudu.Core.Helpers;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,8 +11,10 @@ namespace Kudu.Core.Functions
 {
     public static class KedaFunctionTriggerProvider
     {
-        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, IDictionary<string, string> appSettings)
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, string appName = null, string appKind = null, IDictionary<string, string> appSettings = null)
         {
+            appSettings = appSettings ?? new Dictionary<string, string>();
+            
             if (!File.Exists(zipFilePath))
             {
                 return null;
@@ -56,7 +59,18 @@ namespace Kudu.Core.Functions
                 return fullName.Equals(Constants.FunctionsHostConfigFile, StringComparison.OrdinalIgnoreCase);
             }
 
-            return CreateScaleTriggers(triggerBindings, hostJsonText, appSettings);
+            var triggers = CreateScaleTriggers(triggerBindings, hostJsonText, appSettings).ToList();
+
+            if (appKind?.ToLowerInvariant() == Constants.WorkflowAppKind.ToLowerInvariant())
+            {
+                // NOTE(haassyad) Check if the host json has the workflow extension loaded. If so we will add a queue scale trigger for the job dispatcher queue.
+                if (TryGetWorkflowKedaTrigger(hostJsonText, appName, out ScaleTrigger workflowScaleTrigger))
+                {
+                    triggers.Add(workflowScaleTrigger);
+                }
+            }
+
+            return triggers;
         }
 
         internal static void updateFunctionTriggerBindingExpression(
@@ -214,6 +228,9 @@ namespace Kudu.Core.Functions
                 case "rabbitmqtrigger":
                     return "rabbitmq";
 
+                case "httptrigger":
+                    return "httpTrigger";
+
                 default:
                     return string.Empty;
             }
@@ -235,6 +252,7 @@ namespace Kudu.Core.Functions
             string storageType = storageProviderConfig?["type"]?.ToString();
 
             // Custom storage types are supported starting in Durable Functions v2.4.2
+            // Minimum required version of Microsoft.DurableTask.SqlServer.AzureFunctions is v0.7.0-alpha
             if (string.Equals(storageType, Constants.DurableTaskMicrosoftSqlProviderType, StringComparison.OrdinalIgnoreCase))
             {
                 scaleTrigger = new ScaleTrigger
@@ -243,8 +261,9 @@ namespace Kudu.Core.Functions
                     Type = Constants.MicrosoftSqlScaler,
                     Metadata = new Dictionary<string, string>
                     {
-                        ["query"] = "SELECT dt.GetScaleMetric()",
-                        ["targetValue"] = "1", // super-conservative default
+                        // Durable SQL scaling: https://microsoft.github.io/durabletask-mssql/#/scaling?id=worker-auto-scale
+                        ["query"] = "SELECT dt.GetScaleRecommendation(10, 1)", // max 10 orchestrations and 1 activity per replica
+                        ["targetValue"] = "1",
                         ["connectionStringFromEnv"] = storageProviderConfig?[Constants.DurableTaskSqlConnectionName]?.ToString(),
                     }
                 };
@@ -255,6 +274,52 @@ namespace Kudu.Core.Functions
             }
 
             return scaleTrigger != null;
+        }
+
+        /// <summary>
+        /// Tries to add a scale trigger if the app is a workflow app.
+        /// </summary>
+        /// <param name="hostJsonText">The host.json text.</param>
+        /// <param name="appName">The app name.</param>
+        /// <param name="scaleTrigger">The scale trigger.</param>
+        /// <returns>true if a scale trigger was found</returns>
+        internal static bool TryGetWorkflowKedaTrigger(string hostJsonText, string appName, out ScaleTrigger scaleTrigger)
+        {
+            JObject hostJson = JObject.Parse(hostJsonText);
+
+            // Check the host.json file for workflow settings.
+            JObject workflowSettings = hostJson
+                .SelectToken(path: $"{Constants.Extensions}.{Constants.WorkflowExtensionName}.{Constants.WorkflowSettingsName}") as JObject;
+
+            // Get the queue length if specified, otherwise default to arbitrary value.
+            var queueLengthObject = workflowSettings?["Runtime.ScaleMonitor.KEDA.TargetQueueLength"];
+            var queueLength = queueLengthObject != null ? queueLengthObject.ToString() : "20";
+
+            // Get the host id if specified, otherwise default to app name.
+            var hostIdObject = workflowSettings?["Runtime.HostId"];
+            var hostId = hostIdObject != null ? hostIdObject.ToString() : appName;
+
+            // Hash the host id.
+            var hostSpecificStorageId = StringHelper
+                .EscapeAndTrimStorageKeyPrefix(HashHelper.MurmurHash64(hostId).ToString("X"), 32)
+                .ToLowerInvariant();
+
+            var queuePrefix = $"flow{hostSpecificStorageId}jobtriggers";
+
+            scaleTrigger = new ScaleTrigger
+            {
+                // Azure queue scaler reference: https://keda.sh/docs/2.2/scalers/azure-storage-queue/
+                Type = Constants.AzureQueueScaler,
+                Metadata = new Dictionary<string, string>
+                {
+                    // NOTE(haassyad): We only have one queue partition in single tenant.
+                    ["queueName"] = StringHelper.GetWorkflowQueueNameInternal(queuePrefix, 1),
+                    ["queueLength"] = queueLength,
+                    ["connectionStringFromEnv"] = "AzureWebJobsStorage",
+                }
+            };
+
+            return true;
         }
 
         // match https://github.com/Azure/azure-functions-core-tools/blob/6bfab24b2743f8421475d996402c398d2fe4a9e0/src/Azure.Functions.Cli/Kubernetes/KEDA/V2/KedaV2Resource.cs#L91

@@ -138,6 +138,19 @@ namespace Kudu.Core.K8SE
             return appName;
         }
 
+        public static string GetAppKind(HttpContext context)
+        {
+            var appKind = context.Request.Headers["K8SE_APP_KIND"].ToString();
+
+            if (string.IsNullOrEmpty(appKind))
+            {
+                context.Response.StatusCode = 401;
+                // K8SE TODO: move this to resource map
+                throw new InvalidOperationException("Couldn't recognize AppKind");
+            }
+            return appKind;
+        }
+
         public static string GetAppNamespace(HttpContext context)
         {
             var appNamepace = context.Request.Headers["K8SE_APP_NAMESPACE"].ToString();
