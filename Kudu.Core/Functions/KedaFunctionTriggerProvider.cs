@@ -10,12 +10,8 @@ namespace Kudu.Core.Functions
 {
     public static class KedaFunctionTriggerProvider
     {
-        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, IDictionary<string, string> appSettings = null)
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, IDictionary<string, string> appSettings)
         {
-            if (appSettings is null)
-            {
-                appSettings = new Dictionary<string, string>();
-            }
             if (!File.Exists(zipFilePath))
             {
                 return null;
@@ -63,11 +59,10 @@ namespace Kudu.Core.Functions
             return CreateScaleTriggers(triggerBindings, hostJsonText, appSettings);
         }
 
-        internal static void UpdateFunctionTriggerBindingExpression(
+        internal static void updateFunctionTriggerBindingExpression(
             IEnumerable<ScaleTrigger> scaleTriggers, IDictionary<string, string> appSettings)
         {
-
-            Func<Match, string> replaceMatchedBindingExpression = (Match match) =>
+            string ReplaceMatchedBindingExpression(Match match)
             {
                 var bindingExpressionTarget = match.Value.Replace("%", "");
                 if (appSettings.ContainsKey(bindingExpressionTarget))
@@ -76,9 +71,9 @@ namespace Kudu.Core.Functions
                 }
 
                 return bindingExpressionTarget;
-            };
+            }
 
-            var matchEvaluator = new MatchEvaluator(replaceMatchedBindingExpression);
+            var matchEvaluator = new MatchEvaluator((Func<Match, string>) ReplaceMatchedBindingExpression);
 
             foreach (var scaleTrigger in scaleTriggers)
             {
@@ -93,12 +88,8 @@ namespace Kudu.Core.Functions
             }
         }
 
-        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(IEnumerable<JObject> functionsJson, string hostJsonText, IDictionary<string, string> appSettings = null)
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(IEnumerable<JObject> functionsJson, string hostJsonText, IDictionary<string, string> appSettings)
         {
-            if (appSettings is null)
-            {
-                appSettings = new Dictionary<string, string>();
-            }
             var triggerBindings = functionsJson
             .Select(o => ParseFunctionJson(o["functionName"]?.ToString(), o))
             .SelectMany(i => i);
@@ -106,12 +97,8 @@ namespace Kudu.Core.Functions
             return CreateScaleTriggers(triggerBindings, hostJsonText, appSettings);
         }
 
-        internal static IEnumerable<ScaleTrigger> CreateScaleTriggers(IEnumerable<FunctionTrigger> triggerBindings, string hostJsonText, IDictionary<string, string> appSettings = null)
+        internal static IEnumerable<ScaleTrigger> CreateScaleTriggers(IEnumerable<FunctionTrigger> triggerBindings, string hostJsonText, IDictionary<string, string> appSettings)
         {
-            if (appSettings is null)
-            {
-                appSettings = new Dictionary<string, string>();
-            }
 
             var durableTriggers = triggerBindings.Where(b => IsDurable(b));
             var standardTriggers = triggerBindings.Where(b => !IsDurable(b));
@@ -120,7 +107,7 @@ namespace Kudu.Core.Functions
             kedaScaleTriggers.AddRange(GetStandardScaleTriggers(standardTriggers));
 
             // Update Binding Expression for %..% notation
-            UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appSettings);
+            updateFunctionTriggerBindingExpression(kedaScaleTriggers, appSettings);
 
             // Durable Functions triggers are treated as a group and get configuration from host.json
             if (durableTriggers.Any() && TryGetDurableKedaTrigger(hostJsonText, out ScaleTrigger durableScaleTrigger))
