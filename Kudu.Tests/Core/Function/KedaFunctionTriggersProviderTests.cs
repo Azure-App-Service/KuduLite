@@ -24,6 +24,7 @@ namespace Kudu.Tests.Core.Function
                 CreateJsonFileEntry(archive, "f2/function.json", @"{""bindings"":[{""type"":""entityTrigger"",""name"":""ctx""}],""disabled"":false}");
                 CreateJsonFileEntry(archive, "f3/function.json", @"{""bindings"":[{""type"":""activityTrigger"",""name"":""input""}],""disabled"":false}");
                 CreateJsonFileEntry(archive, "f4/function.json", @"{""bindings"":[{""type"":""queueTrigger"",""connection"":""AzureWebjobsStorage"",""queueName"":""queue"",""name"":""queueItem""}],""disabled"":false}");
+                CreateJsonFileEntry(archive, "f5/function.json", @"{""bindings"":[{""type"":""httpTrigger"",""methods"":[""post""],""authLevel"":""anonymous"",""name"":""req""}],""disabled"":false}");
             }
 
             try
@@ -45,6 +46,10 @@ namespace Kudu.Tests.Core.Function
                 ScaleTrigger queueTrigger = Assert.Single(result, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));
                 string functionName = Assert.Contains("functionName", queueTrigger.Metadata);
                 Assert.Equal("f4", functionName);
+
+                ScaleTrigger httpTrigger = Assert.Single(result, trigger => trigger.Type.Equals("httpTrigger", StringComparison.OrdinalIgnoreCase));
+                functionName = Assert.Contains("functionName", httpTrigger.Metadata);
+                Assert.Equal("f5", functionName);
             }
             finally
             {
@@ -149,7 +154,7 @@ namespace Kudu.Tests.Core.Function
             {
                 ""functionName"": ""f1"",
                 ""bindings"": [{
-                    ""type"": ""httpTrigger"",
+                    ""type"": ""eventGridTrigger"",
                     ""methods"": [""GET""],
                     ""authLevel"": ""anonymous""
                 }]
