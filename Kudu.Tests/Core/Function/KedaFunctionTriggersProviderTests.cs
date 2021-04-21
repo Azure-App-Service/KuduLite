@@ -29,8 +29,8 @@ namespace Kudu.Tests.Core.Function
 
             try
             {
-                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath, new Dictionary<string, string>());
-                Assert.Equal(2, result.Count());
+                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath);
+                Assert.Equal(3, result.Count());
 
                 ScaleTrigger mssqlTrigger = Assert.Single(result, trigger => trigger.Type.Equals("mssql", StringComparison.OrdinalIgnoreCase));
                 string query = Assert.Contains("query", mssqlTrigger.Metadata);
