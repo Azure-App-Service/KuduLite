@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Kudu.Core.Functions
 {
@@ -56,6 +57,36 @@ namespace Kudu.Core.Functions
             }
 
             return CreateScaleTriggers(triggerBindings, hostJsonText);
+        }
+
+        public static void UpdateFunctionTriggerBindingExpression(
+            IEnumerable<ScaleTrigger> scaleTriggers, Dictionary<string, string> appSettings)
+        {
+
+            Func<Match, string> replaceMatchedBindingExpression = (Match match) =>
+            {
+                var bindingExpressionTarget = match.Value.Replace("%", "");
+                if (appSettings.ContainsKey(bindingExpressionTarget))
+                {
+                    return appSettings[bindingExpressionTarget];
+                }
+
+                return bindingExpressionTarget;
+            };
+
+            var matchEvaluator = new MatchEvaluator(replaceMatchedBindingExpression);
+
+            foreach (var scaleTrigger in scaleTriggers)
+            {
+                IDictionary<string, string> newMetadata = new Dictionary<string, string>();
+                foreach (var metadata in scaleTrigger.Metadata)
+                {
+                    var replacedValue = Regex.Replace(metadata.Value, "%.*?%", matchEvaluator);
+                    newMetadata[metadata.Key] = replacedValue;
+                }
+
+                scaleTrigger.Metadata = newMetadata;
+            }
         }
 
         public static IEnumerable<ScaleTrigger> GetFunctionTriggers(IEnumerable<JObject> functionsJson, string hostJsonText)

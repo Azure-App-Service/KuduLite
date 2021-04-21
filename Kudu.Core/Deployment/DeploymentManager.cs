@@ -35,6 +35,7 @@ namespace Kudu.Core.Deployment
         private readonly IDeploymentSettingsManager _settings;
         private readonly IDeploymentStatusManager _status;
         private readonly IWebHooksManager _hooksManager;
+        private readonly IDictionary<string, string> _appSettigns;
 
         private const string RestartTriggerReason = "App deployment";
         private const string XmlLogFile = "log.xml";
@@ -68,6 +69,7 @@ namespace Kudu.Core.Deployment
         {
             _builderFactory = builderFactory;
             _environment = GetEnvironment(httpContextAccessor, environment);
+            _appSettigns = GetAppSettings(httpContextAccessor);
             _traceFactory = traceFactory;
             _analytics = analytics;
             _deploymentLock = deploymentLock;
@@ -90,6 +92,22 @@ namespace Kudu.Core.Deployment
                 _environment = (IEnvironment)context.Items["environment"];
             }
             return _environment;
+        }
+
+        internal IDictionary<string, string> GetAppSettings(IHttpContextAccessor accessor)
+        {
+            IDictionary<string, string> appSettings;
+            if (!K8SEDeploymentHelper.IsK8SEEnvironment() || accessor == null)
+            {
+                appSettings = new Dictionary<string, string>();
+            }
+            else
+            {
+                var context = accessor.HttpContext;
+                appSettings = (IDictionary<string, string>) context.Items["appSettings"];
+            }
+
+            return appSettings;
         }
 
         private bool IsDeploying

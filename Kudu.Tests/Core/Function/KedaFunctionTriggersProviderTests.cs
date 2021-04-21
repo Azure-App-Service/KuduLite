@@ -127,5 +127,35 @@ namespace Kudu.Tests.Core.Function
 
             Assert.Equal(0, triggers.Count());
         }
+
+        [Fact]
+        public void UpdateFunctionTriggerBindingExpression_Replace_Expression()
+        {
+            var triggers = new ScaleTrigger[]
+            {
+                new ScaleTrigger
+                {
+                    Type = "kafkaTrigger",
+                    Metadata = new Dictionary<string, string>()
+                    {
+                        {"brokerList", "BrokerList" },
+                        {"topic", "%topic%" },
+                        {"ConsumerGroup", "%ConsumerGroup%" }
+                    }
+                }
+            };
+
+            var appSettings = new Dictionary<string, string>
+            {
+                {"topic", "myTopic"},
+                {"ConsumerGroup", "$Default"}
+            };
+
+            KedaFunctionTriggerProvider.UpdateFunctionTriggerBindingExpression(triggers, appSettings);
+            var metadata = triggers?.FirstOrDefault().Metadata;
+            Assert.Equal("myTopic", metadata["topic"]);
+            Assert.Equal("$Default", metadata["ConsumerGroup"] );
+            Assert.Equal("BrokerList", metadata["brokerList"]);
+        }
     }
 }

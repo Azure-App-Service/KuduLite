@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using System;
+using System.Collections.Generic;
 using Kudu.Core.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Services.Infrastructure;
@@ -9,8 +10,13 @@ using Kudu.Core;
 using System.Text;
 using Kudu.Core.Helpers;
 using System.IO;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using Kudu.Core.K8SE;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Primitives;
 
+[assembly:InternalsVisibleTo("Kudu.Tests")]
 namespace Kudu.Services.Web
 {
     /// <summary>
@@ -62,6 +68,9 @@ namespace Kudu.Services.Web
 
             // Cache the appName for this request
             context.Items.Add("appName", appName);
+
+            // Add All AppSettings to the context.
+            K8SEDeploymentHelper.UpdateContextWithAppSettings(context);
 
             // Cache the appNamenamespace for this request if it's not empty or null
             if (!string.IsNullOrEmpty(appNamenamespace))

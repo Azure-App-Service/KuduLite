@@ -27,8 +27,13 @@ namespace Kudu.Core.Infrastructure
             "The last modification Kudu made to this file was at {0}, for the following reason: {1}.",
             System.Environment.NewLine);
 
-        public static void RequestContainerRestart(IEnvironment environment, string reason, string repositoryUrl = null, string appSubPath = "")
+        public static void RequestContainerRestart(IEnvironment environment, string reason, string repositoryUrl = null, string appSubPath = "", Dictionary<string,string> appSettings = null)
         {
+            if (appSettings is null)
+            {
+                appSettings = new Dictionary<string, string>();
+            }
+
             if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 string appName = environment.K8SEAppName;
