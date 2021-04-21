@@ -46,6 +46,8 @@ namespace Kudu.Core.Infrastructure
                     AppSubPath = appSubPath
                 };
 
+                KedaFunctionTriggerProvider.UpdateFunctionTriggerBindingExpression(functionTriggers, appSettings);
+
                 //Only for function apps functionTriggers will be non-null/non-empty
                 if (functionTriggers?.Any() == true)
                 {

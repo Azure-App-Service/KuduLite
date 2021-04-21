@@ -131,7 +131,7 @@ namespace Kudu.Tests.Core.Function
         [Fact]
         public void UpdateFunctionTriggerBindingExpression_Replace_Expression()
         {
-            var triggers = new ScaleTrigger[]
+            IEnumerable<ScaleTrigger> triggers = new ScaleTrigger[]
             {
                 new ScaleTrigger
                 {
@@ -144,6 +144,7 @@ namespace Kudu.Tests.Core.Function
                     }
                 }
             };
+
 
             var appSettings = new Dictionary<string, string>
             {

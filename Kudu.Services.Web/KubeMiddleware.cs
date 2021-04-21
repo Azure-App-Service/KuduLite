@@ -16,7 +16,6 @@ using Kudu.Core.K8SE;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Primitives;
 
-[assembly:InternalsVisibleTo("Kudu.Tests")]
 namespace Kudu.Services.Web
 {
     /// <summary>

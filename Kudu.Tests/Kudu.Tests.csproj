@@ -15,7 +15,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Kudu.Core\Kudu.Core.csproj" />
-    <ProjectReference Include="..\Kudu.Services.Web\Kudu.Services.Web.csproj" />
     <ProjectReference Include="..\Kudu.Services\Kudu.Services.csproj" />
   </ItemGroup>
 
