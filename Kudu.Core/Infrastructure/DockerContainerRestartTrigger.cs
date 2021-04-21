@@ -27,7 +27,7 @@ namespace Kudu.Core.Infrastructure
             "The last modification Kudu made to this file was at {0}, for the following reason: {1}.",
             System.Environment.NewLine);
 
-        public static void RequestContainerRestart(IEnvironment environment, string reason, string repositoryUrl = null, string appSubPath = "", Dictionary<string,string> appSettings = null)
+        public static void RequestContainerRestart(IEnvironment environment, string reason, string repositoryUrl = null, string appSubPath = "", IDictionary<string,string> appSettings = null)
         {
             if (appSettings is null)
             {

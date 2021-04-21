@@ -35,7 +35,7 @@ namespace Kudu.Core.Deployment
         private readonly IDeploymentSettingsManager _settings;
         private readonly IDeploymentStatusManager _status;
         private readonly IWebHooksManager _hooksManager;
-        private readonly IDictionary<string, string> _appSettigns;
+        private readonly IDictionary<string, string> _appSettings;
 
         private const string RestartTriggerReason = "App deployment";
         private const string XmlLogFile = "log.xml";
@@ -69,7 +69,7 @@ namespace Kudu.Core.Deployment
         {
             _builderFactory = builderFactory;
             _environment = GetEnvironment(httpContextAccessor, environment);
-            _appSettigns = GetAppSettings(httpContextAccessor);
+            _appSettings = GetAppSettings(httpContextAccessor);
             _traceFactory = traceFactory;
             _analytics = analytics;
             _deploymentLock = deploymentLock;
@@ -306,11 +306,11 @@ namespace Kudu.Core.Deployment
                         string repoUrl = deploymentInfo == null ? "empty" : deploymentInfo.RepositoryUrl;
                         if(deploymentInfo == null)
                         {
-                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason);
+                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, appSettings: _appSettings);
                         }
                         else
                         {
-                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, deploymentInfo == null ? null : deploymentInfo.RepositoryUrl, deploymentInfo.TargetPath);
+                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, deploymentInfo == null ? null : deploymentInfo.RepositoryUrl, deploymentInfo.TargetPath, appSettings:_appSettings);
                         }
                         logger.Log($"Deployment Pod Rollout Started! Use 'kubectl -n k8se-apps get pods {appName} --watch' to monitor the rollout status");
                         logger.Log($"Deployment Pod Rollout Started! Use kubectl watch deplotment {appName} to monitor the rollout status");
