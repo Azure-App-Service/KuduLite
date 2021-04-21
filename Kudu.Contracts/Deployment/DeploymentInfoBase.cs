@@ -4,6 +4,7 @@ using Kudu.Contracts.Tracing;
 using System.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
+using Kudu.Contracts.Deployment;
 
 namespace Kudu.Core.Deployment
 {
@@ -75,5 +76,34 @@ namespace Kudu.Core.Deployment
 
         // Used to set Publish Endpoint context
         public bool ShouldBuildArtifact { get; set; }
+
+        // Optional.
+        // Type of artifact being deployed.
+        public ArtifactType ArtifactType { get; set; }
+
+        // Optional.
+        // By default, TargetSubDirectoryRelativePath specifies the directory to deploy to relative to /home/site/wwwroot.
+        // This property can be used to change the root from wwwroot to something else.
+        public string TargetRootPath { get; set; }
+
+        // Allows the use of a deployment Id, to be tracked
+        public string DeploymentTrackingId { get; set; } = null;
+
+        // Optional.
+        // Path of the directory to be deployed to. The path should be relative to the wwwroot directory.
+        // Example: "webapps/ROOT"
+        public string TargetSubDirectoryRelativePath { get; set; }
+
+        // Optional.
+        // Specifies the name of the deployed artifact.
+        // Example: When deploying startup files, OneDeploy will set this to startup.cmd (or startup.sh)
+        public string TargetFileName { get; set; }
+
+        // Specifies whether to touch the watched file (example web.config, web.xml, etc) after the deployment
+        public bool WatchedFileEnabled { get; set; }
+
+        // Used to allow / disallow 'restart' on a per deployment basis, if needed.
+        // For example: OneDeploy allows clients to enable / disable 'restart'.
+        public bool RestartAllowed { get; set; }
     }
 }
