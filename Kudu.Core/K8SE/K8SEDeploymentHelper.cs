@@ -141,6 +141,10 @@ namespace Kudu.Core.K8SE
         public static string GetAppKind(HttpContext context)
         {
             var appKind = context.Request.Headers["K8SE_APP_KIND"].ToString();
+            foreach (var header in context.Request.Headers)
+            {
+                Console.WriteLine($"**** Debug BuildServer: {header.Key}: {header.Value.ToString()}");
+            }
 
             if (string.IsNullOrEmpty(appKind))
             {
