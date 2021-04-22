@@ -479,14 +479,23 @@ namespace Kudu.Services.Deployment
             HttpContext context)
         {
 
+            string artifactTempPath;
+            if (string.IsNullOrWhiteSpace(deploymentInfo.TargetFileName))
+            {
+                artifactTempPath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
+            }
+            else
+            {
+                artifactTempPath = Path.Combine(_environment.ZipTempPath, deploymentInfo.TargetFileName);
+            }
+
             var oryxManifestFile = Path.Combine(_environment.WebRootPath, "oryx-manifest.toml");
             if (FileSystemHelpers.FileExists(oryxManifestFile))
             {
                 _tracer.Step("Removing previous build artifact's manifest file");
                 FileSystemHelpers.DeleteFileSafe(oryxManifestFile);
             }
-
-            var zipFilePath = Path.Combine(_environment.ZipTempPath, Guid.NewGuid() + ".zip");
+            
 
             if (_settings.RunFromLocalZip())
             {
@@ -494,15 +503,15 @@ namespace Kudu.Services.Deployment
             }
             else
             {
-                using (_tracer.Step("Writing zip file to {0}", zipFilePath))
+                using (_tracer.Step("Writing artifact file to {0}", artifactTempPath))
                 {
                     if (!string.IsNullOrEmpty(context.Request.ContentType) &&
                         context.Request.ContentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                     {
                         FormValueProvider formModel;
-                        using (_tracer.Step("Writing zip file to {0}", zipFilePath))
+                        using (_tracer.Step("Writing zip file to {0}", artifactTempPath))
                         {
-                            using (var file = System.IO.File.Create(zipFilePath))
+                            using (var file = System.IO.File.Create(artifactTempPath))
                             {
                                 formModel = await Request.StreamFile(file);
                             }
@@ -510,10 +519,10 @@ namespace Kudu.Services.Deployment
                     }
                     else if (deploymentInfo.RemoteURL != null)
                     {
-                        using (_tracer.Step("Writing zip file from packageUri to {0}", zipFilePath))
+                        using (_tracer.Step("Writing zip file from packageUri to {0}", artifactTempPath))
                         {
                             using (var httpClient = new HttpClient())
-                            using (var fileStream = new FileStream(zipFilePath,
+                            using (var fileStream = new FileStream(artifactTempPath,
                                 FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 4096, useAsync: true))
                             {
                                 var zipUrlRequest = new HttpRequestMessage(HttpMethod.Get, deploymentInfo.RemoteURL);
@@ -538,14 +547,14 @@ namespace Kudu.Services.Deployment
                     }
                     else
                     {
-                        using (var file = System.IO.File.Create(zipFilePath))
+                        using (var file = System.IO.File.Create(artifactTempPath))
                         {
                             await Request.Body.CopyToAsync(file);
                         }
                     }
                 }
 
-                deploymentInfo.RepositoryUrl = zipFilePath;
+                deploymentInfo.RepositoryUrl = artifactTempPath;
             }
 
             var result =
