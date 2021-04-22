@@ -139,7 +139,9 @@ namespace Kudu.Core.K8SE
 
         public static string GetAppKind(HttpContext context)
         {
-            var appKind = context.Request.Headers["K8SE_APP_KIND"].ToString();
+	    return "webapp";
+	    /*
+            var appKind = context.Request.Headers["K8SE_APP_KIND"].ToString();	    
 
             if (string.IsNullOrEmpty(appKind))
             {
@@ -148,6 +150,7 @@ namespace Kudu.Core.K8SE
                 throw new InvalidOperationException("Couldn't recognize AppKind");
             }
             return appKind;
+	    */
         }
 
         public static string GetAppNamespace(HttpContext context)
