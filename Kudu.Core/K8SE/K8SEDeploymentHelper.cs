@@ -143,9 +143,7 @@ namespace Kudu.Core.K8SE
 
             if (string.IsNullOrEmpty(appType))
             {
-                context.Response.StatusCode = 401;
-                // K8SE TODO: move this to resource map
-                throw new InvalidOperationException("Couldn't recognize AppType");
+                return "web";
             }
             return appType;
         }
