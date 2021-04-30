@@ -94,7 +94,7 @@ namespace Kudu.Core.Functions
                 IDictionary<string, string> newMetadata = new Dictionary<string, string>();
                 foreach (var metadata in scaleTrigger.Metadata)
                 {
-                    var replacedValue = Regex.Replace(metadata.Value, "%.*?%", matchEvaluator);
+                    var replacedValue = Regex.Replace(metadata.Value, Constants.AppSettingsRegex, matchEvaluator);
                     newMetadata[metadata.Key] = replacedValue;
                 }
 
