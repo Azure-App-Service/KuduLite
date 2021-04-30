@@ -62,6 +62,14 @@ namespace Kudu.Services.Web
                 homeDir = "/home/apps/";
                 siteRepoDir = "/site/repository";
             }
+            // TODO test the Items.
+            Console.WriteLine("*********************** check the context.Items");
+            foreach (var item in context.Items)
+            {
+                Console.WriteLine($"****** context.item: {item.Key}");
+            }
+
+            Console.WriteLine("*********************** check the context.Items");
 
             // Cache the App Environment for this request
             context.Items.Add("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appType));
