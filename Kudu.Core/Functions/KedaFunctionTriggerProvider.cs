@@ -73,7 +73,7 @@ namespace Kudu.Core.Functions
             return triggers;
         }
 
-        internal static void updateFunctionTriggerBindingExpression(
+        internal static void UpdateFunctionTriggerBindingExpression(
             IEnumerable<ScaleTrigger> scaleTriggers, IDictionary<string, string> appSettings)
         {
             string ReplaceMatchedBindingExpression(Match match)
@@ -121,7 +121,7 @@ namespace Kudu.Core.Functions
             kedaScaleTriggers.AddRange(GetStandardScaleTriggers(standardTriggers));
 
             // Update Binding Expression for %..% notation
-            updateFunctionTriggerBindingExpression(kedaScaleTriggers, appSettings);
+            UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appSettings);
 
             // Durable Functions triggers are treated as a group and get configuration from host.json
             if (durableTriggers.Any() && TryGetDurableKedaTrigger(hostJsonText, out ScaleTrigger durableScaleTrigger))
