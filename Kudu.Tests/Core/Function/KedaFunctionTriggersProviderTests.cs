@@ -191,7 +191,7 @@ namespace Kudu.Tests.Core.Function
                 {"ConsumerGroup", "$Default"}
             };
 
-            KedaFunctionTriggerProvider.updateFunctionTriggerBindingExpression(triggers, appSettings);
+            KedaFunctionTriggerProvider.UpdateFunctionTriggerBindingExpression(triggers, appSettings);
             var metadata = triggers?.FirstOrDefault().Metadata;
             Assert.Equal("myTopic", metadata["topic"]);
             Assert.Equal("$Default", metadata["ConsumerGroup"] );

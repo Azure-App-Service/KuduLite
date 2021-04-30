@@ -94,14 +94,12 @@ namespace Kudu.Core.Deployment
             return _environment;
         }
 
-        internal IDictionary<string, string> GetAppSettings(IHttpContextAccessor accessor)
+        internal static IDictionary<string, string> GetAppSettings(IHttpContextAccessor accessor, Func<bool> isK8SeEnvironment = null)
         {
-            IDictionary<string, string> appSettings;
-            if (!K8SEDeploymentHelper.IsK8SEEnvironment() || accessor == null)
-            {
-                appSettings = new Dictionary<string, string>();
-            }
-            else
+            isK8SeEnvironment = isK8SeEnvironment ?? K8SEDeploymentHelper.IsK8SEEnvironment;
+
+            IDictionary<string, string> appSettings = new Dictionary<string, string>();
+            if (isK8SeEnvironment() && accessor != null)
             {
                 var context = accessor.HttpContext;
                 appSettings = (IDictionary<string, string>) context.Items["appSettings"];
