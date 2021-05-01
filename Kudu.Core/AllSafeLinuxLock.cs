@@ -58,11 +58,9 @@ namespace Kudu.Core
                     finally
                     {
                         // There is some problem with reading the lock info file
-                        // Avoid deadlock by releasing this lock/removing the dir
                         if (exception!=null)
                         {
-                            _traceFactory.GetTracer().Trace("IsHeld - there were exceptions twice -releasing the lock - ie deleting the lock directory");
-                            FileSystemHelpers.DeleteDirectorySafe(locksPath+"/deployment");
+                            _traceFactory.GetTracer().Trace("IsHeld - there were exceptions twice. Something was wrong.");
                         }
                     }
                 }
