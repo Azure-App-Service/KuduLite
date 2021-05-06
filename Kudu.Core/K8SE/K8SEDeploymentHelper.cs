@@ -165,10 +165,10 @@ namespace Kudu.Core.K8SE
 
         public static void UpdateContextWithAppSettings(HttpContext context)
         {
-            Dictionary<string, string> appSettings = new Dictionary<string, string>();
-            var appSettingsPrefix = "APPSETTING_";
+            Dictionary<string, string> appSettings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+            var appSettingsPrefix = "appsetting_";
             var appSettingsWithHeader = context.Request.Headers
-                .Where(p => p.Key.StartsWith(appSettingsPrefix));
+                .Where(p => p.Key.StartsWith(appSettingsPrefix, StringComparison.OrdinalIgnoreCase));
 
             foreach (var setting in appSettingsWithHeader)
             {

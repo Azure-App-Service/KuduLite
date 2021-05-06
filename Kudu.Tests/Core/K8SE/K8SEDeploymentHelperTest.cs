@@ -15,7 +15,9 @@ namespace Kudu.Tests.Core.K8SE
         public void UpdateHttpContextWithAppSettings()
         {
             HttpContext context = new DefaultHttpContext();
-            context.Request.Headers.Add("APPSETTING_AzureWebJobsStorage", new StringValues("AccountKey=verySecure"));
+            // AppSettings are case insensitive
+            // Current header casing inject header as lowercase.
+            context.Request.Headers.Add("appsetting_azurewebjobsstorage", new StringValues("AccountKey=verySecure"));
             context.Request.Headers.Add("APPSETTING_FUNCTIONS_WORKER_RUNTIME", new StringValues("java"));
             context.Request.Headers.Add("FUNCTIONS_EXTENSION_VERSION", new StringValues("~3"));
             context.Request.Headers.Add("SOME_FUNCTIONS_WORKER_RUNTIME", new StringValues("Should not match"));

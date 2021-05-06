@@ -185,10 +185,10 @@ namespace Kudu.Tests.Core.Function
             };
 
 
-            var appSettings = new Dictionary<string, string>
+            var appSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 {"topic", "myTopic"},
-                {"ConsumerGroup", "$Default"}
+                {"consumergroup", "$Default"} // should be case insensitive
             };
 
             KedaFunctionTriggerProvider.UpdateFunctionTriggerBindingExpression(triggers, appSettings);
