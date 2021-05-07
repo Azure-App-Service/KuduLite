@@ -139,7 +139,9 @@ namespace Kudu.Core.K8SE
 
         public static string GetAppKind(HttpContext context)
         {
+            /*
             var appKind = context.Request.Headers["K8SE_APP_KIND"].ToString();
+
 
             //Adding this condition as az webapp create and az webapp deploy is failing because it doesn't have K8SE_APP_KIND in the request header  
             if (string.IsNullOrEmpty(appKind))
@@ -154,6 +156,9 @@ namespace Kudu.Core.K8SE
                 throw new InvalidOperationException("Couldn't recognize AppKind");
             }
             return appKind;
+            */
+
+            return null;
         }
 
         public static string GetAppNamespace(HttpContext context)
