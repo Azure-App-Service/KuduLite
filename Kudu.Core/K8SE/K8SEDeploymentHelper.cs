@@ -141,6 +141,12 @@ namespace Kudu.Core.K8SE
         {
             var appKind = context.Request.Headers["K8SE_APP_KIND"].ToString();
 
+            //Adding this condition as az webapp create and az webapp deploy is failing because it doesn't have K8SE_APP_KIND in the request header  
+            if (string.IsNullOrEmpty(appKind))
+            {
+                appKind = context.Request.Headers["K8SE_APP_TYPE"].ToString();
+            }
+
             if (string.IsNullOrEmpty(appKind))
             {
                 context.Response.StatusCode = 401;
