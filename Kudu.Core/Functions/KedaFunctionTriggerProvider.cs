@@ -11,7 +11,7 @@ namespace Kudu.Core.Functions
 {
     public static class KedaFunctionTriggerProvider
     {
-        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, string appName = null, string appKind = null, IDictionary<string, string> appSettings = null)
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, string appName = null, string appType = null, IDictionary<string, string> appSettings = null)
         {
             appSettings = appSettings ?? new Dictionary<string, string>();
             
@@ -61,7 +61,8 @@ namespace Kudu.Core.Functions
 
             var triggers = CreateScaleTriggers(triggerBindings, hostJsonText, appSettings).ToList();
 
-            if (appKind?.ToLowerInvariant() == Constants.WorkflowAppKind.ToLowerInvariant())
+            var isWorkflowApp = appType?.ToLowerInvariant()?.Contains(Constants.WorkflowAppKind.ToLowerInvariant());
+            if (isWorkflowApp.GetValueOrDefault(defaultValue: false))
             {
                 // NOTE(haassyad) Check if the host json has the workflow extension loaded. If so we will add a queue scale trigger for the job dispatcher queue.
                 if (TryGetWorkflowKedaTrigger(hostJsonText, appName, out ScaleTrigger workflowScaleTrigger))
