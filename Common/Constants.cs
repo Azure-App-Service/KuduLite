@@ -98,6 +98,8 @@ namespace Kudu
         public const string LogicAppJson = "logicapp.json";
         public const string LogicAppUrlKey = "LOGICAPP_URL";
 
+        public const string AppSettingsRegex = "%.*?%";
+
         public const string SiteExtensionProvisioningStateCreated = "Created";
         public const string SiteExtensionProvisioningStateAccepted = "Accepted";
         public const string SiteExtensionProvisioningStateSucceeded = "Succeeded";
@@ -162,5 +164,7 @@ namespace Kudu
         public const string WebSiteHomeStampName = "WEBSITE_HOME_STAMPNAME";
         public const string WebSiteStampDeploymentId = "WEBSITE_STAMP_DEPLOYMENT_ID";
         public const string IsK8SEEnvironment = "K8SE_BUILD_SERVICE";
+
+        public const string K8SEAppTypeDefault = "functionapp,kubernetes,linux";
     }
 }

@@ -5,13 +5,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Kudu.Core.Functions
 {
     public static class KedaFunctionTriggerProvider
     {
-        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, string appName = null, string appKind = null)
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, string appName = null, string appKind = null, IDictionary<string, string> appSettings = null)
         {
+            appSettings = appSettings ?? new Dictionary<string, string>();
+            
             if (!File.Exists(zipFilePath))
             {
                 return null;
@@ -56,7 +59,7 @@ namespace Kudu.Core.Functions
                 return fullName.Equals(Constants.FunctionsHostConfigFile, StringComparison.OrdinalIgnoreCase);
             }
 
-            var triggers = CreateScaleTriggers(triggerBindings, hostJsonText).ToList();
+            var triggers = CreateScaleTriggers(triggerBindings, hostJsonText, appSettings).ToList();
 
             if (appKind?.ToLowerInvariant() == Constants.WorkflowAppKind.ToLowerInvariant())
             {
@@ -70,22 +73,55 @@ namespace Kudu.Core.Functions
             return triggers;
         }
 
-        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(IEnumerable<JObject> functionsJson, string hostJsonText)
+        internal static void UpdateFunctionTriggerBindingExpression(
+            IEnumerable<ScaleTrigger> scaleTriggers, IDictionary<string, string> appSettings)
+        {
+            string ReplaceMatchedBindingExpression(Match match)
+            {
+                var bindingExpressionTarget = match.Value.Replace("%", "");
+                if (appSettings.ContainsKey(bindingExpressionTarget))
+                {
+                    return appSettings[bindingExpressionTarget];
+                }
+
+                return bindingExpressionTarget;
+            }
+
+            var matchEvaluator = new MatchEvaluator((Func<Match, string>) ReplaceMatchedBindingExpression);
+
+            foreach (var scaleTrigger in scaleTriggers)
+            {
+                IDictionary<string, string> newMetadata = new Dictionary<string, string>();
+                foreach (var metadata in scaleTrigger.Metadata)
+                {
+                    var replacedValue = Regex.Replace(metadata.Value, Constants.AppSettingsRegex, matchEvaluator);
+                    newMetadata[metadata.Key] = replacedValue;
+                }
+
+                scaleTrigger.Metadata = newMetadata;
+            }
+        }
+
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(IEnumerable<JObject> functionsJson, string hostJsonText, IDictionary<string, string> appSettings)
         {
             var triggerBindings = functionsJson
             .Select(o => ParseFunctionJson(o["functionName"]?.ToString(), o))
             .SelectMany(i => i);
 
-            return CreateScaleTriggers(triggerBindings, hostJsonText);
+            return CreateScaleTriggers(triggerBindings, hostJsonText, appSettings);
         }
 
-        internal static IEnumerable<ScaleTrigger> CreateScaleTriggers(IEnumerable<FunctionTrigger> triggerBindings, string hostJsonText)
+        internal static IEnumerable<ScaleTrigger> CreateScaleTriggers(IEnumerable<FunctionTrigger> triggerBindings, string hostJsonText, IDictionary<string, string> appSettings)
         {
+
             var durableTriggers = triggerBindings.Where(b => IsDurable(b));
             var standardTriggers = triggerBindings.Where(b => !IsDurable(b));
 
             var kedaScaleTriggers = new List<ScaleTrigger>();
             kedaScaleTriggers.AddRange(GetStandardScaleTriggers(standardTriggers));
+
+            // Update Binding Expression for %..% notation
+            UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appSettings);
 
             // Durable Functions triggers are treated as a group and get configuration from host.json
             if (durableTriggers.Any() && TryGetDurableKedaTrigger(hostJsonText, out ScaleTrigger durableScaleTrigger))
@@ -100,6 +136,7 @@ namespace Kudu.Core.Functions
 
             return kedaScaleTriggers;
         }
+
 
         internal static IEnumerable<FunctionTrigger> ParseFunctionJson(string functionName, JObject functionJson)
         {
