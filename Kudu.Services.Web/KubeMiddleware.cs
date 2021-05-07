@@ -118,7 +118,7 @@ namespace Kudu.Services.Web
             IDeploymentSettingsManager settings = null,
             HttpContext httpContext = null,
             string appNamespace = null,
-            string appKind = null)
+            string appType = null)
         {
             var root = KubeMiddleware.ResolveRootPath(home, appName);
             var siteRoot = Path.Combine(root, Constants.SiteFolder);
@@ -129,7 +129,7 @@ namespace Kudu.Services.Web
             var kuduConsoleFullPath =
                 Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
             return new Core.Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId,
-                kuduConsoleFullPath, null, appName, appNamespace, appKind);
+                kuduConsoleFullPath, null, appName, appNamespace, appType);
         }
 
         /// <summary>

@@ -37,9 +37,9 @@ namespace Kudu.Core.Infrastructure
             if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 string appName = environment.K8SEAppName;
-                string appKind = environment.K8SEAppKind;
+                string appType = environment.K8SEAppType;
                 string buildNumber = environment.CurrId;
-                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(repositoryUrl, appName, appKind, appSettings);
+                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(repositoryUrl, appName, appType, appSettings);
                 var buildMetadata = new BuildMetadata()
                 {
                     AppName = appName,
