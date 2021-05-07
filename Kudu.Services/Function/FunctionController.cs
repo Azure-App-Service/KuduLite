@@ -23,6 +23,7 @@ namespace Kudu.Services.Function
         private IEnvironment _environment;
         private readonly IAnalytics _analytics;
         private readonly ITracer _tracer;
+        private readonly IDictionary<string, string> _appSettings;
 
         public FunctionController(ITracer tracer,
             IAnalytics analytics,
@@ -30,6 +31,7 @@ namespace Kudu.Services.Function
         {
             _tracer = tracer;
             _environment = (IEnvironment)accessor.HttpContext.Items["environment"];
+            _appSettings = (IDictionary<string, string>) accessor.HttpContext.Items["appSettings"];
             _analytics = analytics;
         }
 
@@ -71,7 +73,7 @@ namespace Kudu.Services.Function
 
                 try
                 {
-                    var syncTriggerHandler = new SyncTriggerHandler(_environment, _tracer);
+                    var syncTriggerHandler = new SyncTriggerHandler(_environment, _tracer, _appSettings);
                     var errorMessage = await syncTriggerHandler.SyncTriggers(triggerPayload);
                     if (!string.IsNullOrEmpty(errorMessage))
                     {
