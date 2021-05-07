@@ -191,6 +191,9 @@ namespace Kudu.Core.Functions
                 case "rabbitmqtrigger":
                     return "rabbitmq";
 
+                case "httptrigger":
+                    return "httpTrigger";
+
                 default:
                     return string.Empty;
             }
