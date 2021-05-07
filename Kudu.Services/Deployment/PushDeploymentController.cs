@@ -393,33 +393,7 @@ namespace Kudu.Services.Deployment
                         }
 
                         deploymentInfo.TargetFileName = "app.ear";
-                        break;
-
-                    case ArtifactType.Lib:
-                        if (!OneDeployHelper.EnsureValidPath(artifactType, OneDeployHelper.LibsDirectoryRelativePath, ref path, out error))
-                        {
-                            return StatusCode400(error);
-                        }
-
-                        deploymentInfo.TargetRootPath = OneDeployHelper.GetAbsolutePath(_environment, OneDeployHelper.LibsDirectoryRelativePath);
-                        OneDeployHelper.SetTargetSubDirectoyAndFileNameFromRelativePath(deploymentInfo, path);
-                        break;
-
-                    case ArtifactType.Startup:
-                        deploymentInfo.TargetRootPath = OneDeployHelper.GetAbsolutePath(_environment, OneDeployHelper.ScriptsDirectoryRelativePath);
-                        OneDeployHelper.SetTargetSubDirectoyAndFileNameFromRelativePath(deploymentInfo, OneDeployHelper.GetStartupFileName());
-                        break;
-
-                    case ArtifactType.Script:
-                        if (!OneDeployHelper.EnsureValidPath(artifactType, OneDeployHelper.ScriptsDirectoryRelativePath, ref path, out error))
-                        {
-                            return StatusCode400(error);
-                        }
-
-                        deploymentInfo.TargetRootPath = OneDeployHelper.GetAbsolutePath(_environment, OneDeployHelper.ScriptsDirectoryRelativePath);
-                        OneDeployHelper.SetTargetSubDirectoyAndFileNameFromRelativePath(deploymentInfo, path);
-
-                        break;
+                        break;                   
 
                     case ArtifactType.Static:
                         if (!OneDeployHelper.EnsureValidPath(artifactType, OneDeployHelper.WwwrootDirectoryRelativePath, ref path, out error))
