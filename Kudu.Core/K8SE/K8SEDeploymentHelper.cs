@@ -139,26 +139,17 @@ namespace Kudu.Core.K8SE
 
         public static string GetAppKind(HttpContext context)
         {
-            /*
             var appKind = context.Request.Headers["K8SE_APP_KIND"].ToString();
-
-
-            //Adding this condition as az webapp create and az webapp deploy is failing because it doesn't have K8SE_APP_KIND in the request header  
-            if (string.IsNullOrEmpty(appKind))
-            {
-                appKind = context.Request.Headers["K8SE_APP_TYPE"].ToString();
-            }
-
+            //K8SE_APP_KIND is only needed for the logic apps, for web apps and function apps, fallback to "kubeapp"
+            appKind = string.IsNullOrEmpty(appKind) ? "kubeapp" : appKind;
             if (string.IsNullOrEmpty(appKind))
             {
                 context.Response.StatusCode = 401;
                 // K8SE TODO: move this to resource map
                 throw new InvalidOperationException("Couldn't recognize AppKind");
             }
-            return appKind;
-            */
 
-            return null;
+            return appKind;           
         }
 
         public static string GetAppNamespace(HttpContext context)
