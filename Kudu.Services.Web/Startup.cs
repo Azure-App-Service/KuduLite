@@ -42,6 +42,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 using ILogger = Kudu.Core.Deployment.ILogger;
+using AspNetCore.Proxy;
 
 namespace Kudu.Services.Web
 {
@@ -276,6 +277,9 @@ namespace Kudu.Services.Web
             services.AddGitServiceHookParsers();
 
             services.AddScoped<ICommandExecutor, CommandExecutor>();
+
+            // Required for proxying requests to dotnet-monitor
+            services.AddProxies();
 
             // KuduWebUtil.MigrateSite(environment, noContextDeploymentsSettingsManager);
             // RemoveOldTracePath(environment);
