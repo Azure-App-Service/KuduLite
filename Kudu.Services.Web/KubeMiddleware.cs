@@ -78,13 +78,6 @@ namespace Kudu.Services.Web
                 context.Items.Add("appNamespace", appNamenamespace);
             }
 
-#if DEBUG
-            foreach (var item in context.Items)
-            {
-                Console.WriteLine($"****** context.item: {item.Key}");
-            }
-#endif
-
             string[] pathParts = context.Request.Path.ToString().Split("/");
 
             if (pathParts != null && pathParts.Length >= 1 && IsGitRoute(context.Request.Path))
