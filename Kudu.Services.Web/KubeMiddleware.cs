@@ -41,7 +41,7 @@ namespace Kudu.Services.Web
         {
             string appName = K8SEDeploymentHelper.GetAppName(context);
             string appNamenamespace = K8SEDeploymentHelper.GetAppNamespace(context);
-            string appType = K8SEDeploymentHelper.GetAppType(context);
+            string appType = K8SEDeploymentHelper.GetAppKind(context);
 
             string homeDir = "";
             string siteRepoDir = "";
