@@ -140,12 +140,12 @@ namespace Kudu.Core.K8SE
 
         public static string GetAppType(HttpContext context)
         {
-            // TODO remove before merging.
+#if DEBUG
             foreach (var header in context.Request.Headers)
             {
                 Console.WriteLine($"**** Debug BuildServer: {header.Key}: {header.Value.ToString()}");
             }
-
+#endif
             var appType = context.Request.Headers["K8SE_APP_TYPE"].ToString();
 
             if (string.IsNullOrEmpty(appType))
