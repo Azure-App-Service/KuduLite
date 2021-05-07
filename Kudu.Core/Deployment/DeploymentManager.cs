@@ -844,17 +844,22 @@ namespace Kudu.Core.Deployment
 
         private static string GetOutputPath(DeploymentInfoBase deploymentInfo, IEnvironment environment, IDeploymentSettingsManager perDeploymentSettings)
         {
-            string targetPath = perDeploymentSettings.GetTargetPath();
+            string targetSubDirectoryRelativePath = perDeploymentSettings.GetTargetPath();
 
-            if (string.IsNullOrWhiteSpace(targetPath))
+            if (string.IsNullOrWhiteSpace(targetSubDirectoryRelativePath))
             {
-                targetPath = deploymentInfo?.TargetPath;
+                targetSubDirectoryRelativePath = deploymentInfo?.TargetSubDirectoryRelativePath;
             }
 
-            if (!string.IsNullOrWhiteSpace(targetPath))
+            if (deploymentInfo?.Deployer == Constants.OneDeploy)
             {
-                targetPath = targetPath.Trim('\\', '/');
-                return Path.GetFullPath(Path.Combine(environment.WebRootPath, targetPath));
+                return string.IsNullOrWhiteSpace(deploymentInfo?.TargetRootPath) ? environment.WebRootPath : deploymentInfo.TargetRootPath;
+            }
+
+            if (!string.IsNullOrWhiteSpace(targetSubDirectoryRelativePath))
+            {
+                targetSubDirectoryRelativePath = targetSubDirectoryRelativePath.Trim('\\', '/');
+                return Path.GetFullPath(Path.Combine(environment.WebRootPath, targetSubDirectoryRelativePath));
             }
 
             return environment.WebRootPath;

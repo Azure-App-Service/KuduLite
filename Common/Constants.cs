@@ -165,6 +165,9 @@ namespace Kudu
         public const string WebSiteStampDeploymentId = "WEBSITE_STAMP_DEPLOYMENT_ID";
         public const string IsK8SEEnvironment = "K8SE_BUILD_SERVICE";
 
+        public const string OneDeploy = "OneDeploy";
+        public const string ArtifactStagingDirectoryName = "extracted";
+
         public const string K8SEAppTypeDefault = "functionapp,kubernetes,linux";
     }
 }

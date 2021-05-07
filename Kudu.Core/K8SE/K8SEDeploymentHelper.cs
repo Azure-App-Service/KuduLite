@@ -138,15 +138,19 @@ namespace Kudu.Core.K8SE
             return appName;
         }
 
-        public static string GetAppType(HttpContext context)
+        public static string GetAppKind(HttpContext context)
         {
-            var appType = context.Request.Headers["K8SE_APP_TYPE"].ToString();
-
-            if (string.IsNullOrEmpty(appType))
+            var appKind = context.Request.Headers["K8SE_APP_KIND"].ToString();
+            //K8SE_APP_KIND is only needed for the logic apps, for web apps and function apps, fallback to "kubeapp"
+            appKind = string.IsNullOrEmpty(appKind) ? "kubeapp" : appKind;
+            if (string.IsNullOrEmpty(appKind))
             {
-                appType = Constants.K8SEAppTypeDefault;
+                context.Response.StatusCode = 401;
+                // K8SE TODO: move this to resource map
+                throw new InvalidOperationException("Couldn't recognize AppKind");
             }
-            return appType;
+
+            return appKind;           
         }
 
         public static string GetAppNamespace(HttpContext context)

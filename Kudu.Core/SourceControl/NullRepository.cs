@@ -21,7 +21,7 @@ namespace Kudu.Core.SourceControl
         private readonly string _path;
         private readonly ITraceFactory _traceFactory;
 
-        public NullRepository(string path, ITraceFactory traceFactory)
+        public NullRepository(string path, ITraceFactory traceFactory, string commitId = null)
         {
             _path = path;
             _traceFactory = traceFactory;
