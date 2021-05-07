@@ -253,7 +253,7 @@ namespace Kudu.Services.Deployment
             [FromQuery] string path = null,
             [FromQuery] bool? restart = true,
             [FromQuery] bool? clean = null,
-            [FromQuery] bool ignoreStack = false,
+            [FromQuery] bool ignoreStack = true,
             [FromQuery] bool trackDeploymentProgress = false
             )
         {
