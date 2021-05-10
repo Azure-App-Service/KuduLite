@@ -47,8 +47,7 @@ namespace Kudu.Contracts.Infrastructure
 
             if (!success)
             {
-                var lockInfo = lockObj.LockInfo;
-                throw new LockOperationException(String.Format(CultureInfo.CurrentCulture, Resources.Error_OperationLockTimeout, operationName, lockInfo.OperationName, lockInfo.AcquiredDateTime));
+                ThrowLockOperationException(lockObj, operationName);
             }
         }
 
@@ -60,8 +59,7 @@ namespace Kudu.Contracts.Infrastructure
 
             if (!success)
             {
-                var lockInfo = lockObj.LockInfo;
-                throw new LockOperationException(String.Format(CultureInfo.CurrentCulture, Resources.Error_OperationLockTimeout, operationName, operationName,""));
+                ThrowLockOperationException(lockObj, operationName);
             }
 
             return result;
@@ -72,8 +70,7 @@ namespace Kudu.Contracts.Infrastructure
             bool isLocked = await WaitToLockAsync(lockObj, operationName, timeout);
             if (!isLocked)
             {
-                var lockInfo = lockObj.LockInfo;
-                throw new LockOperationException(String.Format(CultureInfo.CurrentCulture, Resources.Error_OperationLockTimeout, operationName, lockInfo.OperationName, lockInfo.AcquiredDateTime));
+                ThrowLockOperationException(lockObj, operationName);
             }
 
             try
@@ -91,8 +88,7 @@ namespace Kudu.Contracts.Infrastructure
             bool isLocked = await WaitToLockAsync(lockObj, operationName, timeout);
             if (!isLocked)
             {
-                var lockInfo = lockObj.LockInfo;
-                throw new LockOperationException(String.Format(CultureInfo.CurrentCulture, Resources.Error_OperationLockTimeout, operationName, lockInfo.OperationName, lockInfo.AcquiredDateTime));
+                ThrowLockOperationException(lockObj, operationName);
             }
 
             try
@@ -121,6 +117,16 @@ namespace Kudu.Contracts.Infrastructure
             }
 
             return true;
+        }
+
+        private static void ThrowLockOperationException(IOperationLock lockObj, string operationName)
+        {
+            var lockInfo = lockObj.LockInfo;
+
+            string lockedOperationName = lockInfo?.OperationName ?? "unknown";
+            string lockAcquiredDateTime = lockInfo?.AcquiredDateTime ?? "unknown";
+
+            throw new LockOperationException(String.Format(CultureInfo.CurrentCulture, Resources.Error_OperationLockTimeout, operationName, lockedOperationName, lockAcquiredDateTime));
         }
     }
 }

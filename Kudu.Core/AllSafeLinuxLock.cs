@@ -21,7 +21,8 @@ namespace Kudu.Core
         private static readonly string locksPath = "/home/site/locks";
 	    private const int defaultLockTimeout = 1500; //in seconds
         private string defaultMsg = Resources.DeploymentLockOccMsg;
-        private static string LockExpiry = null;
+        private static object LockExpiryLock = new object();
+        private static DateTime LockExpiry = DateTime.MinValue;
         private string Msg;
         public AllSafeLinuxLock(string path, ITraceFactory traceFactory)
         {
@@ -57,11 +58,9 @@ namespace Kudu.Core
                     finally
                     {
                         // There is some problem with reading the lock info file
-                        // Avoid deadlock by releasing this lock/removing the dir
                         if (exception!=null)
                         {
-                            _traceFactory.GetTracer().Trace("IsHeld - there were exceptions twice -releasing the lock - ie deleting the lock directory");
-                            FileSystemHelpers.DeleteDirectorySafe(locksPath+"/deployment");
+                            _traceFactory.GetTracer().Trace("IsHeld - there were exceptions twice. Something was wrong.");
                         }
                     }
                 }
@@ -78,9 +77,9 @@ namespace Kudu.Core
             // At this point we have already checked for the folder presence
             // hence to avoid the I/O, don't serialize the lock info until
             // folder is cleaned up
-            if(!string.IsNullOrEmpty(LockExpiry))
+            lock (LockExpiryLock)
             {
-                if(Convert.ToDateTime(LockExpiry) > DateTime.Now)
+                if (LockExpiry > DateTime.UtcNow)
                 {
                     return true;
                 }
@@ -99,7 +98,10 @@ namespace Kudu.Core
             }
             
             var exp = Convert.ToDateTime(expStr);
-            LockExpiry = expStr;
+            lock (LockExpiryLock)
+            {
+                LockExpiry = exp;
+            }
             if (exp > DateTime.UtcNow)
             {
                 return true;
@@ -122,7 +124,42 @@ namespace Kudu.Core
             FileSystemHelpers.WriteAllText(locksPath+"/deployment/info.lock",json);
         }
         
-        public OperationLockInfo LockInfo { get; }
+        public OperationLockInfo LockInfo
+        {
+            get
+            {
+                if (!FileSystemHelpers.FileExists(locksPath + "/deployment/info.lock"))
+                {
+                    return null;
+                }
+
+                try
+                {
+                    var lockInfo = JObject.Parse(File.ReadAllText(locksPath + "/deployment/info.lock"));
+                    var expStr = lockInfo["lockExpiry"].ToString();
+
+                    //Should never have null expiry
+                    if (string.IsNullOrEmpty(expStr) || !DateTime.TryParse(expStr, out DateTime exp))
+                    {
+                        Console.WriteLine($"LockInfo: Invalid lockExpiry found: {expStr}");
+                        return null;
+                    }
+
+                    var opLockInfo = new OperationLockInfo();
+
+                    opLockInfo.AcquiredDateTime = exp.AddSeconds(-defaultLockTimeout).ToString("o");
+                    opLockInfo.OperationName = lockInfo["heldByOp"].ToString();
+                    opLockInfo.InstanceId = lockInfo["heldByWorker"].ToString();
+
+                    return opLockInfo;
+                }
+                catch(Exception ex)
+                {
+                    _traceFactory.GetTracer().TraceError(ex);
+                    return null;
+                }
+            }
+        }
         
         public bool Lock(string operationName)
         {
@@ -157,7 +194,10 @@ namespace Kudu.Core
 
         public void Release()
         {
-            LockExpiry = null;
+            lock (LockExpiryLock)
+            {
+                LockExpiry = DateTime.MinValue;
+            }
             if (FileSystemHelpers.DirectoryExists(locksPath+"/deployment"))
             {
                 //Console.WriteLine("Releasing Lock - RemovingDir");
