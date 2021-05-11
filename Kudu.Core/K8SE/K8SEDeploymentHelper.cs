@@ -171,7 +171,7 @@ namespace Kudu.Core.K8SE
                 var key = setting.Key.Substring(appSettingsPrefix.Length);
                 appSettings[key] = setting.Value;
             }
-            context.Items.Add("appSettings", appSettings);
+            context.Items.TryAdd("appSettings", appSettings);
         }
 
         private static string GetFunctionAppPatchJson(IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)
