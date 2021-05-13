@@ -316,7 +316,7 @@ namespace Kudu.Core.Functions
                     // NOTE(haassyad): We only have one queue partition in single tenant.
                     ["queueName"] = StringHelper.GetWorkflowQueueNameInternal(queuePrefix, 1),
                     ["queueLength"] = queueLength,
-                    ["connectionStringFromEnv"] = "AzureWebJobsStorage",
+                    ["connectionFromEnv"] = "AzureWebJobsStorage",
                 }
             };
 

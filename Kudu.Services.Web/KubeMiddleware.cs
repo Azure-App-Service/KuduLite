@@ -64,10 +64,10 @@ namespace Kudu.Services.Web
             }
 
             // Cache the App Environment for this request
-            context.Items.Add("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appType));
+            context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appType));
 
             // Cache the appName for this request
-            context.Items.Add("appName", appName);
+            context.Items.TryAdd("appName", appName);
 
             // Add All AppSettings to the context.
             K8SEDeploymentHelper.UpdateContextWithAppSettings(context);
@@ -75,7 +75,7 @@ namespace Kudu.Services.Web
             // Cache the appNamenamespace for this request if it's not empty or null
             if (!string.IsNullOrEmpty(appNamenamespace))
             {
-                context.Items.Add("appNamespace", appNamenamespace);
+                context.Items.TryAdd("appNamespace", appNamenamespace);
             }
 
             string[] pathParts = context.Request.Path.ToString().Split("/");

@@ -82,7 +82,7 @@ namespace Kudu.Tests.Core.Function
                 var actualQueueLength = Assert.Contains("queueLength", queueTrigger.Metadata);
                 Assert.Equal(actualQueueLength, expectedQueueLength);
 
-                string connectionStringFromEnv = Assert.Contains("connectionStringFromEnv", queueTrigger.Metadata);
+                string connectionStringFromEnv = Assert.Contains("connectionFromEnv", queueTrigger.Metadata);
                 Assert.Equal("AzureWebJobsStorage", connectionStringFromEnv);
             }
             finally
