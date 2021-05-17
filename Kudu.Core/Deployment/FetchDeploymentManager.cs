@@ -221,10 +221,14 @@ namespace Kudu.Core.Deployment
 
                                     // Only send an updatedeploystatus request if DeploymentTrackingId is non null
                                     // This signifies the client has opted in for these deployment updates for this deploy request
+                                    updateStatusObj = new DeployStatusApiResult(Constants.BuildRequestReceived, deploymentInfo.DeploymentTrackingId);
                                     bool isSuccess = await SendDeployStatusUpdate(updateStatusObj);
-                                    if (isSuccess)
+
+                                    if (!isSuccess)
                                     {
-                                        updateStatusObj = new DeployStatusApiResult(Constants.BuildRequestReceived, deploymentInfo.DeploymentTrackingId);
+                                        // If first operation in itself is unsuccessful,
+                                        // set this object to null so subsequent deployment status update operations are not done
+                                        updateStatusObj = null;
                                     }
                                 }
                             }
