@@ -51,7 +51,7 @@ namespace Kudu.Core.Kube
 
             //If the encryption key secret is null or empty in the Kubernetes - return false
             var secretProvider = new SecretProvider();
-            var encryptionKeySecretContent = await secretProvider.GetSecretContent(funcAppName + "-encryptionkey".ToLower(), funcAppNamespace);
+            var encryptionKeySecretContent = await secretProvider.GetSecretContent(funcAppName + "-encryptionkey-secrets".ToLower(), funcAppNamespace);
             if (string.IsNullOrEmpty(encryptionKeySecretContent))
             {
                 return false;
