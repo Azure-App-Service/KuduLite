@@ -30,7 +30,7 @@ namespace Kudu.Tests.Core.Function
             try
             {
                 IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath);
-                Assert.Equal(2, result.Count());
+                Assert.Equal(3, result.Count());
 
                 ScaleTrigger mssqlTrigger = Assert.Single(result, trigger => trigger.Type.Equals("mssql", StringComparison.OrdinalIgnoreCase));
                 string query = Assert.Contains("query", mssqlTrigger.Metadata);
@@ -162,9 +162,40 @@ namespace Kudu.Tests.Core.Function
 
             var jsonObj = JObject.Parse(jsonText);
 
-            var triggers = KedaFunctionTriggerProvider.GetFunctionTriggers(new[] { jsonObj }, string.Empty);
+            var triggers = KedaFunctionTriggerProvider.GetFunctionTriggers(new[] { jsonObj }, string.Empty, new Dictionary<string, string>());
 
             Assert.Equal(0, triggers.Count());
+        }
+
+        [Fact]
+        public void UpdateFunctionTriggerBindingExpression_Replace_Expression()
+        {
+            IEnumerable<ScaleTrigger> triggers = new ScaleTrigger[]
+            {
+                new ScaleTrigger
+                {
+                    Type = "kafkaTrigger",
+                    Metadata = new Dictionary<string, string>()
+                    {
+                        {"brokerList", "BrokerList" },
+                        {"topic", "%topic%" },
+                        {"ConsumerGroup", "%ConsumerGroup%" }
+                    }
+                }
+            };
+
+
+            var appSettings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                {"topic", "myTopic"},
+                {"consumergroup", "$Default"} // should be case insensitive
+            };
+
+            KedaFunctionTriggerProvider.UpdateFunctionTriggerBindingExpression(triggers, appSettings);
+            var metadata = triggers?.FirstOrDefault().Metadata;
+            Assert.Equal("myTopic", metadata["topic"]);
+            Assert.Equal("$Default", metadata["ConsumerGroup"] );
+            Assert.Equal("BrokerList", metadata["brokerList"]);
         }
     }
 }

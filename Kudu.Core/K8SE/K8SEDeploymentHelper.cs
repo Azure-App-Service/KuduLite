@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using Microsoft.Extensions.Primitives;
 
 namespace Kudu.Core.K8SE
 {
@@ -156,6 +157,21 @@ namespace Kudu.Core.K8SE
         {
             var appNamepace = context.Request.Headers["K8SE_APP_NAMESPACE"].ToString();
             return appNamepace;
+        }
+
+        public static void UpdateContextWithAppSettings(HttpContext context)
+        {
+            Dictionary<string, string> appSettings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+            var appSettingsPrefix = "appsetting_";
+            var appSettingsWithHeader = context.Request.Headers
+                .Where(p => p.Key.StartsWith(appSettingsPrefix, StringComparison.OrdinalIgnoreCase));
+
+            foreach (var setting in appSettingsWithHeader)
+            {
+                var key = setting.Key.Substring(appSettingsPrefix.Length);
+                appSettings[key] = setting.Value;
+            }
+            context.Items.Add("appSettings", appSettings);
         }
 
         private static string GetFunctionAppPatchJson(IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)

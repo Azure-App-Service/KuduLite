@@ -15,12 +15,15 @@ namespace Kudu.Core.Functions
     {
         private readonly IEnvironment _environment;
         private readonly ITracer _tracer;
+        private readonly IDictionary<string, string> _appSettings;
 
         public SyncTriggerHandler(IEnvironment environment,
-            ITracer tracer)
+            ITracer tracer,
+            IDictionary<string, string> appSettings)
         {
             _environment = environment;
             _tracer = tracer;
+            _appSettings = appSettings ?? new Dictionary<string, string>();
         }
 
         public async Task<string> SyncTriggers(string functionTriggersPayload)
@@ -62,7 +65,7 @@ namespace Kudu.Core.Functions
                 var triggersJson = JArray.Parse(functionTriggersPayload).Select(o => o.ToObject<JObject>());
 
                 // TODO: https://github.com/Azure/azure-functions-host/issues/7288 should change how we parse hostJsonText here.
-                scaleTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(triggersJson, string.Empty);
+                scaleTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(triggersJson, string.Empty, _appSettings);
                 if (!scaleTriggers.Any())
                 {
                     return new Tuple<IEnumerable<ScaleTrigger>, string>(null, "No triggers in the payload");

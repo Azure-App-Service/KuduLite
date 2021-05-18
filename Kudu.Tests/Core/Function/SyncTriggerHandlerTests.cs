@@ -12,7 +12,7 @@ namespace Kudu.Tests.Core.Function
         [InlineData(null)]
         public void GetScaleTriggersTest(string functionTriggerPayload)
         {
-            var syncTriggerHandler = new SyncTriggerHandler(null, null);
+            var syncTriggerHandler = new SyncTriggerHandler(null, null, null);
             var scaleTriggers = syncTriggerHandler.GetScaleTriggers(functionTriggerPayload);
             if (string.Equals(functionTriggerPayload, "Invalid json") || string.IsNullOrEmpty(functionTriggerPayload))
             {
