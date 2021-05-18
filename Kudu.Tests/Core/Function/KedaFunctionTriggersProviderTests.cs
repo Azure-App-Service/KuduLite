@@ -168,6 +168,73 @@ namespace Kudu.Tests.Core.Function
         }
 
         [Fact]
+        public void ConversionFromSyncTriggerPayloadToFunctionTrigger()
+        {
+            var inputPayload = @"
+{
+    ""triggers"": [
+        {
+            ""name"": ""myQueueItem"",
+            ""type"": ""queueTrigger"",
+            ""direction"": ""in"",
+            ""queueName"": ""js-queue-items"",
+            ""connection"": ""AzureWebJobsStorage"",
+            ""functionName"": ""QueueTrigger""
+        }
+    ],
+    ""functions"": [
+        {
+            ""name"": ""QueueTrigger"",
+            ""script_root_path_href"": ""https://tsushiququecon1901.limaarcncsenv19--k53aemd.northcentralusstage.k4apps.io/admin/vfs/home/site/wwwroot/QueueTrigger/"",
+            ""script_href"": ""https://tsushiququecon1901.limaarcncsenv19--k53aemd.northcentralusstage.k4apps.io/admin/vfs/home/site/wwwroot/QueueTrigger/index.js"",
+            ""config_href"": ""https://tsushiququecon1901.limaarcncsenv19--k53aemd.northcentralusstage.k4apps.io/admin/vfs/home/site/wwwroot/QueueTrigger/function.json"",
+            ""test_data_href"": ""https://tsushiququecon1901.limaarcncsenv19--k53aemd.northcentralusstage.k4apps.io/admin/vfs/tmp/FunctionsData/QueueTrigger.dat"",
+            ""href"": ""https://tsushiququecon1901.limaarcncsenv19--k53aemd.northcentralusstage.k4apps.io/admin/functions/QueueTrigger"",
+            ""invoke_url_template"": null,
+            ""language"": ""node"",
+            ""config"": {
+                ""bindings"": [
+                    {
+                        ""name"": ""myQueueItem"",
+                        ""type"": ""queueTrigger"",
+                        ""direction"": ""in"",
+                        ""queueName"": ""js-queue-items"",
+                        ""connection"": ""AzureWebJobsStorage""
+                    }
+                ]
+            },
+            ""files"": null,
+            ""test_data"": """",
+            ""isDisabled"": false,
+            ""isDirect"": false,
+            ""isProxy"": false
+        }
+    ]
+}
+";
+            var expectedJObjectString = @"
+        {
+            ""name"": ""myQueueItem"",
+            ""type"": ""queueTrigger"",
+            ""direction"": ""in"",
+            ""queueName"": ""js-queue-items"",
+            ""connection"": ""AzureWebJobsStorage"",
+            ""functionName"": ""QueueTrigger""
+        }
+";
+
+            var expectedJObject = JObject.Parse(expectedJObjectString);
+            IEnumerable<KedaFunctionTriggerProvider.FunctionTrigger> results = KedaFunctionTriggerProvider.ParseSyncTriggerPayload(inputPayload);
+            var actual = results.FirstOrDefault();
+            Assert.NotNull(actual);
+            Assert.Equal("QueueTrigger", actual.FunctionName);
+            Assert.Equal("myQueueItem", actual.Binding["name"]);
+            Assert.Equal("js-queue-items", actual.Binding["queueName"]);
+            Assert.Equal("in", actual.Binding["direction"]);
+            Assert.Equal("AzureWebJobsStorage", actual.Binding["connection"]);
+        }
+
+        [Fact]
         public void UpdateFunctionTriggerBindingExpression_Replace_Expression()
         {
             IEnumerable<ScaleTrigger> triggers = new ScaleTrigger[]
