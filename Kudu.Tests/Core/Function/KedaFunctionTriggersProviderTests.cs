@@ -159,7 +159,7 @@ namespace Kudu.Tests.Core.Function
                     ""authLevel"": ""anonymous""
                 }]
             }";
-
+            
             var jsonObj = JObject.Parse(jsonText);
 
             var triggers = KedaFunctionTriggerProvider.GetFunctionTriggers(new[] { jsonObj }, string.Empty, new Dictionary<string, string>());
