@@ -12,7 +12,6 @@ namespace Kudu.Core.Kube
 
     public class SecretProvider
     {
-        private readonly HttpClient _httpClient = new HttpClient();
         private readonly string _secretKubeApiUrlPlaceHolder = "https://kubernetes.default.svc.cluster.local/api/v1/namespaces/{0}/secrets/{1}";
         private readonly string _rbacServiceActTokenFilePath = "/var/run/secrets/kubernetes.io/serviceaccount/token";
         private const string _caFilePath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt";
@@ -22,8 +21,9 @@ namespace Kudu.Core.Kube
             var responseBodyContent = "";
             var secretKubeApiUrl = string.Format(_secretKubeApiUrlPlaceHolder, secretNamespace, secretName);
             var accessToken = await GetAccessToken();
-            _httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + accessToken);
-            var responseMessage = await _httpClient.GetAsync(secretKubeApiUrl);
+            var httpClient = CreateHttpClient();
+            httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer " + accessToken);
+            var responseMessage = await httpClient.GetAsync(secretKubeApiUrl);
 
             if (responseMessage.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -47,6 +47,16 @@ namespace Kudu.Core.Kube
             }
 
             return accessToken;
+        }
+
+        private static HttpClient CreateHttpClient()
+        {
+            var client = new HttpClient(new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = ServerCertificateValidationCallback
+            });
+
+            return client;
         }
 
         private static bool ServerCertificateValidationCallback(
