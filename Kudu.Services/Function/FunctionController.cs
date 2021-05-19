@@ -39,7 +39,7 @@ namespace Kudu.Services.Function
         /// Sync triggers to the k8se function apps
         /// </summary>
         /// <returns></returns>
-        [HttpPut]
+        [HttpPost]
         public async Task<IActionResult> SyncTrigger()
         {
             try
