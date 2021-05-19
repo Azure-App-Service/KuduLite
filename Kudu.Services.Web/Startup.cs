@@ -681,7 +681,7 @@ namespace Kudu.Services.Web
 
                 routes.MapHttpRouteDual("sync-function-triggers-put", "operations/settriggers",
                    new { controller = "Function", action = "SyncTrigger" },
-                   new { verb = new HttpMethodRouteConstraint("PUT") });
+                   new { verb = new HttpMethodRouteConstraint("POST") });
 
                 // catch all unregistered url to properly handle not found
                 // routes.MapRoute("error-404", "{*path}", new {controller = "Error404", action = "Handle"});

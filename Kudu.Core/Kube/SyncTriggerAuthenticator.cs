@@ -51,7 +51,7 @@ namespace Kudu.Core.Kube
 
             //If the encryption key secret is null or empty in the Kubernetes - return false
             var secretProvider = new SecretProvider();
-            var encryptionKeySecretContent = await secretProvider.GetSecretContent(funcAppName + "-encryptionkey".ToLower(), funcAppNamespace);
+            var encryptionKeySecretContent = await secretProvider.GetSecretContent(funcAppName + "-secrets".ToLower(), funcAppNamespace);
             if (string.IsNullOrEmpty(encryptionKeySecretContent))
             {
                 return false;
@@ -64,8 +64,23 @@ namespace Kudu.Core.Kube
                 return false;
             }
 
-            var decryptedToken = Decrypt(Encoding.UTF8.GetBytes(functionEncryptionKey), funcAppAuthToken);
+            var decryptedToken = Decrypt(GetKeyBytes(functionEncryptionKey), funcAppAuthToken);
+
             return ValidateToken(decryptedToken);
+        }
+
+        public static byte[] GetKeyBytes(string hexOrBase64)
+        {
+            // only support 32 bytes (256 bits) key length
+            if (hexOrBase64.Length == 64)
+            {
+                return Enumerable.Range(0, hexOrBase64.Length)
+                    .Where(x => x % 2 == 0)
+                    .Select(x => Convert.ToByte(hexOrBase64.Substring(x, 2), 16))
+                    .ToArray();
+            }
+
+            return Convert.FromBase64String(hexOrBase64);
         }
 
         private static bool ValidateToken(string token)

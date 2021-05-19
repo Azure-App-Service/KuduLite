@@ -112,6 +112,12 @@ namespace Kudu.Core.Functions
             return CreateScaleTriggers(triggerBindings, hostJsonText, appSettings);
         }
 
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggersFromSyncTriggerPayload(string synctriggerPayload,
+            string hostJsonText, IDictionary<string, string> appSettings)
+        {
+            return CreateScaleTriggers(ParseSyncTriggerPayload(synctriggerPayload), hostJsonText, appSettings);
+        }
+
         internal static IEnumerable<ScaleTrigger> CreateScaleTriggers(IEnumerable<FunctionTrigger> triggerBindings, string hostJsonText, IDictionary<string, string> appSettings)
         {
 
@@ -138,6 +144,13 @@ namespace Kudu.Core.Functions
             return kedaScaleTriggers;
         }
 
+        internal static IEnumerable<FunctionTrigger> ParseSyncTriggerPayload(string payload)
+        {
+            var payloadJson = JObject.Parse(payload);
+            var triggers = (JArray)payloadJson["triggers"];
+            return triggers.Select(o => o.ToObject<JObject>())
+                .Select(o => new FunctionTrigger(o["functionName"].ToString(), o, o["type"].ToString()));
+        }
 
         internal static IEnumerable<FunctionTrigger> ParseFunctionJson(string functionName, JObject functionJson)
         {

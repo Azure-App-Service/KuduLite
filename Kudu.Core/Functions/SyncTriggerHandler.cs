@@ -62,10 +62,9 @@ namespace Kudu.Core.Functions
                     return new Tuple<IEnumerable<ScaleTrigger>, string>(null, "Function trigger payload is null or empty.");
                 }
 
-                var triggersJson = JArray.Parse(functionTriggersPayload).Select(o => o.ToObject<JObject>());
-
-                // TODO: https://github.com/Azure/azure-functions-host/issues/7288 should change how we parse hostJsonText here.
-                scaleTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(triggersJson, string.Empty, _appSettings);
+                scaleTriggers =
+                    KedaFunctionTriggerProvider.GetFunctionTriggersFromSyncTriggerPayload(functionTriggersPayload,
+                        string.Empty, _appSettings);
                 if (!scaleTriggers.Any())
                 {
                     return new Tuple<IEnumerable<ScaleTrigger>, string>(null, "No triggers in the payload");
@@ -78,5 +77,6 @@ namespace Kudu.Core.Functions
 
             return new Tuple<IEnumerable<ScaleTrigger>, string>(scaleTriggers, null); ;
         }
+
     }
 }
