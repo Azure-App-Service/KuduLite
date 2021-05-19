@@ -42,8 +42,6 @@ namespace Kudu.Services.Function
         [HttpPut]
         public async Task<IActionResult> SyncTrigger()
         {
-            Console.WriteLine("******* Sync Trigger is executing**** ");
-            _tracer.Trace("Tracer: Sync Trigger Started...");
             try
             {
                 var headers = Request.Headers.ToDictionary(a => a.Key, a => a.Value.AsEnumerable());

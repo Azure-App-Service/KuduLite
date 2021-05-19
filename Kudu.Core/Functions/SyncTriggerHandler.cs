@@ -31,7 +31,6 @@ namespace Kudu.Core.Functions
             using (_tracer.Step("SyncTriggerHandler.SyncTrigger()"))
             {
                 var scaleTriggersContent = GetScaleTriggers(functionTriggersPayload);
-                Console.WriteLine("******* Getting ScaleTriggers ***");
                 if (!string.IsNullOrEmpty(scaleTriggersContent.Item2))
                 {
                     return scaleTriggersContent.Item2;
@@ -48,7 +47,6 @@ namespace Kudu.Core.Functions
                 };
 
                 await Task.Run(() => K8SEDeploymentHelper.UpdateFunctionAppTriggers(appName, scaleTriggers, buildMetadata));
-                Console.WriteLine("***** Finish the Updating App Triggers ***** ");
             }
 
             return null;

@@ -21,27 +21,27 @@ namespace Kudu.Core.Kube
             {
                 return false;
             }
-            Console.WriteLine("**** SyncTriggerAuthenticator Started ***");
+
             //If there's no encryption key in the header return true
             if (!headers.TryGetValue(SiteTokenHeaderName, out IEnumerable<string> siteTokenHeaderValue))
             {
                 return false;
             }
-            Console.WriteLine("**** SyncTriggerAuthenticator finish TryGetValue ***");
+
             //Auth header value is null or empty return false
             var funcAppAuthToken = siteTokenHeaderValue.FirstOrDefault();
             if (string.IsNullOrEmpty(funcAppAuthToken))
             {
                 return false;
             }
-            Console.WriteLine("**** SyncTriggerAuthenticator funcAppAuthToken ***");
+
             //If there's no app name or app namespace in the header return false
             if (!headers.TryGetValue(FuncAppNameHeaderKey, out IEnumerable<string> funcAppNameHeaderValue)
                 || !headers.TryGetValue(FuncAppNamespaceHeaderKey, out IEnumerable<string> funcAppNamespaceHeaderValue))
             {
                 return false;
             }
-            Console.WriteLine("**** SyncTriggerAuthenticator TryGetValue ***");
+
             var funcAppName = funcAppNameHeaderValue.FirstOrDefault();
             var funcAppNamespace = funcAppNamespaceHeaderValue.FirstOrDefault();
             if (string.IsNullOrEmpty(funcAppName) || string.IsNullOrEmpty(funcAppNamespace))
@@ -56,7 +56,7 @@ namespace Kudu.Core.Kube
             {
                 return false;
             }
-            Console.WriteLine("**** SyncTriggerAuthenticator GetSecretContent done ***");
+
             var encryptionSecretJObject = JObject.Parse(encryptionKeySecretContent);
             var functionEncryptionKey = Base64Decode((string)encryptionSecretJObject["data"][FuncAppEncryptionKeyName]);
             if (string.IsNullOrEmpty(functionEncryptionKey))
@@ -65,7 +65,7 @@ namespace Kudu.Core.Kube
             }
 
             var decryptedToken = Decrypt(GetKeyBytes(functionEncryptionKey), funcAppAuthToken);
-            Console.WriteLine("**** SyncTriggerAuthenticator Decrypt done ***");
+
             return ValidateToken(decryptedToken);
         }
 
