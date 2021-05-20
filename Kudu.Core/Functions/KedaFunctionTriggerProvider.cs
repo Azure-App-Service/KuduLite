@@ -144,6 +144,21 @@ namespace Kudu.Core.Functions
             return kedaScaleTriggers;
         }
 
+        internal static string ParseHostJsonPayload(string payload)
+        {
+            var payloadJson = JObject.Parse(payload);
+            var extensions = (JObject) payloadJson["extensions"];
+            if (extensions != null)
+            {
+                var hostJsonPayload = new JObject {{"extensions", extensions}};
+                return hostJsonPayload.ToString();
+            }
+            else
+            {
+                return string.Empty;
+            }
+        }
+
         internal static IEnumerable<FunctionTrigger> ParseSyncTriggerPayload(string payload)
         {
             var payloadJson = JObject.Parse(payload);
