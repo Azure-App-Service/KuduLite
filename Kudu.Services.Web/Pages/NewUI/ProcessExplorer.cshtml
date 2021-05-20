@@ -1,0 +1,243 @@
+﻿@page
+<link href="~/Content/Styles/jsonTree.css" rel="stylesheet" />
+<link href="~/Content/Styles/app.css" rel="stylesheet" />
+<link href="~/Content/Styles/reset.css" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css?family=PT+Mono" rel="stylesheet">
+<!-- Font Awesome CSS -->
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.4.1/css/all.css" integrity="sha384-5sAR7xN1Nv6T6+dT2mhtzEpVJvfS3NScPQTrOxhwjIuvcA67KV2R5Jz6kr4abQsz" crossorigin="anonymous">
+<!--
+JSON Tree Viewer
+http://github.com/summerstyle/jsonTreeViewer
+
+Copyright 2017 Vera Lobacheva (http://iamvera.com)
+Released under the MIT license (LICENSE.txt)
+-->
+
+<style>
+    a:link, a:visited {
+        color: white;
+    }
+
+    h2, h3, h4 {
+        font-size: initial;
+    }
+
+    .table > tbody > tr > td {
+        vertical-align: middle;
+    }
+</style>
+
+<div class="panel panel-primary">
+    <h2>Process Explorer</h2>
+    <div class="mt-4">
+        <table class="table table-bordered" id="processTable">
+            <tr>
+                <th>Process Id</th>
+                <th>Uid</th>
+                <th colspan="2">Memory Dump</th>
+                <th colspan="2">Profiling</th>
+            </tr>
+        </table>
+    </div>
+
+    <div class="modal" id="memory-dump-modal">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Collecting Memory dump</h3>
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                </div>
+                <div class="modal-body mb-3">
+                    The memory dump is now getting generated. This could take a couple of minutes after which you will be prompted with a download.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="profiler-modal">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Collecting Diagnostic traces</h3>
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                </div>
+                <div class="modal-body mb-3">
+                    The trace is now getting generated and will automatically stop after the configured timeout.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="process-details">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Process Details</h3>
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="code" id="source_json" data-header="Source JSON" style="margin-top:20px;">
+                        <div class="d-flex justify-content-center">
+                            <i class="fa-3x fas fa-circle-notch fa-spin" id="jsonLoadingSpinner" style="color:#007bff"></i>
+                        </div>
+                        <div id="wrapper">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
+<script src="~/Content/Scripts/jsonTree.js"></script>
+<script src="~/Content/Scripts/jsonTreeViewer.js"></script>
+<script src="~/Content/Scripts/App.js"></script>
+
+<script>
+    var tree;
+    var expanded = false;
+    var dataStr = "";
+    var wrapper = document.getElementById("wrapper");
+
+    $(document).ready(function () {
+        $.ajax({
+            type: "GET",
+            url: "/api/processes",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $.each(data, function (i, item) {
+                    var rows = "<tr>" +
+                        "<td>" + item.pid + "<a class='process-details' role='button' href='/api/processes/" + item.pid + "'><i class='ml-2 feather fas fa-info-circle fa-lg clr-icon-navbar'></i></a></td>" +
+                        "<td>" + item.uid + "</td>" +
+                        "<td><select class='heapType' name='heapType' id='heapType'><option value='WithHeap'>WithHeap</option><option value='Full'>Full</option><option value='Mini'>Mini</option><option value='Triage'>Triage</option></select></td>" +
+                        "<td><a class='memory-dump btn btn-primary' role='button' href='/api/processes/" + item.pid + "/dump'>Collect Dump</a> </td>" +
+                        "<td><select class='profilingTimeout' name='profilingTimeout' id='profilingTimeout'><option value='30'>30s</option><option value='60' selected>60s</option><option value='90'>90s</option><option value='120'>120s</option></select></td>" +
+                        "<td><a class='start-profiler btn btn-primary' role='button' href='/api/processes/" + item.pid + "/profile/start'> Start Profiling</a> </td > " +
+                        "</tr>";
+                    $('#processTable').append(rows);
+                });
+
+                $('.process-details').on('click', function (e) {
+                    e.preventDefault();
+                    $('#process-details').modal('show');
+                    $.ajax({
+                        url: $(this).attr('href'),
+                        type: "GET",
+                        success: function (data) {
+                            dataStr = data;
+
+                            $("#jsonLoadingSpinner").hide();
+
+                            if (wrapper) {
+                                wrapper.innerHTML = "";
+                            }
+
+                            // Create json-tree
+                            tree = jsonTree.create(data, wrapper, false);
+
+                            // Expand all (or selected) child nodes of root (optional)
+                            tree.expand(function (node) {
+                                return node.childNodes.length < 2;
+                            });
+                        },
+                        dataType: "json",
+                        timeout: 60000
+                    });
+                });
+
+                $('.memory-dump').on('click', function (e) {
+                    e.preventDefault();
+                    let url = $(this).attr('href');
+                    var $item = $(this).closest("tr")   // Finds the closest row <tr>
+                        .find(".heapType")              // Gets a descendent with class="heapType"
+                        .val();                         // Retrieves the text within <td>
+
+                    url += "?type=" + $item;
+                    downloadUrl(url, true);
+
+                    $('#memory-dump-modal').modal('show');
+
+                    // Set a timeout to hide the modal again
+                    setTimeout(function () {
+                        $("#memory-dump-modal").modal('hide');
+                    }, 15000);
+                });
+
+                $('.start-profiler').on('click', function (e) {
+                    e.preventDefault();
+                    let url = $(this).attr('href');
+                    var $item = $(this).closest("tr")   // Finds the closest row <tr>
+                        .find(".profilingTimeout")      // Gets a descendent with class="profilingTimeout"
+                        .val();                         // Retrieves the text within <td>
+
+                    url += "?durationSeconds=" + $item;
+                    downloadUrl(url, true);
+
+                    $('#profiler-modal').modal('show');
+
+                    // Set a timeout to hide the modal again
+                    setTimeout(function () {
+                        $("#profiler-modal").modal('hide');
+                    }, 15000);
+                });
+            },
+
+            failure: function (data) {
+                alert(data.responseText);
+            },
+            error: function (data) {
+                alert(data.responseText);
+            }
+        });
+    });
+
+    function downloadUrl(url, showResponseMessage) {
+        var hiddenIFrameID = "hiddenDownloader", iframe;
+        iframe = document.getElementById(hiddenIFrameID);
+        if (iframe === null) {
+            iframe = document.createElement("iframe");
+            iframe.id = hiddenIFrameID;
+            iframe.style.display = "none";
+            document.body.appendChild(iframe);
+        }
+        iframe.onload = function (e) {
+            if (showResponseMessage) {
+                var iframeDocument = iframe.contentDocument || iframe.contentWindow.document; // for both IE and other
+                var iFrameBody = iframeDocument.getElementsByTagName('body')[0];
+                var iframeText = $(iFrameBody).text();
+                if (iframeText && iframeText.length > 0) {
+                    showModal("Error", iframeText);
+                }
+            }
+        }
+        iframe.src = url;
+    };
+
+    function postProfileRequest(processId) {
+        var uri = "/api/processes/" + processId + "/profile/start";
+        var request = {
+            method: "POST",
+            contentType: "application/json",
+        };
+        return $.ajax(uri, request);
+    }
+
+    function startProfiling(e, processId) {
+        var request = postProfileRequest(processId);
+        request.done(function (resp) {
+        });
+        request.fail(function (resp) {
+            var obj = JSON.parse(resp.responseText);
+            alert(obj["Message"]);
+        });
+    }
+</script>  

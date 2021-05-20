@@ -6,7 +6,9 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using AspNetCore.Proxy;
+using AspNetCore.Proxy.Options;
 using Kudu.Contracts.Diagnostics;
+using Kudu.Core.Helpers;
 using Kudu.Services.Arm;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -21,16 +23,33 @@ namespace Kudu.Services.Performance
     {
         const string dotnetMonitorPort = "50051";
         const string DotNetMonitorAddressCacheKey = "DotNetMonitorAddressCacheKey";
+        const string AcceptEncodingHeader = "Accept-Encoding";
 
-        private IMemoryCache _cache;
+        private readonly IMemoryCache _cache;
+        private readonly HttpProxyOptions _options;
 
         public LinuxProcessController(IMemoryCache memoryCache)
         {
             _cache = memoryCache;
+            _options = HttpProxyOptionsBuilder.Instance.WithHttpClientName("DotnetMonitorProxyClient")
+                .WithBeforeSend((context, request) =>
+                {
+                    // Remove Accept encoding header from requests due to a
+                    // known issue in dotnet-monitor with brotli compression
+                    // https://github.com/dotnet/dotnet-monitor/issues/330
+
+                    if (request.Headers.Contains(AcceptEncodingHeader))
+                    {
+                        request.Headers.Remove(AcceptEncodingHeader);
+                    }
+
+                    return Task.CompletedTask;
+                })
+                .Build();
         }
 
         private const string ERRORMSG = "Not supported on Linux";
-        private const string DOTNETMONITORSTOPPED = "The dotnet-monitor tool is not running";
+        private const string DOTNETMONITORNOTCONFIGURED = "The dotnet-monitor tool is not configured to run";
 
         [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
         [HttpGet]
@@ -68,44 +87,20 @@ namespace Kudu.Services.Performance
         [HttpGet]
         public Task GetAllProcesses(bool allUsers = false)
         {
-            if (IsDotNetMonitorEnabled())
+            return ExecuteIfDotnetMonitorEnabled((dotnetMonitorAddress) =>
             {
-                var dotnetMonitorAddress = GetDotNetMonitorAddress();
-                if (!string.IsNullOrWhiteSpace(dotnetMonitorAddress))
-                {
-                    return this.HttpProxyAsync($"{dotnetMonitorAddress}/processes");
-                }
-                else
-                {
-                    Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.FromResult(Response.Body.WriteAsync(Encoding.UTF8.GetBytes(DOTNETMONITORSTOPPED)));
-                }
-            }
-
-            Response.StatusCode = (int)HttpStatusCode.BadRequest;
-            return Task.FromResult(Response.Body.WriteAsync(Encoding.UTF8.GetBytes(ERRORMSG)));
+                return this.HttpProxyAsync($"{dotnetMonitorAddress}/processes", _options);
+            });
         }
 
         [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
         [HttpGet]
         public Task GetProcess(int id)
         {
-            if (IsDotNetMonitorEnabled())
+            return ExecuteIfDotnetMonitorEnabled((dotnetMonitorAddress) =>
             {
-                var dotnetMonitorAddress = GetDotNetMonitorAddress();
-                if (!string.IsNullOrWhiteSpace(dotnetMonitorAddress))
-                {
-                    return this.HttpProxyAsync($"{dotnetMonitorAddress}/processes/{id}");
-                }
-                else
-                {
-                    Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.FromResult(Response.Body.WriteAsync(Encoding.UTF8.GetBytes(DOTNETMONITORSTOPPED)));
-                }
-            }
-
-            Response.StatusCode = (int)HttpStatusCode.BadRequest;
-            return Task.FromResult(Response.Body.WriteAsync(Encoding.UTF8.GetBytes(ERRORMSG)));
+                return this.HttpProxyAsync($"{dotnetMonitorAddress}/processes/{id}", _options);
+            });
         }
 
         [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
@@ -120,21 +115,20 @@ namespace Kudu.Services.Performance
         [HttpGet]
         public Task MiniDump(int id, string type = "WithHeap")
         {
-            if (IsDotNetMonitorEnabled())
+            return ExecuteIfDotnetMonitorEnabled((dotnetMonitorAddress) =>
             {
-                var dotnetMonitorAddress = GetDotNetMonitorAddress();
-                if (!string.IsNullOrWhiteSpace(dotnetMonitorAddress))
-                {
-                    return this.HttpProxyAsync($"{dotnetMonitorAddress}/dump/{id}?type={type}");
-                }
+                return this.HttpProxyAsync($"{dotnetMonitorAddress}/dump/{id}?type={type}", _options);
+            });
+        }
 
-                Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.FromResult(Response.Body.WriteAsync(Encoding.UTF8.GetBytes(DOTNETMONITORSTOPPED)));
-
-            }
-
-            Response.StatusCode = (int)HttpStatusCode.BadRequest;
-            return Task.FromResult(Response.Body.WriteAsync(Encoding.UTF8.GetBytes(ERRORMSG)));
+        [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
+        [HttpGet]
+        public Task StartProfileAsync(int id, int durationSeconds = 60, string profile = "Cpu,Http,Metrics")
+        {
+            return ExecuteIfDotnetMonitorEnabled((dotnetMonitorAddress) =>
+            {
+                return this.HttpProxyAsync($"{dotnetMonitorAddress}/trace/{id}?profile={profile}&durationSeconds={durationSeconds}", _options);
+            });
         }
 
         [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
@@ -164,8 +158,31 @@ namespace Kudu.Services.Performance
             return Ok(ArmUtils.AddEnvelopeOnArmRequest(new ProcessEnvironmentInfo(filter, envs), Request));
         }
 
+        private Task ExecuteIfDotnetMonitorEnabled(Func<string, Task> action)
+        {
+            if (DotNetHelper.IsDotNetMonitorEnabled())
+            {
+                var dotnetMonitorAddress = GetDotNetMonitorAddress();
+                if (!string.IsNullOrWhiteSpace(dotnetMonitorAddress))
+                {
+                    return action(dotnetMonitorAddress);
+                }
+
+                Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.FromResult(Response.Body.WriteAsync(Encoding.UTF8.GetBytes(DOTNETMONITORNOTCONFIGURED)));
+            }
+
+            Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            return Task.FromResult(Response.Body.WriteAsync(Encoding.UTF8.GetBytes(ERRORMSG)));
+        }
+
         private string GetDotNetMonitorAddress()
         {
+            if (OSDetector.IsOnWindows())
+            {
+                return "http://localhost:52323";
+            }
+
             var dotnetMonitorAddress = _cache.GetOrCreate(DotNetMonitorAddressCacheKey, entry =>
             {
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2);
@@ -201,24 +218,8 @@ namespace Kudu.Services.Performance
             catch (Exception)
             {
             }
+
             return string.Empty;
-        }
-
-        private bool IsDotNetMonitorEnabled()
-        {
-            string val = Environment.GetEnvironmentVariable("WEBSITE_USE_DOTNET_MONITOR");
-            if (!string.IsNullOrWhiteSpace(val))
-            {
-                string stack = Environment.GetEnvironmentVariable("WEBSITE_STACK");
-
-                if (!string.IsNullOrWhiteSpace(stack))
-                {
-                    return val.Equals("true", StringComparison.OrdinalIgnoreCase)
-                        && stack.Equals("DOTNETCORE", StringComparison.OrdinalIgnoreCase);
-                }
-            }
-
-            return false;
         }
     }
 }

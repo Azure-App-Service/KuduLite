@@ -278,7 +278,14 @@ namespace Kudu.Services.Web
 
             services.AddScoped<ICommandExecutor, CommandExecutor>();
 
-            // Required for proxying requests to dotnet-monitor
+            // Required for proxying requests to dotnet-monitor. Increase
+            // the default time to a bigger number because memory dump requests
+            // can take a few minutes to finish
+            services.AddHttpClient("DotnetMonitorProxyClient", client =>
+            {
+                client.Timeout = TimeSpan.FromMinutes(10);
+            });
+
             services.AddProxies();
 
             // KuduWebUtil.MigrateSite(environment, noContextDeploymentsSettingsManager);
@@ -664,9 +671,12 @@ namespace Kudu.Services.Web
                 routes.MapHttpProcessesRoute("one-process-dump", "/{id}/dump",
                     new {controller = processControllerName, action = "MiniDump"},
                     new {verb = new HttpMethodRouteConstraint("GET")});
-                routes.MapHttpProcessesRoute("start-process-profile", "/{id}/profile/start",
+                routes.MapHttpProcessesRoute("start-process-profile-get", "/{id}/profile/start",
                     new {controller = processControllerName, action = "StartProfileAsync"},
-                    new {verb = new HttpMethodRouteConstraint("POST")});
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpProcessesRoute("start-process-profile", "/{id}/profile/start",
+                    new { controller = processControllerName, action = "StartProfileAsync" },
+                    new { verb = new HttpMethodRouteConstraint("POST") });
                 routes.MapHttpProcessesRoute("stop-process-profile", "/{id}/profile/stop",
                     new {controller = processControllerName, action = "StopProfileAsync"},
                     new {verb = new HttpMethodRouteConstraint("GET")});

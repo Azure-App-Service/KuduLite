@@ -139,6 +139,14 @@
                                 <i class="feather fas fa-stream clr-icon-navbar"></i> Log stream
                             </a>
                         </li>
+                        @if (Kudu.Services.Performance.DotNetHelper.IsDotNetMonitorEnabled())
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" href="/newui/ProcessExplorer">
+                                    <i class="feather fas fa-microchip clr-icon-navbar"></i> Process Explorer
+                                </a>
+                            </li>
+                        }
                         <li class="nav-item" hidden>
                             <a class="nav-link" href="#">
                                 <i class="feather fas fa-user-md clr-icon-navbar"></i> App Lens

@@ -6,6 +6,7 @@
  * Released under the MIT license (LICENSE.txt)
  */
 
+var enableHyperLinks = true;
 var jsonTree = (function() {
     
     /* ---------- Utilities ---------- */
@@ -379,8 +380,8 @@ var jsonTree = (function() {
      */
     function NodeString(label, val, isLast) {
         this.type = "string";
-        var fileExtsToWhiteList = [".log",".txt",".zip",".py",".js",".xml"];
-        if(val!=null&&val.includes("/api/")){
+        var fileExtsToWhiteList = [".log", ".txt", ".zip", ".py", ".js", ".xml"];
+        if (val != null && val.includes("/api/") && enableHyperLinks) {
             var urlStartIdx = val.indexOf("/api/");
             var shouldShowJSONViewerURL = true;
             /*
@@ -394,7 +395,7 @@ var jsonTree = (function() {
             if(val.length>3&&(val.charAt(val.length-3) === "." || val.charAt(val.length-4) === ".")){
                 shouldShowJSONViewerURL = false;
             }
-            if(shouldShowJSONViewerURL) {
+            if (shouldShowJSONViewerURL) {
                 val = "<span style=\"color:#953b39\"><a href=\"/newui/jsonviewer?view_url=" + val.substring(urlStartIdx, val.length) + "\">" + val + "</a></span>";
             }else{
                 val = "<span style=\"color:#953b39\"><a href=\""+val+"\">"+val+"</a></span>";
@@ -832,7 +833,8 @@ var jsonTree = (function() {
          * @param domEl {DOMElement} - the wrapper element
          * @returns {Tree}
          */
-        create : function(jsonObj, domEl) {
+        create: function (jsonObj, domEl, enableLinks = true) {
+            enableHyperLinks = enableLinks;
             return new Tree(jsonObj, domEl);
         }
     };
