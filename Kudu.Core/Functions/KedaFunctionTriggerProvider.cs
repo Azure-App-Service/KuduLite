@@ -113,9 +113,9 @@ namespace Kudu.Core.Functions
         }
 
         public static IEnumerable<ScaleTrigger> GetFunctionTriggersFromSyncTriggerPayload(string synctriggerPayload,
-            string hostJsonText, IDictionary<string, string> appSettings)
+            IDictionary<string, string> appSettings)
         {
-            return CreateScaleTriggers(ParseSyncTriggerPayload(synctriggerPayload), hostJsonText, appSettings);
+            return CreateScaleTriggers(ParseSyncTriggerPayload(synctriggerPayload), ParseHostJsonPayload(synctriggerPayload), appSettings);
         }
 
         internal static IEnumerable<ScaleTrigger> CreateScaleTriggers(IEnumerable<FunctionTrigger> triggerBindings, string hostJsonText, IDictionary<string, string> appSettings)
