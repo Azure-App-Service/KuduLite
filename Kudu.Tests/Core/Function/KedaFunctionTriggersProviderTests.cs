@@ -12,7 +12,7 @@ namespace Kudu.Tests.Core.Function
     public class KedaFunctionTriggersProviderTests
     {
         [Fact]
-        public void DurableFunctionApp()
+        public void DurableFunctions_DeployAsZip()
         {
             // Generate a zip archive with a host.json and the contents of a Durable Function app
             string zipFilePath = Path.GetTempFileName();
@@ -30,31 +30,37 @@ namespace Kudu.Tests.Core.Function
             try
             {
                 IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath);
-                Assert.Equal(3, result.Count());
-
-                ScaleTrigger mssqlTrigger = Assert.Single(result, trigger => trigger.Type.Equals("mssql", StringComparison.OrdinalIgnoreCase));
-                string query = Assert.Contains("query", mssqlTrigger.Metadata);
-                Assert.False(string.IsNullOrEmpty(query));
-
-                string targetValue = Assert.Contains("targetValue", mssqlTrigger.Metadata);
-                Assert.False(string.IsNullOrEmpty(targetValue));
-                Assert.True(double.TryParse(targetValue, out _));
-
-                string connectionStringName = Assert.Contains("connectionStringFromEnv", mssqlTrigger.Metadata);
-                Assert.Equal("SQLDB_Connection", connectionStringName);
-
-                ScaleTrigger queueTrigger = Assert.Single(result, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));
-                string functionName = Assert.Contains("functionName", queueTrigger.Metadata);
-                Assert.Equal("f4", functionName);
-
-                ScaleTrigger httpTrigger = Assert.Single(result, trigger => trigger.Type.Equals("httpTrigger", StringComparison.OrdinalIgnoreCase));
-                functionName = Assert.Contains("functionName", httpTrigger.Metadata);
-                Assert.Equal("f5", functionName);
+                ValidateDurableTriggers(result);
             }
             finally
             {
                 File.Delete(zipFilePath);
             }
+        }
+
+        internal static void ValidateDurableTriggers(IEnumerable<ScaleTrigger> triggers)
+        {
+            Assert.Equal(3, triggers.Count());
+
+            ScaleTrigger mssqlTrigger = Assert.Single(triggers, trigger => trigger.Type.Equals("mssql", StringComparison.OrdinalIgnoreCase));
+            string query = Assert.Contains("query", mssqlTrigger.Metadata);
+            Assert.NotNull(query);
+            Assert.Contains("dt.GetScaleRecommendation", query);
+
+            string targetValue = Assert.Contains("targetValue", mssqlTrigger.Metadata);
+            Assert.False(string.IsNullOrEmpty(targetValue));
+            Assert.True(double.TryParse(targetValue, out _));
+
+            string connectionStringName = Assert.Contains("connectionStringFromEnv", mssqlTrigger.Metadata);
+            Assert.Equal("SQLDB_Connection", connectionStringName);
+
+            ScaleTrigger queueTrigger = Assert.Single(triggers, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));
+            string functionName = Assert.Contains("functionName", queueTrigger.Metadata);
+            Assert.Equal("f4", functionName);
+
+            ScaleTrigger httpTrigger = Assert.Single(triggers, trigger => trigger.Type.Equals("httpTrigger", StringComparison.OrdinalIgnoreCase));
+            functionName = Assert.Contains("functionName", httpTrigger.Metadata);
+            Assert.Equal("f5", functionName);
         }
 
         [Theory]
