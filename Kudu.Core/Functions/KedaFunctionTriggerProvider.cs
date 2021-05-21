@@ -380,7 +380,7 @@ namespace Kudu.Core.Functions
                     break;
 
                 case TriggerTypes.Kafka:
-                    metadata["bootstrapServers"] = metadata["brokerList"];
+                    metadata["bootstrapServersFromEnv"] = metadata["brokerList"];
                     metadata.Remove("brokerList");
                     metadata.Remove("protocol");
                     metadata.Remove("authenticationMode");
