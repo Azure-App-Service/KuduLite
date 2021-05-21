@@ -64,7 +64,7 @@ namespace Kudu.Core.Functions
 
                 scaleTriggers =
                     KedaFunctionTriggerProvider.GetFunctionTriggersFromSyncTriggerPayload(functionTriggersPayload,
-                        string.Empty, _appSettings);
+                         _appSettings);
                 if (!scaleTriggers.Any())
                 {
                     return new Tuple<IEnumerable<ScaleTrigger>, string>(null, "No triggers in the payload");

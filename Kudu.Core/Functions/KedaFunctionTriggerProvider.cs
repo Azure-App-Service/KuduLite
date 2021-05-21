@@ -106,16 +106,16 @@ namespace Kudu.Core.Functions
         public static IEnumerable<ScaleTrigger> GetFunctionTriggers(IEnumerable<JObject> functionsJson, string hostJsonText, IDictionary<string, string> appSettings)
         {
             var triggerBindings = functionsJson
-            .Select(o => ParseFunctionJson(o["functionName"]?.ToString(), o))
-            .SelectMany(i => i);
+                .Select(o => ParseFunctionJson(o["functionName"]?.ToString(), o))
+                .SelectMany(i => i);
 
             return CreateScaleTriggers(triggerBindings, hostJsonText, appSettings);
         }
 
         public static IEnumerable<ScaleTrigger> GetFunctionTriggersFromSyncTriggerPayload(string synctriggerPayload,
-            string hostJsonText, IDictionary<string, string> appSettings)
+            IDictionary<string, string> appSettings)
         {
-            return CreateScaleTriggers(ParseSyncTriggerPayload(synctriggerPayload), hostJsonText, appSettings);
+            return CreateScaleTriggers(ParseSyncTriggerPayload(synctriggerPayload), ParseHostJsonPayload(synctriggerPayload), appSettings);
         }
 
         internal static IEnumerable<ScaleTrigger> CreateScaleTriggers(IEnumerable<FunctionTrigger> triggerBindings, string hostJsonText, IDictionary<string, string> appSettings)
@@ -142,6 +142,21 @@ namespace Kudu.Core.Functions
                 function.Type.Equals("entityTrigger", StringComparison.OrdinalIgnoreCase);
 
             return kedaScaleTriggers;
+        }
+
+        internal static string ParseHostJsonPayload(string payload)
+        {
+            var payloadJson = JObject.Parse(payload);
+            var extensions = (JObject) payloadJson["extensions"];
+            if (extensions != null)
+            {
+                var hostJsonPayload = new JObject {{"extensions", extensions}};
+                return hostJsonPayload.ToString();
+            }
+            else
+            {
+                return string.Empty;
+            }
         }
 
         internal static IEnumerable<FunctionTrigger> ParseSyncTriggerPayload(string payload)
