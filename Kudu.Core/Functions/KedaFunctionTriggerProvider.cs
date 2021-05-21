@@ -106,8 +106,8 @@ namespace Kudu.Core.Functions
         public static IEnumerable<ScaleTrigger> GetFunctionTriggers(IEnumerable<JObject> functionsJson, string hostJsonText, IDictionary<string, string> appSettings)
         {
             var triggerBindings = functionsJson
-            .Select(o => ParseFunctionJson(o["functionName"]?.ToString(), o))
-            .SelectMany(i => i);
+                .Select(o => ParseFunctionJson(o["functionName"]?.ToString(), o))
+                .SelectMany(i => i);
 
             return CreateScaleTriggers(triggerBindings, hostJsonText, appSettings);
         }
