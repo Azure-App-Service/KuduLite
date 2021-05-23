@@ -202,6 +202,13 @@ namespace Kudu.Core.K8SE
                 var key = setting.Key.Substring(appSettingsPrefix.Length);
                 appSettings[key] = setting.Value;
             }
+
+            // Filter out App Settings headers
+            foreach (var key in appSettingsWithHeader.ToList())
+            {
+                context.Request.Headers.Remove(key);
+            }
+
             context.Items.TryAdd("appSettings", appSettings);
         }
 

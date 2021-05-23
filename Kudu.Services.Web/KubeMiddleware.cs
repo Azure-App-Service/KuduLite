@@ -11,12 +11,7 @@ using System.Text;
 using Kudu.Core.Helpers;
 using System.IO;
 using System.Linq;
-using System.Collections.Generic;
-using System.Runtime.Caching;
-using System.Runtime.CompilerServices;
 using Kudu.Core.K8SE;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Primitives;
 
 namespace Kudu.Services.Web
 {

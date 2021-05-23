@@ -27,7 +27,7 @@ namespace Kudu.Core.Infrastructure
 
         public static void AddDeploymentSettingsAsEnvironmentVariables(this Executable exe, IDeploymentSettingsManager deploymentSettingsManager)
         {
-            IEnumerable<KeyValuePair<string, string>> deploymentSettings = deploymentSettingsManager.GetValues();
+            IEnumerable<KeyValuePair<string, string>> deploymentSettings = deploymentSettingsManager.GetValues(new Dictionary<string, string>());
             foreach (var keyValuePair in deploymentSettings)
             {
                 exe.EnvironmentVariables[keyValuePair.Key] = keyValuePair.Value;

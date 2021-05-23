@@ -5,7 +5,7 @@ namespace Kudu.Contracts.Settings
     public interface IDeploymentSettingsManager
     {
         void SetValue(string key, string value);
-        IEnumerable<KeyValuePair<string, string>> GetValues();
+        IEnumerable<KeyValuePair<string, string>> GetValues(IDictionary<string, string> injectedSettings);
 
         /// <summary>
         /// Gets a value for the key from an unified list of environment, per site settings and defaults.

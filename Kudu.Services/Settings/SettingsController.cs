@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Services.Settings
 {
@@ -106,7 +107,13 @@ namespace Kudu.Services.Settings
         /// <returns></returns>
         public IActionResult GetAll()
         {
-            return Ok(_settingsManager.GetValues());
+            IDictionary<string, string> appSettings = new Dictionary<string, string>();
+            if (K8SEDeploymentHelper.IsK8SEEnvironment() && HttpContext != null)
+            {
+                appSettings = (IDictionary<string, string>)HttpContext.Items["appSettings"];
+            }
+
+            return Ok(_settingsManager.GetValues(appSettings));
         }
 
         /// <summary>

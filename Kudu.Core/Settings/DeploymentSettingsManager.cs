@@ -50,7 +50,7 @@ namespace Kudu.Core.Settings
             return new DeploymentSettingsManager(perSiteSettings, combinedSettingsProviders.ToArray());
         }
 
-        public IEnumerable<KeyValuePair<string, string>> GetValues()
+        public IEnumerable<KeyValuePair<string, string>> GetValues(IDictionary<string, string> injectedSettings)
         {
             Dictionary<string, string> values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -62,6 +62,15 @@ namespace Kudu.Core.Settings
                     values[keyValuePair.Key] = keyValuePair.Value;
                 }
             }
+
+            if(injectedSettings != null)
+            {
+                foreach (var setting in injectedSettings)
+                {
+                    values[setting.Key] = setting.Value;
+                }
+            }
+
 
             return values;
         }
