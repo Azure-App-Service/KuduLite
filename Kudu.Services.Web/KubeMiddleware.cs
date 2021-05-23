@@ -69,19 +69,15 @@ namespace Kudu.Services.Web
             context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appType));
 
             // Cache the appName for this request
-<<<<<<< HEAD
             context.Items.TryAdd("appName", appName);
 
             // Add All AppSettings to the context.
             K8SEDeploymentHelper.UpdateContextWithAppSettings(context);
 
-            var instance = new PodInstance()
-=======
-            context.Items.Add("appName", appName);
             PodInstance instance = null;
+
             if (context.Request.Path.Value.StartsWith("/instances/", StringComparison.OrdinalIgnoreCase)
                 && context.Request.Path.Value.IndexOf("/webssh") > 0)
->>>>>>> f9921c9... Move proxy to startup
             {
                 List<PodInstance> instances = K8SEDeploymentHelper.GetInstances(appName);
 
