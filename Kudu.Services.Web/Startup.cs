@@ -45,6 +45,8 @@ using ILogger = Kudu.Core.Deployment.ILogger;
 using Microsoft.AspNetCore.Authentication;
 using Kudu.Services.Web.Services;
 using Kudu.Core.K8SE;
+using System.Net.Http;
+using Microsoft.AspNetCore.Routing;
 
 namespace Kudu.Services.Web
 {
@@ -338,6 +340,8 @@ namespace Kudu.Services.Web
             {
                 KeepAliveInterval = TimeSpan.FromSeconds(15)
             };
+            app.UseMiddleware<InstanceMiddleware>();
+
             app.UseWebSockets(webSocketOptions);
 
             var containsRelativePath = new Func<HttpContext, bool>(i =>
@@ -358,6 +362,8 @@ namespace Kudu.Services.Web
                 app.UseKubeMiddleware();
             }
 
+            ProxyRequestIfRelativeUrlMatches(@"/webssh", "http", "127.0.0.1", KuduWebUtil.GetWebSSHProxyPort(), app);
+
             app.MapWhen(containsRelativeProvisionPath, application => application.Run(async context =>
             {
                 FileSystemHelpers.EnsureDirectory("/home/apps/"+context.Request.Path.Value.Replace("/api/provision/", ""));
@@ -376,16 +382,14 @@ namespace Kudu.Services.Web
 
             app.UseResponseCompression();
 
-            var containsRelativePath3 = new Func<HttpContext, bool>(i =>
-                i.Request.Path.Value.StartsWith("/AppServiceTunnel/Tunnel.ashx", StringComparison.OrdinalIgnoreCase));
+            //var containsRelativePath3 = new Func<HttpContext, bool>(i =>
+            //    i.Request.Path.Value.StartsWith("/AppServiceTunnel/Tunnel.ashx", StringComparison.OrdinalIgnoreCase));
 
-            app.MapWhen(containsRelativePath3, builder => builder.UseMiddleware<DebugExtensionMiddleware>());
+            //app.MapWhen(containsRelativePath3, builder => builder.UseMiddleware<DebugExtensionMiddleware>());
 
             applicationLifetime.ApplicationStopping.Register(OnShutdown);
 
             app.UseStaticFiles();
-
-            ProxyRequestIfRelativeUrlMatches(@"/webssh", "http", "127.0.0.1", KuduWebUtil.GetWebSSHProxyPort() , app);
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 
@@ -409,22 +413,12 @@ namespace Kudu.Services.Web
                 appBranch => appBranch.RunUploadPackHandler());
             //app.MapWhen("/{repository}/git-upload-pack", appBranch => appBranch.RunUploadPackHandler());
 
-            // Push url
-            // Fetch hook
-            app.Map("/deploy", appBranch => appBranch.RunFetchHandler());
-
             // Log streaming
             app.Map("/api/logstream", appBranch => appBranch.RunLogStreamHandler());
 
 
             // Clone url
             // Custom GIT repositories, which can be served from any directory that has a git repo
-
-            // Sets up the file server to web app's wwwroot
-            KuduWebUtil.SetupFileServer(app, _webAppRuntimeEnvironment.WebRootPath, "/wwwroot");
-            
-            // Sets up the file server to LogFiles
-            KuduWebUtil.SetupFileServer(app, Path.Combine(_webAppRuntimeEnvironment.LogFilesPath,"kudu","deployment"), "/deploymentlogs");
 
             app.UseSwagger();
 
@@ -491,18 +485,6 @@ namespace Kudu.Services.Web
                 routes.MapHttpRouteDual("onedeploy", "publish",
                     new { controller = "PushDeployment", action = "OneDeploy" });
 
-                // Support Linux Consumption Function app on Service Fabric Mesh
-                routes.MapRoute("admin-instance-info", "admin/instance/info",
-                    new {controller = "LinuxConsumptionInstanceAdmin", action = "Info"},
-                    new {verb = new HttpMethodRouteConstraint("GET")});
-                routes.MapRoute("admin-instance-assign", "admin/instance/assign",
-                    new {controller = "LinuxConsumptionInstanceAdmin", action = "AssignAsync" },
-                    new {verb = new HttpMethodRouteConstraint("POST")});
-
-                // Live Command Line
-                routes.MapHttpRouteDual("execute-command", "command",
-                    new {controller = "Command", action = "ExecuteCommand"},
-                    new {verb = new HttpMethodRouteConstraint("POST")});
 
                 // Deployments
                 routes.MapHttpRouteDual("all-deployments", "deployments",
@@ -544,42 +526,6 @@ namespace Kudu.Services.Web
                     new {controller = "Deployment", action = "IsDeploying"},
                     new {verb = new HttpMethodRouteConstraint("GET")});
 
-                // Initiate Scan 
-                routes.MapRoute("start-clamscan", "api/scan/start/",
-                    new { controller = "Scan", action = "ExecuteScan" },
-                    new { verb = new HttpMethodRouteConstraint("GET") });
-
-                //Get scan status
-                routes.MapRoute("get-scan-status", "/api/scan/{scanId}/track",
-                    new { controller = "Scan", action = "GetScanStatus" },
-                    new { verb = new HttpMethodRouteConstraint("GET") });
-
-                //Get unique scan result
-                routes.MapRoute("get-scan-result", "/api/scan/{scanId}/result",
-                    new { controller = "Scan", action = "GetScanLog" },
-                    new { verb = new HttpMethodRouteConstraint("GET") });
-
-                //Get all scan result
-                routes.MapRoute("get-all-scan-result", "/api/scan/results",
-                    new { controller = "Scan", action = "GetScanResults" },
-                    new { verb = new HttpMethodRouteConstraint("GET") });
-
-                //Stop scan
-                routes.MapRoute("stop-scan", "/api/scan/stop",
-                    new { controller = "Scan", action = "StopScan" },
-                    new { verb = new HttpMethodRouteConstraint("DELETE") });
-
-                // SSHKey
-                routes.MapHttpRouteDual("get-sshkey", "api/sshkey",
-                    new {controller = "SSHKey", action = "GetPublicKey"},
-                    new {verb = new HttpMethodRouteConstraint("GET")});
-                routes.MapHttpRouteDual("put-sshkey", "api/sshkey",
-                    new {controller = "SSHKey", action = "SetPrivateKey"},
-                    new {verb = new HttpMethodRouteConstraint("PUT")});
-                routes.MapHttpRouteDual("delete-sshkey", "api/sshkey",
-                    new {controller = "SSHKey", action = "DeleteKeyPair"},
-                    new {verb = new HttpMethodRouteConstraint("DELETE")});
-
                 // Environment
                 routes.MapHttpRouteDual("get-env", "environment", new {controller = "Environment", action = "Get"},
                     new {verb = new HttpMethodRouteConstraint("GET")});
@@ -610,12 +556,6 @@ namespace Kudu.Services.Web
                 routes.MapHttpRouteDual("diagnostics-delete-setting", "diagnostics/settings/{key}",
                     new {controller = "Diagnostics", action = "Delete"},
                     new {verb = new HttpMethodRouteConstraint("DELETE")});
-
-                // Logs
-                foreach (var url in new[] {"/logstream", "/logstream/{*path}"})
-                {
-                    app.Map(url, appBranch => appBranch.RunLogStreamHandler());
-                }
 
                 routes.MapHttpRouteDual("recent-logs", "api/logs/recent",
                     new {controller = "Diagnostics", action = "GetRecentLogs"},
@@ -717,12 +657,12 @@ namespace Kudu.Services.Web
             IApplicationBuilder app)
         {
             var containsRelativePath = new Func<HttpContext, bool>(i =>
-                i.Request.Path.Value.StartsWith(relativeUrl, StringComparison.OrdinalIgnoreCase));
+                i.Request.Path.Value.StartsWith("/webssh", StringComparison.OrdinalIgnoreCase));
             app.MapWhen(containsRelativePath, builder => builder.RunProxy(new ProxyOptions
             {
                 Scheme = scheme,
                 Host = host,
-                Port = port
+                Port = port,
             }));
         }
 
