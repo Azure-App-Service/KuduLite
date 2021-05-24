@@ -38,15 +38,8 @@ namespace Kudu.Core.Functions
 
                 var scaleTriggers = scaleTriggersContent.Item1;
                 string appName = _environment.K8SEAppName;
-                string buildNumber = Guid.NewGuid().ToString();
-                var buildMetadata = new BuildMetadata()
-                {
-                    AppName = appName,
-                    BuildVersion = buildNumber,
-                    AppSubPath = string.Empty
-                };
 
-                await Task.Run(() => K8SEDeploymentHelper.UpdateFunctionAppTriggers(appName, scaleTriggers, buildMetadata));
+                await Task.Run(() => K8SEDeploymentHelper.UpdateFunctionAppTriggers(appName, scaleTriggers, null));
             }
 
             return null;

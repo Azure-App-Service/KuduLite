@@ -181,7 +181,7 @@ namespace Kudu.Core.K8SE
                 throw new InvalidOperationException("Couldn't recognize AppKind");
             }
 
-            return appKind;           
+            return appKind;
         }
 
         public static string GetAppNamespace(HttpContext context)
@@ -214,33 +214,30 @@ namespace Kudu.Core.K8SE
 
         private static string GetFunctionAppPatchJson(IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)
         {
-            if (functionTriggers == null || !functionTriggers.Any())
+            if ((functionTriggers == null || !functionTriggers.Any()) && buildMetadata == null)
             {
                 return null;
             }
 
-            if (buildMetadata == null )
+            var patchAppJson = new PatchAppJson { PatchSpec = new PatchSpec { } };
+            if (functionTriggers?.Any() == true)
             {
-                return null;
-            }
-
-            var patchAppJson = new PatchAppJson
-            {
-                PatchSpec = new PatchSpec
+                patchAppJson.PatchSpec.TriggerOptions = new TriggerOptions
                 {
-                    TriggerOptions = new TriggerOptions
+                    Triggers = functionTriggers
+                };
+            }
+
+            if (buildMetadata != null)
+            {
+                patchAppJson.PatchSpec.Code = new CodeSpec
+                {
+                    PackageRef = new PackageReference
                     {
-                        Triggers = functionTriggers
-                    },
-                    Code = new CodeSpec
-                    {
-                        PackageRef = new PackageReference
-                        {
-                            BuildMetadata = GetBuildMetadataStr(buildMetadata),
-                        }
+                        BuildMetadata = GetBuildMetadataStr(buildMetadata),
                     }
-                }
-            };
+                };
+            }
 
             var str= System.Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes(JsonConvert.SerializeObject(patchAppJson)));
             Console.WriteLine("Test Str:     " + str);
