@@ -51,7 +51,7 @@ namespace Kudu.Services.TunnelServer
         {
             if (loggerFactory == null)
             {
-                loggerFactory = new LoggerFactory();
+                loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
 
                 string level = Environment.GetEnvironmentVariable("APPSVC_TUNNEL_VERBOSITY");
                 LogLevel logLevel = LogLevel.Information;
@@ -76,9 +76,9 @@ namespace Kudu.Services.TunnelServer
                     }
                     Console.WriteLine("Setting LogLevel to " + level);
                 }
-
-                loggerFactory.AddConsole(logLevel);
             }
+
+            
 
             if (_logger == null)
             {

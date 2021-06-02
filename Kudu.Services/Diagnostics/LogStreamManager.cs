@@ -372,10 +372,10 @@ namespace Kudu.Services.Performance
         
         private void DisableResponseBuffering(HttpContext context)
         {
-            IHttpBufferingFeature bufferingFeature = context.Features.Get<IHttpBufferingFeature>();
+            IHttpResponseBodyFeature bufferingFeature = context.Features.Get<IHttpResponseBodyFeature>();
             if (bufferingFeature != null)
             {
-                bufferingFeature.DisableResponseBuffering();
+                bufferingFeature.DisableBuffering();
             }
         }
         
