@@ -315,8 +315,6 @@ namespace Kudu.Services.Web
         {
             Console.WriteLine(@"Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
-            loggerFactory.AddEventSourceLogger();
-
             KuduWebUtil.MigrateToNetCorePatch(_webAppRuntimeEnvironment);
 
             if (_hostingEnvironment.IsDevelopment())
@@ -394,8 +392,6 @@ namespace Kudu.Services.Web
             //var configuration = kernel.Get<IServerConfiguration>();
             //GlobalConfiguration.Configuration.Formatters.Clear();
             //GlobalConfiguration.Configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
-
-            var jsonFormatter = new JsonMediaTypeFormatter();
 
 
             // CORE TODO concept of "deprecation" in routes for traces, Do we need this for linux ?
