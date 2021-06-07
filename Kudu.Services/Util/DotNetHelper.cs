@@ -20,10 +20,10 @@ namespace Kudu.Services.Performance
                 return true;
             }
 
-            string val = Environment.GetEnvironmentVariable("WEBSITE_USE_DOTNET_MONITOR");
+            string val = Environment.GetEnvironmentVariable(Constants.DotNetMonitorEnabled);
             if (!string.IsNullOrWhiteSpace(val))
             {
-                string stack = Environment.GetEnvironmentVariable("WEBSITE_STACK");
+                string stack = Environment.GetEnvironmentVariable(Constants.FrameworkSetting);
                 if (!string.IsNullOrWhiteSpace(stack))
                 {
                     return val.Equals("true", StringComparison.OrdinalIgnoreCase)

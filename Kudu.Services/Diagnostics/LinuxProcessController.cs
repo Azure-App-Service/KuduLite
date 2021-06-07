@@ -201,7 +201,7 @@ namespace Kudu.Services.Performance
         {
             try
             {
-                string ipAddress = System.IO.File.ReadAllText("/appsvctmp/ipaddr_" + Environment.GetEnvironmentVariable("WEBSITE_ROLE_INSTANCE_ID"));
+                string ipAddress = System.IO.File.ReadAllText(Constants.AppServiceTempPath + Environment.GetEnvironmentVariable(Constants.AzureWebsiteRoleInstanceId));
                 if (ipAddress != null)
                 {
                     if (ipAddress.Contains(':'))
