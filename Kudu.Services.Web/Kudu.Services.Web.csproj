@@ -22,6 +22,7 @@
     <Message Importance="High" Text="%0a+++ Building KuduLite +++%0a%0a" />
   </Target>
   <ItemGroup>
+    <PackageReference Include="AspNetCore.Proxy" Version="4.2.0" />
     <PackageReference Include="AspNetCore.RouteAnalyzer" Version="0.5.3" />
     <PackageReference Include="log4net" Version="2.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.App" />

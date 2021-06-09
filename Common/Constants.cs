@@ -24,6 +24,7 @@ namespace Kudu
         public const string RepositoryPath = "repository";
         public const string ZipTempDirectoryName = "zipdeploy";
         public const string ArtifactStagingDirectoryName = "extracted";
+        public const string AppServiceTempPath = "/appsvctmp/ipaddr_";
 
         public const string LockPath = "locks";
         public const string DeploymentLockFile = "deployments.lock";
@@ -134,7 +135,10 @@ namespace Kudu
         public const string HttpAuthority = "HTTP_AUTHORITY";
         public const string WebSiteSwapSlotName = "WEBSITE_SWAP_SLOTNAME";
         public const string AzureWebsiteInstanceId = "WEBSITE_INSTANCE_ID";
+        public const string AzureWebsiteRoleInstanceId = "WEBSITE_ROLE_INSTANCE_ID";
         public const string ContainerName = "CONTAINER_NAME";
+        public const string DotNetMonitorEnabled = "WEBSITE_USE_DOTNET_MONITOR";
+        public const string FrameworkSetting = "FRAMEWORK";
 
         public const string Function = "function";
         public const string Functions = "functions";

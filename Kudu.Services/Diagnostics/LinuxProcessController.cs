@@ -3,9 +3,15 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+using AspNetCore.Proxy;
+using AspNetCore.Proxy.Options;
 using Kudu.Contracts.Diagnostics;
+using Kudu.Core.Helpers;
 using Kudu.Services.Arm;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Kudu.Services.Performance
 {
@@ -15,7 +21,31 @@ namespace Kudu.Services.Performance
 
     public class LinuxProcessController : Controller
     {
+        private const string DotnetMonitorPort = "50051";
+        private const string AcceptEncodingHeader = "Accept-Encoding";
         private const string ERRORMSG = "Not supported on Linux";
+        private const string DOTNETMONITORNOTCONFIGURED = "The dotnet-monitor tool is not configured to run";
+
+        private readonly HttpProxyOptions _options;
+
+        public LinuxProcessController()
+        {
+            _options = HttpProxyOptionsBuilder.Instance.WithHttpClientName("DotnetMonitorProxyClient")
+                .WithBeforeSend((context, request) =>
+                {
+                    // Remove Accept encoding header from requests due to a
+                    // known issue in dotnet-monitor with brotli compression
+                    // https://github.com/dotnet/dotnet-monitor/issues/330
+
+                    if (request.Headers.Contains(AcceptEncodingHeader))
+                    {
+                        request.Headers.Remove(AcceptEncodingHeader);
+                    }
+
+                    return Task.CompletedTask;
+                })
+                .Build();
+        }
 
         [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
         [HttpGet]
@@ -51,18 +81,22 @@ namespace Kudu.Services.Performance
 
         [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
         [HttpGet]
-        public IActionResult GetAllProcesses(bool allUsers = false)
+        public Task GetAllProcesses(bool allUsers = false)
         {
-            Response.StatusCode = (int)HttpStatusCode.BadRequest;
-            return new JsonResult(ERRORMSG);
+            return ExecuteIfDotnetMonitorEnabled((dotnetMonitorAddress) =>
+            {
+                return this.HttpProxyAsync($"{dotnetMonitorAddress}/processes", _options);
+            });
         }
 
         [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
         [HttpGet]
-        public IActionResult GetProcess(int id)
+        public Task GetProcess(int id)
         {
-            Response.StatusCode = (int)HttpStatusCode.BadRequest;
-            return new JsonResult(ERRORMSG);
+            return ExecuteIfDotnetMonitorEnabled((dotnetMonitorAddress) =>
+            {
+                return this.HttpProxyAsync($"{dotnetMonitorAddress}/processes/{id}", _options);
+            });
         }
 
         [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
@@ -75,10 +109,22 @@ namespace Kudu.Services.Performance
 
         [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
         [HttpGet]
-        public IActionResult MiniDump(int id, int dumpType = 0, string format = null)
+        public Task MiniDump(int id, string type = "WithHeap")
         {
-            Response.StatusCode = (int)HttpStatusCode.BadRequest;
-            return new JsonResult(ERRORMSG);
+            return ExecuteIfDotnetMonitorEnabled((dotnetMonitorAddress) =>
+            {
+                return this.HttpProxyAsync($"{dotnetMonitorAddress}/dump/{id}?type={type}", _options);
+            });
+        }
+
+        [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
+        [HttpGet]
+        public Task StartProfileAsync(int id, int durationSeconds = 60, string profile = "Cpu,Http,Metrics")
+        {
+            return ExecuteIfDotnetMonitorEnabled((dotnetMonitorAddress) =>
+            {
+                return this.HttpProxyAsync($"{dotnetMonitorAddress}/trace/{id}?profile={profile}&durationSeconds={durationSeconds}", _options);
+            });
         }
 
         [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
@@ -106,6 +152,65 @@ namespace Kudu.Services.Performance
                 .ToDictionary(p => p.Key, p => p.Value);
 
             return Ok(ArmUtils.AddEnvelopeOnArmRequest(new ProcessEnvironmentInfo(filter, envs), Request));
+        }
+
+        private Task ExecuteIfDotnetMonitorEnabled(Func<string, Task> action)
+        {
+            if (DotNetHelper.IsDotNetMonitorEnabled())
+            {
+                var dotnetMonitorAddress = GetDotNetMonitorAddress();
+                if (!string.IsNullOrWhiteSpace(dotnetMonitorAddress))
+                {
+                    return action(dotnetMonitorAddress);
+                }
+
+                Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.FromResult(Response.Body.WriteAsync(Encoding.UTF8.GetBytes(DOTNETMONITORNOTCONFIGURED)));
+            }
+
+            Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            return Task.FromResult(Response.Body.WriteAsync(Encoding.UTF8.GetBytes(ERRORMSG)));
+        }
+
+        private string GetDotNetMonitorAddress()
+        {
+            if (OSDetector.IsOnWindows())
+            {
+                return "https://localhost:52323";
+            }
+
+            var ipAddress = GetIpAddress();
+            if (!string.IsNullOrWhiteSpace(ipAddress))
+            {
+                return $"http://{ipAddress}:{DotnetMonitorPort}";
+            }
+
+            return string.Empty;
+        }
+
+        private string GetIpAddress()
+        {
+            try
+            {
+                string ipAddress = System.IO.File.ReadAllText(Constants.AppServiceTempPath + Environment.GetEnvironmentVariable(Constants.AzureWebsiteRoleInstanceId));
+                if (ipAddress != null)
+                {
+                    if (ipAddress.Contains(':'))
+                    {
+                        string[] ipAddrPortStr = ipAddress.Split(":");
+                        return ipAddrPortStr[0];
+                    }
+                    else
+                    {
+                        return ipAddress;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            return string.Empty;
         }
     }
 }
