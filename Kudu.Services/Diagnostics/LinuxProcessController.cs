@@ -21,8 +21,10 @@ namespace Kudu.Services.Performance
 
     public class LinuxProcessController : Controller
     {
-        const string DotnetMonitorPort = "50051";
-        const string AcceptEncodingHeader = "Accept-Encoding";
+        private const string DotnetMonitorPort = "50051";
+        private const string AcceptEncodingHeader = "Accept-Encoding";
+        private const string ERRORMSG = "Not supported on Linux";
+        private const string DOTNETMONITORNOTCONFIGURED = "The dotnet-monitor tool is not configured to run";
 
         private readonly HttpProxyOptions _options;
 
@@ -44,9 +46,6 @@ namespace Kudu.Services.Performance
                 })
                 .Build();
         }
-
-        private const string ERRORMSG = "Not supported on Linux";
-        private const string DOTNETMONITORNOTCONFIGURED = "The dotnet-monitor tool is not configured to run";
 
         [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
         [HttpGet]
