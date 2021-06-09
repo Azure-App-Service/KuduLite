@@ -21,16 +21,13 @@ namespace Kudu.Services.Performance
 
     public class LinuxProcessController : Controller
     {
-        const string dotnetMonitorPort = "50051";
-        const string DotNetMonitorAddressCacheKey = "DotNetMonitorAddressCacheKey";
+        const string DotnetMonitorPort = "50051";
         const string AcceptEncodingHeader = "Accept-Encoding";
 
-        private readonly IMemoryCache _cache;
         private readonly HttpProxyOptions _options;
 
-        public LinuxProcessController(IMemoryCache memoryCache)
+        public LinuxProcessController()
         {
-            _cache = memoryCache;
             _options = HttpProxyOptionsBuilder.Instance.WithHttpClientName("DotnetMonitorProxyClient")
                 .WithBeforeSend((context, request) =>
                 {
@@ -180,21 +177,16 @@ namespace Kudu.Services.Performance
         {
             if (OSDetector.IsOnWindows())
             {
-                return "http://localhost:52323";
+                return "https://localhost:52323";
             }
 
-            var dotnetMonitorAddress = _cache.GetOrCreate(DotNetMonitorAddressCacheKey, entry =>
+            var ipAddress = GetIpAddress();
+            if (!string.IsNullOrWhiteSpace(ipAddress))
             {
-                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2);
-                var ipAddress = GetIpAddress();
-                if (!string.IsNullOrWhiteSpace(ipAddress))
-                {
-                    return $"http://{ipAddress}:{dotnetMonitorPort}";
-                }
-                return string.Empty;
-            });
+                return $"http://{ipAddress}:{DotnetMonitorPort}";
+            }
 
-            return dotnetMonitorAddress;
+            return string.Empty;
         }
 
         private string GetIpAddress()

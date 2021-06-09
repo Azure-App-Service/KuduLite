@@ -1,7 +1,6 @@
 ﻿@page
 <link href="~/Content/Styles/jsonTree.css" rel="stylesheet" />
 <link href="~/Content/Styles/app.css" rel="stylesheet" />
-
 <link href="https://fonts.googleapis.com/css?family=PT+Mono" rel="stylesheet">
 <!-- Font Awesome CSS -->
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.4.1/css/all.css" integrity="sha384-5sAR7xN1Nv6T6+dT2mhtzEpVJvfS3NScPQTrOxhwjIuvcA67KV2R5Jz6kr4abQsz" crossorigin="anonymous">
@@ -14,14 +13,6 @@ Released under the MIT license (LICENSE.txt)
 -->
 
 <style>
-    a:link, a:visited {
-        color: white;
-    }
-
-    h2, h3, h4 {
-        font-size: initial;
-    }
-
     .table > tbody > tr > td {
         vertical-align: middle;
     }
@@ -29,7 +20,7 @@ Released under the MIT license (LICENSE.txt)
     li {
         list-style-type: none;
         padding: 0;
-        margin: 0; 
+        margin: 0;
     }
 </style>
 
@@ -125,9 +116,9 @@ Released under the MIT license (LICENSE.txt)
                         "<td>" + item.pid + "<a class='process-details' role='button' href='/api/processes/" + item.pid + "'><i class='ml-2 feather fas fa-info-circle fa-lg clr-icon-navbar'></i></a></td>" +
                         "<td>" + item.uid + "</td>" +
                         "<td><select class='heapType' name='heapType' id='heapType'><option value='WithHeap'>WithHeap</option><option value='Full'>Full</option><option value='Mini'>Mini</option><option value='Triage'>Triage</option></select></td>" +
-                        "<td><a class='memory-dump btn btn-primary' role='button' href='/api/processes/" + item.pid + "/dump'>Collect Dump</a> </td>" +
+                        "<td><a class='memory-dump btn btn-primary btn-sm' role='button' href='/api/processes/" + item.pid + "/dump'>Collect Dump</a> </td>" +
                         "<td><select class='profilingTimeout' name='profilingTimeout' id='profilingTimeout'><option value='30'>30s</option><option value='60' selected>60s</option><option value='90'>90s</option><option value='120'>120s</option></select></td>" +
-                        "<td><a class='start-profiler btn btn-primary' role='button' href='/api/processes/" + item.pid + "/profile/start'> Start Profiling</a> </td > " +
+                        "<td><a class='start-profiler btn btn-primary btn-sm' role='button' href='/api/processes/" + item.pid + "/profile/start'> Start Profiling</a> </td > " +
                         "</tr>";
                     $('#processTable').append(rows);
                 });
