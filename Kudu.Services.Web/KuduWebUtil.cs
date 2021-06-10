@@ -230,6 +230,10 @@ namespace Kudu.Services.Web
                     {
                         FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("dotnet", "benv dotnet=2.2 dotnet"));
                     }
+                    else if(!fileText.Contains("dotnet") && fileText.Contains("$KUDU_EXE") && isRunningOnAzure)
+                    {
+                        FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("$KUDU_EXE", "benv dotnet=2.2 dotnet $KUDU_EXE"));
+                    }
                 }
                 else
                 {
