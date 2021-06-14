@@ -94,8 +94,8 @@ namespace Kudu.Services.Web
             // Kudu.Services contains all the Controllers 
             var kuduServicesAssembly = Assembly.Load("Kudu.Services");
 
-            services.AddMvcCore()
-                .AddRazorPages()
+            services.AddMvcCore(options => options.EnableEndpointRouting = false)
+                .AddRazorPages().AddMvcOptions(options => options.EnableEndpointRouting = false)
                 .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices()
                 .AddApiExplorer();
 
