@@ -46,17 +46,20 @@ using Kudu.Services.Web.Services;
 using Kudu.Core.K8SE;
 using System.Net.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
+using IApplicationLifetime = Microsoft.AspNetCore.Hosting.IApplicationLifetime;
 
 namespace Kudu.Services.Web
 {
     public class Startup
     {
-        private readonly IHostingEnvironment _hostingEnvironment;
+        private readonly IWebHostEnvironment _hostingEnvironment;
         private IEnvironment _webAppRuntimeEnvironment;
         private IDeploymentSettingsManager _noContextDeploymentsSettingsManager;
         private static readonly ServerConfiguration ServerConfiguration = new ServerConfiguration();
 
-        public Startup(IConfiguration configuration, IHostingEnvironment hostingEnvironment)
+        public Startup(IConfiguration configuration, IWebHostEnvironment hostingEnvironment)
         {
             Console.WriteLine(@"Startup : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
             Configuration = configuration;
@@ -101,7 +104,7 @@ namespace Kudu.Services.Web
 
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new Info {Title = "Kudu API Docs"});
+                c.SwaggerDoc("v1", new OpenApiInfo {Title = "Kudu API Docs"});
                 // Setting the comments path for the Swagger JSON and UI.
                 var xmlFile = $"Kudu.Services.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -316,8 +319,8 @@ namespace Kudu.Services.Web
             Console.WriteLine(@"Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             KuduWebUtil.MigrateToNetCorePatch(_webAppRuntimeEnvironment);
-
-            if (_hostingEnvironment.IsDevelopment())
+            
+            if (HostEnvironmentEnvExtensions.IsDevelopment(_hostingEnvironment))
             {
                 app.UseDeveloperExceptionPage();
             }
