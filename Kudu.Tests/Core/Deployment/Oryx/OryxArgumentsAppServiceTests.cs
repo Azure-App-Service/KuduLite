@@ -30,7 +30,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
         [InlineData("NODE", "8.15", true, false, BuildOptimizationsFlags.CompressModules)]
         [InlineData("PYTHON", "3.6", true, false, BuildOptimizationsFlags.CompressModules)]
         [InlineData("PHP", "7.3", true, false, BuildOptimizationsFlags.None)]
-        [InlineData("DOTNETCORE", "2.2", true, true, BuildOptimizationsFlags.UseTempDirectory)]
+        [InlineData("DOTNETCORE", "3.1", true, true, BuildOptimizationsFlags.UseTempDirectory)]
         public void ArgumentPropertyTest(string language, string version,
             bool expectedRunOryxBuild, bool expectedSkipKuduSync, BuildOptimizationsFlags expectedFlags)
         {

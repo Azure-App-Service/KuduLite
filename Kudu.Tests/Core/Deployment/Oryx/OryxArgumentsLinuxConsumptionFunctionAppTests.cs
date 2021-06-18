@@ -58,7 +58,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
         [InlineData("PHP",
             "oryx build RepositoryPath -o OutputPath --platform php --platform-version 7.3")]
         [InlineData("DOTNET",
-            "oryx build RepositoryPath -o OutputPath --platform dotnet --platform-version 2.2")]
+            "oryx build RepositoryPath -o OutputPath --platform dotnet --platform-version 3.1")]
         public void CommandGenerationTest(string functions_worker_runtime, string expected_command)
         {
             var mockedEnvironment = new Dictionary<string, string>()
