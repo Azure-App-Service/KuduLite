@@ -1,7 +1,6 @@
 ﻿using Kudu.Core.K8SE;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections.Generic;

@@ -206,6 +206,10 @@ namespace Kudu.Core.Deployment
                     {
                         Version = "2.1";
                     }
+                    else if (Version == "3.0")
+                    {
+                        Version = "3.1";
+                    }
 
                     OryxArgumentsHelper.AddLanguageVersion(args, Version);
                     break;
@@ -251,10 +255,9 @@ namespace Kudu.Core.Deployment
             {
                 OryxArgumentsHelper.AddPythonVirtualEnv(args, VirtualEnv);
             }
+            // OryxArgumentsHelper.AddDebugLog(args);
 
-            OryxArgumentsHelper.AddDebugLog(args);
-
-            return args.ToString();
+           return args.ToString();
         }
 
         public bool SkipKuduSync { get; set; }

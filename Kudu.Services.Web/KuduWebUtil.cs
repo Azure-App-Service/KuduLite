@@ -220,12 +220,12 @@ namespace Kudu.Services.Web
                 {
                     if(isRunningOnAzure)
                     {
-                        FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("/usr/bin/mono", "benv dotnet=2.2 dotnet"));
+                        FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("/usr/bin/mono", "benv dotnet=3-lts dotnet"));
                     }
                 }
                 else if(!fileText.Contains("benv") && fileText.Contains("dotnet") && isRunningOnAzure)
                 {
-                    FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("dotnet", "benv dotnet=2.2 dotnet"));
+                    FileSystemHelpers.WriteAllText(gitPostReceiveHookFile, fileText.Replace("dotnet", "benv dotnet=3-lts dotnet"));
                 }
                 
             }
@@ -299,7 +299,7 @@ namespace Kudu.Services.Web
         /// Returns a specified environment configuration as the current webapp's
         /// default configuration during the runtime.
         /// </summary>
-        internal static IEnvironment GetEnvironment(IHostingEnvironment hostingEnvironment,
+        internal static IEnvironment GetEnvironment(IWebHostEnvironment hostingEnvironment,
             IDeploymentSettingsManager settings = null,
             HttpContext httpContext = null)
         {

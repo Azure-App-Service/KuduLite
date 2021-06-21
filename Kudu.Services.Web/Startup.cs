@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
 using System.Net;
-using System.Net.Http.Formatting;
 using System.Reflection;
 using AspNetCore.RouteAnalyzer;
 using Kudu.Contracts;
@@ -47,17 +46,20 @@ using Kudu.Services.Web.Services;
 using Kudu.Core.K8SE;
 using System.Net.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
+using IApplicationLifetime = Microsoft.AspNetCore.Hosting.IApplicationLifetime;
 
 namespace Kudu.Services.Web
 {
     public class Startup
     {
-        private readonly IHostingEnvironment _hostingEnvironment;
+        private readonly IWebHostEnvironment _hostingEnvironment;
         private IEnvironment _webAppRuntimeEnvironment;
         private IDeploymentSettingsManager _noContextDeploymentsSettingsManager;
         private static readonly ServerConfiguration ServerConfiguration = new ServerConfiguration();
 
-        public Startup(IConfiguration configuration, IHostingEnvironment hostingEnvironment)
+        public Startup(IConfiguration configuration, IWebHostEnvironment hostingEnvironment)
         {
             Console.WriteLine(@"Startup : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
             Configuration = configuration;
@@ -95,16 +97,14 @@ namespace Kudu.Services.Web
             // Kudu.Services contains all the Controllers 
             var kuduServicesAssembly = Assembly.Load("Kudu.Services");
 
-            services.AddMvcCore()
-                .AddRazorPages()
-                .AddJsonFormatters()
-                .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver())
+            services.AddMvcCore(options => options.EnableEndpointRouting = false)
+                .AddRazorPages().AddMvcOptions(options => options.EnableEndpointRouting = false)
                 .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices()
                 .AddApiExplorer();
 
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new Info {Title = "Kudu API Docs"});
+                c.SwaggerDoc("v1", new OpenApiInfo {Title = "Kudu API Docs"});
                 // Setting the comments path for the Swagger JSON and UI.
                 var xmlFile = $"Kudu.Services.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -318,11 +318,9 @@ namespace Kudu.Services.Web
         {
             Console.WriteLine(@"Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
-            loggerFactory.AddEventSourceLogger();
-
             KuduWebUtil.MigrateToNetCorePatch(_webAppRuntimeEnvironment);
-
-            if (_hostingEnvironment.IsDevelopment())
+            
+            if (HostEnvironmentEnvExtensions.IsDevelopment(_hostingEnvironment))
             {
                 app.UseDeveloperExceptionPage();
             }
@@ -397,8 +395,6 @@ namespace Kudu.Services.Web
             //var configuration = kernel.Get<IServerConfiguration>();
             //GlobalConfiguration.Configuration.Formatters.Clear();
             //GlobalConfiguration.Configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
-
-            var jsonFormatter = new JsonMediaTypeFormatter();
 
 
             // CORE TODO concept of "deprecation" in routes for traces, Do we need this for linux ?

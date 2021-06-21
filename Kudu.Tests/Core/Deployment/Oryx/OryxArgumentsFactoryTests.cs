@@ -110,6 +110,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
             }
         }
 
+        // TODO check if it is proper change
         [Fact]
         public void BuildCommandForLinuxConsumptionFunctionApp()
         {
@@ -123,7 +124,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
             {
                 IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(TestMockedEnvironment.GetMockedEnvironment());
                 string command = args.GenerateOryxBuildCommand(deploymentContext, TestMockedEnvironment.GetMockedEnvironment());
-                Assert.Equal(@"oryx build repositorypath -o repositorypath", command);
+                Assert.Equal(@"oryx build repositorypath -o ", command);
             }
         }
 
