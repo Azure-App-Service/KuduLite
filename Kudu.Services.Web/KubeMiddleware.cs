@@ -61,10 +61,15 @@ namespace Kudu.Services.Web
             }
 
             // Cache the App Environment for this request
-            context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appType));
+            if (!context.Items.ContainsKey("environment"))
+            {
+                context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appType));
+            }
 
             // Cache the appName for this request
-            context.Items.TryAdd("appName", appName);
+            if (!context.Items.ContainsKey("appName")) {
+                context.Items.TryAdd("appName", appName);
+            }
 
             // Add All AppSettings to the context.
             K8SEDeploymentHelper.UpdateContextWithAppSettings(context);
