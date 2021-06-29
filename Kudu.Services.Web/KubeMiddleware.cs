@@ -63,11 +63,13 @@ namespace Kudu.Services.Web
             // Cache the App Environment for this request
             if (!context.Items.ContainsKey("environment"))
             {
+                Console.WriteLine("KubeMiddlware: adding environment. appName=" + appName + ",appType=" + appType);
                 context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appType));
             }
 
             // Cache the appName for this request
             if (!context.Items.ContainsKey("appName")) {
+                Console.WriteLine("KubeMiddlware: appName=" + appName);
                 context.Items.TryAdd("appName", appName);
             }
 

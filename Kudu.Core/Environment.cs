@@ -128,9 +128,12 @@ namespace Kudu.Core
             if(k8seAppName == null)
             {
                 _tempPath = Path.GetTempPath();
-            }else
+                Console.WriteLine("k8seAppName is null. tempPath=" + _tempPath);
+            }
+            else
             {
                 _tempPath = Path.Combine(Path.GetTempPath(), k8seAppName);
+                Console.WriteLine("k8seAppName is " + k8seAppName +". tempPath=" + _tempPath);
             }
 
             _repositoryPath = repositoryPath;
