@@ -49,6 +49,7 @@ namespace Kudu.Core.Deployment
         {
             string path = Path.Combine(environment.DeploymentsPath, id);
 
+            Console.WriteLine("id=" +id + ": Creating statusFile at " + path);
             FileSystemHelpers.EnsureDirectory(path);
 
             DateTime utcNow = DateTime.UtcNow;
@@ -64,14 +65,14 @@ namespace Kudu.Core.Deployment
             return statusLock.LockOperation(() =>
             {
                 string path = Path.Combine(environment.DeploymentsPath, id, StatusFile);
-                Console.WriteLine("DeploymentStatusFile.path=" + path);
 
                 if(!FileSystemHelpers.FileExists(path))
                 {
-                    Console.WriteLine("Returning NULL, FileNotFound. DeploymentStatusFile.path=" + path);
+                    Console.WriteLine("id=" +id + ": DeploymentStatusFile.open. path=" + path +". FileNotFound");
                     return null;
                 }
 
+                Console.WriteLine("id=" + id + ": DeploymentStatusFile.open. path=" + path + ". FileExists");
                 try
                 {
                     XDocument document = null;
