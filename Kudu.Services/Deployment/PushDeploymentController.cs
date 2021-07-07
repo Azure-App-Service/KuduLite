@@ -393,7 +393,7 @@ namespace Kudu.Services.Deployment
                         }
 
                         deploymentInfo.TargetFileName = "app.ear";
-                        break;                   
+                        break;
 
                     case ArtifactType.Static:
                         if (!OneDeployHelper.EnsureValidPath(artifactType, OneDeployHelper.WwwrootDirectoryRelativePath, ref path, out error))
@@ -469,7 +469,7 @@ namespace Kudu.Services.Deployment
                 _tracer.Step("Removing previous build artifact's manifest file");
                 FileSystemHelpers.DeleteFileSafe(oryxManifestFile);
             }
-            
+
 
             if (_settings.RunFromLocalZip())
             {
@@ -762,7 +762,7 @@ namespace Kudu.Services.Deployment
                 try
                 {
                     // ARM template should have properties field and a packageUri field inside the properties field.
-                    string packageUri = requestObject.Value<JObject>("properties").Value<string>("packageUri");
+                    string packageUri = requestObject.Value<JObject>("properties") != null ? requestObject.Value<JObject>("properties").Value<string>("packageUri") : requestObject.Value<string>("packageUri");
                     if (string.IsNullOrEmpty(packageUri))
                     {
                         throw new ArgumentException("Invalid Url in the JSON request");
