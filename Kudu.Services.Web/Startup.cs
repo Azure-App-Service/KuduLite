@@ -241,12 +241,6 @@ namespace Kudu.Services.Web
             
             services.AddScoped<ISSHKeyManager, SSHKeyManager>();
 
-            services.AddScoped<IRepositoryFactory>(
-                sp => KuduWebUtil.GetDeploymentLock(traceFactory, environment).RepositoryFactory =
-                    new RepositoryFactory(
-                        sp.GetRequiredService<IEnvironment>(), sp.GetRequiredService<IDeploymentSettingsManager>(),
-                        sp.GetRequiredService<ITraceFactory>()));
-
             services.AddScoped<IApplicationLogsReader, ApplicationLogsReader>();
 
             // Git server
