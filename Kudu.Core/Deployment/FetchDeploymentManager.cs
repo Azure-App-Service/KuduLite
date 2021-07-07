@@ -348,6 +348,9 @@ namespace Kudu.Core.Deployment
                     var hooksLock = new LockFile(hooksLockPath, traceFactory);
                     var deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
 
+                    Console.WriteLine("deploymentLockPath=" + deploymentLockPath);
+                    Console.WriteLine((deploymentLock == null) ? "deploymentLock is null" : "deploymentLock is not null");
+
                     var analytics = new Analytics(settings, new ServerConfiguration(), traceFactory);
                     var deploymentStatusManager = new DeploymentStatusManager(environment, analytics, statusLock);
                     var siteBuilderFactory = new SiteBuilderFactory(new BuildPropertyProvider(), environment, _httpContextAccessor);
