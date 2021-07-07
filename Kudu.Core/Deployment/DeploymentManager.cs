@@ -439,7 +439,7 @@ namespace Kudu.Core.Deployment
             if (results.Any())
             {
                 var toDelete = new List<DeployResult>();
-                toDelete.AddRange(GetPurgeTemporaryDeployments(results));
+                //toDelete.AddRange(GetPurgeTemporaryDeployments(results));
                 toDelete.AddRange(GetPurgeFailedDeployments(results));
                 toDelete.AddRange(GetPurgeObsoleteDeployments(results));
 
