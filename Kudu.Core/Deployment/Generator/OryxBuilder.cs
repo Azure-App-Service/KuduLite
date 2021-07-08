@@ -72,8 +72,10 @@ namespace Kudu.Core.Deployment.Generator
                     context.Logger.Log("run 6.0");
                     RunCommand(context, buildCommand, false, "Running oryx build...", true);
                 }
-
-                RunCommand(context, buildCommand, false, "Running oryx build...");
+                else
+                {
+                    RunCommand(context, buildCommand, false, "Running oryx build...");
+                }
 
                 //
                 // Run express build setups if needed

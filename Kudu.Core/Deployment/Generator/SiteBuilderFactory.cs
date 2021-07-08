@@ -81,6 +81,7 @@ namespace Kudu.Core.Deployment.Generator
             }
 
             logger.Log(settings.GetValue(SettingsKeys.DoBuildDuringDeployment.ToLower()));
+            logger.Log(settings.GetValue(deploymentInfo.DoFullBuildByDefault.ToString()));
 
             if (deploymentInfo != null && (!deploymentInfo.ShouldBuildArtifact && !settings.DoBuildDuringDeployment() && repository.RepositoryType != RepositoryType.Git))
             {
