@@ -81,7 +81,7 @@ namespace Kudu.Core.Deployment.Generator
             }
         }
 
-        protected void RunCommand(DeploymentContext context, string command, bool ignoreManifest, string message = "Running deployment command...")
+        protected void RunCommand(DeploymentContext context, string command, bool ignoreManifest, string message = "Running deployment command...", bool runDynamicInstall = false)
         {
             ILogger customLogger = context.Logger.Log(message);
             customLogger.Log("Command: " + command);
@@ -99,6 +99,11 @@ namespace Kudu.Core.Deployment.Generator
             // Set Commit ID in the environment
             exe.EnvironmentVariables[WellKnownEnvironmentVariables.CommitId] = context.CommitId;
             exe.EnvironmentVariables[WellKnownEnvironmentVariables.CommitMessage] = context.Message;
+
+            if (runDynamicInstall)
+            {
+                exe.EnvironmentVariables[WellKnownEnvironmentVariables.DynamicInstallment] = "true";
+            }
 
             // Populate the environment with the build properties
             foreach (var property in PropertyProvider.GetProperties())
