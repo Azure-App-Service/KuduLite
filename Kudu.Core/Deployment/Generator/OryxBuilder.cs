@@ -37,6 +37,9 @@ namespace Kudu.Core.Deployment.Generator
             // Initialize Oryx Args.
             IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(environment);
 
+            context.Logger.Log("env is function: " + FunctionAppHelper.LooksLikeFunctionApp().ToString());
+            context.Logger.Log("Frame " + args.Language + args.Version);
+
             if (!args.SkipKuduSync)
             {
                 // Step 1: Run kudusync
@@ -59,6 +62,11 @@ namespace Kudu.Core.Deployment.Generator
                 args.Flags = BuildOptimizationsFlags.UseExpressBuild;
 
                 string buildCommand = args.GenerateOryxBuildCommand(context, environment);
+                if (buildCommand.Contains(" --platform dotnet") && buildCommand.Contains(" --platform-version 6.0"))
+                {
+                    RunCommand(context, buildCommand, false, "Running oryx build...", true);
+                }
+
                 RunCommand(context, buildCommand, false, "Running oryx build...");
 
                 //
