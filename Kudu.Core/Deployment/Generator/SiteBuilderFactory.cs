@@ -80,6 +80,8 @@ namespace Kudu.Core.Deployment.Generator
                 return new RunFromZipSiteBuilder();
             }
 
+            logger.Log(settings.GetValue(SettingsKeys.DoBuildDuringDeployment.ToLower()));
+
             if (deploymentInfo != null && (!deploymentInfo.ShouldBuildArtifact && !settings.DoBuildDuringDeployment() && repository.RepositoryType != RepositoryType.Git))
             {
                 var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
