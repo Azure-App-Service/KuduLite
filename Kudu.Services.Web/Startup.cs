@@ -270,6 +270,10 @@ namespace Kudu.Services.Web
 
             services.AddScoped<IApplicationLogsReader, ApplicationLogsReader>();
 
+            // DaaS related services
+            services.AddSingleton<ISessionManager, SessionManager>();
+            services.AddHostedService<SessionRunnerService>();
+
             // Git server
             services.AddGitServer(KuduWebUtil.GetDeploymentLock(traceFactory, environment));
 
@@ -708,6 +712,23 @@ namespace Kudu.Services.Web
                         new {controller = "Docker", action = "ReceiveHook"},
                         new {verb = new HttpMethodRouteConstraint("POST")});
                 }
+
+                // DaaS
+                routes.MapHttpRouteDual("get-daas-sessions", "daas/sessions",
+                     new { controller = "Daas", action = "GetSessions" },
+                     new { verb = new HttpMethodRouteConstraint("GET") });
+
+                routes.MapHttpRouteDual("post-daas-session", "daas/sessions",
+                    new { controller = "Daas", action = "SubmitNewSession" },
+                    new { verb = new HttpMethodRouteConstraint("POST") });
+
+                routes.MapHttpRouteDual("get-daas-session", "daas/sessions/{sessionId}",
+                    new { controller = "Daas", action = "GetSession" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
+
+                routes.MapHttpRouteDual("get-daas-active-session", "daas/activesession",
+                    new { controller = "Daas", action = "GetActiveSession" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
 
                 // catch all unregistered url to properly handle not found
                 routes.MapRoute("error-404", "{*path}", new {controller = "Error404", action = "Handle"});

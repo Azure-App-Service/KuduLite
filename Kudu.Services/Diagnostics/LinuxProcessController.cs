@@ -21,7 +21,6 @@ namespace Kudu.Services.Performance
 
     public class LinuxProcessController : Controller
     {
-        private const string DotnetMonitorPort = "50051";
         private const string AcceptEncodingHeader = "Accept-Encoding";
         private const string ERRORMSG = "Not supported on Linux";
         private const string DOTNETMONITORNOTCONFIGURED = "The dotnet-monitor tool is not configured to run";
@@ -158,7 +157,7 @@ namespace Kudu.Services.Performance
         {
             if (DotNetHelper.IsDotNetMonitorEnabled())
             {
-                var dotnetMonitorAddress = GetDotNetMonitorAddress();
+                var dotnetMonitorAddress = DotNetHelper.GetDotNetMonitorAddress();
                 if (!string.IsNullOrWhiteSpace(dotnetMonitorAddress))
                 {
                     return action(dotnetMonitorAddress);
@@ -170,47 +169,6 @@ namespace Kudu.Services.Performance
 
             Response.StatusCode = (int)HttpStatusCode.BadRequest;
             return Task.FromResult(Response.Body.WriteAsync(Encoding.UTF8.GetBytes(ERRORMSG)));
-        }
-
-        private string GetDotNetMonitorAddress()
-        {
-            if (OSDetector.IsOnWindows())
-            {
-                return "https://localhost:52323";
-            }
-
-            var ipAddress = GetIpAddress();
-            if (!string.IsNullOrWhiteSpace(ipAddress))
-            {
-                return $"http://{ipAddress}:{DotnetMonitorPort}";
-            }
-
-            return string.Empty;
-        }
-
-        private string GetIpAddress()
-        {
-            try
-            {
-                string ipAddress = System.IO.File.ReadAllText(Constants.AppServiceTempPath + Environment.GetEnvironmentVariable(Constants.AzureWebsiteRoleInstanceId));
-                if (ipAddress != null)
-                {
-                    if (ipAddress.Contains(':'))
-                    {
-                        string[] ipAddrPortStr = ipAddress.Split(":");
-                        return ipAddrPortStr[0];
-                    }
-                    else
-                    {
-                        return ipAddress;
-                    }
-                }
-            }
-            catch (Exception)
-            {
-            }
-
-            return string.Empty;
         }
     }
 }

@@ -8,6 +8,8 @@ namespace Kudu.Services.Performance
     /// </summary>
     public class DotNetHelper
     {
+        private const string DotnetMonitorPort = "50051";
+
         /// <summary>
         /// Returns TRUE if the container is running a .NET Core blessed image and
         /// if the WEBSITE_USE_DOTNET_MONITOR is set to TRUE
@@ -32,6 +34,51 @@ namespace Kudu.Services.Performance
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Returns the address of the Dotnet monitor server
+        /// </summary>
+        /// <returns></returns>
+        public static string GetDotNetMonitorAddress()
+        {
+            if (OSDetector.IsOnWindows())
+            {
+                return "https://localhost:52323";
+            }
+
+            var ipAddress = GetIpAddress();
+            if (!string.IsNullOrWhiteSpace(ipAddress))
+            {
+                return $"http://{ipAddress}:{DotnetMonitorPort}";
+            }
+
+            return string.Empty;
+        }
+
+        private static string GetIpAddress()
+        {
+            try
+            {
+                string ipAddress = System.IO.File.ReadAllText(Constants.AppServiceTempPath + Environment.GetEnvironmentVariable(Constants.AzureWebsiteRoleInstanceId));
+                if (ipAddress != null)
+                {
+                    if (ipAddress.Contains(':'))
+                    {
+                        string[] ipAddrPortStr = ipAddress.Split(":");
+                        return ipAddrPortStr[0];
+                    }
+                    else
+                    {
+                        return ipAddress;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            return string.Empty;
         }
     }
 }
