@@ -28,25 +28,22 @@ namespace Kudu.Services.Performance
     /// </summary>
     public class SessionRunnerService : BackgroundService
     {
-        private const string EgressProviderName = "monitorFile";
+        private const double MaxAllowedSessionTimeInMinutes = 15;
 
         private readonly ITracer _tracer;
         private readonly ITraceFactory _traceFactory;
         private readonly ISessionManager _sessionManager;
-        private Dictionary<string, TaskAndCancellationToken> _runningSessions = new Dictionary<string, TaskAndCancellationToken>();
-        private readonly HttpClient _dotnetMonitorClient;
-
-        private static AllSafeLinuxLock _sessionLockFile;
+        private readonly Dictionary<string, TaskAndCancellationToken> _runningSessions = new Dictionary<string, TaskAndCancellationToken>();
 
         /// <summary>
         /// 
         /// </summary>
+        /// <param name="traceFactory"></param>
         /// <param name="sessionManager"></param>
         public SessionRunnerService(ITraceFactory traceFactory,
             ISessionManager sessionManager)
         {
             _sessionManager = sessionManager;
-            _dotnetMonitorClient = CreateDotNetMonitorClient();
             _traceFactory = traceFactory;
             _tracer = _traceFactory.GetTracer();
         }
@@ -121,21 +118,32 @@ namespace Kudu.Services.Performance
                 return;
             }
 
-            if (activeSession.Instances.Any(x => x.Equals(GetInstanceId(), StringComparison.OrdinalIgnoreCase)))
+            // Check if all instances are finished with log collection
+            if (await CheckandCompleteSessionIfNeeded(activeSession))
+            {
+                return;
+            }
+
+            if (DateTime.UtcNow.Subtract(activeSession.StartTime).TotalMinutes > MaxAllowedSessionTimeInMinutes)
+            {
+                await CheckandCompleteSessionIfNeeded(activeSession, forceCompletion: true);
+            }
+
+            if (_sessionManager.ShouldCollectOnCurrentInstance(activeSession))
             {
                 if (_runningSessions.ContainsKey(activeSession.SessionId))
                 {
-                    // Data Collection for this session is in progress
+                    // data Collection for this session is in progress
                     return;
                 }
 
-                if (HasThisInstanceCollectedLogs(activeSession))
+                if (_sessionManager.HasThisInstanceCollectedLogs(activeSession))
                 {
                     // This instance has already collected logs for this session
                     return;
                 }
 
-                    CancellationTokenSource cts = new CancellationTokenSource();
+                CancellationTokenSource cts = new CancellationTokenSource();
                 var sessionTask = RunToolForSessionAsync(activeSession, cts.Token);
 
                 TaskAndCancellationToken t = new TaskAndCancellationToken
@@ -148,77 +156,55 @@ namespace Kudu.Services.Performance
             }
         }
 
-        private bool HasThisInstanceCollectedLogs(Session activeSession)
+        private async Task<bool> CheckandCompleteSessionIfNeeded(Session activeSession, bool forceCompletion = false)
         {
-            return activeSession.Logs != null 
-                && activeSession.Logs.Any(x => x.Instance.Equals(GetInstanceId(), 
-                StringComparison.OrdinalIgnoreCase));
+            if (_sessionManager.AllInstancesCollectedLogs(activeSession) || forceCompletion)
+            {
+                await _sessionManager.MarkSessionAsComplete(activeSession);
+                return true;
+            }
+
+            return false;
         }
 
         private async Task RunToolForSessionAsync(Session activeSession, CancellationToken token)
         {
-            var dotnetMonitorAddress = DotNetHelper.GetDotNetMonitorAddress();
-            if (!string.IsNullOrWhiteSpace(dotnetMonitorAddress))
+            IDiagnosticTool diagnosticTool = null;
+            if (activeSession.Tool == DiagnosticTool.MemoryDump)
             {
-                if (activeSession.Tool == DiagnosticTool.MemoryDump)
-                {
-                    string type = "Mini";
-                    var resp =  await _dotnetMonitorClient.GetAsync($"{dotnetMonitorAddress}/dump/13640?egressProvider={EgressProviderName}&type={type}");
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        string responseBody = await resp.Content.ReadAsStringAsync();
-                        var dotnetMonitorResponse = JsonConvert.DeserializeObject<DotNetMonitorMemoryDumpResponse>(responseBody);
-                        await AddLogToActiveSession(dotnetMonitorResponse.Path);
-                    }
-                    
-                    await MarkSessionAsComplete(activeSession, resp);
-                }
+                diagnosticTool = new MemoryDumpTool();
             }
+
+            await _sessionManager.MarkCurrentInstanceAsStarted(activeSession);
+            var logs = await diagnosticTool.InvokeAsync(activeSession.ToolParams);
+            {
+                await AddLogsToActiveSession(activeSession, logs);
+            }
+
+            await _sessionManager.MarkCurrentInstanceAsComplete(activeSession);
+            await CheckandCompleteSessionIfNeeded(activeSession);
         }
 
-        private async Task AddLogToActiveSession(string path)
+        private async Task AddLogsToActiveSession(Session activeSession, IEnumerable<string> logs)
         {
-            var logFile = new LogFile()
+            var logFiles = new List<LogFile>();
+            foreach (var log in logs)
             {
-                Instance = System.Environment.MachineName,
-                Name = Path.GetFileName(path),
-                FullPath = path,
-                Size = GetFileSize(path),
-                RelativePath = ""
-            };
-
-            _sessionLockFile = new AllSafeLinuxLock(path, _traceFactory);
-            if (_sessionLockFile.Lock("AcquireSessionLock"))
-            {
-                var activeSession = await _sessionManager.GetActiveSession();
-                if (activeSession.Logs == null)
+                logFiles.Add(new LogFile()
                 {
-                    activeSession.Logs = new List<LogFile>();
-                }
-
-                activeSession.Logs.Add(logFile);
-                await _sessionManager.UpdateActiveSession(activeSession);
+                    Name = Path.GetFileName(log),
+                    FullPath = log,
+                    Size = GetFileSize(log),
+                    RelativePath = ""
+                });
             }
 
-            if (_sessionLockFile != null)
-            {
-                _sessionLockFile.Release();
-            }
+            await _sessionManager.AddLogsToActiveSession(activeSession, logFiles);
         }
 
         private long GetFileSize(string path)
         {
             return new System.IO.FileInfo(path).Length;
         }
-
-        private async Task MarkSessionAsComplete(Session activeSession, HttpResponseMessage resp)
-        {
-        }
-
-        private string GetInstanceId()
-        {
-            return System.Environment.MachineName;
-        }
-
     }
 }

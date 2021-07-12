@@ -16,19 +16,23 @@ namespace Kudu.Services.Performance
         /// <summary>
         /// 
         /// </summary>
-        public SessionStatus Status { get; set; }
+        public Status Status { get; set; }
 
         /// <summary>
         /// 
         /// </summary>
-
         public DateTime StartTime { get; set; }
 
         /// <summary>
         /// 
         /// </summary>
         public DiagnosticTool Tool { get; set; }
-        
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string ToolParams { get; set; }
+
         /// <summary>
         /// 
         /// </summary>
@@ -42,6 +46,12 @@ namespace Kudu.Services.Performance
         /// <summary>
         /// 
         /// </summary>
-        public List<LogFile> Logs { get; set; }
+        public List<ActiveInstance> ActiveInstances { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public DateTime EndTime { get; set; }
+        
     }
 }

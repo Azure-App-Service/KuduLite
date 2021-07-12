@@ -8,9 +8,10 @@ namespace Kudu.Services.Performance
     /// </summary>
     
     [JsonConverter(typeof(StringEnumConverter))]
-    public enum SessionStatus
+    public enum Status
     {
         Active,
+        Started,
         Completed
     }
 }
