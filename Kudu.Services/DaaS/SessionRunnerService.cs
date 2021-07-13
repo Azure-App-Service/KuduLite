@@ -7,20 +7,12 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Kudu.Contracts.Tracing;
-using Kudu.Core;
 using Kudu.Core.Tracing;
-using Kudu.Services.Performance;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+
 
 namespace Kudu.Services.Performance
 {
-
-    class DotNetMonitorMemoryDumpResponse
-    {
-        public string Path { get; set; }
-    }
 
     /// <summary>
     /// ASP.NET core background HostedService that manages sessions
@@ -169,12 +161,7 @@ namespace Kudu.Services.Performance
 
         private async Task RunToolForSessionAsync(Session activeSession, CancellationToken token)
         {
-            IDiagnosticTool diagnosticTool = null;
-            if (activeSession.Tool == DiagnosticTool.MemoryDump)
-            {
-                diagnosticTool = new MemoryDumpTool();
-            }
-
+            IDiagnosticTool diagnosticTool = GetDiagnosticTool(activeSession);
             await _sessionManager.MarkCurrentInstanceAsStarted(activeSession);
             var logs = await diagnosticTool.InvokeAsync(activeSession.ToolParams);
             {
@@ -185,21 +172,34 @@ namespace Kudu.Services.Performance
             await CheckandCompleteSessionIfNeeded(activeSession);
         }
 
-        private async Task AddLogsToActiveSession(Session activeSession, IEnumerable<string> logs)
+        private static IDiagnosticTool GetDiagnosticTool(Session activeSession)
         {
-            var logFiles = new List<LogFile>();
-            foreach (var log in logs)
+            IDiagnosticTool diagnosticTool = null;
+            if (activeSession.Tool == DiagnosticTool.MemoryDump)
             {
-                logFiles.Add(new LogFile()
-                {
-                    Name = Path.GetFileName(log),
-                    FullPath = log,
-                    Size = GetFileSize(log),
-                    RelativePath = ""
-                });
+                diagnosticTool = new MemoryDumpTool();
+            }
+            else if (activeSession.Tool == DiagnosticTool.Profiler)
+            {
+                diagnosticTool = new ClrTraceTool();
+            }
+            else
+            {
+                throw new ApplicationException($"Diagnostic Tool of type {activeSession.Tool} not found");
             }
 
-            await _sessionManager.AddLogsToActiveSession(activeSession, logFiles);
+            return diagnosticTool;
+        }
+
+        private async Task AddLogsToActiveSession(Session activeSession, IEnumerable<LogFile> logs)
+        {
+            foreach (var log in logs)
+            {
+                log.Size = GetFileSize(log.FullPath);
+                log.Name = Path.GetFileName(log.FullPath);
+            }
+
+            await _sessionManager.AddLogsToActiveSession(activeSession, logs);
         }
 
         private long GetFileSize(string path)

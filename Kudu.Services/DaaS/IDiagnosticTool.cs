@@ -5,6 +5,6 @@ namespace Kudu.Services.Performance
 {
     internal interface IDiagnosticTool
     {
-        Task<IEnumerable<string>> InvokeAsync(string diagnoserParams);
+        Task<IEnumerable<LogFile>> InvokeAsync(string toolParams);
     }
 }

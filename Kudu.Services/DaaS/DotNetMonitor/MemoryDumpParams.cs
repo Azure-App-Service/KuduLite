@@ -4,10 +4,9 @@
     {
         internal int ProcessId { get; set; }
         internal string DumpType { get; set; } = "Mini";
-
-        internal MemoryDumpParams(string diagnoserParams)
+        internal MemoryDumpParams(string toolParams)
         {
-            foreach(var param in diagnoserParams.Split(";"))
+            foreach(var param in toolParams.Split(";"))
             {
                 var singleParams = param.Split("=");
                 if (singleParams.Length !=  2)

@@ -57,8 +57,8 @@ namespace Kudu.Services.Performance
         /// <returns></returns>
         public async Task<Session> GetActiveSession()
         {
-            return (await LoadSessionsFromStorage(SessionDirectories.ActiveSessionsDir))
-                .FirstOrDefault();
+            var activeSessions = await LoadSessionsFromStorage(SessionDirectories.ActiveSessionsDir);
+            return activeSessions.FirstOrDefault();
         }
 
         /// <summary>
@@ -166,7 +166,7 @@ namespace Kudu.Services.Performance
             var sb = new StringBuilder();
             using (var sourceStream = new FileStream(
              path,
-             FileMode.Open, FileAccess.Read, FileShare.Read,
+             FileMode.Open, FileAccess.Read, FileShare.ReadWrite,
              bufferSize: 4096, useAsync: true))
             {
                 byte[] buffer = new byte[0x1000];
@@ -238,7 +238,7 @@ namespace Kudu.Services.Performance
 
         public async Task MarkCurrentInstanceAsComplete(Session activeSession)
         {
-            await UpdateCurrentInstanceStatus(activeSession, Status.Completed);
+            await UpdateCurrentInstanceStatus(activeSession, Status.Complete);
         }
 
         public async Task MarkCurrentInstanceAsStarted(Session activeSession)
@@ -292,7 +292,7 @@ namespace Kudu.Services.Performance
         {
             return activeSession.ActiveInstances != null
                 && activeSession.ActiveInstances.Any(x => x.Name.Equals(GetInstanceId(),
-                StringComparison.OrdinalIgnoreCase) && x.Status == Status.Completed);
+                StringComparison.OrdinalIgnoreCase) && x.Status == Status.Complete);
         }
 
         public string GetInstanceId()
@@ -307,7 +307,7 @@ namespace Kudu.Services.Performance
                 return false;
             }
 
-            var completedInstances = activeSession.ActiveInstances.Where(x => x.Status == Status.Completed).Select(x => x.Name);
+            var completedInstances = activeSession.ActiveInstances.Where(x => x.Status == Status.Complete).Select(x => x.Name);
             return completedInstances.SequenceEqual(activeSession.Instances, StringComparer.OrdinalIgnoreCase);
         }
 
@@ -315,7 +315,7 @@ namespace Kudu.Services.Performance
         {
             await UpdateSession(() =>
             {
-                activeSession.Status = Status.Completed;
+                activeSession.Status = Status.Complete;
                 activeSession.EndTime = DateTime.UtcNow;
                 return activeSession;
 

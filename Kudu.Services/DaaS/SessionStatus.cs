@@ -12,6 +12,6 @@ namespace Kudu.Services.Performance
     {
         Active,
         Started,
-        Completed
+        Complete
     }
 }
