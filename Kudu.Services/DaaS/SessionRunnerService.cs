@@ -1,9 +1,7 @@
 ﻿
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Kudu.Contracts.Tracing;
@@ -52,7 +50,7 @@ namespace Kudu.Services.Performance
                 if (DotNetHelper.IsDotNetMonitorEnabled())
                 {
                     await SessionRunner(stoppingToken);
-                    await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                    await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
                 }
             }
         }
@@ -95,14 +93,14 @@ namespace Kudu.Services.Performance
             }
 
             // Check if all instances are finished with log collection
-            if (await CheckandCompleteSessionIfNeeded(activeSession))
+            if (await _sessionManager.CheckandCompleteSessionIfNeeded(activeSession))
             {
                 return;
             }
 
             if (DateTime.UtcNow.Subtract(activeSession.StartTime).TotalMinutes > MaxAllowedSessionTimeInMinutes)
             {
-                await CheckandCompleteSessionIfNeeded(activeSession, forceCompletion: true);
+                await _sessionManager.CheckandCompleteSessionIfNeeded(activeSession, forceCompletion: true);
             }
 
             if (_sessionManager.ShouldCollectOnCurrentInstance(activeSession))
@@ -120,7 +118,7 @@ namespace Kudu.Services.Performance
                 }
 
                 CancellationTokenSource cts = new CancellationTokenSource();
-                var sessionTask = RunToolForSessionAsync(activeSession, cts.Token);
+                var sessionTask = _sessionManager.RunToolForSessionAsync(activeSession, cts.Token);
 
                 TaskAndCancellationToken t = new TaskAndCancellationToken
                 {
@@ -130,67 +128,6 @@ namespace Kudu.Services.Performance
 
                 _runningSessions[activeSession.SessionId] = t;
             }
-        }
-
-        private async Task<bool> CheckandCompleteSessionIfNeeded(Session activeSession, bool forceCompletion = false)
-        {
-            if (_sessionManager.AllInstancesCollectedLogs(activeSession) || forceCompletion)
-            {
-                await _sessionManager.MarkSessionAsComplete(activeSession);
-                return true;
-            }
-
-            return false;
-        }
-
-        private async Task RunToolForSessionAsync(Session activeSession, CancellationToken token)
-        {
-            IDiagnosticTool diagnosticTool = GetDiagnosticTool(activeSession);
-            await _sessionManager.MarkCurrentInstanceAsStarted(activeSession);
-
-            TraceExtensions.Trace(_tracer, $"Invoking Diagnostic tool for session {activeSession.SessionId}");
-            var logs = await diagnosticTool.InvokeAsync(activeSession.ToolParams);
-            {
-                await AddLogsToActiveSession(activeSession, logs);
-            }
-
-            await _sessionManager.MarkCurrentInstanceAsComplete(activeSession);
-            await CheckandCompleteSessionIfNeeded(activeSession);
-        }
-
-        private static IDiagnosticTool GetDiagnosticTool(Session activeSession)
-        {
-            IDiagnosticTool diagnosticTool;
-            if (activeSession.Tool == DiagnosticTool.MemoryDump)
-            {
-                diagnosticTool = new MemoryDumpTool();
-            }
-            else if (activeSession.Tool == DiagnosticTool.Profiler)
-            {
-                diagnosticTool = new ClrTraceTool();
-            }
-            else
-            {
-                throw new ApplicationException($"Diagnostic Tool of type {activeSession.Tool} not found");
-            }
-
-            return diagnosticTool;
-        }
-
-        private async Task AddLogsToActiveSession(Session activeSession, IEnumerable<LogFile> logs)
-        {
-            foreach (var log in logs)
-            {
-                log.Size = GetFileSize(log.FullPath);
-                log.Name = Path.GetFileName(log.FullPath);
-            }
-
-            await _sessionManager.AddLogsToActiveSession(activeSession, logs);
-        }
-
-        private long GetFileSize(string path)
-        {
-            return new FileInfo(path).Length;
         }
     }
 }

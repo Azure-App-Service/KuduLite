@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Kudu.Services.Performance
@@ -21,5 +22,7 @@ namespace Kudu.Services.Performance
         bool ShouldCollectOnCurrentInstance(Session activeSession);
         Task MarkSessionAsComplete(Session activeSession);
         string GetInstanceId();
+        Task RunToolForSessionAsync(Session activeSession, CancellationToken token);
+        Task<bool> CheckandCompleteSessionIfNeeded(Session activeSession, bool forceCompletion = false);
     }
 }

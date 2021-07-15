@@ -1,15 +1,12 @@
-﻿using Kudu.Services.Performance;
-using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace Kudu.Services.Performance
 {
     class ClrTraceTool : DotNetMonitorToolBase
     {
-        public override async Task<IEnumerable<LogFile>> InvokeAsync(string toolParams)
+        public override async Task<IEnumerable<LogFile>> InvokeAsync(string toolParams, string tempPath)
         {
             ClrTraceParams clrTraceParams = new ClrTraceParams(toolParams);
             var logs = new List<LogFile>();

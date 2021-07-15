@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Tracing;
+using Kudu.Core;
 using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Tracing;
@@ -22,6 +23,7 @@ namespace Kudu.Services.Performance
         const string SessionFileNameFormat = "yyMMdd_HHmmssffff";
 
         private readonly ITracer _tracer;
+        private readonly IEnvironment _environment;
         private readonly ITraceFactory _traceFactory;
         private static IOperationLock _sessionLockFile;
         private readonly List<string> _allSessionsDirs = new List<string>()
@@ -34,10 +36,12 @@ namespace Kudu.Services.Performance
         /// 
         /// </summary>
         /// <param name="traceFactory"></param>
-        public SessionManager(ITraceFactory traceFactory)
+        /// <param name="environment"></param>
+        public SessionManager(ITraceFactory traceFactory, IEnvironment environment)
         {
             _traceFactory = traceFactory;
             _tracer = _traceFactory.GetTracer();
+            _environment = environment;
 
             CreateSessionDirectories();
         }
@@ -269,6 +273,12 @@ namespace Kudu.Services.Performance
 
         public async Task AddLogsToActiveSession(Session activeSession, IEnumerable<LogFile> logFiles)
         {
+            foreach (var log in logFiles)
+            {
+                log.Size = GetFileSize(log.FullPath);
+                log.Name = Path.GetFileName(log.FullPath);
+            }
+
             await CopyLogsToPermanentLocation(logFiles, activeSession);
 
             await UpdateSession(() =>
@@ -298,16 +308,22 @@ namespace Kudu.Services.Performance
                     activeSession.SessionId,
                     $"{GetInstanceId()}_{log.ProcessName}_{log.ProcessId}_{Path.GetFileName(log.FullPath)}");
 
-                log.RelativePath = ConvertBackSlashesToForwardSlashes(logPath);
+                log.RelativePath = $"{_environment.AppBaseUrlPrefix}/api/vfs/{ConvertBackSlashesToForwardSlashes(logPath)}";
                 string destination = Path.Combine(LogsDirectories.LogsDir, logPath);
                 await CopyFileAsync(log.FullPath, destination);
             }
         }
 
+        private long GetFileSize(string path)
+        {
+            return new FileInfo(path).Length;
+        }
+
         private string ConvertBackSlashesToForwardSlashes(string logPath)
         {
             string relativePath = Path.Combine(LogsDirectories.LogsDirRelativePath, logPath);
-            return relativePath.Replace('\\', '/');
+            relativePath = relativePath.Replace('\\', '/');
+            return relativePath.TrimStart('/');
         }
 
         // https://stackoverflow.com/questions/882686/non-blocking-file-copy-in-c-sharp
@@ -375,6 +391,59 @@ namespace Kudu.Services.Performance
         {
             return activeSession.Instances != null &&
                 activeSession.Instances.Any(x => x.Equals(GetInstanceId(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        internal string GetTemporaryFolderPath()
+        {
+            string tempPath = Path.Combine(_environment.TempPath, "dotnet-monitor");
+            CreateDirectoryIfNotExists(tempPath);
+            return tempPath;
+        }
+
+        public async Task RunToolForSessionAsync(Session activeSession, CancellationToken token)
+        {
+            IDiagnosticTool diagnosticTool = GetDiagnosticTool(activeSession);
+            await MarkCurrentInstanceAsStarted(activeSession);
+            string tempPath = GetTemporaryFolderPath();
+
+            TraceExtensions.Trace(_tracer, $"Invoking Diagnostic tool for session {activeSession.SessionId}");
+            var logs = await diagnosticTool.InvokeAsync(activeSession.ToolParams, tempPath);
+            {
+                await AddLogsToActiveSession(activeSession, logs);
+            }
+
+            await MarkCurrentInstanceAsComplete(activeSession);
+            await CheckandCompleteSessionIfNeeded(activeSession);
+        }
+
+        public async Task<bool> CheckandCompleteSessionIfNeeded(Session activeSession, bool forceCompletion = false)
+        {
+            if (AllInstancesCollectedLogs(activeSession) || forceCompletion)
+            {
+                await MarkSessionAsComplete(activeSession);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static IDiagnosticTool GetDiagnosticTool(Session activeSession)
+        {
+            IDiagnosticTool diagnosticTool;
+            if (activeSession.Tool == DiagnosticTool.MemoryDump)
+            {
+                diagnosticTool = new MemoryDumpTool();
+            }
+            else if (activeSession.Tool == DiagnosticTool.Profiler)
+            {
+                diagnosticTool = new ClrTraceTool();
+            }
+            else
+            {
+                throw new ApplicationException($"Diagnostic Tool of type {activeSession.Tool} not found");
+            }
+
+            return diagnosticTool;
         }
     }
 }

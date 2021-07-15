@@ -51,6 +51,6 @@ namespace Kudu.Services.Performance
             return process;
         }
 
-        public abstract Task<IEnumerable<LogFile>> InvokeAsync(string diagnoserParams);
+        public abstract Task<IEnumerable<LogFile>> InvokeAsync(string toolParams, string tempPath);
     }
 }
