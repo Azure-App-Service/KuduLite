@@ -33,9 +33,8 @@ namespace Kudu.Services.Performance
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="tracer"></param>
         /// <param name="traceFactory"></param>
-        public SessionManager(ITracer tracer, ITraceFactory traceFactory)
+        public SessionManager(ITraceFactory traceFactory)
         {
             _traceFactory = traceFactory;
             _tracer = _traceFactory.GetTracer();
