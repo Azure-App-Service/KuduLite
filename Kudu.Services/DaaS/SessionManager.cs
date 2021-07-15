@@ -23,7 +23,6 @@ namespace Kudu.Services.Performance
         const string SessionFileNameFormat = "yyMMdd_HHmmssffff";
 
         private readonly ITracer _tracer;
-        private readonly IEnvironment _environment;
         private readonly ITraceFactory _traceFactory;
         private static IOperationLock _sessionLockFile;
         private readonly List<string> _allSessionsDirs = new List<string>()
@@ -37,11 +36,10 @@ namespace Kudu.Services.Performance
         /// </summary>
         /// <param name="traceFactory"></param>
         /// <param name="environment"></param>
-        public SessionManager(ITraceFactory traceFactory, IEnvironment environment)
+        public SessionManager(ITraceFactory traceFactory)
         {
             _traceFactory = traceFactory;
             _tracer = _traceFactory.GetTracer();
-            _environment = environment;
 
             CreateSessionDirectories();
         }
@@ -308,7 +306,7 @@ namespace Kudu.Services.Performance
                     activeSession.SessionId,
                     $"{GetInstanceId()}_{log.ProcessName}_{log.ProcessId}_{Path.GetFileName(log.FullPath)}");
 
-                log.RelativePath = $"{_environment.AppBaseUrlPrefix}/api/vfs/{ConvertBackSlashesToForwardSlashes(logPath)}";
+                log.RelativePath = $"{System.Environment.GetEnvironmentVariable(Constants.HttpHost)}/api/vfs/{ConvertBackSlashesToForwardSlashes(logPath)}";
                 string destination = Path.Combine(LogsDirectories.LogsDir, logPath);
                 await CopyFileAsync(log.FullPath, destination);
             }
@@ -395,7 +393,7 @@ namespace Kudu.Services.Performance
 
         internal string GetTemporaryFolderPath()
         {
-            string tempPath = Path.Combine(_environment.TempPath, "dotnet-monitor");
+            string tempPath = Path.Combine(Path.GetTempPath(), "dotnet-monitor");
             CreateDirectoryIfNotExists(tempPath);
             return tempPath;
         }
