@@ -206,24 +206,31 @@ namespace Kudu.Services.Performance
         /// <returns></returns>
         private async Task UpdateSession(Func<Session> updatedSession, string sessionId)
         {
-            if (OSDetector.IsOnWindows())
+            try
             {
-                _sessionLockFile = new LockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
-            }
-            else
-            {
-                _sessionLockFile = new LinuxLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
-            }
+                if (OSDetector.IsOnWindows())
+                {
+                    _sessionLockFile = new LockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
+                }
+                else
+                {
+                    _sessionLockFile = new LinuxLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
+                }
 
-            if (_sessionLockFile.Lock("AcquireSessionLock"))
-            {
-                Session activeSession = updatedSession();
-                await UpdateActiveSession(activeSession);
-            }
+                if (_sessionLockFile.Lock("AcquireSessionLock"))
+                {
+                    Session activeSession = updatedSession();
+                    await UpdateActiveSession(activeSession);
+                }
 
-            if (_sessionLockFile != null)
+                if (_sessionLockFile != null)
+                {
+                    _sessionLockFile.Release();
+                }
+            }
+            catch (Exception ex)
             {
-                _sessionLockFile.Release();
+                LogError("DaaS-UpdateSession", $"Failed while updating session - {sessionId}", ex);
             }
         }
 
@@ -250,23 +257,30 @@ namespace Kudu.Services.Performance
 
         public async Task UpdateCurrentInstanceStatus(Session activeSession, Status sessionStatus)
         {
-            await UpdateSession(() =>
+            try
             {
-                if (activeSession.ActiveInstances == null)
+                await UpdateSession(() =>
                 {
-                    activeSession.ActiveInstances = new List<ActiveInstance>();
-                }
+                    if (activeSession.ActiveInstances == null)
+                    {
+                        activeSession.ActiveInstances = new List<ActiveInstance>();
+                    }
 
-                var activeInstance = activeSession.ActiveInstances.FirstOrDefault(x => x.Name.Equals(GetInstanceId(), StringComparison.OrdinalIgnoreCase));
-                if (activeInstance == null)
-                {
-                    activeInstance = new ActiveInstance(GetInstanceId());
-                    activeSession.ActiveInstances.Add(activeInstance);
-                }
+                    var activeInstance = activeSession.ActiveInstances.FirstOrDefault(x => x.Name.Equals(GetInstanceId(), StringComparison.OrdinalIgnoreCase));
+                    if (activeInstance == null)
+                    {
+                        activeInstance = new ActiveInstance(GetInstanceId());
+                        activeSession.ActiveInstances.Add(activeInstance);
+                    }
 
-                activeInstance.Status = sessionStatus;
-                return activeSession;
-            }, activeSession.SessionId);
+                    activeInstance.Status = sessionStatus;
+                    return activeSession;
+                }, activeSession.SessionId);
+            }
+            catch(Exception ex)
+            {
+                LogError("UpdateCurrentInstanceStatus", $"Failed while updating current instance status to {sessionStatus}", ex);
+            }
         }
 
         public async Task AddLogsToActiveSession(Session activeSession, IEnumerable<LogFile> logFiles)
@@ -278,6 +292,8 @@ namespace Kudu.Services.Performance
             }
 
             await CopyLogsToPermanentLocation(logFiles, activeSession);
+
+            LogMessage($"Logs copied to permanent storage for {activeSession.SessionId}");
 
             await UpdateSession(() =>
             {
@@ -293,6 +309,8 @@ namespace Kudu.Services.Performance
                     activeSession.ActiveInstances.Add(activeInstance);
                 }
 
+                LogMessage($"Active Instance added for {activeSession.SessionId}");
+
                 activeInstance.Logs.AddRange(logFiles);
                 return activeSession;
             }, activeSession.SessionId);
@@ -300,15 +318,22 @@ namespace Kudu.Services.Performance
 
         private async Task CopyLogsToPermanentLocation(IEnumerable<LogFile> logFiles, Session activeSession)
         {
-            foreach(var log in logFiles)
+            try
             {
-                string logPath = Path.Combine(
-                    activeSession.SessionId,
-                    $"{GetInstanceId()}_{log.ProcessName}_{log.ProcessId}_{Path.GetFileName(log.FullPath)}");
+                foreach (var log in logFiles)
+                {
+                    string logPath = Path.Combine(
+                        activeSession.SessionId,
+                        $"{GetInstanceId()}_{log.ProcessName}_{log.ProcessId}_{Path.GetFileName(log.FullPath)}");
 
-                log.RelativePath = $"{System.Environment.GetEnvironmentVariable(Constants.HttpHost)}/api/vfs/{ConvertBackSlashesToForwardSlashes(logPath)}";
-                string destination = Path.Combine(LogsDirectories.LogsDir, logPath);
-                await CopyFileAsync(log.FullPath, destination);
+                    log.RelativePath = $"{System.Environment.GetEnvironmentVariable(Constants.HttpHost)}/api/vfs/{ConvertBackSlashesToForwardSlashes(logPath)}";
+                    string destination = Path.Combine(LogsDirectories.LogsDir, logPath);
+                    await CopyFileAsync(log.FullPath, destination);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError("DaaS-CopyLogsToPermanentLocation", "Failed while copying logs to permanent storage", ex);
             }
         }
 
@@ -394,17 +419,20 @@ namespace Kudu.Services.Performance
         internal string GetTemporaryFolderPath()
         {
             string tempPath = Path.Combine(Path.GetTempPath(), "dotnet-monitor");
+            LogMessage($"TempPath = {tempPath}");
             CreateDirectoryIfNotExists(tempPath);
             return tempPath;
         }
 
         public async Task RunToolForSessionAsync(Session activeSession, CancellationToken token)
         {
+            LogMessage($"RunToolForSessionAsync {activeSession.SessionId}");
+
             IDiagnosticTool diagnosticTool = GetDiagnosticTool(activeSession);
             await MarkCurrentInstanceAsStarted(activeSession);
             string tempPath = GetTemporaryFolderPath();
 
-            TraceExtensions.Trace(_tracer, $"Invoking Diagnostic tool for session {activeSession.SessionId}");
+            LogMessage($"Invoking Diagnostic tool for session {activeSession.SessionId}");
             var logs = await diagnosticTool.InvokeAsync(activeSession.ToolParams, tempPath);
             {
                 await AddLogsToActiveSession(activeSession, logs);
@@ -442,6 +470,26 @@ namespace Kudu.Services.Performance
             }
 
             return diagnosticTool;
+        }
+
+        private static void LogMessage(string message)
+        {
+            KuduEventGenerator.Log().GenericEvent(ServerConfiguration.GetApplicationName(),
+                message,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty);
+        }
+
+        private static void LogError(string method, string message, Exception ex)
+        {
+            KuduEventGenerator.Log().KuduException(ServerConfiguration.GetApplicationName(),
+                method,
+                string.Empty,
+                string.Empty,
+                message,
+                ex.ToString());
         }
     }
 }

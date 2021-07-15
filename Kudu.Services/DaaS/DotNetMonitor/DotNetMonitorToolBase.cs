@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Kudu.Core.Infrastructure;
+using Kudu.Core.Tracing;
 using Newtonsoft.Json;
 
 namespace Kudu.Services.Performance
@@ -49,6 +51,36 @@ namespace Kudu.Services.Performance
             string content = await resp.Content.ReadAsStringAsync();
             var process = JsonConvert.DeserializeObject<DotNetMonitorProcessResponse>(content);
             return process;
+        }
+
+        internal void LogMessage(string message)
+        {
+            KuduEventGenerator.Log().GenericEvent(ServerConfiguration.GetApplicationName(),
+                message,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty);
+        }
+
+        internal void LogError(string method, string message, Exception ex)
+        {
+            KuduEventGenerator.Log().KuduException(ServerConfiguration.GetApplicationName(),
+                method,
+                string.Empty,
+                string.Empty,
+                message,
+                ex.ToString());
+        }
+
+        internal void LogError(string method, string message, string error)
+        {
+            KuduEventGenerator.Log().KuduException(ServerConfiguration.GetApplicationName(),
+                method,
+                string.Empty,
+                string.Empty,
+                message,
+                error);
         }
 
         public abstract Task<IEnumerable<LogFile>> InvokeAsync(string toolParams, string tempPath);
