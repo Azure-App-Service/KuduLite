@@ -40,22 +40,6 @@ namespace Kudu.Services.Performance
             _tracer = _traceFactory.GetTracer();
         }
 
-        private HttpClient CreateDotNetMonitorClient()
-        {
-            var webRequestHandler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) =>
-                {
-                    return true;
-                }
-            };
-
-            return new HttpClient(webRequestHandler)
-            {
-                Timeout = TimeSpan.FromMinutes(10)
-            };
-        }
-
         /// <summary>
         /// Implement abstract ExecuteAsync method for BackgroundService
         /// </summary>
@@ -163,6 +147,8 @@ namespace Kudu.Services.Performance
         {
             IDiagnosticTool diagnosticTool = GetDiagnosticTool(activeSession);
             await _sessionManager.MarkCurrentInstanceAsStarted(activeSession);
+
+            TraceExtensions.Trace(_tracer, $"Invoking Diagnostic tool for session {activeSession.SessionId}");
             var logs = await diagnosticTool.InvokeAsync(activeSession.ToolParams);
             {
                 await AddLogsToActiveSession(activeSession, logs);
@@ -174,7 +160,7 @@ namespace Kudu.Services.Performance
 
         private static IDiagnosticTool GetDiagnosticTool(Session activeSession)
         {
-            IDiagnosticTool diagnosticTool = null;
+            IDiagnosticTool diagnosticTool;
             if (activeSession.Tool == DiagnosticTool.MemoryDump)
             {
                 diagnosticTool = new MemoryDumpTool();
@@ -204,7 +190,7 @@ namespace Kudu.Services.Performance
 
         private long GetFileSize(string path)
         {
-            return new System.IO.FileInfo(path).Length;
+            return new FileInfo(path).Length;
         }
     }
 }

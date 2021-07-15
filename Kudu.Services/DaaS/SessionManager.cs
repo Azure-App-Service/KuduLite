@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Tracing;
@@ -269,6 +270,8 @@ namespace Kudu.Services.Performance
 
         public async Task AddLogsToActiveSession(Session activeSession, IEnumerable<LogFile> logFiles)
         {
+            await CopyLogsToPermanentLocation(logFiles, activeSession);
+
             await UpdateSession(() =>
             {
                 if (activeSession.ActiveInstances == null)
@@ -286,6 +289,46 @@ namespace Kudu.Services.Performance
                 activeInstance.Logs.AddRange(logFiles);
                 return activeSession;
             }, activeSession.SessionId);
+        }
+
+        private async Task CopyLogsToPermanentLocation(IEnumerable<LogFile> logFiles, Session activeSession)
+        {
+            foreach(var log in logFiles)
+            {
+                string logPath = Path.Combine(
+                    activeSession.SessionId,
+                    $"{GetInstanceId()}_{log.ProcessName}_{log.ProcessId}_{Path.GetFileName(log.FullPath)}");
+
+                log.RelativePath = ConvertBackSlashesToForwardSlashes(logPath);
+                string destination = Path.Combine(LogsDirectories.LogsDir, logPath);
+                await CopyFileAsync(log.FullPath, destination);
+            }
+        }
+
+        private string ConvertBackSlashesToForwardSlashes(string logPath)
+        {
+            string relativePath = Path.Combine(LogsDirectories.LogsDirRelativePath, logPath);
+            return relativePath.Replace('\\', '/');
+        }
+
+        // https://stackoverflow.com/questions/882686/non-blocking-file-copy-in-c-sharp
+        private async Task CopyFileAsync(string sourceFile, string destinationFile)
+        {
+            CreateDirectoryIfNotExists(Path.GetDirectoryName(destinationFile));
+
+            TraceExtensions.Trace(_tracer, $"Copying file from {sourceFile} to {destinationFile}");
+
+            using (var sourceStream = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
+            using (var destinationStream = new FileStream(destinationFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
+                await sourceStream.CopyToAsync(destinationStream);
+
+            TraceExtensions.Trace(_tracer, $"File copied from {sourceFile} to {destinationFile}");
+        }
+
+        private void CreateDirectoryIfNotExists(string directory)
+        {
+            if (!FileSystemHelpers.DirectoryExists(directory))
+                FileSystemHelpers.CreateDirectory(directory);
         }
 
         public bool HasThisInstanceCollectedLogs(Session activeSession)
@@ -325,6 +368,8 @@ namespace Kudu.Services.Performance
             string completedSessionFile = Path.Combine(SessionDirectories.CompletedSessionsDir, activeSession.SessionId + ".json");
 
             FileSystemHelpers.MoveFile(activeSessionFile, completedSessionFile);
+
+            TraceExtensions.Trace(_tracer, $"Session {activeSession.SessionId} is complete");
         }
 
         public bool ShouldCollectOnCurrentInstance(Session activeSession)
