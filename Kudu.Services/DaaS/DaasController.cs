@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Kudu.Services.Performance
@@ -27,14 +29,19 @@ namespace Kudu.Services.Performance
         [HttpPost]
         public async Task<IActionResult> SubmitNewSession([FromBody] Session session)
         {
-            var activeSession = await _sessionManager.GetActiveSession();
-            if (activeSession != null)
+            try
             {
-                return Conflict("There is already an existing active session");
+                string sessionId = await _sessionManager.SubmitNewSession(session);
+                return Ok(sessionId);
             }
-
-            string sessionId = await _sessionManager.SubmitNewSession(session);
-            return Ok(sessionId);
+            catch (AccessViolationException aex)
+            {
+                return Conflict(aex.Message);
+            }
+            catch(Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
         }
 
         /// <summary>

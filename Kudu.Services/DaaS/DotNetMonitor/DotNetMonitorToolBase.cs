@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 namespace Kudu.Services.Performance
 {
-    abstract class DotNetMonitorToolBase : IDiagnosticTool
+    abstract internal class DotNetMonitorToolBase : IDiagnosticTool
     {
         protected const string EgressProviderName = "monitorFile";
         protected readonly HttpClient _dotnetMonitorClient;

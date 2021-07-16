@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Kudu.Contracts.Tracing;
 using Kudu.Core.Tracing;
 using Microsoft.Extensions.Hosting;
 
@@ -20,22 +19,16 @@ namespace Kudu.Services.Performance
     {
         private const double MaxAllowedSessionTimeInMinutes = 15;
 
-        private readonly ITracer _tracer;
-        private readonly ITraceFactory _traceFactory;
         private readonly ISessionManager _sessionManager;
         private readonly Dictionary<string, TaskAndCancellationToken> _runningSessions = new Dictionary<string, TaskAndCancellationToken>();
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="traceFactory"></param>
         /// <param name="sessionManager"></param>
-        public SessionRunnerService(ITraceFactory traceFactory,
-            ISessionManager sessionManager)
+        public SessionRunnerService(ISessionManager sessionManager)
         {
             _sessionManager = sessionManager;
-            _traceFactory = traceFactory;
-            _tracer = _traceFactory.GetTracer();
         }
 
         /// <summary>
@@ -63,7 +56,6 @@ namespace Kudu.Services.Performance
             }
 
             await RunActiveSession();
-
             CleanupCompletedSessions();
         }
 
@@ -76,8 +68,7 @@ namespace Kudu.Services.Performance
                     var status = _runningSessions[sessionId].UnderlyingTask.Status;
                     if (status == TaskStatus.Canceled || status == TaskStatus.Faulted || status == TaskStatus.RanToCompletion)
                     {
-
-                        TraceExtensions.Trace(_tracer, $"Task for Session {sessionId} has completed with status {status} on {System.Environment.MachineName}", sessionId.ToString());
+                        LogMessage($"Task for Session {sessionId} has completed with status {status} on {Environment.MachineName}", sessionId.ToString());
                         _runningSessions.Remove(sessionId);
                     }
                 }
@@ -128,6 +119,10 @@ namespace Kudu.Services.Performance
 
                 _runningSessions[activeSession.SessionId] = t;
             }
+        }
+
+        private void LogMessage(string message, string sessionId)
+        {
         }
     }
 }
