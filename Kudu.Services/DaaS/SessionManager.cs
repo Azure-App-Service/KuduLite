@@ -204,13 +204,13 @@ namespace Kudu.Services.Performance
         /// </summary>
         /// <param name="updatedSession"></param>
         /// <param name="sessionId"></param>
-        /// <param name="methodName"></param>
+        /// <param name="callerMethodName"></param>
         /// <returns></returns>
-        private async Task UpdateSession(Func<Session> updatedSession, string sessionId, [CallerMemberName] string methodName = "")
+        private async Task UpdateSession(Func<Session> updatedSession, string sessionId, [CallerMemberName] string callerMethodName = "")
         {
             try
             {
-                _sessionLockFile = await AcquireSesssionLock(sessionId, methodName);
+                _sessionLockFile = await AcquireSesssionLock(sessionId, callerMethodName);
 
                 if (_sessionLockFile == null)
                 {
@@ -226,6 +226,7 @@ namespace Kudu.Services.Performance
 
                 if (_sessionLockFile != null)
                 {
+                    LogMessage($"SessionLock released by {callerMethodName} for {sessionId} on {System.Environment.MachineName}");
                     _sessionLockFile.Release();
                 }
             }
@@ -249,11 +250,12 @@ namespace Kudu.Services.Performance
                 sessionLock = new LinuxLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
             }
 
-            while (!sessionLock.Lock($"AcquireSessionLock by {callerMethodName} on {System.Environment.MachineName}") 
+            LogMessage($"{callerMethodName} going to SessionLock by for {sessionId} on {System.Environment.MachineName}");
+            while (!sessionLock.Lock(callerMethodName) 
                 && loopCount <= 60)
             {
                 ++loopCount;
-                LogMessage($"Waiting to acquire the lock on session file {sessionId} on {System.Environment.MachineName}");
+                LogMessage($"Waiting to acquire the lock on session file {sessionId} on {System.Environment.MachineName} invoked by {callerMethodName}");
                 await Task.Delay(1000);
             }
 
@@ -411,7 +413,7 @@ namespace Kudu.Services.Performance
                 using (var destinationStream = new FileStream(destinationFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
                     await sourceStream.CopyToAsync(destinationStream);
 
-                LogMessage("File copied from {sourceFile} to {destinationFile}");
+                LogMessage($"File copied from {sourceFile} to {destinationFile}");
             }
             catch(Exception ex)
             {
