@@ -36,7 +36,6 @@ namespace Kudu.Services.Performance
         /// 
         /// </summary>
         /// <param name="traceFactory"></param>
-        /// <param name="environment"></param>
         public SessionManager(ITraceFactory traceFactory)
         {
             _traceFactory = traceFactory;
@@ -49,8 +48,7 @@ namespace Kudu.Services.Performance
         {
             _allSessionsDirs.ForEach(x =>
             {
-                if (!Directory.Exists(x))
-                    Directory.CreateDirectory(x);
+                FileSystemHelpers.EnsureDirectory(x);
             });
         }
 
@@ -145,6 +143,8 @@ namespace Kudu.Services.Performance
             session.Status = Status.Active;
             await WriteJsonAsync(session,
                 Path.Combine(SessionDirectories.ActiveSessionsDir, session.SessionId + ".json"));
+
+            LogMessage($"New session started {JsonConvert.SerializeObject(session)}");
         }
 
         private string GetSessionId(DateTime startTime)
@@ -366,7 +366,7 @@ namespace Kudu.Services.Performance
                 {
                     string logPath = Path.Combine(
                         activeSession.SessionId,
-                        $"{GetInstanceIdShort()}_{Path.GetFileName(log.FullPath)}");
+                        Path.GetFileName(log.FullPath));
 
                     log.RelativePath = $"{System.Environment.GetEnvironmentVariable(Constants.HttpHost)}/api/vfs/{ConvertBackSlashesToForwardSlashes(logPath)}";
                     string destination = Path.Combine(LogsDirectories.LogsDir, logPath);
@@ -481,7 +481,7 @@ namespace Kudu.Services.Performance
             string tempPath = GetTemporaryFolderPath();
 
             LogMessage($"Invoking Diagnostic tool for session {activeSession.SessionId}");
-            var logs = await diagnosticTool.InvokeAsync(activeSession.ToolParams, tempPath);
+            var logs = await diagnosticTool.InvokeAsync(activeSession.ToolParams, tempPath, GetInstanceIdShort());
             {
                 await AddLogsToActiveSession(activeSession, logs);
             }

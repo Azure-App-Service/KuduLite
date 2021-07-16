@@ -83,6 +83,6 @@ namespace Kudu.Services.Performance
                 error);
         }
 
-        public abstract Task<IEnumerable<LogFile>> InvokeAsync(string toolParams, string tempPath);
+        public abstract Task<IEnumerable<LogFile>> InvokeAsync(string toolParams, string tempPath, string instanceId);
     }
 }

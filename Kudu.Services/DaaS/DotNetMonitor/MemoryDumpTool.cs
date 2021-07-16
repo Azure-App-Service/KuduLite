@@ -8,7 +8,7 @@ namespace Kudu.Services.Performance
 {
     internal class MemoryDumpTool : DotNetMonitorToolBase
     {
-        public override async Task<IEnumerable<LogFile>> InvokeAsync(string toolParams, string tempPath)
+        public override async Task<IEnumerable<LogFile>> InvokeAsync(string toolParams, string tempPath, string instanceId)
         {
             MemoryDumpParams memoryDumpParams = new MemoryDumpParams(toolParams);
             var logs = new List<LogFile>();
@@ -22,8 +22,10 @@ namespace Kudu.Services.Performance
                     foreach (var p in processes)
                     {
                         var process = await GetDotNetProcess(p.pid);
-                        var requestPath = $"{dotnetMonitorAddress}/dump/{p.pid}?type={memoryDumpParams.DumpType}";
-                        var resp = await _dotnetMonitorClient.GetAsync(requestPath, HttpCompletionOption.ResponseHeadersRead);
+                        var resp = await _dotnetMonitorClient.GetAsync(
+                            $"{dotnetMonitorAddress}/dump/{p.pid}?type={memoryDumpParams.DumpType}", 
+                            HttpCompletionOption.ResponseHeadersRead);
+
                         if (resp.IsSuccessStatusCode)
                         {
                             string fileName = resp.Content.Headers.ContentDisposition.FileName;
@@ -32,7 +34,7 @@ namespace Kudu.Services.Performance
                                 fileName = DateTime.UtcNow.Ticks.ToString() + ".dmp";
                             }
 
-                            fileName = $"{process.name}_{process.pid}_{fileName}";
+                            fileName = $"{instanceId}_{process.name}_{process.pid}_{fileName}";
                             fileName = Path.Combine(tempPath, fileName);
                             using (var stream = await resp.Content.ReadAsStreamAsync())
                             {
