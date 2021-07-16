@@ -409,7 +409,7 @@ namespace Kudu.Services.Performance
                     activeSession.SessionId,
                     Path.GetFileName(log.FullPath));
 
-                log.RelativePath = $"{System.Environment.GetEnvironmentVariable(Constants.HttpHost)}/api/vfs/{ConvertBackSlashesToForwardSlashes(logPath)}";
+                log.RelativePath = $"https://{System.Environment.GetEnvironmentVariable(Constants.HttpHost)}/api/vfs/{ConvertBackSlashesToForwardSlashes(logPath)}";
                 string destination = Path.Combine(LogsDirectories.LogsDir, logPath);
 
                 try
