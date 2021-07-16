@@ -247,7 +247,7 @@ namespace Kudu.Services.Performance
             }
             else
             {
-                sessionLock = new LinuxLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
+                sessionLock = new SessionLockFileLinux(GetActiveSessionLockPath(sessionId), _traceFactory);
             }
 
             LogMessage($"{callerMethodName} going to SessionLock by for {sessionId} on {System.Environment.MachineName}");
@@ -405,7 +405,7 @@ namespace Kudu.Services.Performance
         {
             try
             {
-                CreateDirectoryIfNotExists(Path.GetDirectoryName(destinationFile));
+                FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(destinationFile));
 
                 LogMessage($"Copying file from {sourceFile} to {destinationFile}");
 
@@ -419,12 +419,6 @@ namespace Kudu.Services.Performance
             {
                 LogError("Failed while copying logs", ex);
             }
-        }
-
-        private void CreateDirectoryIfNotExists(string directory)
-        {
-            if (!FileSystemHelpers.DirectoryExists(directory))
-                FileSystemHelpers.CreateDirectory(directory);
         }
 
         public bool HasThisInstanceCollectedLogs(Session activeSession)
@@ -478,7 +472,7 @@ namespace Kudu.Services.Performance
         {
             string tempPath = Path.Combine(Path.GetTempPath(), "dotnet-monitor");
             LogMessage($"TempPath = {tempPath}");
-            CreateDirectoryIfNotExists(tempPath);
+            FileSystemHelpers.EnsureDirectory(tempPath);
             return tempPath;
         }
 
