@@ -238,20 +238,11 @@ namespace Kudu.Services.Performance
 
         private async Task<IOperationLock> AcquireSesssionLock(string sessionId, string callerMethodName)
         {
-            IOperationLock sessionLock;
+            IOperationLock sessionLock = new LockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
             int loopCount = 0;
 
-            if (OSDetector.IsOnWindows())
-            {
-                sessionLock = new LockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
-            }
-            else
-            {
-                sessionLock = new SessionLockFileLinux(GetActiveSessionLockPath(sessionId), _traceFactory);
-            }
-
             LogMessage($"{callerMethodName} going to SessionLock by for {sessionId} on {System.Environment.MachineName}");
-            while (!sessionLock.Lock(callerMethodName) 
+            while (!sessionLock.Lock(callerMethodName)
                 && loopCount <= 60)
             {
                 ++loopCount;
