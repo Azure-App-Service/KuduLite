@@ -366,7 +366,7 @@ namespace Kudu.Services.Performance
                 {
                     string logPath = Path.Combine(
                         activeSession.SessionId,
-                        $"{GetInstanceId()}_{Path.GetFileName(log.FullPath)}");
+                        $"{GetInstanceIdShort()}_{Path.GetFileName(log.FullPath)}");
 
                     log.RelativePath = $"{System.Environment.GetEnvironmentVariable(Constants.HttpHost)}/api/vfs/{ConvertBackSlashesToForwardSlashes(logPath)}";
                     string destination = Path.Combine(LogsDirectories.LogsDir, logPath);
@@ -377,6 +377,11 @@ namespace Kudu.Services.Performance
             {
                 LogError("Failed while copying logs to permanent storage", ex);
             }
+        }
+
+        private string GetInstanceIdShort()
+        {
+            return InstanceIdUtility.GetShortInstanceId();
         }
 
         private long GetFileSize(string path)
@@ -421,7 +426,7 @@ namespace Kudu.Services.Performance
 
         public string GetInstanceId()
         {
-            return System.Environment.MachineName;
+            return InstanceIdUtility.GetInstanceId();
         }
 
         public bool AllInstancesCollectedLogs(Session activeSession)
