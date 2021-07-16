@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -203,25 +204,25 @@ namespace Kudu.Services.Performance
         /// </summary>
         /// <param name="updatedSession"></param>
         /// <param name="sessionId"></param>
+        /// <param name="methodName"></param>
         /// <returns></returns>
-        private async Task UpdateSession(Func<Session> updatedSession, string sessionId)
+        private async Task UpdateSession(Func<Session> updatedSession, string sessionId, [CallerMemberName] string methodName = "")
         {
             try
             {
-                if (OSDetector.IsOnWindows())
+                _sessionLockFile = await AcquireSesssionLock(sessionId, methodName);
+
+                if (_sessionLockFile == null)
                 {
-                    _sessionLockFile = new LockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
-                }
-                else
-                {
-                    _sessionLockFile = new LinuxLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
+                    //
+                    // We failed to acquire the lock on the session file
+                    //
+
+                    return;
                 }
 
-                if (_sessionLockFile.Lock("AcquireSessionLock"))
-                {
-                    Session activeSession = updatedSession();
-                    await UpdateActiveSession(activeSession);
-                }
+                Session activeSession = updatedSession();
+                await UpdateActiveSession(activeSession);
 
                 if (_sessionLockFile != null)
                 {
@@ -230,8 +231,40 @@ namespace Kudu.Services.Performance
             }
             catch (Exception ex)
             {
-                LogError("DaaS-UpdateSession", $"Failed while updating session - {sessionId}", ex);
+                LogError($"Failed while updating session - {sessionId}", ex);
             }
+        }
+
+        private async Task<IOperationLock> AcquireSesssionLock(string sessionId, string callerMethodName)
+        {
+            IOperationLock sessionLock;
+            int loopCount = 0;
+
+            if (OSDetector.IsOnWindows())
+            {
+                sessionLock = new LockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
+            }
+            else
+            {
+                sessionLock = new LinuxLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
+            }
+
+            while (!sessionLock.Lock($"AcquireSessionLock by {callerMethodName} on {System.Environment.MachineName}") 
+                && loopCount <= 60)
+            {
+                ++loopCount;
+                LogMessage($"Waiting to acquire the lock on session file {sessionId} on {System.Environment.MachineName}");
+                await Task.Delay(1000);
+            }
+
+            if (loopCount > 60)
+            {
+                LogMessage($"Deleting the lock file for {sessionId} as it seems to be in an orphaned stage");
+                sessionLock.Release();
+                return null;
+            }
+
+            return sessionLock;
         }
 
         private async Task UpdateActiveSession(Session activeSesion)
@@ -279,41 +312,57 @@ namespace Kudu.Services.Performance
             }
             catch(Exception ex)
             {
-                LogError("UpdateCurrentInstanceStatus", $"Failed while updating current instance status to {sessionStatus}", ex);
+                LogError($"Failed while updating current instance status to {sessionStatus}", ex);
             }
         }
 
         public async Task AddLogsToActiveSession(Session activeSession, IEnumerable<LogFile> logFiles)
         {
-            foreach (var log in logFiles)
+            try
             {
-                log.Size = GetFileSize(log.FullPath);
-                log.Name = Path.GetFileName(log.FullPath);
+                foreach (var log in logFiles)
+                {
+                    log.Size = GetFileSize(log.FullPath);
+                    log.Name = Path.GetFileName(log.FullPath);
+                }
+
+                await CopyLogsToPermanentLocation(logFiles, activeSession);
+
+                LogMessage($"Logs copied to permanent storage for {activeSession.SessionId}");
+
+                await UpdateSession(() =>
+                {
+                    try
+                    {
+                        LogMessage($"Adding active Instance added for {activeSession.SessionId}");
+
+                        if (activeSession.ActiveInstances == null)
+                        {
+                            activeSession.ActiveInstances = new List<ActiveInstance>();
+                        }
+
+                        ActiveInstance activeInstance = activeSession.ActiveInstances.FirstOrDefault(x => x.Name.Equals(GetInstanceId(), StringComparison.OrdinalIgnoreCase));
+                        if (activeInstance == null)
+                        {
+                            activeInstance = new ActiveInstance(GetInstanceId());
+                            activeSession.ActiveInstances.Add(activeInstance);
+                        }
+
+                        LogMessage($"Active Instance added for {activeSession.SessionId}");
+
+                        activeInstance.Logs.AddRange(logFiles);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogError("Failed while adding active instance", ex);
+                    }
+                    return activeSession;
+                }, activeSession.SessionId);
             }
-
-            await CopyLogsToPermanentLocation(logFiles, activeSession);
-
-            LogMessage($"Logs copied to permanent storage for {activeSession.SessionId}");
-
-            await UpdateSession(() =>
+            catch (Exception ex)
             {
-                if (activeSession.ActiveInstances == null)
-                {
-                    activeSession.ActiveInstances = new List<ActiveInstance>();
-                }
-
-                ActiveInstance activeInstance = activeSession.ActiveInstances.FirstOrDefault(x => x.Name.Equals(GetInstanceId(), StringComparison.OrdinalIgnoreCase));
-                if (activeInstance == null)
-                {
-                    activeInstance = new ActiveInstance(GetInstanceId());
-                    activeSession.ActiveInstances.Add(activeInstance);
-                }
-
-                LogMessage($"Active Instance added for {activeSession.SessionId}");
-
-                activeInstance.Logs.AddRange(logFiles);
-                return activeSession;
-            }, activeSession.SessionId);
+                LogError("Failed in AddLogsToActiveSession", ex);
+            }
         }
 
         private async Task CopyLogsToPermanentLocation(IEnumerable<LogFile> logFiles, Session activeSession)
@@ -324,7 +373,7 @@ namespace Kudu.Services.Performance
                 {
                     string logPath = Path.Combine(
                         activeSession.SessionId,
-                        $"{GetInstanceId()}_{log.ProcessName}_{log.ProcessId}_{Path.GetFileName(log.FullPath)}");
+                        $"{GetInstanceId()}_{Path.GetFileName(log.FullPath)}");
 
                     log.RelativePath = $"{System.Environment.GetEnvironmentVariable(Constants.HttpHost)}/api/vfs/{ConvertBackSlashesToForwardSlashes(logPath)}";
                     string destination = Path.Combine(LogsDirectories.LogsDir, logPath);
@@ -333,7 +382,7 @@ namespace Kudu.Services.Performance
             }
             catch (Exception ex)
             {
-                LogError("DaaS-CopyLogsToPermanentLocation", "Failed while copying logs to permanent storage", ex);
+                LogError("Failed while copying logs to permanent storage", ex);
             }
         }
 
@@ -352,15 +401,22 @@ namespace Kudu.Services.Performance
         // https://stackoverflow.com/questions/882686/non-blocking-file-copy-in-c-sharp
         private async Task CopyFileAsync(string sourceFile, string destinationFile)
         {
-            CreateDirectoryIfNotExists(Path.GetDirectoryName(destinationFile));
+            try
+            {
+                CreateDirectoryIfNotExists(Path.GetDirectoryName(destinationFile));
 
-            TraceExtensions.Trace(_tracer, $"Copying file from {sourceFile} to {destinationFile}");
+                LogMessage($"Copying file from {sourceFile} to {destinationFile}");
 
-            using (var sourceStream = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
-            using (var destinationStream = new FileStream(destinationFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
-                await sourceStream.CopyToAsync(destinationStream);
+                using (var sourceStream = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
+                using (var destinationStream = new FileStream(destinationFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
+                    await sourceStream.CopyToAsync(destinationStream);
 
-            TraceExtensions.Trace(_tracer, $"File copied from {sourceFile} to {destinationFile}");
+                LogMessage("File copied from {sourceFile} to {destinationFile}");
+            }
+            catch(Exception ex)
+            {
+                LogError("Failed while copying logs", ex);
+            }
         }
 
         private void CreateDirectoryIfNotExists(string directory)
@@ -482,14 +538,14 @@ namespace Kudu.Services.Performance
                 string.Empty);
         }
 
-        private static void LogError(string method, string message, Exception ex)
+        private static void LogError(string message, Exception ex)
         {
-            KuduEventGenerator.Log().KuduException(ServerConfiguration.GetApplicationName(),
-                method,
+            KuduEventGenerator.Log().GenericEvent(ServerConfiguration.GetApplicationName(),
+                message + " " + ex.ToString(),
                 string.Empty,
                 string.Empty,
-                message,
-                ex.ToString());
+                string.Empty,
+                string.Empty);
         }
     }
 }

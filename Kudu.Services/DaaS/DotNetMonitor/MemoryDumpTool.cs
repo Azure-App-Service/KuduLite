@@ -32,6 +32,7 @@ namespace Kudu.Services.Performance
                                 fileName = DateTime.UtcNow.Ticks.ToString() + ".dmp";
                             }
 
+                            fileName = $"{process.name}_{process.pid}_{fileName}";
                             fileName = Path.Combine(tempPath, fileName);
                             using (var stream = await resp.Content.ReadAsStreamAsync())
                             {
