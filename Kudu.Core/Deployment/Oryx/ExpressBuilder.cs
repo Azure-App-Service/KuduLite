@@ -74,10 +74,10 @@ namespace Kudu.Core.Deployment.Oryx
             // Create NetCore Zip at tm build folder where artifact were build and copy it to sitePackages, .GetBranch()
             string zipAppName = $"artifact.zip";
 
-            context.Logger.Log($"From {context.BuildTempPath} to {(environment.RepositoryPath + "/../artifacts/" + environment.CurrId)} ");
-            FileSystemHelpers.EnsureDirectory(environment.RepositoryPath + "/../artifacts/");
-            FileSystemHelpers.EnsureDirectory(environment.RepositoryPath + "/../artifacts/" + environment.CurrId);
-            string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath, environment.RepositoryPath + "/../artifacts/" + environment.CurrId, zipAppName, BuildArtifactType.Squashfs, numBuildArtifacts: -1);
+            context.Logger.Log($"From {context.BuildTempPath} to {(environment.RepositoryPath + "/artifacts/" + environment.CurrId)} ");
+            FileSystemHelpers.EnsureDirectory(environment.RepositoryPath + "/artifacts/");
+            FileSystemHelpers.EnsureDirectory(environment.RepositoryPath + "/artifacts/" + environment.CurrId);
+            string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath, environment.RepositoryPath + "/artifacts/" + environment.CurrId, zipAppName, BuildArtifactType.Squashfs, numBuildArtifacts: -1);
             return zipAppName;
         }
 
