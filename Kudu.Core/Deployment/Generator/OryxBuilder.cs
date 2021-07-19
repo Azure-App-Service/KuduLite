@@ -64,7 +64,7 @@ namespace Kudu.Core.Deployment.Generator
             {
                 PreOryxBuild(context);
 
-                args.Flags = BuildOptimizationsFlags.UseExpressBuild;
+                //args.Flags = BuildOptimizationsFlags.UseExpressBuild;
 
                 string buildCommand = args.GenerateOryxBuildCommand(context, environment);
                 if (buildCommand.Contains(" --platform dotnet") && buildCommand.Contains(" --platform-version 6.0"))
