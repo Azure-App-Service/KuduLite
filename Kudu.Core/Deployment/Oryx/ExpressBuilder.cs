@@ -77,7 +77,7 @@ namespace Kudu.Core.Deployment.Oryx
             context.Logger.Log($"From {context.BuildTempPath} to {(environment.RepositoryPath + "/../artifacts/" + environment.CurrId)} ");
             FileSystemHelpers.EnsureDirectory(environment.RepositoryPath + "/../artifacts/");
             FileSystemHelpers.EnsureDirectory(environment.RepositoryPath + "/../artifacts/" + environment.CurrId);
-            string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath, environment.RepositoryPath + "/../artifacts/" + environment.CurrId, zipAppName, BuildArtifactType.Zip, numBuildArtifacts: -1);
+            string createdZip = PackageArtifactFromFolder(context, context.BuildTempPath, environment.RepositoryPath + "/../artifacts/" + environment.CurrId, zipAppName, BuildArtifactType.Squashfs, numBuildArtifacts: -1);
             return zipAppName;
         }
 
