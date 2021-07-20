@@ -3,37 +3,45 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 
-namespace Kudu.Services.Performance
+namespace Kudu.Services.DaaS
 {
     class ClrTraceTool : DotNetMonitorToolBase
     {
-        public override async Task<IEnumerable<LogFile>> InvokeAsync(string toolParams, string tempPath, string instanceId)
+        internal override async Task<DiagnosticToolResponse> InvokeDotNetMonitorAsync(string path, string temporaryFilePath, string fileExtension, string instanceId)
         {
-            ClrTraceParams clrTraceParams = new ClrTraceParams(toolParams);
-            var logs = new List<LogFile>();
-
-            if (!string.IsNullOrWhiteSpace(dotnetMonitorAddress))
+            var toolResponse = new DiagnosticToolResponse();
+            if (string.IsNullOrWhiteSpace(dotnetMonitorAddress))
             {
-                var processes = await GetDotNetProcesses();
-                foreach (var p in processes)
+                return toolResponse;
+            }
+
+            try
+            {
+                var tasks = new Dictionary<DotNetMonitorProcessResponse, Task<HttpResponseMessage>>();
+                foreach (var p in await GetDotNetProcessesAsync())
                 {
-                    var process = await GetDotNetProcess(p.pid);
-                    var resp = await _dotnetMonitorClient.GetAsync(
-                        $"{dotnetMonitorAddress}/trace/{p.pid}?durationSeconds={clrTraceParams.DurationSeconds}&profile={clrTraceParams.TraceProfile}",
-                        HttpCompletionOption.ResponseHeadersRead);
+                    var process = await GetDotNetProcessAsync(p.pid);
+                    tasks.Add(process, _dotnetMonitorClient.GetAsync(
+                        path.Replace("{processId}", p.pid.ToString()),
+                        HttpCompletionOption.ResponseHeadersRead));
+                }
+
+                foreach (var task in tasks)
+                {
+                    var process = task.Key;
+                    var resp = await task.Value;
 
                     if (resp.IsSuccessStatusCode)
                     {
                         string fileName = resp.Content.Headers.ContentDisposition.FileName;
                         if (string.IsNullOrWhiteSpace(fileName))
                         {
-                            fileName = DateTime.UtcNow.Ticks.ToString() + ".etl";
+                            fileName = DateTime.UtcNow.Ticks.ToString() + fileExtension;
                         }
 
                         fileName = $"{instanceId}_{process.name}_{process.pid}_{fileName}";
-                        fileName = Path.Combine(tempPath, fileName);
+                        fileName = Path.Combine(temporaryFilePath, fileName);
                         using (var stream = await resp.Content.ReadAsStreamAsync())
                         {
                             using (var fileStream = new FileStream(fileName, FileMode.CreateNew))
@@ -42,7 +50,7 @@ namespace Kudu.Services.Performance
                             }
                         }
 
-                        logs.Add(new LogFile()
+                        toolResponse.Logs.Add(new LogFile()
                         {
                             FullPath = fileName,
                             ProcessName = process.name,
@@ -52,12 +60,23 @@ namespace Kudu.Services.Performance
                     else
                     {
                         var error = await resp.Content.ReadAsStringAsync();
-                        LogError("MemoryDumpTool-InvokeAsync", "Failed while calling dotnet monitor", error);
+                        toolResponse.Errors.Add(error);
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                toolResponse.Errors.Add(ex.Message);
+            }
 
-            return logs;
+            return toolResponse;
+        }
+        public override async Task<DiagnosticToolResponse> InvokeAsync(string toolParams, string temporaryFilePath, string instanceId)
+        {
+            ClrTraceParams clrTraceParams = new ClrTraceParams(toolParams);
+            string path = $"{dotnetMonitorAddress}/trace/{{processId}}?durationSeconds={clrTraceParams.DurationSeconds}&profile={clrTraceParams.TraceProfile}";
+            var response = await InvokeDotNetMonitorAsync(path, temporaryFilePath, fileExtension: ".nettrace", instanceId);
+            return response;
         }
     }
 }

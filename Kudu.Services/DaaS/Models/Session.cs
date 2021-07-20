@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
-namespace Kudu.Services.Performance
+namespace Kudu.Services.DaaS
 {
     /// <summary>
     /// 
@@ -26,6 +28,7 @@ namespace Kudu.Services.Performance
         /// <summary>
         /// 
         /// </summary>
+        [JsonConverter(typeof(StringEnumConverter))]
         public DiagnosticTool Tool { get; set; }
 
         /// <summary>

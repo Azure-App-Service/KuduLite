@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace Kudu.Services.Performance
+namespace Kudu.Services.DaaS
 {
     public class TaskAndCancellationToken
     {

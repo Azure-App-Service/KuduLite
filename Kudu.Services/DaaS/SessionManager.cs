@@ -8,13 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Tracing;
-using Kudu.Core;
-using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Tracing;
 using Newtonsoft.Json;
 
-namespace Kudu.Services.Performance
+namespace Kudu.Services.DaaS
 {
     /// <summary>
     /// 
@@ -44,8 +42,11 @@ namespace Kudu.Services.Performance
             CreateSessionDirectories();
         }
 
+
+        #region ISessionManager methods
+
         /// <summary>
-        /// ISessionManager's GetActiveSession
+        /// ISessionManager - GetActiveSession
         /// </summary>
         /// <returns></returns>
         public async Task<Session> GetActiveSession()
@@ -55,7 +56,7 @@ namespace Kudu.Services.Performance
         }
 
         /// <summary>
-        /// ISessionManager's GetAllSessions
+        /// ISessionManager - GetAllSessions
         /// </summary>
         /// <returns></returns>
         public async Task<IEnumerable<Session>> GetAllSessions()
@@ -64,7 +65,7 @@ namespace Kudu.Services.Performance
         }
 
         /// <summary>
-        /// ISessionManager's GetSession
+        /// ISessionManager - GetSession
         /// </summary>
         /// <param name="sessionId"></param>
         /// <returns></returns>
@@ -75,7 +76,7 @@ namespace Kudu.Services.Performance
         }
 
         /// <summary>
-        /// ISessionManager's
+        /// ISessionManager - SubmitNewSession
         /// </summary>
         /// <param name="session"></param>
         /// <returns></returns>
@@ -86,13 +87,18 @@ namespace Kudu.Services.Performance
             {
                 throw new AccessViolationException("There is an already an existing active session");
             }
+
+            if (session.Tool == DiagnosticTool.Unspecified)
+            {
+                throw new ArgumentException("Please specify a diagnostic tool");
+            }
             
             await SaveSession(session);
             return session.SessionId;
         }
 
         /// <summary>
-        /// ISessionManager's HasThisInstanceCollectedLogs
+        /// ISessionManager - HasThisInstanceCollectedLogs
         /// </summary>
         /// <param name="activeSession"></param>
         /// <returns></returns>
@@ -104,30 +110,98 @@ namespace Kudu.Services.Performance
         }
 
         /// <summary>
-        /// ISessionManager's AddLogsToActiveSession
+        /// ISessionManager - RunToolForSessionAsync
         /// </summary>
         /// <param name="activeSession"></param>
-        /// <param name="logFiles"></param>
+        /// <param name="token"></param>
         /// <returns></returns>
-        public async Task AddLogsToActiveSession(Session activeSession, IEnumerable<LogFile> logFiles)
+        public async Task RunToolForSessionAsync(Session activeSession, CancellationToken token)
+        {
+            DaasLogger.LogSessionMessage($"Running tool for session", activeSession.SessionId);
+
+            IDiagnosticTool diagnosticTool = GetDiagnosticTool(activeSession);
+            await MarkCurrentInstanceAsStarted(activeSession);
+
+            DaasLogger.LogSessionMessage($"Invoking Diagnostic tool for session", activeSession.SessionId);
+            var resp = await diagnosticTool.InvokeAsync(activeSession.ToolParams, GetTemporaryFolderPath(), GetInstanceIdShort());
+            
+            //
+            // Add the collected logs to the Active session
+            //
+            await AddLogsToActiveSession(activeSession, resp);
+
+            //
+            // Mark current instance as Complete
+            //
+            await MarkCurrentInstanceAsComplete(activeSession);
+
+            //
+            // Check if all the instances have finished running the session
+            // and set the Session State to Complete
+            //
+            await CheckandCompleteSessionIfNeeded(activeSession);
+        }
+
+        /// <summary>
+        /// ISessionManager - CheckandCompleteSessionIfNeeded
+        /// </summary>
+        /// <param name="activeSession"></param>
+        /// <param name="forceCompletion"></param>
+        /// <returns></returns>
+        public async Task<bool> CheckandCompleteSessionIfNeeded(Session activeSession, bool forceCompletion = false)
+        {
+            if (AllInstancesCollectedLogs(activeSession) || forceCompletion)
+            {
+                await MarkSessionAsComplete(activeSession, forceCompletion:forceCompletion);
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// ISessionManager - ShouldCollectOnCurrentInstance
+        /// </summary>
+        /// <param name="activeSession"></param>
+        /// <returns></returns>
+        public bool ShouldCollectOnCurrentInstance(Session activeSession)
+        {
+            return activeSession.Instances != null &&
+                activeSession.Instances.Any(x => x.Equals(GetInstanceId(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        #endregion
+
+        /// <summary>
+        /// This method will copy the logs generated by the diagnostic session
+        /// to permanent storage folder. This will also delete the log file
+        /// generated in the temporary folder and append ShortInstanceId to the file
+        /// name so it becomes easy to distinguish files from multiple instances in
+        /// same session file. This method also updates the session after the files
+        /// have been copied to permanent storage
+        /// </summary>
+        /// <param name="activeSession"></param>
+        /// <param name="response"></param>
+        /// <returns></returns>
+        private async Task AddLogsToActiveSession(Session activeSession, DiagnosticToolResponse response)
         {
             try
             {
-                foreach (var log in logFiles)
+                foreach (var log in response.Logs)
                 {
                     log.Size = GetFileSize(log.FullPath);
                     log.Name = Path.GetFileName(log.FullPath);
                 }
 
-                await CopyLogsToPermanentLocation(logFiles, activeSession);
+                await CopyLogsToPermanentLocation(response.Logs, activeSession);
 
-                LogMessage($"Logs copied to permanent storage for {activeSession.SessionId}");
+                DaasLogger.LogSessionMessage($"Copied {response.Logs.Count()} logs to permanent storage", activeSession.SessionId);
 
                 await UpdateSession(() =>
                 {
                     try
                     {
-                        LogMessage($"Adding active Instance added for {activeSession.SessionId}");
+                        DaasLogger.LogSessionMessage($"Adding ActiveInstance to session", activeSession.SessionId);
 
                         if (activeSession.ActiveInstances == null)
                         {
@@ -141,82 +215,32 @@ namespace Kudu.Services.Performance
                             activeSession.ActiveInstances.Add(activeInstance);
                         }
 
-                        LogMessage($"Active Instance added for {activeSession.SessionId}");
+                        DaasLogger.LogSessionMessage($"ActiveInstance added", activeSession.SessionId);
 
-                        activeInstance.Logs.AddRange(logFiles);
+                        activeInstance.Logs.AddRange(response.Logs);
+
+                        if (response.Errors.Any())
+                        {
+                            activeInstance.Errors.AddRange(response.Errors);
+                        }
                     }
                     catch (Exception ex)
                     {
-                        LogError("Failed while adding active instance", ex);
+                        DaasLogger.LogSessionError("Failed while adding active instance", activeSession.SessionId, ex);
                     }
                     return activeSession;
                 }, activeSession.SessionId);
             }
             catch (Exception ex)
             {
-                LogError("Failed in AddLogsToActiveSession", ex);
+                DaasLogger.LogSessionError("Failed in AddLogsToActiveSession", activeSession.SessionId, ex);
             }
         }
-
-       
-
-        /// <summary>
-        /// ISessionManager's RunToolForSessionAsync
-        /// </summary>
-        /// <param name="activeSession"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
-        public async Task RunToolForSessionAsync(Session activeSession, CancellationToken token)
-        {
-            LogMessage($"RunToolForSessionAsync {activeSession.SessionId}");
-
-            IDiagnosticTool diagnosticTool = GetDiagnosticTool(activeSession);
-            await MarkCurrentInstanceAsStarted(activeSession);
-            string tempPath = GetTemporaryFolderPath();
-
-            LogMessage($"Invoking Diagnostic tool for session {activeSession.SessionId}");
-            var logs = await diagnosticTool.InvokeAsync(activeSession.ToolParams, tempPath, GetInstanceIdShort());
-            {
-                await AddLogsToActiveSession(activeSession, logs);
-            }
-
-            await MarkCurrentInstanceAsComplete(activeSession);
-            await CheckandCompleteSessionIfNeeded(activeSession);
-        }
-
-        /// <summary>
-        /// ISessionManager's CheckandCompleteSessionIfNeeded
-        /// </summary>
-        /// <param name="activeSession"></param>
-        /// <param name="forceCompletion"></param>
-        /// <returns></returns>
-        public async Task<bool> CheckandCompleteSessionIfNeeded(Session activeSession, bool forceCompletion = false)
-        {
-            if (AllInstancesCollectedLogs(activeSession) || forceCompletion)
-            {
-                await MarkSessionAsComplete(activeSession);
-                return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// ISessionManager's ShouldCollectOnCurrentInstance
-        /// </summary>
-        /// <param name="activeSession"></param>
-        /// <returns></returns>
-        public bool ShouldCollectOnCurrentInstance(Session activeSession)
-        {
-            return activeSession.Instances != null &&
-                activeSession.Instances.Any(x => x.Equals(GetInstanceId(), StringComparison.OrdinalIgnoreCase));
-        }
-
         private async Task UpdateSession(Func<Session> updatedSession, string sessionId, [CallerMemberName] string callerMethodName = "")
         {
             try
             {
-                _sessionLockFile = await AcquireSesssionLock(sessionId, callerMethodName);
+                _sessionLockFile = await AcquireSessionLock(sessionId, callerMethodName);
 
                 if (_sessionLockFile == null)
                 {
@@ -232,13 +256,13 @@ namespace Kudu.Services.Performance
 
                 if (_sessionLockFile != null)
                 {
-                    LogMessage($"SessionLock released by {callerMethodName} for {sessionId} on {System.Environment.MachineName}");
+                    DaasLogger.LogSessionMessage($"SessionLock released by {callerMethodName} on {GetInstanceId()}", sessionId);
                     _sessionLockFile.Release();
                 }
             }
             catch (Exception ex)
             {
-                LogError($"Failed while updating session - {sessionId}", ex);
+                DaasLogger.LogSessionError($"Failed while updating session", sessionId, ex);
             }
         }
 
@@ -250,7 +274,6 @@ namespace Kudu.Services.Performance
         private async Task<List<Session>> LoadSessionsFromStorage(List<string> directoriesToLoadSessionsFrom)
         {
             var sessions = new List<Session>();
-
             foreach (var directory in directoriesToLoadSessionsFrom)
             {
                 foreach (var sessionFile in FileSystemHelpers.GetFiles(directory, "*.json", SearchOption.TopDirectoryOnly))
@@ -272,13 +295,20 @@ namespace Kudu.Services.Performance
 
         private async Task SaveSession(Session session)
         {
-            session.StartTime = DateTime.UtcNow;
-            session.SessionId = GetSessionId(session.StartTime);
-            session.Status = Status.Active;
-            await WriteJsonAsync(session,
-                Path.Combine(SessionDirectories.ActiveSessionsDir, session.SessionId + ".json"));
+            try
+            {
+                session.StartTime = DateTime.UtcNow;
+                session.SessionId = GetSessionId(session.StartTime);
+                session.Status = Status.Active;
+                await WriteJsonAsync(session,
+                    Path.Combine(SessionDirectories.ActiveSessionsDir, session.SessionId + ".json"));
 
-            LogMessage($"New session started {JsonConvert.SerializeObject(session)}");
+                DaasLogger.LogSessionMessage($"New session started {JsonConvert.SerializeObject(session)}", session.SessionId);
+            }
+            catch (Exception ex)
+            {
+                DaasLogger.LogSessionError("Failed while saving the session", session.SessionId, ex);
+            }
         }
 
         private string GetSessionId(DateTime startTime)
@@ -328,27 +358,27 @@ namespace Kudu.Services.Performance
             }
         }
 
-        private async Task<IOperationLock> AcquireSesssionLock(string sessionId, string callerMethodName)
+        private async Task<IOperationLock> AcquireSessionLock(string sessionId, string callerMethodName)
         {
-            IOperationLock sessionLock = new LockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
+            IOperationLock sessionLock = new SessionLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
             int loopCount = 0;
 
-            LogMessage($"{callerMethodName} going to SessionLock by for {sessionId} on {System.Environment.MachineName}");
+            DaasLogger.LogSessionMessage($"Acquiring SessionLock by {callerMethodName} on {GetInstanceId()}", sessionId);
             while (!sessionLock.Lock(callerMethodName)
                 && loopCount <= 60)
             {
                 ++loopCount;
-                LogMessage($"Waiting to acquire the lock on session file {sessionId} on {System.Environment.MachineName} invoked by {callerMethodName}");
                 await Task.Delay(1000);
             }
 
             if (loopCount > 60)
             {
-                LogMessage($"Deleting the lock file for {sessionId} as it seems to be in an orphaned stage");
+                DaasLogger.LogSessionMessage($"Deleting the lock file as it seems to be in an orphaned stage", sessionId);
                 sessionLock.Release();
                 return null;
             }
 
+            DaasLogger.LogSessionMessage($"Acquired SessionLock by {callerMethodName} on {GetInstanceId()}", sessionId);
             return sessionLock;
         }
 
@@ -397,7 +427,7 @@ namespace Kudu.Services.Performance
             }
             catch (Exception ex)
             {
-                LogError($"Failed while updating current instance status to {sessionStatus}", ex);
+                DaasLogger.LogSessionError($"Failed while updating current instance status to {sessionStatus}", activeSession.SessionId, ex);
             }
         }
 
@@ -414,11 +444,11 @@ namespace Kudu.Services.Performance
 
                 try
                 {
-                    await CopyFileAsync(log.FullPath, destination);
+                    await CopyFileAsync(log.FullPath, destination, activeSession.SessionId);
                 }
                 catch (Exception ex)
                 {
-                    LogError($"Failed while copying {logPath} to permanent storage", ex);
+                    DaasLogger.LogSessionError($"Failed while copying {logPath} to permanent storage", activeSession.SessionId, ex);
                 }
             }
         }
@@ -441,26 +471,27 @@ namespace Kudu.Services.Performance
         }
 
         // https://stackoverflow.com/questions/882686/non-blocking-file-copy-in-c-sharp
-        private async Task CopyFileAsync(string sourceFile, string destinationFile)
+        private async Task CopyFileAsync(string sourceFile, string destinationFile, string sessionId)
         {
             try
             {
                 FileSystemHelpers.EnsureDirectory(Path.GetDirectoryName(destinationFile));
-
-                LogMessage($"Copying file from {sourceFile} to {destinationFile}");
+                DaasLogger.LogSessionMessage($"Copying file from {sourceFile} to {destinationFile}", sessionId);
 
                 using (var sourceStream = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
-                using (var destinationStream = new FileStream(destinationFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
                 {
-                    await sourceStream.CopyToAsync(destinationStream);
-                    FileSystemHelpers.DeleteFileSafe(sourceFile);
+                    using (var destinationStream = new FileStream(destinationFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.SequentialScan))
+                    {
+                        await sourceStream.CopyToAsync(destinationStream);
+                    }
                 }
 
-                LogMessage($"File copied from {sourceFile} to {destinationFile}");
+                DaasLogger.LogSessionMessage($"File copied from {sourceFile} to {destinationFile}", sessionId);
+                FileSystemHelpers.DeleteFileSafe(sourceFile);
             }
             catch (Exception ex)
             {
-                LogError("Failed while copying logs", ex);
+                DaasLogger.LogSessionError("Failed while copying logs", sessionId, ex);
             }
         }
 
@@ -487,11 +518,11 @@ namespace Kudu.Services.Performance
             return completedInstances.SequenceEqual(activeSession.Instances, StringComparer.OrdinalIgnoreCase);
         }
 
-        private async Task MarkSessionAsComplete(Session activeSession)
+        private async Task MarkSessionAsComplete(Session activeSession, bool forceCompletion = false)
         {
             await UpdateSession(() =>
             {
-                activeSession.Status = Status.Complete;
+                activeSession.Status = forceCompletion ? Status.TimedOut : Status.Complete;
                 activeSession.EndTime = DateTime.UtcNow;
                 return activeSession;
 
@@ -500,15 +531,23 @@ namespace Kudu.Services.Performance
             string activeSessionFile = Path.Combine(SessionDirectories.ActiveSessionsDir, activeSession.SessionId + ".json");
             string completedSessionFile = Path.Combine(SessionDirectories.CompletedSessionsDir, activeSession.SessionId + ".json");
 
+            //
+            // Move the session file from Active to Complete folder
+            //
+
             FileSystemHelpers.MoveFile(activeSessionFile, completedSessionFile);
 
-            TraceExtensions.Trace(_tracer, $"Session {activeSession.SessionId} is complete");
+            //
+            // Clean-up the lock file from the Active session folder
+            //
+
+            FileSystemHelpers.DeleteFileSafe(GetActiveSessionLockPath(activeSession.SessionId));
+            DaasLogger.LogSessionMessage($"Session is complete", activeSession.SessionId);
         }
 
         private string GetTemporaryFolderPath()
         {
             string tempPath = Path.Combine(Path.GetTempPath(), "dotnet-monitor");
-            LogMessage($"TempPath = {tempPath}");
             FileSystemHelpers.EnsureDirectory(tempPath);
             return tempPath;
         }
@@ -530,26 +569,6 @@ namespace Kudu.Services.Performance
             }
 
             return diagnosticTool;
-        }
-
-        private static void LogMessage(string message)
-        {
-            KuduEventGenerator.Log().GenericEvent(ServerConfiguration.GetApplicationName(),
-                message,
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                string.Empty);
-        }
-
-        private static void LogError(string message, Exception ex)
-        {
-            KuduEventGenerator.Log().GenericEvent(ServerConfiguration.GetApplicationName(),
-                message + " " + ex.ToString(),
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                string.Empty);
         }
     }
 }

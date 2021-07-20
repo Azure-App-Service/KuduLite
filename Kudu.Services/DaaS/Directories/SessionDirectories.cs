@@ -1,6 +1,6 @@
 ﻿using System.IO;
 
-namespace Kudu.Services.Performance
+namespace Kudu.Services.DaaS
 {
     internal class SessionDirectories : DaasDirectory
     {

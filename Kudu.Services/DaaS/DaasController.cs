@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Kudu.Services.Performance
+namespace Kudu.Services.DaaS
 {
     /// <summary>
     /// 
@@ -29,6 +29,11 @@ namespace Kudu.Services.Performance
         [HttpPost]
         public async Task<IActionResult> SubmitNewSession([FromBody] Session session)
         {
+            if (session.Tool == DiagnosticTool.Unspecified)
+            {
+                return BadRequest("Please specify a valid diagnostic tool");
+            }
+
             try
             {
                 string sessionId = await _sessionManager.SubmitNewSession(session);

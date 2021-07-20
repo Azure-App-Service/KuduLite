@@ -1,4 +1,4 @@
-﻿namespace Kudu.Services.Performance
+﻿namespace Kudu.Services.DaaS
 {
     internal class MemoryDumpParams
     {

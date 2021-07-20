@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace Kudu.Services.Performance
+namespace Kudu.Services.DaaS
 {
     /// <summary>
     /// 
@@ -9,6 +9,7 @@ namespace Kudu.Services.Performance
     [JsonConverter(typeof(StringEnumConverter))]
     public enum DiagnosticTool
     {
+        Unspecified,
         MemoryDump,
         Profiler
     }

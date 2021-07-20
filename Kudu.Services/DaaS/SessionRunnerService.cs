@@ -1,14 +1,13 @@
 ﻿
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Kudu.Core.Tracing;
+using Kudu.Services.Performance;
 using Microsoft.Extensions.Hosting;
 
-
-namespace Kudu.Services.Performance
+namespace Kudu.Services.DaaS
 {
 
     /// <summary>
@@ -20,7 +19,7 @@ namespace Kudu.Services.Performance
         private const double MaxAllowedSessionTimeInMinutes = 15;
 
         private readonly ISessionManager _sessionManager;
-        private readonly Dictionary<string, TaskAndCancellationToken> _runningSessions = new Dictionary<string, TaskAndCancellationToken>();
+        private readonly ConcurrentDictionary<string, TaskAndCancellationToken> _runningSessions = new ConcurrentDictionary<string, TaskAndCancellationToken>();
 
         /// <summary>
         /// 
@@ -68,8 +67,8 @@ namespace Kudu.Services.Performance
                     var status = _runningSessions[sessionId].UnderlyingTask.Status;
                     if (status == TaskStatus.Canceled || status == TaskStatus.Faulted || status == TaskStatus.RanToCompletion)
                     {
-                        LogMessage($"Task for Session {sessionId} has completed with status {status} on {Environment.MachineName}", sessionId.ToString());
-                        _runningSessions.Remove(sessionId);
+                        DaasLogger.LogSessionMessage($"Task for Session completed with status {status}", sessionId);
+                        _runningSessions.TryRemove(sessionId, out _);
                     }
                 }
             }
@@ -119,10 +118,6 @@ namespace Kudu.Services.Performance
 
                 _runningSessions[activeSession.SessionId] = t;
             }
-        }
-
-        private void LogMessage(string message, string sessionId)
-        {
         }
     }
 }

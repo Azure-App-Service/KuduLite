@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Kudu.Services.Performance
+namespace Kudu.Services.DaaS
 {
     public class LogFile
     {

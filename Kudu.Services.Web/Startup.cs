@@ -43,6 +43,7 @@ using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 using ILogger = Kudu.Core.Deployment.ILogger;
 using AspNetCore.Proxy;
+using Kudu.Services.DaaS;
 
 namespace Kudu.Services.Web
 {
