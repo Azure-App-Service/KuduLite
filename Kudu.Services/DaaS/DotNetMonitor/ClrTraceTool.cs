@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,7 +8,8 @@ namespace Kudu.Services.DaaS
 {
     class ClrTraceTool : DotNetMonitorToolBase
     {
-        internal override async Task<DiagnosticToolResponse> InvokeDotNetMonitorAsync(string path,
+        internal override async Task<DiagnosticToolResponse> InvokeDotNetMonitorAsync(string sessionId,
+            string path,
             string temporaryFilePath,
             string fileExtension,
             string instanceId,
@@ -27,9 +27,12 @@ namespace Kudu.Services.DaaS
                 foreach (var p in await GetDotNetProcessesAsync(cancellationToken))
                 {
                     var process = await GetDotNetProcessAsync(p.pid, cancellationToken);
-                    tasks.Add(process, _dotnetMonitorClient.GetAsync(
-                        path.Replace("{processId}", p.pid.ToString()),
-                        HttpCompletionOption.ResponseHeadersRead));
+                    path = path.Replace("{processId}", p.pid.ToString());
+                    
+                    DaasLogger.LogSessionMessage($"Invoking {path}", sessionId);
+                    tasks.Add(process, _dotnetMonitorClient.GetAsync(path,
+                        HttpCompletionOption.ResponseHeadersRead,
+                        cancellationToken));
                 }
 
                 foreach (var task in tasks)
@@ -37,7 +40,8 @@ namespace Kudu.Services.DaaS
                     var process = task.Key;
                     var resp = await task.Value;
 
-                    await UpdateToolResponseAsync(toolResponse,
+                    await UpdateToolResponseAsync(sessionId,
+                        toolResponse,
                         process,
                         resp,
                         fileExtension,
@@ -53,11 +57,15 @@ namespace Kudu.Services.DaaS
             return toolResponse;
         }
 
-        public override async Task<DiagnosticToolResponse> InvokeAsync(string toolParams, string temporaryFilePath, string instanceId, CancellationToken token)
+        public override async Task<DiagnosticToolResponse> InvokeAsync(string sessionId,
+            string toolParams,
+            string temporaryFilePath,
+            string instanceId,
+            CancellationToken token)
         {
             ClrTraceParams clrTraceParams = new ClrTraceParams(toolParams);
             string path = $"{dotnetMonitorAddress}/trace/{{processId}}?durationSeconds={clrTraceParams.DurationSeconds}&profile={clrTraceParams.TraceProfile}";
-            var response = await InvokeDotNetMonitorAsync(path, temporaryFilePath, fileExtension: ".nettrace", instanceId, token);
+            var response = await InvokeDotNetMonitorAsync(sessionId, path, temporaryFilePath, fileExtension: ".nettrace", instanceId, token);
             return response;
         }
     }

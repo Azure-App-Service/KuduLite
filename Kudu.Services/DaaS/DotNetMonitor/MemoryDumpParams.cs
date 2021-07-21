@@ -6,6 +6,11 @@
         internal string DumpType { get; set; } = "Mini";
         internal MemoryDumpParams(string toolParams)
         {
+            if (string.IsNullOrWhiteSpace(toolParams))
+            {
+                return;
+            }
+            
             foreach(var param in toolParams.Split(";"))
             {
                 var singleParams = param.Split("=");
@@ -16,7 +21,7 @@
 
                 if (singleParams[0] == "DumpType")
                 {
-                    this.DumpType = singleParams[1];
+                    DumpType = singleParams[1];
                 }
             }
         }

@@ -5,6 +5,10 @@ namespace Kudu.Services.DaaS
 {
     internal interface IDiagnosticTool
     {
-        Task<DiagnosticToolResponse> InvokeAsync(string toolParams, string tempPath, string instanceId, CancellationToken token);
+        Task<DiagnosticToolResponse> InvokeAsync(string sessionId,
+            string toolParams,
+            string tempPath,
+            string instanceId,
+            CancellationToken token);
     }
 }

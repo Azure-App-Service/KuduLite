@@ -118,33 +118,47 @@ namespace Kudu.Services.DaaS
         /// <returns></returns>
         public async Task RunToolForSessionAsync(Session activeSession, CancellationToken token)
         {
-            DaasLogger.LogSessionMessage($"Running tool for session", activeSession.SessionId);
+            try
+            {
+                DiagnosticToolResponse resp = null;
+                IDiagnosticTool diagnosticTool = GetDiagnosticTool(activeSession);
+                await SetCurrentInstanceAsStartedAsync(activeSession);
 
-            IDiagnosticTool diagnosticTool = GetDiagnosticTool(activeSession);
-            await SetCurrentInstanceAsStartedAsync(activeSession);
+                try
+                {
+                    resp = await diagnosticTool.InvokeAsync(activeSession.SessionId,
+                    activeSession.ToolParams,
+                    GetTemporaryFolderPath(),
+                    GetInstanceIdShort(),
+                    token);
+                }
+                catch (Exception ex)
+                {
+                    resp = new DiagnosticToolResponse();
+                    resp.Errors.Add($"Invoking diagnostic tool failed with error - {ex.Message}");
+                    DaasLogger.LogSessionError("Tool invocation failed", activeSession.SessionId, ex);
+                }
 
-            DaasLogger.LogSessionMessage($"Invoking Diagnostic tool for session", activeSession.SessionId);
-            var resp = await diagnosticTool.InvokeAsync(
-                activeSession.ToolParams,
-                GetTemporaryFolderPath(),
-                GetInstanceIdShort(),
-                token);
+                //
+                // Add the tool output to the active session
+                //
+                await AppendToolResponseToSessionAsync(activeSession, resp);
 
-            //
-            // Add the tool output to the active session
-            //
-            await AppendToolResponseToSessionAsync(activeSession, resp);
+                //
+                // Mark current instance as Complete
+                //
+                await MarkCurrentInstanceAsCompleteAsync(activeSession);
 
-            //
-            // Mark current instance as Complete
-            //
-            await MarkCurrentInstanceAsCompleteAsync(activeSession);
-
-            //
-            // Check if all the instances have finished running the session
-            // and set the Session State to Complete
-            //
-            await CheckandCompleteSessionIfNeededAsync(activeSession);
+                //
+                // Check if all the instances have finished running the session
+                // and set the Session State to Complete
+                //
+                await CheckandCompleteSessionIfNeededAsync(activeSession);
+            }
+            catch (Exception ex)
+            {
+                DaasLogger.LogSessionError("Exception while running tool", activeSession.SessionId, ex);
+            }
         }
 
         /// <summary>

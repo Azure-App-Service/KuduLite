@@ -55,13 +55,16 @@ namespace Kudu.Services.DaaS
             return process;
         }
 
-        internal async Task UpdateToolResponseAsync(DiagnosticToolResponse toolResponse,
+        internal async Task UpdateToolResponseAsync(string sessionId,
+            DiagnosticToolResponse toolResponse,
             DotNetMonitorProcessResponse process,
             HttpResponseMessage resp,
             string fileExtension,
             string temporaryFilePath,
             string instanceId)
         {
+            DaasLogger.LogSessionMessage($"dotnet-monitor response status {resp.StatusCode}", sessionId);
+
             if (resp.IsSuccessStatusCode)
             {
                 string fileName = resp.Content.Headers.ContentDisposition.FileName;
@@ -91,16 +94,19 @@ namespace Kudu.Services.DaaS
                 var error = await resp.Content.ReadAsStringAsync();
                 string errorMessage = string.IsNullOrWhiteSpace(error) ? $"dotnet-monitor failed with Status:{resp.StatusCode}" : error;
                 toolResponse.Errors.Add(errorMessage);
+                DaasLogger.LogSessionMessage($"dotnet-monitor failed {errorMessage}", sessionId);
             }
         }
 
         internal virtual async Task<DiagnosticToolResponse> InvokeDotNetMonitorAsync(
+            string sessionId,
             string path,
             string temporaryFilePath,
             string fileExtension,
             string instanceId,
             CancellationToken cancellationToken)
         {
+            DaasLogger.LogSessionMessage("InvokeDotNetMonitorAsync called", sessionId);
             var toolResponse = new DiagnosticToolResponse();
             if (string.IsNullOrWhiteSpace(dotnetMonitorAddress))
             {
@@ -118,12 +124,15 @@ namespace Kudu.Services.DaaS
                     }
 
                     var process = await GetDotNetProcessAsync(p.pid, cancellationToken);
-                    var resp = await _dotnetMonitorClient.GetAsync(
-                        path.Replace("{processId}", p.pid.ToString()),
+                    path = path.Replace("{processId}", p.pid.ToString());
+                    
+                    DaasLogger.LogSessionMessage($"Invoking {path}", sessionId);
+                    var resp = await _dotnetMonitorClient.GetAsync(path,
                         HttpCompletionOption.ResponseHeadersRead,
                         cancellationToken);
 
-                    await UpdateToolResponseAsync(toolResponse,
+                    await UpdateToolResponseAsync(sessionId, 
+                        toolResponse,
                         process,
                         resp,
                         fileExtension,
@@ -139,6 +148,6 @@ namespace Kudu.Services.DaaS
             return toolResponse;
         }
 
-        public abstract Task<DiagnosticToolResponse> InvokeAsync(string toolParams, string tempPath, string instanceId, CancellationToken token);
+        public abstract Task<DiagnosticToolResponse> InvokeAsync(string sessionId, string toolParams, string tempPath, string instanceId, CancellationToken token);
     }
 }

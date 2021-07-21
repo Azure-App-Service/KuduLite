@@ -3,10 +3,15 @@
     internal class ClrTraceParams
     {
         public int DurationSeconds { get; set; } = 60;
-        public string TraceProfile { get; set; }
+        public string TraceProfile { get; set; } = "Cpu,Http,Metrics";
 
         internal ClrTraceParams(string toolParams)
         {
+            if (string.IsNullOrWhiteSpace(toolParams))
+            {
+                return;
+            }
+
             foreach (var param in toolParams.Split(";"))
             {
                 var singleParams = param.Split("=");
@@ -19,13 +24,13 @@
                 {
                     if (int.TryParse(singleParams[1], out int duration))
                     {
-                        this.DurationSeconds = duration;
+                        DurationSeconds = duration;
                     }
                 }
 
                 if (singleParams[0] == "TraceProfile")
                 {
-                    this.TraceProfile = singleParams[1];
+                    TraceProfile = singleParams[1];
                 }
             }
         }
