@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Kudu.Services.Performance;
 using Newtonsoft.Json;
@@ -54,7 +55,12 @@ namespace Kudu.Services.DaaS
             return process;
         }
 
-        internal virtual async Task<DiagnosticToolResponse> InvokeDotNetMonitorAsync(string path, string temporaryFilePath, string fileExtension, string instanceId)
+        internal virtual async Task<DiagnosticToolResponse> InvokeDotNetMonitorAsync(
+            string path,
+            string temporaryFilePath,
+            string fileExtension,
+            string instanceId,
+            CancellationToken token)
         {
             var toolResponse = new DiagnosticToolResponse();
             if (string.IsNullOrWhiteSpace(dotnetMonitorAddress))
@@ -67,6 +73,11 @@ namespace Kudu.Services.DaaS
                 var processes = await GetDotNetProcessesAsync();
                 foreach (var p in processes)
                 {
+                    if (token.IsCancellationRequested)
+                    {
+                        continue;
+                    }
+                    
                     var process = await GetDotNetProcessAsync(p.pid);
                     var resp = await _dotnetMonitorClient.GetAsync(
                         path.Replace("{processId}", p.pid.ToString()),
@@ -112,6 +123,6 @@ namespace Kudu.Services.DaaS
             return toolResponse;
         }
 
-        public abstract Task<DiagnosticToolResponse> InvokeAsync(string toolParams, string tempPath, string instanceId);
+        public abstract Task<DiagnosticToolResponse> InvokeAsync(string toolParams, string tempPath, string instanceId, CancellationToken token);
     }
 }

@@ -54,7 +54,7 @@ namespace Kudu.Services.DaaS
                 return;
             }
 
-            await RunActiveSession();
+            await RunActiveSession(stoppingToken);
             CleanupCompletedSessions();
         }
 
@@ -74,23 +74,23 @@ namespace Kudu.Services.DaaS
             }
         }
 
-        private async Task RunActiveSession()
+        private async Task RunActiveSession(CancellationToken stoppingToken)
         {
-            Session activeSession = await _sessionManager.GetActiveSession();
+            Session activeSession = await _sessionManager.GetActiveSessionAsync();
             if (activeSession == null)
             {
                 return;
             }
 
             // Check if all instances are finished with log collection
-            if (await _sessionManager.CheckandCompleteSessionIfNeeded(activeSession))
+            if (await _sessionManager.CheckandCompleteSessionIfNeededAsync(activeSession))
             {
                 return;
             }
 
             if (DateTime.UtcNow.Subtract(activeSession.StartTime).TotalMinutes > MaxAllowedSessionTimeInMinutes)
             {
-                await _sessionManager.CheckandCompleteSessionIfNeeded(activeSession, forceCompletion: true);
+                await _sessionManager.CheckandCompleteSessionIfNeededAsync(activeSession, forceCompletion: true);
             }
 
             if (_sessionManager.ShouldCollectOnCurrentInstance(activeSession))
@@ -107,13 +107,12 @@ namespace Kudu.Services.DaaS
                     return;
                 }
 
-                CancellationTokenSource cts = new CancellationTokenSource();
-                var sessionTask = _sessionManager.RunToolForSessionAsync(activeSession, cts.Token);
+                var sessionTask = _sessionManager.RunToolForSessionAsync(activeSession, stoppingToken);
 
                 TaskAndCancellationToken t = new TaskAndCancellationToken
                 {
                     UnderlyingTask = sessionTask,
-                    CancellationSource = cts
+                    CancellationToken = stoppingToken
                 };
 
                 _runningSessions[activeSession.SessionId] = t;

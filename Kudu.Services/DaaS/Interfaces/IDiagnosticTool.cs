@@ -1,9 +1,10 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace Kudu.Services.DaaS
 {
     internal interface IDiagnosticTool
     {
-        Task<DiagnosticToolResponse> InvokeAsync(string toolParams, string tempPath, string instanceId);
+        Task<DiagnosticToolResponse> InvokeAsync(string toolParams, string tempPath, string instanceId, CancellationToken token);
     }
 }

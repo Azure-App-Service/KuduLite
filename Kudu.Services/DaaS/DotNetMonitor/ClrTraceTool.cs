@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Kudu.Services.DaaS
 {
     class ClrTraceTool : DotNetMonitorToolBase
     {
-        internal override async Task<DiagnosticToolResponse> InvokeDotNetMonitorAsync(string path, string temporaryFilePath, string fileExtension, string instanceId)
+        internal override async Task<DiagnosticToolResponse> InvokeDotNetMonitorAsync(string path, string temporaryFilePath, string fileExtension, string instanceId, CancellationToken token)
         {
             var toolResponse = new DiagnosticToolResponse();
             if (string.IsNullOrWhiteSpace(dotnetMonitorAddress))
@@ -71,11 +72,11 @@ namespace Kudu.Services.DaaS
 
             return toolResponse;
         }
-        public override async Task<DiagnosticToolResponse> InvokeAsync(string toolParams, string temporaryFilePath, string instanceId)
+        public override async Task<DiagnosticToolResponse> InvokeAsync(string toolParams, string temporaryFilePath, string instanceId, CancellationToken token)
         {
             ClrTraceParams clrTraceParams = new ClrTraceParams(toolParams);
             string path = $"{dotnetMonitorAddress}/trace/{{processId}}?durationSeconds={clrTraceParams.DurationSeconds}&profile={clrTraceParams.TraceProfile}";
-            var response = await InvokeDotNetMonitorAsync(path, temporaryFilePath, fileExtension: ".nettrace", instanceId);
+            var response = await InvokeDotNetMonitorAsync(path, temporaryFilePath, fileExtension: ".nettrace", instanceId, token);
             return response;
         }
     }

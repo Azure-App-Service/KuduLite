@@ -36,7 +36,7 @@ namespace Kudu.Services.DaaS
 
             try
             {
-                string sessionId = await _sessionManager.SubmitNewSession(session);
+                string sessionId = await _sessionManager.SubmitNewSessionAsync(session);
                 return Ok(sessionId);
             }
             catch (AccessViolationException aex)
@@ -56,7 +56,7 @@ namespace Kudu.Services.DaaS
         [HttpGet]
         public async Task<IActionResult> GetSessions()
         {
-            return Ok(await _sessionManager.GetAllSessions());
+            return Ok(await _sessionManager.GetAllSessionsAsync());
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace Kudu.Services.DaaS
         [HttpGet]
         public async Task<IActionResult> GetSession(string sessionId)
         {
-            return Ok(await _sessionManager.GetSession(sessionId));
+            return Ok(await _sessionManager.GetSessionAsync(sessionId));
         }
 
         /// <summary>
@@ -77,7 +77,7 @@ namespace Kudu.Services.DaaS
         [HttpGet]
         public async Task<IActionResult> GetActiveSession()
         {
-            return Ok(await _sessionManager.GetActiveSession());
+            return Ok(await _sessionManager.GetActiveSessionAsync());
         }
     }
 }

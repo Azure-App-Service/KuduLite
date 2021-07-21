@@ -14,26 +14,26 @@ namespace Kudu.Services.DaaS
         /// </summary>
         /// <param name="session"></param>
         /// <returns></returns>
-        Task<string> SubmitNewSession(Session session);
+        Task<string> SubmitNewSessionAsync(Session session);
         
         /// <summary>
         /// Lists all DaaS sessions, complete as well as active
         /// </summary>
         /// <returns></returns>
-        Task<IEnumerable<Session>> GetAllSessions();
+        Task<IEnumerable<Session>> GetAllSessionsAsync();
 
         /// <summary>
         /// Get a specific DaaS session
         /// </summary>
         /// <param name="sessionId"></param>
         /// <returns></returns>
-        Task<Session> GetSession(string sessionId);
+        Task<Session> GetSessionAsync(string sessionId);
 
         /// <summary>
         /// Gets the active diagnostic session object
         /// </summary>
         /// <returns></returns>
-        Task<Session> GetActiveSession();
+        Task<Session> GetActiveSessionAsync();
 
         /// <summary>
         /// Once a DaaS session is submitted, this method should be
@@ -67,6 +67,6 @@ namespace Kudu.Services.DaaS
         /// <param name="activeSession"></param>
         /// <param name="forceCompletion"></param>
         /// <returns></returns>
-        Task<bool> CheckandCompleteSessionIfNeeded(Session activeSession, bool forceCompletion = false);
+        Task<bool> CheckandCompleteSessionIfNeededAsync(Session activeSession, bool forceCompletion = false);
     }
 }

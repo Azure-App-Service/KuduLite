@@ -46,43 +46,43 @@ namespace Kudu.Services.DaaS
         #region ISessionManager methods
 
         /// <summary>
-        /// ISessionManager - GetActiveSession
+        /// ISessionManager - GetActiveSessionAsync
         /// </summary>
         /// <returns></returns>
-        public async Task<Session> GetActiveSession()
+        public async Task<Session> GetActiveSessionAsync()
         {
             var activeSessions = await LoadSessionsFromStorage(SessionDirectories.ActiveSessionsDir);
             return activeSessions.FirstOrDefault();
         }
 
         /// <summary>
-        /// ISessionManager - GetAllSessions
+        /// ISessionManager - GetAllSessionsAsync
         /// </summary>
         /// <returns></returns>
-        public async Task<IEnumerable<Session>> GetAllSessions()
+        public async Task<IEnumerable<Session>> GetAllSessionsAsync()
         {
             return (await LoadSessionsFromStorage(_allSessionsDirs));
         }
 
         /// <summary>
-        /// ISessionManager - GetSession
+        /// ISessionManager - GetSessionAsync
         /// </summary>
         /// <param name="sessionId"></param>
         /// <returns></returns>
-        public async Task<Session> GetSession(string sessionId)
+        public async Task<Session> GetSessionAsync(string sessionId)
         {
             return (await LoadSessionsFromStorage(_allSessionsDirs))
                 .Where(x => x.SessionId == sessionId).FirstOrDefault();
         }
 
         /// <summary>
-        /// ISessionManager - SubmitNewSession
+        /// ISessionManager - SubmitNewSessionAsync
         /// </summary>
         /// <param name="session"></param>
         /// <returns></returns>
-        public async Task<string> SubmitNewSession(Session session)
+        public async Task<string> SubmitNewSessionAsync(Session session)
         {
-            var activeSession = await GetActiveSession();
+            var activeSession = await GetActiveSessionAsync();
             if (activeSession != null)
             {
                 throw new AccessViolationException("There is an already an existing active session");
@@ -93,7 +93,7 @@ namespace Kudu.Services.DaaS
                 throw new ArgumentException("Please specify a diagnostic tool");
             }
             
-            await SaveSession(session);
+            await SaveSessionAsync(session);
             return session.SessionId;
         }
 
@@ -123,32 +123,36 @@ namespace Kudu.Services.DaaS
             await MarkCurrentInstanceAsStarted(activeSession);
 
             DaasLogger.LogSessionMessage($"Invoking Diagnostic tool for session", activeSession.SessionId);
-            var resp = await diagnosticTool.InvokeAsync(activeSession.ToolParams, GetTemporaryFolderPath(), GetInstanceIdShort());
+            var resp = await diagnosticTool.InvokeAsync(
+                activeSession.ToolParams,
+                GetTemporaryFolderPath(),
+                GetInstanceIdShort(),
+                token);
             
             //
-            // Add the collected logs to the Active session
+            // Add the tool output to the active session
             //
-            await AddLogsToActiveSession(activeSession, resp);
+            await AddToolOutputToSessionAsync(activeSession, resp);
 
             //
             // Mark current instance as Complete
             //
-            await MarkCurrentInstanceAsComplete(activeSession);
+            await MarkCurrentInstanceAsCompleteAsync(activeSession);
 
             //
             // Check if all the instances have finished running the session
             // and set the Session State to Complete
             //
-            await CheckandCompleteSessionIfNeeded(activeSession);
+            await CheckandCompleteSessionIfNeededAsync(activeSession);
         }
 
         /// <summary>
-        /// ISessionManager - CheckandCompleteSessionIfNeeded
+        /// ISessionManager - CheckandCompleteSessionIfNeededAsync
         /// </summary>
         /// <param name="activeSession"></param>
         /// <param name="forceCompletion"></param>
         /// <returns></returns>
-        public async Task<bool> CheckandCompleteSessionIfNeeded(Session activeSession, bool forceCompletion = false)
+        public async Task<bool> CheckandCompleteSessionIfNeededAsync(Session activeSession, bool forceCompletion = false)
         {
             if (AllInstancesCollectedLogs(activeSession) || forceCompletion)
             {
@@ -183,7 +187,7 @@ namespace Kudu.Services.DaaS
         /// <param name="activeSession"></param>
         /// <param name="response"></param>
         /// <returns></returns>
-        private async Task AddLogsToActiveSession(Session activeSession, DiagnosticToolResponse response)
+        private async Task AddToolOutputToSessionAsync(Session activeSession, DiagnosticToolResponse response)
         {
             try
             {
@@ -293,7 +297,7 @@ namespace Kudu.Services.DaaS
             return sessions;
         }
 
-        private async Task SaveSession(Session session)
+        private async Task SaveSessionAsync(Session session)
         {
             try
             {
@@ -393,7 +397,7 @@ namespace Kudu.Services.DaaS
             return Path.Combine(SessionDirectories.ActiveSessionsDir, sessionId + ".json.lock");
         }
 
-        private async Task MarkCurrentInstanceAsComplete(Session activeSession)
+        private async Task MarkCurrentInstanceAsCompleteAsync(Session activeSession)
         {
             await UpdateCurrentInstanceStatus(activeSession, Status.Complete);
         }
@@ -444,7 +448,7 @@ namespace Kudu.Services.DaaS
 
                 try
                 {
-                    await CopyFileAsync(log.FullPath, destination, activeSession.SessionId);
+                    await MoveFileAsync(log.FullPath, destination, activeSession.SessionId);
                 }
                 catch (Exception ex)
                 {
@@ -471,7 +475,7 @@ namespace Kudu.Services.DaaS
         }
 
         // https://stackoverflow.com/questions/882686/non-blocking-file-copy-in-c-sharp
-        private async Task CopyFileAsync(string sourceFile, string destinationFile, string sessionId)
+        private async Task MoveFileAsync(string sourceFile, string destinationFile, string sessionId)
         {
             try
             {
