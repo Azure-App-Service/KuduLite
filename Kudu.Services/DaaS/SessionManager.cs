@@ -365,16 +365,7 @@ namespace Kudu.Services.DaaS
 
         private async Task<IOperationLock> AcquireSessionLockAsync(string sessionId, string callerMethodName)
         {
-            IOperationLock sessionLock;
-            if (OSDetector.IsOnWindows())
-            {
-                sessionLock = new SessionLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
-            }
-            else
-            {
-                sessionLock = new SessionLinuxLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
-            }
-
+            IOperationLock sessionLock = new SessionLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
             int loopCount = 0;
 
             DaasLogger.LogSessionMessage($"Acquiring SessionLock by {callerMethodName} on {GetInstanceId()}", sessionId);
