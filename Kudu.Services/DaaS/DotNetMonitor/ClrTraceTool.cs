@@ -9,7 +9,11 @@ namespace Kudu.Services.DaaS
 {
     class ClrTraceTool : DotNetMonitorToolBase
     {
-        internal override async Task<DiagnosticToolResponse> InvokeDotNetMonitorAsync(string path, string temporaryFilePath, string fileExtension, string instanceId, CancellationToken token)
+        internal override async Task<DiagnosticToolResponse> InvokeDotNetMonitorAsync(string path,
+            string temporaryFilePath,
+            string fileExtension,
+            string instanceId,
+            CancellationToken cancellationToken)
         {
             var toolResponse = new DiagnosticToolResponse();
             if (string.IsNullOrWhiteSpace(dotnetMonitorAddress))
@@ -20,9 +24,9 @@ namespace Kudu.Services.DaaS
             try
             {
                 var tasks = new Dictionary<DotNetMonitorProcessResponse, Task<HttpResponseMessage>>();
-                foreach (var p in await GetDotNetProcessesAsync())
+                foreach (var p in await GetDotNetProcessesAsync(cancellationToken))
                 {
-                    var process = await GetDotNetProcessAsync(p.pid);
+                    var process = await GetDotNetProcessAsync(p.pid, cancellationToken);
                     tasks.Add(process, _dotnetMonitorClient.GetAsync(
                         path.Replace("{processId}", p.pid.ToString()),
                         HttpCompletionOption.ResponseHeadersRead));
@@ -33,36 +37,12 @@ namespace Kudu.Services.DaaS
                     var process = task.Key;
                     var resp = await task.Value;
 
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        string fileName = resp.Content.Headers.ContentDisposition.FileName;
-                        if (string.IsNullOrWhiteSpace(fileName))
-                        {
-                            fileName = DateTime.UtcNow.Ticks.ToString() + fileExtension;
-                        }
-
-                        fileName = $"{instanceId}_{process.name}_{process.pid}_{fileName}";
-                        fileName = Path.Combine(temporaryFilePath, fileName);
-                        using (var stream = await resp.Content.ReadAsStreamAsync())
-                        {
-                            using (var fileStream = new FileStream(fileName, FileMode.CreateNew))
-                            {
-                                await stream.CopyToAsync(fileStream);
-                            }
-                        }
-
-                        toolResponse.Logs.Add(new LogFile()
-                        {
-                            FullPath = fileName,
-                            ProcessName = process.name,
-                            ProcessId = process.pid
-                        });
-                    }
-                    else
-                    {
-                        var error = await resp.Content.ReadAsStringAsync();
-                        toolResponse.Errors.Add(error);
-                    }
+                    await UpdateToolResponseAsync(toolResponse,
+                        process,
+                        resp,
+                        fileExtension,
+                        temporaryFilePath,
+                        instanceId);
                 }
             }
             catch (Exception ex)
@@ -72,6 +52,7 @@ namespace Kudu.Services.DaaS
 
             return toolResponse;
         }
+
         public override async Task<DiagnosticToolResponse> InvokeAsync(string toolParams, string temporaryFilePath, string instanceId, CancellationToken token)
         {
             ClrTraceParams clrTraceParams = new ClrTraceParams(toolParams);

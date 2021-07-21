@@ -5,7 +5,10 @@ namespace Kudu.Services.DaaS
 {
     internal class MemoryDumpTool : DotNetMonitorToolBase
     {
-        public override async Task<DiagnosticToolResponse> InvokeAsync(string toolParams, string temporaryFilePath, string instanceId, CancellationToken token)
+        public override async Task<DiagnosticToolResponse> InvokeAsync(string toolParams,
+            string temporaryFilePath,
+            string instanceId,
+            CancellationToken token)
         {
             MemoryDumpParams memoryDumpParams = new MemoryDumpParams(toolParams);
             string path = $"{dotnetMonitorAddress}/dump/{{processId}}?type={memoryDumpParams.DumpType}";

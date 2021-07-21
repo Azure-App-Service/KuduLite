@@ -22,7 +22,7 @@ namespace Kudu.Services.DaaS
         private readonly ConcurrentDictionary<string, TaskAndCancellationToken> _runningSessions = new ConcurrentDictionary<string, TaskAndCancellationToken>();
 
         /// <summary>
-        /// 
+        /// SessionRunnerService constructor
         /// </summary>
         /// <param name="sessionManager"></param>
         public SessionRunnerService(ISessionManager sessionManager)
@@ -54,7 +54,7 @@ namespace Kudu.Services.DaaS
                 return;
             }
 
-            await RunActiveSession(stoppingToken);
+            await RunActiveSessionAsync(stoppingToken);
             CleanupCompletedSessions();
         }
 
@@ -74,7 +74,7 @@ namespace Kudu.Services.DaaS
             }
         }
 
-        private async Task RunActiveSession(CancellationToken stoppingToken)
+        private async Task RunActiveSessionAsync(CancellationToken stoppingToken)
         {
             Session activeSession = await _sessionManager.GetActiveSessionAsync();
             if (activeSession == null)
@@ -90,6 +90,11 @@ namespace Kudu.Services.DaaS
 
             if (DateTime.UtcNow.Subtract(activeSession.StartTime).TotalMinutes > MaxAllowedSessionTimeInMinutes)
             {
+                if (_runningSessions.ContainsKey(activeSession.SessionId))
+                {
+                    _runningSessions[activeSession.SessionId].CancellationTokenSource.Cancel();
+                }
+                
                 await _sessionManager.CheckandCompleteSessionIfNeededAsync(activeSession, forceCompletion: true);
             }
 
@@ -112,7 +117,7 @@ namespace Kudu.Services.DaaS
                 TaskAndCancellationToken t = new TaskAndCancellationToken
                 {
                     UnderlyingTask = sessionTask,
-                    CancellationToken = stoppingToken
+                    CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken)
                 };
 
                 _runningSessions[activeSession.SessionId] = t;

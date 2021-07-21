@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Tracing;
+using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Tracing;
 using Newtonsoft.Json;
@@ -51,7 +52,7 @@ namespace Kudu.Services.DaaS
         /// <returns></returns>
         public async Task<Session> GetActiveSessionAsync()
         {
-            var activeSessions = await LoadSessionsFromStorage(SessionDirectories.ActiveSessionsDir);
+            var activeSessions = await LoadSessionsAsync(SessionDirectories.ActiveSessionsDir);
             return activeSessions.FirstOrDefault();
         }
 
@@ -61,7 +62,7 @@ namespace Kudu.Services.DaaS
         /// <returns></returns>
         public async Task<IEnumerable<Session>> GetAllSessionsAsync()
         {
-            return (await LoadSessionsFromStorage(_allSessionsDirs));
+            return (await LoadSessionsAsync(_allSessionsDirs)).OrderByDescending(x => x.StartTime);
         }
 
         /// <summary>
@@ -71,7 +72,7 @@ namespace Kudu.Services.DaaS
         /// <returns></returns>
         public async Task<Session> GetSessionAsync(string sessionId)
         {
-            return (await LoadSessionsFromStorage(_allSessionsDirs))
+            return (await LoadSessionsAsync(_allSessionsDirs))
                 .Where(x => x.SessionId == sessionId).FirstOrDefault();
         }
 
@@ -92,7 +93,7 @@ namespace Kudu.Services.DaaS
             {
                 throw new ArgumentException("Please specify a diagnostic tool");
             }
-            
+
             await SaveSessionAsync(session);
             return session.SessionId;
         }
@@ -120,7 +121,7 @@ namespace Kudu.Services.DaaS
             DaasLogger.LogSessionMessage($"Running tool for session", activeSession.SessionId);
 
             IDiagnosticTool diagnosticTool = GetDiagnosticTool(activeSession);
-            await MarkCurrentInstanceAsStarted(activeSession);
+            await SetCurrentInstanceAsStartedAsync(activeSession);
 
             DaasLogger.LogSessionMessage($"Invoking Diagnostic tool for session", activeSession.SessionId);
             var resp = await diagnosticTool.InvokeAsync(
@@ -128,11 +129,11 @@ namespace Kudu.Services.DaaS
                 GetTemporaryFolderPath(),
                 GetInstanceIdShort(),
                 token);
-            
+
             //
             // Add the tool output to the active session
             //
-            await AddToolOutputToSessionAsync(activeSession, resp);
+            await AppendToolResponseToSessionAsync(activeSession, resp);
 
             //
             // Mark current instance as Complete
@@ -156,7 +157,7 @@ namespace Kudu.Services.DaaS
         {
             if (AllInstancesCollectedLogs(activeSession) || forceCompletion)
             {
-                await MarkSessionAsComplete(activeSession, forceCompletion:forceCompletion);
+                await MarkSessionAsCompleteAsync(activeSession, forceCompletion: forceCompletion);
                 return true;
             }
 
@@ -187,7 +188,7 @@ namespace Kudu.Services.DaaS
         /// <param name="activeSession"></param>
         /// <param name="response"></param>
         /// <returns></returns>
-        private async Task AddToolOutputToSessionAsync(Session activeSession, DiagnosticToolResponse response)
+        private async Task AppendToolResponseToSessionAsync(Session activeSession, DiagnosticToolResponse response)
         {
             try
             {
@@ -197,11 +198,11 @@ namespace Kudu.Services.DaaS
                     log.Name = Path.GetFileName(log.FullPath);
                 }
 
-                await CopyLogsToPermanentLocation(response.Logs, activeSession);
+                await CopyLogsToPermanentLocationAsync(response.Logs, activeSession);
 
                 DaasLogger.LogSessionMessage($"Copied {response.Logs.Count()} logs to permanent storage", activeSession.SessionId);
 
-                await UpdateSession(() =>
+                await UpdateActiveSessionAsync(() =>
                 {
                     try
                     {
@@ -240,11 +241,11 @@ namespace Kudu.Services.DaaS
                 DaasLogger.LogSessionError("Failed in AddLogsToActiveSession", activeSession.SessionId, ex);
             }
         }
-        private async Task UpdateSession(Func<Session> updatedSession, string sessionId, [CallerMemberName] string callerMethodName = "")
+        private async Task UpdateActiveSessionAsync(Func<Session> updatedSession, string sessionId, [CallerMemberName] string callerMethodName = "")
         {
             try
             {
-                _sessionLockFile = await AcquireSessionLock(sessionId, callerMethodName);
+                _sessionLockFile = await AcquireSessionLockAsync(sessionId, callerMethodName);
 
                 if (_sessionLockFile == null)
                 {
@@ -256,7 +257,7 @@ namespace Kudu.Services.DaaS
                 }
 
                 Session activeSession = updatedSession();
-                await UpdateActiveSession(activeSession);
+                await UpdateActiveSessionFileAsync(activeSession);
 
                 if (_sessionLockFile != null)
                 {
@@ -270,12 +271,12 @@ namespace Kudu.Services.DaaS
             }
         }
 
-        private async Task<List<Session>> LoadSessionsFromStorage(string directoryToLoadSessionsFrom)
+        private async Task<List<Session>> LoadSessionsAsync(string directoryToLoadSessionsFrom)
         {
-            return await LoadSessionsFromStorage(new List<string> { directoryToLoadSessionsFrom });
+            return await LoadSessionsAsync(new List<string> { directoryToLoadSessionsFrom });
         }
 
-        private async Task<List<Session>> LoadSessionsFromStorage(List<string> directoriesToLoadSessionsFrom)
+        private async Task<List<Session>> LoadSessionsAsync(List<string> directoriesToLoadSessionsFrom)
         {
             var sessions = new List<Session>();
             foreach (var directory in directoriesToLoadSessionsFrom)
@@ -362,9 +363,18 @@ namespace Kudu.Services.DaaS
             }
         }
 
-        private async Task<IOperationLock> AcquireSessionLock(string sessionId, string callerMethodName)
+        private async Task<IOperationLock> AcquireSessionLockAsync(string sessionId, string callerMethodName)
         {
-            IOperationLock sessionLock = new SessionLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
+            IOperationLock sessionLock;
+            if (OSDetector.IsOnWindows())
+            {
+                sessionLock = new SessionLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
+            }
+            else
+            {
+                sessionLock = new SessionLinuxLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
+            }
+
             int loopCount = 0;
 
             DaasLogger.LogSessionMessage($"Acquiring SessionLock by {callerMethodName} on {GetInstanceId()}", sessionId);
@@ -386,7 +396,7 @@ namespace Kudu.Services.DaaS
             return sessionLock;
         }
 
-        private async Task UpdateActiveSession(Session activeSesion)
+        private async Task UpdateActiveSessionFileAsync(Session activeSesion)
         {
             await WriteJsonAsync(activeSesion,
                 Path.Combine(SessionDirectories.ActiveSessionsDir, activeSesion.SessionId + ".json"));
@@ -399,19 +409,19 @@ namespace Kudu.Services.DaaS
 
         private async Task MarkCurrentInstanceAsCompleteAsync(Session activeSession)
         {
-            await UpdateCurrentInstanceStatus(activeSession, Status.Complete);
+            await SetCurrentInstanceStatusAsync(activeSession, Status.Complete);
         }
 
-        private async Task MarkCurrentInstanceAsStarted(Session activeSession)
+        private async Task SetCurrentInstanceAsStartedAsync(Session activeSession)
         {
-            await UpdateCurrentInstanceStatus(activeSession, Status.Started);
+            await SetCurrentInstanceStatusAsync(activeSession, Status.Started);
         }
 
-        private async Task UpdateCurrentInstanceStatus(Session activeSession, Status sessionStatus)
+        private async Task SetCurrentInstanceStatusAsync(Session activeSession, Status sessionStatus)
         {
             try
             {
-                await UpdateSession(() =>
+                await UpdateActiveSessionAsync(() =>
                 {
                     if (activeSession.ActiveInstances == null)
                     {
@@ -435,7 +445,7 @@ namespace Kudu.Services.DaaS
             }
         }
 
-        private async Task CopyLogsToPermanentLocation(IEnumerable<LogFile> logFiles, Session activeSession)
+        private async Task CopyLogsToPermanentLocationAsync(IEnumerable<LogFile> logFiles, Session activeSession)
         {
             foreach (var log in logFiles)
             {
@@ -522,9 +532,9 @@ namespace Kudu.Services.DaaS
             return completedInstances.SequenceEqual(activeSession.Instances, StringComparer.OrdinalIgnoreCase);
         }
 
-        private async Task MarkSessionAsComplete(Session activeSession, bool forceCompletion = false)
+        private async Task MarkSessionAsCompleteAsync(Session activeSession, bool forceCompletion = false)
         {
-            await UpdateSession(() =>
+            await UpdateActiveSessionAsync(() =>
             {
                 activeSession.Status = forceCompletion ? Status.TimedOut : Status.Complete;
                 activeSession.EndTime = DateTime.UtcNow;

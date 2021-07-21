@@ -37,22 +37,61 @@ namespace Kudu.Services.DaaS
             };
         }
 
-        internal async Task<IEnumerable<DotNetMonitorProcessesResponse>> GetDotNetProcessesAsync()
+        internal async Task<IEnumerable<DotNetMonitorProcessesResponse>> GetDotNetProcessesAsync(CancellationToken cancellationToken)
         {
-            var resp = await _dotnetMonitorClient.GetAsync($"{dotnetMonitorAddress}/processes");
+            var resp = await _dotnetMonitorClient.GetAsync($"{dotnetMonitorAddress}/processes", cancellationToken);
             resp.EnsureSuccessStatusCode();
             string content = await resp.Content.ReadAsStringAsync();
             var processes = JsonConvert.DeserializeObject<IEnumerable<DotNetMonitorProcessesResponse>>(content);
             return processes.Take(MaxProcessesToDiagnose).ToList();
         }
 
-        internal async Task<DotNetMonitorProcessResponse> GetDotNetProcessAsync(int pid)
+        internal async Task<DotNetMonitorProcessResponse> GetDotNetProcessAsync(int pid, CancellationToken cancellationToken)
         {
-            var resp = await _dotnetMonitorClient.GetAsync($"{dotnetMonitorAddress}/processes/{pid}");
+            var resp = await _dotnetMonitorClient.GetAsync($"{dotnetMonitorAddress}/processes/{pid}", cancellationToken);
             resp.EnsureSuccessStatusCode();
             string content = await resp.Content.ReadAsStringAsync();
             var process = JsonConvert.DeserializeObject<DotNetMonitorProcessResponse>(content);
             return process;
+        }
+
+        internal async Task UpdateToolResponseAsync(DiagnosticToolResponse toolResponse,
+            DotNetMonitorProcessResponse process,
+            HttpResponseMessage resp,
+            string fileExtension,
+            string temporaryFilePath,
+            string instanceId)
+        {
+            if (resp.IsSuccessStatusCode)
+            {
+                string fileName = resp.Content.Headers.ContentDisposition.FileName;
+                if (string.IsNullOrWhiteSpace(fileName))
+                {
+                    fileName = DateTime.UtcNow.Ticks.ToString() + fileExtension;
+                }
+
+                fileName = Path.Combine(temporaryFilePath, $"{instanceId}_{process.name}_{process.pid}_{fileName}");
+                using (var stream = await resp.Content.ReadAsStreamAsync())
+                {
+                    using (var fileStream = new FileStream(fileName, FileMode.CreateNew))
+                    {
+                        await stream.CopyToAsync(fileStream);
+                    }
+                }
+
+                toolResponse.Logs.Add(new LogFile()
+                {
+                    FullPath = fileName,
+                    ProcessName = process.name,
+                    ProcessId = process.pid
+                });
+            }
+            else
+            {
+                var error = await resp.Content.ReadAsStringAsync();
+                string errorMessage = string.IsNullOrWhiteSpace(error) ? $"dotnet-monitor failed with Status:{resp.StatusCode}" : error;
+                toolResponse.Errors.Add(errorMessage);
+            }
         }
 
         internal virtual async Task<DiagnosticToolResponse> InvokeDotNetMonitorAsync(
@@ -60,7 +99,7 @@ namespace Kudu.Services.DaaS
             string temporaryFilePath,
             string fileExtension,
             string instanceId,
-            CancellationToken token)
+            CancellationToken cancellationToken)
         {
             var toolResponse = new DiagnosticToolResponse();
             if (string.IsNullOrWhiteSpace(dotnetMonitorAddress))
@@ -70,49 +109,26 @@ namespace Kudu.Services.DaaS
 
             try
             {
-                var processes = await GetDotNetProcessesAsync();
+                var processes = await GetDotNetProcessesAsync(cancellationToken);
                 foreach (var p in processes)
                 {
-                    if (token.IsCancellationRequested)
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        continue;
+                        break;
                     }
-                    
-                    var process = await GetDotNetProcessAsync(p.pid);
+
+                    var process = await GetDotNetProcessAsync(p.pid, cancellationToken);
                     var resp = await _dotnetMonitorClient.GetAsync(
                         path.Replace("{processId}", p.pid.ToString()),
-                        HttpCompletionOption.ResponseHeadersRead);
+                        HttpCompletionOption.ResponseHeadersRead,
+                        cancellationToken);
 
-                    if (resp.IsSuccessStatusCode)
-                    {
-                        string fileName = resp.Content.Headers.ContentDisposition.FileName;
-                        if (string.IsNullOrWhiteSpace(fileName))
-                        {
-                            fileName = DateTime.UtcNow.Ticks.ToString() + fileExtension;
-                        }
-
-                        fileName = $"{instanceId}_{process.name}_{process.pid}_{fileName}";
-                        fileName = Path.Combine(temporaryFilePath, fileName);
-                        using (var stream = await resp.Content.ReadAsStreamAsync())
-                        {
-                            using (var fileStream = new FileStream(fileName, FileMode.CreateNew))
-                            {
-                                await stream.CopyToAsync(fileStream);
-                            }
-                        }
-
-                        toolResponse.Logs.Add(new LogFile()
-                        {
-                            FullPath = fileName,
-                            ProcessName = process.name,
-                            ProcessId = process.pid
-                        });
-                    }
-                    else
-                    {
-                        var error = await resp.Content.ReadAsStringAsync();
-                        toolResponse.Errors.Add(error);
-                    }
+                    await UpdateToolResponseAsync(toolResponse,
+                        process,
+                        resp,
+                        fileExtension,
+                        temporaryFilePath,
+                        instanceId);
                 }
             }
             catch (Exception ex)
