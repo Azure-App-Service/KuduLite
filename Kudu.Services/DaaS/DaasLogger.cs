@@ -31,5 +31,18 @@ namespace Kudu.Services.DaaS
                 Console.WriteLine($"[{sessionId}] {message} {ex}");
             }
         }
+
+        internal static void LogSessionError(string message, string sessionId, string error)
+        {
+            KuduEventGenerator.Log().DaasSessionException(ServerConfiguration.GetApplicationName(),
+                message: message,
+                sessionId: sessionId,
+                exception: error); ;
+
+            if (OSDetector.IsOnWindows())
+            {
+                Console.WriteLine($"[{sessionId}] {message} {ex}");
+            }
+        }
     }
 }

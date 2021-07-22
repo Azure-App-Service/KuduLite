@@ -9,11 +9,11 @@ namespace Kudu.Services.DaaS
             string toolParams,
             string temporaryFilePath,
             string instanceId,
-            CancellationToken token)
+            CancellationToken cancellationToken)
         {
             MemoryDumpParams memoryDumpParams = new MemoryDumpParams(toolParams);
             string path = $"{dotnetMonitorAddress}/dump/{{processId}}?type={memoryDumpParams.DumpType}";
-            var response = await InvokeDotNetMonitorAsync(sessionId, path, temporaryFilePath, ".dmp", instanceId, token);
+            var response = await InvokeDotNetMonitorAsync(sessionId, path, temporaryFilePath, ".dmp", instanceId, cancellationToken);
             return response;
         }
     }

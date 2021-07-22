@@ -91,11 +91,21 @@ namespace Kudu.Services.DaaS
             }
             else
             {
-                var error = await resp.Content.ReadAsStringAsync();
-                string errorMessage = string.IsNullOrWhiteSpace(error) ? $"dotnet-monitor failed with Status:{resp.StatusCode}" : error;
-                toolResponse.Errors.Add(errorMessage);
-                DaasLogger.LogSessionMessage($"dotnet-monitor failed {errorMessage}", sessionId);
+                var error = await GetErrorResponse(resp);
+                toolResponse.Errors.Add(error);
+                DaasLogger.LogSessionError($"dotnet-monitor returned an error response", sessionId, error);
             }
+        }
+
+        private async Task<string> GetErrorResponse(HttpResponseMessage resp)
+        {
+            var error = await resp.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(error))
+            {
+                return $"dotnet-monitor failed with Status:{resp.StatusCode}";
+            }
+            
+            return error;
         }
 
         internal virtual async Task<DiagnosticToolResponse> InvokeDotNetMonitorAsync(
@@ -142,6 +152,7 @@ namespace Kudu.Services.DaaS
             }
             catch (Exception ex)
             {
+                DaasLogger.LogSessionError($"Failed while invoking dotnet-monitor", sessionId, ex);
                 toolResponse.Errors.Add(ex.Message);
             }
 
