@@ -6,26 +6,17 @@ using Microsoft.AspNetCore.Mvc;
 namespace Kudu.Services.DaaS
 {
     /// <summary>
-    /// 
+    /// Controller exposing the DaaS functionality
     /// </summary>
     public class DaasController : Controller
     {
         private readonly ISessionManager _sessionManager;
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="sessionManager"></param>
         public DaasController(ISessionManager sessionManager)
         {
             _sessionManager = sessionManager;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="session"></param>
-        /// <returns></returns>
         [HttpPost]
         public async Task<IActionResult> SubmitNewSession([FromBody] Session session)
         {
@@ -49,31 +40,18 @@ namespace Kudu.Services.DaaS
             }
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
         [HttpGet]
         public async Task<IActionResult> GetSessions()
         {
             return Ok(await _sessionManager.GetAllSessionsAsync());
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="sessionId"></param>
-        /// <returns></returns>
         [HttpGet]
         public async Task<IActionResult> GetSession(string sessionId)
         {
             return Ok(await _sessionManager.GetSessionAsync(sessionId));
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
         [HttpGet]
         public async Task<IActionResult> GetActiveSession()
         {

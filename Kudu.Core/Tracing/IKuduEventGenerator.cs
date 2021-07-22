@@ -22,5 +22,9 @@ namespace Kudu.Core.Tracing
         void ApiEvent(string siteName, string Message, string address, string verb, string requestId, int statusCode, long latencyInMilliseconds, string userAgent);
 
         void LogMessage(EventLevel logLevel, string siteName, string message, string exception);
+
+        void DaasSessionMessage(string siteName, string message, string sessionId);
+
+        void DaasSessionException(string siteName, string message, string sessionId, string exception);
     }
 }

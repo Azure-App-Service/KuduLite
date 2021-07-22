@@ -52,5 +52,17 @@ namespace Kudu.Core.Tracing
             // Only used in Linux consumption currently
             return;
         }
+
+        public void DaasSessionMessage(string siteName, string Message, string SessionId)
+        {
+            // Only used in Linux
+            return;
+        }
+
+        public void DaasSessionException(string siteName, string Message, string SessionId, string exception)
+        {
+            // Only used in Linux
+            return;
+        }
     }
 }

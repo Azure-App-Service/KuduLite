@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Tracing;
-using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Tracing;
 using Newtonsoft.Json;
@@ -275,7 +274,7 @@ namespace Kudu.Services.DaaS
 
                 if (_sessionLockFile != null)
                 {
-                    DaasLogger.LogSessionMessage($"SessionLock released by {callerMethodName} on {GetInstanceId()}", sessionId);
+                    DaasLogger.LogSessionMessage($"SessionLock released by {callerMethodName}", sessionId);
                     _sessionLockFile.Release();
                 }
             }
@@ -322,7 +321,15 @@ namespace Kudu.Services.DaaS
                 await WriteJsonAsync(session,
                     Path.Combine(SessionDirectories.ActiveSessionsDir, session.SessionId + ".json"));
 
-                DaasLogger.LogSessionMessage($"New session started {JsonConvert.SerializeObject(session)}", session.SessionId);
+                var sessionInfo = new
+                {
+                    session.SessionId,
+                    session.Instances,
+                    session.Tool,
+                    session.ToolParams,
+                };
+
+                DaasLogger.LogSessionMessage($"New session started {JsonConvert.SerializeObject(sessionInfo)}", session.SessionId);
             }
             catch (Exception ex)
             {
@@ -382,7 +389,7 @@ namespace Kudu.Services.DaaS
             IOperationLock sessionLock = new SessionLockFile(GetActiveSessionLockPath(sessionId), _traceFactory);
             int loopCount = 0;
 
-            DaasLogger.LogSessionMessage($"Acquiring SessionLock by {callerMethodName} on {GetInstanceId()}", sessionId);
+            DaasLogger.LogSessionMessage($"Acquiring SessionLock by {callerMethodName}", sessionId);
             while (!sessionLock.Lock(callerMethodName)
                 && loopCount <= 60)
             {
@@ -397,7 +404,7 @@ namespace Kudu.Services.DaaS
                 return null;
             }
 
-            DaasLogger.LogSessionMessage($"Acquired SessionLock by {callerMethodName} on {GetInstanceId()}", sessionId);
+            DaasLogger.LogSessionMessage($"Acquired SessionLock by {callerMethodName}", sessionId);
             return sessionLock;
         }
 

@@ -9,12 +9,9 @@ namespace Kudu.Services.DaaS
     {
         internal static void LogSessionMessage(string message, string sessionId)
         {
-            KuduEventGenerator.Log().GenericEvent(ServerConfiguration.GetApplicationName(),
-                 $"[{sessionId}] {message}",
-                 string.Empty,
-                 string.Empty,
-                 string.Empty,
-                 string.Empty);
+            KuduEventGenerator.Log().DaasSessionMessage(ServerConfiguration.GetApplicationName(),
+                 message: message,
+                 sessionId: sessionId);
 
             if (OSDetector.IsOnWindows())
             {
@@ -24,12 +21,10 @@ namespace Kudu.Services.DaaS
 
         internal static void LogSessionError(string message, string sessionId, Exception ex)
         {
-            KuduEventGenerator.Log().GenericEvent(ServerConfiguration.GetApplicationName(),
-                 $"[{sessionId}] {message} {ex}",
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                string.Empty);
+            KuduEventGenerator.Log().DaasSessionException(ServerConfiguration.GetApplicationName(),
+                message: message,
+                sessionId: sessionId,
+                exception: ex.ToString()); ;
 
             if (OSDetector.IsOnWindows())
             {

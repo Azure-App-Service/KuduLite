@@ -167,5 +167,31 @@ namespace Kudu.Core.Tracing
                 Console.WriteLine(evt);
             }
         }
+
+        public void DaasSessionMessage(string siteName, string message, string sessionId)
+        {
+            KuduEvent kuduEvent = new KuduEvent
+            {
+                siteName = siteName,
+                Message = message,
+                path = sessionId
+            };
+
+            LogKuduTraceEvent(kuduEvent);
+        }
+
+        public void DaasSessionException(string siteName, string message, string sessionId, string exception)
+        {
+            KuduEvent kuduEvent = new KuduEvent
+            {
+                level = (int)EventLevel.Warning,
+                siteName = siteName,
+                Message = message,
+                path = sessionId,
+                exception = exception
+            };
+
+            LogKuduTraceEvent(kuduEvent);
+        }
     }
 }
