@@ -41,7 +41,7 @@ namespace Kudu.Services.DaaS
 
             if (OSDetector.IsOnWindows())
             {
-                Console.WriteLine($"[{sessionId}] {message} {ex}");
+                Console.WriteLine($"[{sessionId}] {message} {error}");
             }
         }
     }
