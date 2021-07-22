@@ -215,25 +215,22 @@ namespace Kudu.Services.DaaS
 
                 DaasLogger.LogSessionMessage($"Copied {response.Logs.Count()} logs to permanent storage", activeSession.SessionId);
 
-                await UpdateActiveSessionAsync(() =>
+                await UpdateActiveSessionAsync((latestSessionFromDisk) =>
                 {
                     try
                     {
-                        DaasLogger.LogSessionMessage($"Adding ActiveInstance to session", activeSession.SessionId);
-
-                        if (activeSession.ActiveInstances == null)
+                        if (latestSessionFromDisk.ActiveInstances == null)
                         {
-                            activeSession.ActiveInstances = new List<ActiveInstance>();
+                            latestSessionFromDisk.ActiveInstances = new List<ActiveInstance>();
                         }
 
-                        ActiveInstance activeInstance = activeSession.ActiveInstances.FirstOrDefault(x => x.Name.Equals(GetInstanceId(), StringComparison.OrdinalIgnoreCase));
+                        ActiveInstance activeInstance = latestSessionFromDisk.ActiveInstances.FirstOrDefault(x => x.Name.Equals(GetInstanceId(), StringComparison.OrdinalIgnoreCase));
                         if (activeInstance == null)
                         {
                             activeInstance = new ActiveInstance(GetInstanceId());
-                            activeSession.ActiveInstances.Add(activeInstance);
+                            latestSessionFromDisk.ActiveInstances.Add(activeInstance);
+                            DaasLogger.LogSessionMessage($"Added ActiveInstance to session", latestSessionFromDisk.SessionId);
                         }
-
-                        DaasLogger.LogSessionMessage($"ActiveInstance added", activeSession.SessionId);
 
                         activeInstance.Logs.AddRange(response.Logs);
 
@@ -244,9 +241,10 @@ namespace Kudu.Services.DaaS
                     }
                     catch (Exception ex)
                     {
-                        DaasLogger.LogSessionError("Failed while adding active instance", activeSession.SessionId, ex);
+                        DaasLogger.LogSessionError("Failed while adding active instance", latestSessionFromDisk.SessionId, ex);
                     }
-                    return activeSession;
+                    
+                    return latestSessionFromDisk;
                 }, activeSession.SessionId);
             }
             catch (Exception ex)
@@ -254,7 +252,7 @@ namespace Kudu.Services.DaaS
                 DaasLogger.LogSessionError("Failed in AddLogsToActiveSession", activeSession.SessionId, ex);
             }
         }
-        private async Task UpdateActiveSessionAsync(Func<Session> updatedSession, string sessionId, [CallerMemberName] string callerMethodName = "")
+        private async Task UpdateActiveSessionAsync(Func<Session, Session> updateSession, string sessionId, [CallerMemberName] string callerMethodName = "")
         {
             try
             {
@@ -269,18 +267,26 @@ namespace Kudu.Services.DaaS
                     return;
                 }
 
-                Session activeSession = updatedSession();
-                await UpdateActiveSessionFileAsync(activeSession);
+                //
+                // Load the latest session from the disk under the lock. This
+                // ensures that only one instance can write to the sesion
+                // and others wait while this instance has the lock
+                //
+                
+                Session latestSessionFromDisk = await GetActiveSessionAsync();
 
-                if (_sessionLockFile != null)
-                {
-                    DaasLogger.LogSessionMessage($"SessionLock released by {callerMethodName}", sessionId);
-                    _sessionLockFile.Release();
-                }
+                Session sessionAfterMergingLatestUpdates = updateSession(latestSessionFromDisk);
+                await UpdateActiveSessionFileAsync(sessionAfterMergingLatestUpdates);
             }
             catch (Exception ex)
             {
                 DaasLogger.LogSessionError($"Failed while updating session", sessionId, ex);
+            }
+
+            if (_sessionLockFile != null)
+            {
+                DaasLogger.LogSessionMessage($"SessionLock released by {callerMethodName}", sessionId);
+                _sessionLockFile.Release();
             }
         }
 
@@ -433,22 +439,22 @@ namespace Kudu.Services.DaaS
         {
             try
             {
-                await UpdateActiveSessionAsync(() =>
+                await UpdateActiveSessionAsync((latestSessionFromDisk) =>
                 {
-                    if (activeSession.ActiveInstances == null)
+                    if (latestSessionFromDisk.ActiveInstances == null)
                     {
-                        activeSession.ActiveInstances = new List<ActiveInstance>();
+                        latestSessionFromDisk.ActiveInstances = new List<ActiveInstance>();
                     }
 
-                    var activeInstance = activeSession.ActiveInstances.FirstOrDefault(x => x.Name.Equals(GetInstanceId(), StringComparison.OrdinalIgnoreCase));
+                    var activeInstance = latestSessionFromDisk.ActiveInstances.FirstOrDefault(x => x.Name.Equals(GetInstanceId(), StringComparison.OrdinalIgnoreCase));
                     if (activeInstance == null)
                     {
                         activeInstance = new ActiveInstance(GetInstanceId());
-                        activeSession.ActiveInstances.Add(activeInstance);
+                        latestSessionFromDisk.ActiveInstances.Add(activeInstance);
                     }
 
                     activeInstance.Status = sessionStatus;
-                    return activeSession;
+                    return latestSessionFromDisk;
                 }, activeSession.SessionId);
             }
             catch (Exception ex)
@@ -546,11 +552,11 @@ namespace Kudu.Services.DaaS
 
         private async Task MarkSessionAsCompleteAsync(Session activeSession, bool forceCompletion = false)
         {
-            await UpdateActiveSessionAsync(() =>
+            await UpdateActiveSessionAsync((latestSessionFromDisk) =>
             {
-                activeSession.Status = forceCompletion ? Status.TimedOut : Status.Complete;
-                activeSession.EndTime = DateTime.UtcNow;
-                return activeSession;
+                latestSessionFromDisk.Status = forceCompletion ? Status.TimedOut : Status.Complete;
+                latestSessionFromDisk.EndTime = DateTime.UtcNow;
+                return latestSessionFromDisk;
 
             }, activeSession.SessionId);
 
