@@ -56,17 +56,15 @@ namespace Kudu.Services.DaaS
         /// Checks if the current instance has already collected the logs for the diagnostic
         /// session or not
         /// </summary>
-        /// <param name="activeSession"></param>
         /// <returns></returns>
-        bool HasThisInstanceCollectedLogs(Session activeSession);
+        Task<bool> HasThisInstanceCollectedLogs();
 
         /// <summary>
         /// Marks a diagnostic session as complete if all instances have finished collecting
         /// data
         /// </summary>
-        /// <param name="activeSession"></param>
         /// <param name="forceCompletion"></param>
         /// <returns></returns>
-        Task<bool> CheckandCompleteSessionIfNeededAsync(Session activeSession, bool forceCompletion = false);
+        Task<bool> CheckandCompleteSessionIfNeededAsync(bool forceCompletion = false);
     }
 }

@@ -83,7 +83,7 @@ namespace Kudu.Services.DaaS
             }
 
             // Check if all instances are finished with log collection
-            if (await _sessionManager.CheckandCompleteSessionIfNeededAsync(activeSession))
+            if (await _sessionManager.CheckandCompleteSessionIfNeededAsync())
             {
                 return;
             }
@@ -95,7 +95,7 @@ namespace Kudu.Services.DaaS
                     _runningSessions[activeSession.SessionId].CancellationTokenSource.Cancel();
                 }
                 
-                await _sessionManager.CheckandCompleteSessionIfNeededAsync(activeSession, forceCompletion: true);
+                await _sessionManager.CheckandCompleteSessionIfNeededAsync(forceCompletion: true);
             }
 
             if (_sessionManager.ShouldCollectOnCurrentInstance(activeSession))
@@ -106,7 +106,7 @@ namespace Kudu.Services.DaaS
                     return;
                 }
 
-                if (_sessionManager.HasThisInstanceCollectedLogs(activeSession))
+                if (await _sessionManager.HasThisInstanceCollectedLogs())
                 {
                     // This instance has already collected logs for this session
                     return;

@@ -100,10 +100,10 @@ namespace Kudu.Services.DaaS
         /// <summary>
         /// ISessionManager - HasThisInstanceCollectedLogs
         /// </summary>
-        /// <param name="activeSession"></param>
         /// <returns></returns>
-        public bool HasThisInstanceCollectedLogs(Session activeSession)
+        public async Task<bool> HasThisInstanceCollectedLogs()
         {
+            var activeSession = await GetActiveSessionAsync();
             return activeSession.ActiveInstances != null
                 && activeSession.ActiveInstances.Any(x => x.Name.Equals(GetInstanceId(),
                 StringComparison.OrdinalIgnoreCase) && x.Status == Status.Complete);
@@ -152,7 +152,7 @@ namespace Kudu.Services.DaaS
                 // Check if all the instances have finished running the session
                 // and set the Session State to Complete
                 //
-                await CheckandCompleteSessionIfNeededAsync(activeSession);
+                await CheckandCompleteSessionIfNeededAsync();
             }
             catch (Exception ex)
             {
@@ -163,11 +163,11 @@ namespace Kudu.Services.DaaS
         /// <summary>
         /// ISessionManager - CheckandCompleteSessionIfNeededAsync
         /// </summary>
-        /// <param name="activeSession"></param>
         /// <param name="forceCompletion"></param>
         /// <returns></returns>
-        public async Task<bool> CheckandCompleteSessionIfNeededAsync(Session activeSession, bool forceCompletion = false)
+        public async Task<bool> CheckandCompleteSessionIfNeededAsync(bool forceCompletion = false)
         {
+            var activeSession = await GetActiveSessionAsync();
             if (AllInstancesCollectedLogs(activeSession) || forceCompletion)
             {
                 await MarkSessionAsCompleteAsync(activeSession, forceCompletion: forceCompletion);
