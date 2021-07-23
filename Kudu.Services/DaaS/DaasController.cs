@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +24,11 @@ namespace Kudu.Services.DaaS
             if (session.Tool == DiagnosticTool.Unspecified)
             {
                 return BadRequest("Please specify a valid diagnostic tool");
+            }
+
+            if (session.Instances == null || !session.Instances.Any())
+            {
+                return BadRequest("At least one instance must be specified");
             }
 
             try
