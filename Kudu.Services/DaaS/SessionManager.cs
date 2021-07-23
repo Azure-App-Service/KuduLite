@@ -571,7 +571,10 @@ namespace Kudu.Services.DaaS
             }
 
             var completedInstances = activeSession.ActiveInstances.Where(x => x.Status == Status.Complete).Select(x => x.Name);
-            return completedInstances.SequenceEqual(activeSession.Instances, StringComparer.OrdinalIgnoreCase);
+
+            return Enumerable.SequenceEqual(completedInstances.OrderBy(x => x),
+                activeSession.Instances.OrderBy(x => x),
+                StringComparer.OrdinalIgnoreCase);
         }
 
         private async Task MarkSessionAsCompleteAsync(Session activeSession, bool forceCompletion = false)
