@@ -3,9 +3,9 @@ using System.Threading.Tasks;
 
 namespace Kudu.Services.DaaS
 {
-    public class TaskAndCancellationToken
+    internal class TaskAndCancellationToken
     {
-        public Task UnderlyingTask { get; set; }
-        public CancellationTokenSource CancellationTokenSource { get; set; }
+        internal Task UnderlyingTask { get; set; }
+        internal CancellationTokenSource CancellationTokenSource { get; set; }
     }
 }

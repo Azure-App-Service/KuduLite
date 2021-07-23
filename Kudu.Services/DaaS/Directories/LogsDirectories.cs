@@ -4,7 +4,7 @@ namespace Kudu.Services.DaaS
 {
     internal class LogsDirectories : DaasDirectory
     {
-        public static string LogsDir { get; } = Path.Combine(daasPath, "Logs");
-        public static string LogsDirRelativePath { get; } = Path.Combine(daasRelativePath, "Logs");
+        internal static string LogsDir { get; } = Path.Combine(daasPath, "Logs");
+        internal static string LogsDirRelativePath { get; } = Path.Combine(daasRelativePath, "Logs");
     }
 }

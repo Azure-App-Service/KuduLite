@@ -2,8 +2,8 @@
 {
     internal class ClrTraceParams
     {
-        public int DurationSeconds { get; set; } = 60;
-        public string TraceProfile { get; set; } = "Cpu,Http,Metrics";
+        internal int DurationSeconds { get; set; } = 60;
+        internal string TraceProfile { get; set; } = "Cpu,Http,Metrics";
 
         internal ClrTraceParams(string toolParams)
         {

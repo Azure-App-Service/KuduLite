@@ -6,7 +6,7 @@ namespace Kudu.Services.DaaS
     {
         private static readonly string sessionsDir = Path.Combine(daasPath, "Sessions");
 
-        public static string CompletedSessionsDir { get; } = Path.Combine(sessionsDir, "Complete");
-        public static string ActiveSessionsDir { get; } = Path.Combine(sessionsDir, "Active");
+        internal static string CompletedSessionsDir { get; } = Path.Combine(sessionsDir, "Complete");
+        internal static string ActiveSessionsDir { get; } = Path.Combine(sessionsDir, "Active");
     }
 }

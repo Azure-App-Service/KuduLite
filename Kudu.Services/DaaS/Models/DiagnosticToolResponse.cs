@@ -2,19 +2,9 @@
 
 namespace Kudu.Services.DaaS
 {
-    /// <summary>
-    /// 
-    /// </summary>
-    public class DiagnosticToolResponse
+    internal class DiagnosticToolResponse
     {
-        /// <summary>
-        /// 
-        /// </summary>
-        public List<LogFile> Logs { get; set; } = new List<LogFile>();
-        
-        /// <summary>
-        /// 
-        /// </summary>
-        public List<string> Errors { get; set; } = new List<string>();
+        internal List<LogFile> Logs { get; set; } = new List<LogFile>();
+        internal List<string> Errors { get; set; } = new List<string>();
     }
 }

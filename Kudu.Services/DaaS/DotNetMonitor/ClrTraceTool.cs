@@ -35,6 +35,10 @@ namespace Kudu.Services.DaaS
                         cancellationToken));
                 }
 
+                //
+                // Since the trace will run for the duration specified, invoke the 
+                // trace API for all the processes in parallel
+                // 
                 foreach (var task in tasks)
                 {
                     var process = task.Key;
@@ -51,6 +55,7 @@ namespace Kudu.Services.DaaS
             }
             catch (Exception ex)
             {
+                DaasLogger.LogSessionError($"Failed while invoking dotnet-monitor", sessionId, ex);
                 toolResponse.Errors.Add(ex.Message);
             }
 

@@ -34,7 +34,7 @@ namespace Kudu.Services.DaaS
             {
                 return Conflict(aex.Message);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
             }

@@ -37,6 +37,11 @@ namespace Kudu.Services.DaaS
             };
         }
 
+        /// <summary>
+        /// Gets all the running .NET Core processes
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         internal async Task<IEnumerable<DotNetMonitorProcessesResponse>> GetDotNetProcessesAsync(CancellationToken cancellationToken)
         {
             var resp = await _dotnetMonitorClient.GetAsync($"{dotnetMonitorAddress}/processes", cancellationToken);
@@ -46,6 +51,12 @@ namespace Kudu.Services.DaaS
             return processes.Take(MaxProcessesToDiagnose).ToList();
         }
 
+        /// <summary>
+        /// Gets process detail for a single .NET core process
+        /// </summary>
+        /// <param name="pid"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         internal async Task<DotNetMonitorProcessResponse> GetDotNetProcessAsync(int pid, CancellationToken cancellationToken)
         {
             var resp = await _dotnetMonitorClient.GetAsync($"{dotnetMonitorAddress}/processes/{pid}", cancellationToken);
@@ -76,10 +87,8 @@ namespace Kudu.Services.DaaS
                 fileName = Path.Combine(temporaryFilePath, $"{instanceId}_{process.name}_{process.pid}_{fileName}");
                 using (var stream = await resp.Content.ReadAsStreamAsync())
                 {
-                    using (var fileStream = new FileStream(fileName, FileMode.CreateNew))
-                    {
-                        await stream.CopyToAsync(fileStream);
-                    }
+                    using var fileStream = new FileStream(fileName, FileMode.CreateNew);
+                    await stream.CopyToAsync(fileStream);
                 }
 
                 toolResponse.Logs.Add(new LogFile()
@@ -116,7 +125,6 @@ namespace Kudu.Services.DaaS
             string instanceId,
             CancellationToken cancellationToken)
         {
-            DaasLogger.LogSessionMessage("InvokeDotNetMonitorAsync called", sessionId);
             var toolResponse = new DiagnosticToolResponse();
             if (string.IsNullOrWhiteSpace(dotnetMonitorAddress))
             {

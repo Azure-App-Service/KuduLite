@@ -2,7 +2,6 @@
 {
     internal class MemoryDumpParams
     {
-        internal int ProcessId { get; set; }
         internal string DumpType { get; set; } = "Mini";
         internal MemoryDumpParams(string toolParams)
         {
