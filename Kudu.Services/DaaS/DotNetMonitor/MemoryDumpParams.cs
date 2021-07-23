@@ -9,11 +9,11 @@
             {
                 return;
             }
-            
-            foreach(var param in toolParams.Split(";"))
+
+            foreach (var param in toolParams.Split(";"))
             {
                 var singleParams = param.Split("=");
-                if (singleParams.Length !=  2)
+                if (singleParams.Length != 2)
                 {
                     continue;
                 }

@@ -87,8 +87,10 @@ namespace Kudu.Services.DaaS
                 fileName = Path.Combine(temporaryFilePath, $"{instanceId}_{process.name}_{process.pid}_{fileName}");
                 using (var stream = await resp.Content.ReadAsStreamAsync())
                 {
-                    using var fileStream = new FileStream(fileName, FileMode.CreateNew);
-                    await stream.CopyToAsync(fileStream);
+                    using (var fileStream = new FileStream(fileName, FileMode.CreateNew))
+                    {
+                        await stream.CopyToAsync(fileStream);
+                    }
                 }
 
                 toolResponse.Logs.Add(new LogFile()

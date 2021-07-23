@@ -42,7 +42,6 @@ namespace Kudu.Services.DaaS
             CreateSessionDirectories();
         }
 
-
         #region ISessionManager methods
 
         /// <summary>
@@ -243,7 +242,7 @@ namespace Kudu.Services.DaaS
                     {
                         DaasLogger.LogSessionError("Failed while adding active instance", latestSessionFromDisk.SessionId, ex);
                     }
-                    
+
                     return latestSessionFromDisk;
                 }, activeSession.SessionId);
             }
@@ -252,6 +251,7 @@ namespace Kudu.Services.DaaS
                 DaasLogger.LogSessionError("Failed in AddLogsToActiveSession", activeSession.SessionId, ex);
             }
         }
+
         private async Task UpdateActiveSessionAsync(Func<Session, Session> updateSession, string sessionId, [CallerMemberName] string callerMethodName = "")
         {
             try
@@ -272,7 +272,7 @@ namespace Kudu.Services.DaaS
                 // ensures that only one instance can write to the sesion
                 // and others wait while this instance has the lock
                 //
-                
+
                 Session latestSessionFromDisk = await GetActiveSessionAsync();
 
                 Session sessionAfterMergingLatestUpdates = updateSession(latestSessionFromDisk);
@@ -485,8 +485,36 @@ namespace Kudu.Services.DaaS
             }
         }
 
+        private bool GetComputerNameIfExists(out string computerName)
+        {
+            computerName = string.Empty;
+            var env = Environment.GetEnvironmentVariable("COMPUTERNAME");
+            if (!string.IsNullOrWhiteSpace(env))
+            {
+                computerName = env;
+                return true;
+            }
+
+            return false;
+        }
+
+        private string GetInstanceId()
+        {
+            if (GetComputerNameIfExists(out string machineName))
+            {
+                return machineName;
+            }
+
+            return InstanceIdUtility.GetInstanceId();
+        }
+
         private string GetInstanceIdShort()
         {
+            if (GetComputerNameIfExists(out string machineName))
+            {
+                return machineName;
+            }
+
             return InstanceIdUtility.GetShortInstanceId();
         }
 
@@ -533,10 +561,6 @@ namespace Kudu.Services.DaaS
             {
                 FileSystemHelpers.EnsureDirectory(x);
             });
-        }
-        private string GetInstanceId()
-        {
-            return InstanceIdUtility.GetInstanceId();
         }
 
         private bool AllInstancesCollectedLogs(Session activeSession)
