@@ -145,7 +145,7 @@ namespace Kudu.Services.DaaS
                 //
                 // Mark current instance as Complete
                 //
-                await MarkCurrentInstanceAsCompleteAsync(activeSession);
+                await SetCurrentInstanceAsCompleteAsync(activeSession);
 
                 //
                 // Check if all the instances have finished running the session
@@ -169,6 +169,7 @@ namespace Kudu.Services.DaaS
             var activeSession = await GetActiveSessionAsync();
             if (AllInstancesCollectedLogs(activeSession) || forceCompletion)
             {
+                DaasLogger.LogSessionMessage("All instances have status as Complete", activeSession.SessionId);
                 await MarkSessionAsCompleteAsync(activeSession, forceCompletion: forceCompletion);
                 return true;
             }
@@ -425,13 +426,15 @@ namespace Kudu.Services.DaaS
             return Path.Combine(SessionDirectories.ActiveSessionsDir, sessionId + ".json.lock");
         }
 
-        private async Task MarkCurrentInstanceAsCompleteAsync(Session activeSession)
+        private async Task SetCurrentInstanceAsCompleteAsync(Session activeSession)
         {
+            DaasLogger.LogSessionMessage("Setting current instance as Complete", activeSession.SessionId);
             await SetCurrentInstanceStatusAsync(activeSession, Status.Complete);
         }
 
         private async Task SetCurrentInstanceAsStartedAsync(Session activeSession)
         {
+            DaasLogger.LogSessionMessage("Setting current instance as Started", activeSession.SessionId);
             await SetCurrentInstanceStatusAsync(activeSession, Status.Started);
         }
 
