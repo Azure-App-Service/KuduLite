@@ -39,7 +39,7 @@ namespace Kudu.Core.Deployment
                 // K8SE TODO: Inject Environment
                 var frameworkArr = K8SEDeploymentHelper.GetLinuxFxVersion(AppName);
                 framework = frameworkArr.Split("|")[0];
-                version = frameworkArr.Split("|")[1];
+                version = frameworkArr.Split("|")[1].Replace("\n", string.Empty);
             }
             else
             {

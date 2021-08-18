@@ -59,7 +59,14 @@ namespace Kudu.Core.Deployment.Generator
                 args.Flags = BuildOptimizationsFlags.UseExpressBuild;
 
                 string buildCommand = args.GenerateOryxBuildCommand(context, environment);
-                RunCommand(context, buildCommand, false, "Running oryx build...");
+
+                if (buildCommand.Contains(" --platform dotnet") && buildCommand.Contains(" --platform-version 6.0"))
+                {
+                    RunCommand(context, buildCommand, false, "Running oryx build...", true);
+                }
+                else {
+                    RunCommand(context, buildCommand, false, "Running oryx build...");
+                }
 
                 //
                 // Run express build setups if needed
