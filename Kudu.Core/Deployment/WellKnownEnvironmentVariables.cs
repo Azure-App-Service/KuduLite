@@ -44,5 +44,7 @@
         public const string GypMsvsVersion = "GYP_MSVS_VERSION";
         public const string VCTargetsPath = "VCTargetsPath";
         public const string VCInstallDir140 = "VCInstallDir_140";
+
+        public const string DynamicInstallment = "DYNAMIC_INSTALL_ENABLED";
     }
 }

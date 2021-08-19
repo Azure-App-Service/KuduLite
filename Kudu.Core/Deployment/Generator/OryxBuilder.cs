@@ -34,6 +34,13 @@ namespace Kudu.Core.Deployment.Generator
             // initialize the repository Path for the build
             context.RepositoryPath = RepositoryPath;
 
+            // K8SE TODO: Inject Environment
+            var frameworkArr = K8SEDeploymentHelper.GetLinuxFxVersion(environment.K8SEAppName);
+            var framework = frameworkArr.Split("|")[0];
+            var version = frameworkArr.Split("|")[1];
+            context.Logger.Log(frameworkArr);
+            context.Logger.Log(version);
+
             // Initialize Oryx Args.
             IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(environment);
 
@@ -56,10 +63,18 @@ namespace Kudu.Core.Deployment.Generator
             {
                 PreOryxBuild(context);
 
-                args.Flags = BuildOptimizationsFlags.UseExpressBuild;
+                //args.Flags = BuildOptimizationsFlags.UseExpressBuild;
 
                 string buildCommand = args.GenerateOryxBuildCommand(context, environment);
-                RunCommand(context, buildCommand, false, "Running oryx build...");
+                if (buildCommand.Contains(" --platform dotnet") && buildCommand.Contains(" --platform-version 6.0"))
+                {
+                    context.Logger.Log("run 6.0");
+                    RunCommand(context, buildCommand, false, "Running oryx build...", true);
+                }
+                else
+                {
+                    RunCommand(context, buildCommand, false, "Running oryx build...");
+                }
 
                 //
                 // Run express build setups if needed
