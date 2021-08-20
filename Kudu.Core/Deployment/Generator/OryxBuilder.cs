@@ -44,6 +44,8 @@ namespace Kudu.Core.Deployment.Generator
             // Initialize Oryx Args.
             IOryxArguments args = OryxArgumentsFactory.CreateOryxArguments(environment);
 
+            context.Logger.Log(args.Flags == BuildOptimizationsFlags.UseExpressBuild ? "yes" : "no");
+
             if (!args.SkipKuduSync)
             {
                 // Step 1: Run kudusync
@@ -65,7 +67,15 @@ namespace Kudu.Core.Deployment.Generator
 
                 //args.Flags = BuildOptimizationsFlags.UseExpressBuild;
 
+                context.Logger.Log(context.BuildTempPath);
+
+                context.Logger.Log(context.OutputPath);
+
                 string buildCommand = args.GenerateOryxBuildCommand(context, environment);
+
+                context.Logger.Log(args.Flags == BuildOptimizationsFlags.UseExpressBuild ? "yes" : "no");
+
+
                 if (buildCommand.Contains(" --platform dotnet") && buildCommand.Contains(" --platform-version 6.0"))
                 {
                     context.Logger.Log("run 6.0");
