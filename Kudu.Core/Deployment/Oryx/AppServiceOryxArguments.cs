@@ -152,10 +152,10 @@ namespace Kudu.Core.Deployment
                     break;
 
                 case Framework.DotNETCore:
-                    if (Flags == BuildOptimizationsFlags.UseExpressBuild && Flags != BuildOptimizationsFlags.UseExpressBuild)
+                    if (Flags == BuildOptimizationsFlags.UseExpressBuild && Flags)
                     {
                         // We don't want to copy the built artifacts to wwwroot for ExpressBuild scenario
-                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath);
+                        OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.BuildTempPath + "/publish");
                     }
                     else
                     {
