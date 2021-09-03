@@ -167,7 +167,7 @@ namespace Kudu.Core.Deployment
 
                 case Framework.PHP:
                     // Input/Output
-                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.OutputPath, destination: context.OutputPath);
+                    OryxArgumentsHelper.AddOryxBuildCommand(args, source: context.RepositoryPath, destination: context.OutputPath);
                     OryxArgumentsHelper.AddLanguage(args, "php");
                     break;
             }
