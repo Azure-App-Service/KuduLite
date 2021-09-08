@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Diagnostics.Tracing;
 using System.IO;
 using System.Threading.Tasks;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Helpers;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Deployment.Oryx;
+using Kudu.Core.Tracing;
 
 namespace Kudu.Core.Deployment.Generator
 {
@@ -28,6 +30,8 @@ namespace Kudu.Core.Deployment.Generator
 
         public override Task Build(DeploymentContext context)
         {
+            KuduEventGenerator.Log().LogMessage(EventLevel.Informational, string.Empty,
+                $"Starting {nameof(OryxBuilder)}.{nameof(Build)}", string.Empty);
             FileLogHelper.Log("In oryx build...");
 
             // initialize the repository Path for the build

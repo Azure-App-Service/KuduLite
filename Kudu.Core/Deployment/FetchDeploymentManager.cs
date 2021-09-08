@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.IO;
 using System.IO.Abstractions;
 using System.Threading.Tasks;
@@ -79,6 +80,9 @@ namespace Kudu.Core.Deployment
             Uri requestUri,
             string targetBranch)
         {
+            KuduEventGenerator.Log().LogMessage(EventLevel.Informational, string.Empty,
+                $"Starting {nameof(FetchDeploy)}", string.Empty);
+
             // If Scm is not enabled, we will reject all but one payload for GenericHandler
             // This is to block the unintended CI with Scm providers like GitHub
             // Since Generic payload can only be done by user action, we loosely allow
@@ -86,6 +90,8 @@ namespace Kudu.Core.Deployment
             // push/clone endpoint and zip deployment.
             if (!(_settings.IsScmEnabled() || deployInfo.AllowDeploymentWhileScmDisabled))
             {
+                KuduEventGenerator.Log().LogMessage(EventLevel.Warning, string.Empty,
+                    nameof(FetchDeploy), "Attempt to deploy app with Scm disabled");
                 return FetchDeploymentRequestResult.ForbiddenScmDisabled;
             }
 
@@ -95,6 +101,8 @@ namespace Kudu.Core.Deployment
             // WEBSITE_RUN_FROM_PACKAGE app setting after a build finishes
             else if (_settings.RunFromRemoteZip() && !deployInfo.OverwriteWebsiteRunFromPackage)
             {
+                KuduEventGenerator.Log().LogMessage(EventLevel.Warning, string.Empty,
+                    nameof(FetchDeploy), "Failed to OverwriteWebsiteRunFromPackage");
                 return FetchDeploymentRequestResult.ConflictRunFromRemoteZipConfigured;
             }
 
@@ -193,6 +201,8 @@ namespace Kudu.Core.Deployment
                         innerLogger = logger.Log(Resources.FetchingChanges);
 
                         IRepository repository = deploymentInfo.GetRepository();
+                        KuduEventGenerator.Log().LogMessage(EventLevel.Informational, string.Empty,
+                            $"Repository type = {repository.GetType()}", string.Empty);
 
                         try
                         {

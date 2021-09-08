@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Newtonsoft.Json.Linq;
 using System.Net.Http;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using Kudu.Core.Helpers;
 using System.Threading;
 using Kudu.Contracts.Deployment;
@@ -68,7 +69,11 @@ namespace Kudu.Services.Deployment
             [FromQuery] string message = DefaultMessage,
             [FromQuery] bool trackDeploymentProgress = false)
         {
-            using (_tracer.Step("ZipPushDeploy"))
+            var siteName = ServerConfiguration.GetApplicationName();
+            KuduEventGenerator.Log()
+                .LogMessage(EventLevel.Informational, siteName, $"Start {nameof(ZipPushDeploy)} isAsync = {isAsync} syncTriggers = {syncTriggers} overwriteWebsiteRunFromPackage = {overwriteWebsiteRunFromPackage}", string.Empty);
+
+            using (_tracer.Step(nameof(ZipPushDeploy)))
             {
                 var deploymentInfo = new ArtifactDeploymentInfo(_environment, _traceFactory)
                 {
@@ -94,6 +99,8 @@ namespace Kudu.Services.Deployment
 
                 if (_settings.RunFromLocalZip())
                 {
+                    KuduEventGenerator.Log().LogMessage(EventLevel.Informational, siteName,
+                        $"Triggering Local RunFromZip", string.Empty);
                     // This is used if the deployment is Run-From-Zip
                     // the name of the deployed file in D:\home\data\SitePackages\{name}.zip is the
                     // timestamp in the format yyyMMddHHmmss.
@@ -120,7 +127,11 @@ namespace Kudu.Services.Deployment
             [FromQuery] string message = DefaultMessage,
             [FromQuery] bool trackDeploymentProgress = false)
         {
-            using (_tracer.Step("ZipPushDeployViaUrl"))
+            var siteName = ServerConfiguration.GetApplicationName();
+            KuduEventGenerator.Log()
+                .LogMessage(EventLevel.Informational, siteName, $"Start {nameof(ZipPushDeployViaUrl)} isAsync = {isAsync} syncTriggers = {syncTriggers} overwriteWebsiteRunFromPackage = {overwriteWebsiteRunFromPackage}", string.Empty);
+
+            using (_tracer.Step(nameof(ZipPushDeployViaUrl)))
             {
                 // ARM Request payload is wrapped in properties {'properties':{'uri':''}}
                 string zipUrl = ArmUtils.IsArmRequest(Request) ? GetArticfactURLFromARMJSON(requestJson) : GetArtifactURLFromJSON(requestJson);
@@ -428,7 +439,10 @@ namespace Kudu.Services.Deployment
 
         private string GetArticfactURLFromARMJSON(JObject requestObject)
         {
-            using (_tracer.Step("Reading the artifact URL from the ARM request JSON"))
+            var siteName = ServerConfiguration.GetApplicationName();
+            const string message = "Reading the artifact URL from the ARM request JSON";
+            KuduEventGenerator.Log().LogMessage(EventLevel.Informational, siteName, message, string.Empty);
+            using (_tracer.Step(message))
             {
                 try
                 {
@@ -436,12 +450,16 @@ namespace Kudu.Services.Deployment
                     string packageUri = requestObject.Value<JObject>("properties") != null ? requestObject.Value<JObject>("properties").Value<string>("packageUri") : requestObject.Value<string>("packageUri");
                     if (string.IsNullOrEmpty(packageUri))
                     {
+                        KuduEventGenerator.Log().LogMessage(EventLevel.Warning, siteName,
+                            nameof(GetArticfactURLFromARMJSON), "PackageUri was empty");
                         throw new ArgumentException("Invalid Url in the JSON request");
                     }
                     return packageUri;
                 }
                 catch (Exception ex)
                 {
+                    KuduEventGenerator.Log().LogMessage(EventLevel.Warning, siteName,
+                        "Error reading the URL from the JSON", ex.Message);
                     _tracer.TraceError(ex, "Error reading the URL from the JSON {0}", requestObject.ToString());
                     throw;
                 }
@@ -450,25 +468,34 @@ namespace Kudu.Services.Deployment
 
         private string GetArtifactURLFromJSON(JObject requestObject)
         {
-            using (_tracer.Step("Reading the zip URL from the request JSON"))
+            var siteName = ServerConfiguration.GetApplicationName();
+            const string message = "Reading the zip URL from the request JSON";
+            KuduEventGenerator.Log().LogMessage(EventLevel.Informational, siteName, message, string.Empty);
+            using (_tracer.Step(message))
             {
                 try
                 {
                     string packageUri = requestObject.Value<string>("packageUri");
                     if (string.IsNullOrEmpty(packageUri))
                     {
-                        throw new ArgumentException("Request body does not contain packageUri");
+                        const string doesNotContainPackageuriMsg = "Request body does not contain packageUri";
+                        KuduEventGenerator.Log().LogMessage(EventLevel.Warning, siteName, nameof(GetArtifactURLFromJSON), doesNotContainPackageuriMsg);
+                        throw new ArgumentException(doesNotContainPackageuriMsg);
                     }
 
                     Uri zipUri = null;
                     if (!Uri.TryCreate(packageUri, UriKind.Absolute, out zipUri))
                     {
-                        throw new ArgumentException("Malformed packageUri");
+                        const string malformedPackageuriMsg = "Malformed packageUri";
+                        KuduEventGenerator.Log().LogMessage(EventLevel.Warning, siteName, nameof(GetArtifactURLFromJSON), malformedPackageuriMsg);
+                        throw new ArgumentException(malformedPackageuriMsg);
                     }
                     return packageUri;
                 }
                 catch (Exception ex)
                 {
+                    KuduEventGenerator.Log().LogMessage(EventLevel.Warning, siteName,
+                        "Error reading the URL from the JSON", ex.Message);
                     _tracer.TraceError(ex, "Error reading the URL from the JSON {0}", requestObject.ToString());
                     throw;
                 }
@@ -478,6 +505,9 @@ namespace Kudu.Services.Deployment
         private async Task<IActionResult> PushDeployAsync(ArtifactDeploymentInfo deploymentInfo, bool isAsync,
             HttpContext context)
         {
+            var siteName = ServerConfiguration.GetApplicationName();
+            KuduEventGenerator.Log().LogMessage(EventLevel.Informational, siteName,
+                $"Starting {nameof(PushDeployAsync)}", string.Empty);
             string artifactTempPath;
             if (string.IsNullOrWhiteSpace(deploymentInfo.TargetFileName))
             {
@@ -490,6 +520,8 @@ namespace Kudu.Services.Deployment
 
             if (_settings.RunFromLocalZip())
             {
+                KuduEventGenerator.Log().LogMessage(EventLevel.Informational, siteName, $"Writing SitePackageZip",
+                    string.Empty);
                 await WriteSitePackageZip(deploymentInfo, _tracer);
             }
             else
@@ -523,6 +555,8 @@ namespace Kudu.Services.Deployment
                     if (!string.IsNullOrEmpty(context.Request.ContentType) &&
                         context.Request.ContentType.Contains("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                     {
+                        KuduEventGenerator.Log().LogMessage(EventLevel.Informational, siteName,
+                            $"Writing multipart request body to artifacts", string.Empty);
                         FormValueProvider formModel;
                         using (_tracer.Step("Writing zip file to {0}", artifactTempPath))
                         {
@@ -534,6 +568,9 @@ namespace Kudu.Services.Deployment
                     }
                     else if (deploymentInfo.RemoteURL != null)
                     {
+                        KuduEventGenerator.Log().LogMessage(EventLevel.Informational, siteName,
+                            $"Writing zip file from packageUri", string.Empty);
+
                         using (_tracer.Step("Writing zip file from packageUri to {0}", artifactTempPath))
                         {
                             using (var httpClient = new HttpClient())
@@ -549,6 +586,8 @@ namespace Kudu.Services.Deployment
                                 }
                                 catch (HttpRequestException hre)
                                 {
+                                    KuduEventGenerator.Log().LogMessage(EventLevel.Informational, siteName,
+                                        $"Failed to get contents from remote packageUri", string.Empty);
                                     _tracer.TraceError(hre, "Failed to get file from packageUri {0}", deploymentInfo.RemoteURL);
                                     throw;
                                 }
@@ -562,6 +601,8 @@ namespace Kudu.Services.Deployment
                     }
                     else
                     {
+                        KuduEventGenerator.Log().LogMessage(EventLevel.Informational, siteName,
+                            $"Writing request body to artifacts", string.Empty);
                         using (var file = System.IO.File.Create(artifactTempPath))
                         {
                             await Request.Body.CopyToAsync(file);
@@ -618,6 +659,8 @@ namespace Kudu.Services.Deployment
         private Task LocalZipFetch(IRepository repository, DeploymentInfoBase deploymentInfo, string targetBranch,
             ILogger logger, ITracer tracer)
         {
+            KuduEventGenerator.Log().LogMessage(EventLevel.Informational, string.Empty,
+                $"Starting {nameof(LocalZipFetch)}", string.Empty);
             var zipDeploymentInfo = (ArtifactDeploymentInfo)deploymentInfo;
 
             // For this kind of deployment, RepositoryUrl is a local path.
@@ -747,8 +790,13 @@ namespace Kudu.Services.Deployment
         private async Task LocalZipHandler(IRepository repository, DeploymentInfoBase deploymentInfo,
             string targetBranch, ILogger logger, ITracer tracer)
         {
+            KuduEventGenerator.Log().LogMessage(EventLevel.Informational, string.Empty,
+                $"Starting {nameof(LocalZipHandler)}", string.Empty);
+
             if (_settings.RunFromLocalZip() && deploymentInfo is ArtifactDeploymentInfo)
             {
+                KuduEventGenerator.Log().LogMessage(EventLevel.Informational, string.Empty,
+                    $"Extracting triggers", string.Empty);
                 // If this is a Run-From-Zip deployment, then we need to extract function.json
                 // from the zip file into path zipDeploymentInfo.SyncFunctionsTrigersPath
                 ExtractTriggers(repository, deploymentInfo as ArtifactDeploymentInfo);
