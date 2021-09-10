@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -652,6 +653,10 @@ namespace Kudu.Core.Deployment
                         builder = _builderFactory.CreateBuilder(tracer, innerLogger, perDeploymentSettings, repository, deploymentInfo);
                         deploymentAnalytics.ProjectType = builder.ProjectType;
                         tracer.Trace("Builder is {0}", builder.GetType().Name);
+                        KuduEventGenerator.Log()
+                            .LogMessage(EventLevel.Informational, string.Empty,
+                                $"Using builder {builder.GetType().Name} ProjectType = {deploymentAnalytics.ProjectType}",
+                                string.Empty);
                     }
                 }
                 catch (Exception ex)

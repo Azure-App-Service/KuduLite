@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics.Tracing;
 using System.IO;
 using System.Threading.Tasks;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Helpers;
+using Kudu.Core.Tracing;
 
 namespace Kudu.Core.Deployment.Generator
 {
@@ -18,6 +20,8 @@ namespace Kudu.Core.Deployment.Generator
 
         public override Task Build(DeploymentContext context)
         {
+            KuduEventGenerator.Log().LogMessage(EventLevel.Informational, string.Empty,
+                $"Starting {nameof(CustomBuilder)}.{nameof(Build)}", string.Empty);
             var tcs = new TaskCompletionSource<object>();
             context.Logger.Log("Running custom deployment command...");
             var commandFullPath = _command;
