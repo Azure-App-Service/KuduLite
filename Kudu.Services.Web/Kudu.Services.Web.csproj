@@ -46,7 +46,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="wwwroot\Content\Styles\" />
-    <Folder Include="wwwroot\Content\Scripts\" />
   </ItemGroup>
   <!-- Run updateNodeModules to install kuduscript -->  
   <Target Name="PutNodeModulesInBinDir" AfterTargets="Build">    
