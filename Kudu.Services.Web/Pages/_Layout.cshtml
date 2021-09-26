@@ -68,6 +68,8 @@
                 <ul class="nav navbar-nav">
                     <li><a class="navbar-brand" style="padding-top: 17px" href="~/Env">Environment</a></li>
                     <li><a class="navbar-brand" style="padding-top: 17px" href="~/instances/any/webssh/host">SSH</a></li>
+                    <li><a class="navbar-brand" style="padding-top: 17px" href="~/api/processes">Process Explorer</a></li>
+                    <li><a class="navbar-brand" style="padding-top: 17px" href="~/api/logstream">Log Stream</a></li>
                 </ul>
                 @{
                     var email = httpContextAccessor.HttpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].ToString();

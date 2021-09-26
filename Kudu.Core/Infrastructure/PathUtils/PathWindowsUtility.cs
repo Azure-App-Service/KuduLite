@@ -145,6 +145,8 @@ namespace Kudu.Core.Infrastructure
 
         internal static string ResolveGitInstallDirPath()
         {
+            return "D:\\Software\\Git\\bin";
+
             // look up whether x86 or x64 of git was installed.
             // if both exists, x64 will be used (assuming it is newly installed).
             string programFiles = SystemEnvironment.GetEnvironmentVariable(ProgramFiles64bitKey) ?? SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.ProgramFiles);
