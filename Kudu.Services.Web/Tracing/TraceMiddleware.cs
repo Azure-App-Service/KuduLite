@@ -144,20 +144,19 @@ namespace Kudu.Services.Web.Tracing
             {
                 if (key != null)
                 {
-                    attribs[key] = httpContext.Request.Headers[key];
-                    //if (!key.Equals("Authorization", StringComparison.OrdinalIgnoreCase) &&
-                    //    !key.Equals("X-MS-CLIENT-PRINCIPAL-NAME", StringComparison.OrdinalIgnoreCase))
-                    //{
-                    //    attribs[key] = httpContext.Request.Headers[key];
-                    //}
-                    //else
-                    //{
-                    //    // for sensitive header, we only trace first 3 characters following by "..."
-                    //    var value = httpContext.Request.Headers[key].ToString();
-                    //    attribs[key] = string.IsNullOrEmpty(value)
-                    //        ? value
-                    //        : (value.Substring(0, Math.Min(3, value.Length)) + "...");
-                    //}
+                    if (!key.Equals("Authorization", StringComparison.OrdinalIgnoreCase) &&
+                        !key.Equals("X-MS-CLIENT-PRINCIPAL-NAME", StringComparison.OrdinalIgnoreCase))
+                    {
+                        attribs[key] = httpContext.Request.Headers[key];
+                    }
+                    else
+                    {
+                        // for sensitive header, we only trace first 3 characters following by "..."
+                        var value = httpContext.Request.Headers[key].ToString();
+                        attribs[key] = string.IsNullOrEmpty(value)
+                            ? value
+                            : (value.Substring(0, Math.Min(3, value.Length)) + "...");
+                    }
                 }
             }
 
