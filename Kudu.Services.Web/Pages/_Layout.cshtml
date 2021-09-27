@@ -15,7 +15,6 @@
     {
         <link rel="shortcut icon" type="image/x-icon" href="/linux_favicon.ico" />
         <link rel="icon" type="image/x-icon" href="/linux_favicon.ico" />
-	
     }
     
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -68,6 +67,8 @@
                 <ul class="nav navbar-nav">
                     <li><a class="navbar-brand" style="padding-top: 17px" href="~/Env">Environment</a></li>
                     <li><a class="navbar-brand" style="padding-top: 17px" href="~/instances/any/webssh/host">SSH</a></li>
+                    <li><a class="navbar-brand" style="padding-top: 17px" href="~/api/processes">Process Explorer</a></li>
+                    <li><a class="navbar-brand" style="padding-top: 17px" href="~/api/logstream">Log Stream</a></li>
                 </ul>
                 @{
                     var email = httpContextAccessor.HttpContext.Request.Headers["X-MS-CLIENT-PRINCIPAL-NAME"].ToString();

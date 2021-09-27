@@ -159,7 +159,6 @@ namespace Kudu.Core.K8SE
         public static string GetAppName(HttpContext context)
         {
             var appName = context.Request.Headers["K8SE_APP_NAME"].ToString();
-
             if (string.IsNullOrEmpty(appName))
             {
                 context.Response.StatusCode = 401;
