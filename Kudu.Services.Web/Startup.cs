@@ -568,8 +568,7 @@ namespace Kudu.Services.Web
                         new {verb = new HttpMethodRouteConstraint("GET")});
                 }
 
-                // var processControllerName = OSDetector.IsOnWindows() ? "Process" : "LinuxProcess";
-                string processControllerName = "LinuxProcess";
+                string processControllerName = "Process";
 
                 // Processes
                 routes.MapHttpProcessesRoute("all-processes", "",

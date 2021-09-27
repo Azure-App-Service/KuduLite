@@ -145,7 +145,18 @@ namespace Kudu.Core.Infrastructure
 
         internal static string ResolveGitInstallDirPath()
         {
-            return "D:\\Software\\Git\\bin";
+            // Get git path from system path
+            var systemPathList = SystemEnvironment.GetEnvironmentVariable("Path").Split(';');
+            foreach (var dir in systemPathList)
+            {
+                if (dir.Contains(@"\Git\", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (Directory.Exists(dir) && File.Exists(Path.Combine(dir, "git.exe")))
+                    {
+                        return dir;
+                    }
+                }
+            }
 
             // look up whether x86 or x64 of git was installed.
             // if both exists, x64 will be used (assuming it is newly installed).

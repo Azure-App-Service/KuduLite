@@ -9,8 +9,6 @@ namespace Kudu.Services.Web
         {
             // The HOME path should always be set correctly
             var path = Environment.ExpandEnvironmentVariables(@"%HOME%");
-            path = "D:\\hackathon\\KuduLite\\Kudu.Services.Web\\wwwroot";
-
             if (!Directory.Exists(path))
                 // We should never get here
                 throw new DirectoryNotFoundException("The site's home directory could not be located");
