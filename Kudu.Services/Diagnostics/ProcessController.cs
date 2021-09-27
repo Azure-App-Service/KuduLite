@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Kudu.Core.K8SE;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace Kudu.Services.Diagnostics
 {
@@ -28,14 +27,7 @@ namespace Kudu.Services.Diagnostics
                 return BadRequest($"Instance index error, valid values are [0, {pods.Count}]");
             }
 
-            // For command with params, it should split into command list
-            var command = new List<string>()
-            {
-                "ps",
-                "-aux"
-            };
-
-            var result = await k8seClient.ExecuteCommandInPodAsync(appNamespace, pods[instance].Name, command);
+            var result = await k8seClient.GetPodAllProcessAsync(appNamespace, pods[instance].Name);
             return Ok(result);
         }
     }

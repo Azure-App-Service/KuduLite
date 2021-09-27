@@ -39,7 +39,30 @@ namespace Kudu.Core.K8SE
             }).ToList();
         }
 
-        public async Task<string> ExecuteCommandInPodAsync(string namespaceName, string podName, IEnumerable<string> command, string containerName = null)
+        public async Task<string> GetPodAllProcessAsync(string namespaceName, string podName)
+        {
+            // For command with params, it should split into command list
+            var command = new List<string>()
+            {
+                "ps",
+                "-aux"
+            };
+
+            return await ExecuteCommandInPodAsync(namespaceName, podName, command);
+        }
+
+        public async Task<string> GetPodFileAsync(string namespaceName, string podName, string fileName)
+        {
+            var command = new List<string>()
+            {
+                "cat",
+                fileName
+            };
+
+            return await ExecuteCommandInPodAsync(namespaceName, podName, command);
+        }
+
+        private async Task<string> ExecuteCommandInPodAsync(string namespaceName, string podName, IEnumerable<string> command, string containerName = null)
         {
             var webSocket = await kubernetesClient.WebSocketNamespacedPodExecAsync(podName, namespaceName, command, containerName);
 
