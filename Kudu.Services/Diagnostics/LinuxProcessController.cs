@@ -44,7 +44,6 @@ namespace Kudu.Services.Performance
             return new JsonResult(ERRORMSG);
         }
 
-        [SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", Justification = "Parameters preserved for equivalent route binding")]
         [HttpGet]
         public IActionResult GetAllProcesses(bool allUsers = false)
         {

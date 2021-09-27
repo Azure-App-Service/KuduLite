@@ -10,7 +10,7 @@ namespace Kudu.Services.Diagnostics
         [HttpGet]
         public IActionResult GetAllProcesses()
         {
-            return new JsonResult("Waiting...");
+            return new JsonResult("Waiting to get all windows processes ...");
         }
     }
 }

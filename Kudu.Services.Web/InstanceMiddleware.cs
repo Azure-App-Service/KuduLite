@@ -38,7 +38,7 @@ namespace Kudu.Services.Web
             {
                 Console.WriteLine($"Getting target URI");
                 var targetUri = await RewriteInstanceUri(context);
-                Console.WriteLine($"Got target URI");
+                Console.WriteLine($"Got target URI: {targetUri}");
 
                 if (targetUri != null)
                 {
