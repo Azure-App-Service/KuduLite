@@ -10,7 +10,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Caching;
 using System.Text;
-using Microsoft.Extensions.Primitives;
+using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+using k8s.Models;
+using k8s;
 
 namespace Kudu.Core.K8SE
 {
@@ -159,6 +162,7 @@ namespace Kudu.Core.K8SE
         public static string GetAppName(HttpContext context)
         {
             var appName = context.Request.Headers["K8SE_APP_NAME"].ToString();
+
             if (string.IsNullOrEmpty(appName))
             {
                 context.Response.StatusCode = 401;
@@ -187,6 +191,49 @@ namespace Kudu.Core.K8SE
         {
             var appNamepace = context.Request.Headers["K8SE_APP_NAMESPACE"].ToString();
             return appNamepace;
+        }
+
+        public static V1PodList ListPodsForDeployment(IKubernetes client, string namespaceName, string deploymentName)
+        {
+            var deploy = client.ReadNamespacedDeployment(deploymentName, namespaceName);
+            var labelSelector = "";
+            foreach (var item in deploy.Spec.Selector.MatchLabels)
+            {
+                labelSelector = labelSelector + item.Key + "=" + item.Value + ",";
+            }
+            labelSelector = labelSelector.Substring(0, labelSelector.Length - 1);
+            Console.WriteLine("======" + labelSelector);
+
+            return client.ListNamespacedPod(namespaceName, labelSelector: labelSelector);
+        }
+
+
+        public async static Task<string> ExecInPod(IKubernetes client, string namespaceName, string podName, string command, string containerName = null)
+        {
+            var webSocket = await client.WebSocketNamespacedPodExecAsync(podName, namespaceName, command, containerName).ConfigureAwait(false);
+
+            var demux = new StreamDemuxer(webSocket);
+            demux.Start();
+
+            var buff = new byte[4096];
+            var stream = demux.GetStream(1, 1);
+            var read = stream.Read(buff, 0, 4096);
+
+            byte[] result = new byte[read];
+            Array.Copy(buff, 0, result, 0, read);
+
+            var str = System.Text.Encoding.Default.GetString(result);
+            str = removeAnsi(str);
+            return str;
+        }
+
+        private static string removeAnsi(string s)
+        {
+            string pattern = @"[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]";
+            string replacement = "";
+            Regex rgx = new Regex(pattern);
+            string result = rgx.Replace(s, replacement);
+            return result;
         }
 
         public static void UpdateContextWithAppSettings(HttpContext context)
