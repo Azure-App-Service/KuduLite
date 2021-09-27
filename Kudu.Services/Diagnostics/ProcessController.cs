@@ -1,64 +1,42 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using k8s;
 using Kudu.Core.K8SE;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Kudu.Services.Diagnostics
 {
     public class ProcessController : Controller
     {
         [HttpGet]
-        public IActionResult GetAllProcesses()
+        public async Task<IActionResult> GetAllProcesses([FromQuery] int instance)
         {
-            var config = KubernetesClientConfiguration.BuildDefaultConfig();
-            IKubernetes client = new Kubernetes(config);
-
             var appNamespace = K8SEDeploymentHelper.GetAppNamespace(HttpContext);
             var appName = K8SEDeploymentHelper.GetAppName(HttpContext);
+            using var k8seClient = new K8SEClient();
 
-            Console.WriteLine("===" + appNamespace + "===");
-            Console.WriteLine("===" + appName + "===");
+            // appNamespace = "appservice-ns";
+            // appName = "test2";
 
-            if (appNamespace == "")
+            var pods = k8seClient.GetPodsForDeployment(appNamespace, appName);
+            if (pods == null || pods.Count == 0)
             {
-                appNamespace = "appservice-ns";
+                return BadRequest($"No pod found for the app '{appName}'");
             }
 
-            if (appName == "")
+            if (instance >= pods.Count || instance < 0)
             {
-                appName = "cz-as";
+                return BadRequest($"Instance index error, valid values are [0, {pods.Count}]");
             }
 
-            var a = new AppsModel();
-            a.Name = appName;
-            a.NamespaceName = appNamespace;
-
-            var podList = K8SEDeploymentHelper.ListPodsForDeployment(client, appNamespace, appName);
-            a.InstanceCount = podList.Items.Count;
-
-            var podNameList = new List<string>();
-            foreach (var item in podList.Items) {
-                podNameList.Add(item.Metadata.Name);
-            }
-            a.PodNameList = podNameList;
-
-            var cmd = "ls";
-            var cmdQuery = HttpContext.Request.Query["cmd"];
-            if (cmdQuery.Count != 0)
+            // For command with params, it should split into command list
+            var command = new List<string>()
             {
-                cmd = cmdQuery[0];
-            }
-            string str = K8SEDeploymentHelper.ExecInPod(client, appNamespace, podList.Items[0].Metadata.Name, cmd).Result;
-            return new JsonResult(str);
+                "ps",
+                "-aux"
+            };
+
+            var result = await k8seClient.ExecuteCommandInPodAsync(appNamespace, pods[instance].Name, command);
+            return Ok(result);
         }
-    }
-
-    class AppsModel
-    {
-        public string NamespaceName { get; set; }
-        public string Name { get; set; }
-        public int InstanceCount { get; set; }
-        public List<string> PodNameList { get; set; }
     }
 }

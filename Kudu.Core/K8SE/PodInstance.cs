@@ -10,6 +10,9 @@ namespace Kudu.Core.K8SE
         [JsonProperty(PropertyName = "ipAddr")]
         public string IpAddress { get; set; }
 
+        [JsonProperty(PropertyName = "hostIp")]
+        public string HostIpAddress { get; set; }
+
         [JsonProperty(PropertyName = "nodeName")]
         public string NodeName { get; set; }
 
