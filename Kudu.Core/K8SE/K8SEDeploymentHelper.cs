@@ -161,11 +161,6 @@ namespace Kudu.Core.K8SE
             var appName = context.Request.Headers["K8SE_APP_NAME"].ToString();
             if (string.IsNullOrEmpty(appName))
             {
-                appName = "lima";
-            }
-
-            if (string.IsNullOrEmpty(appName))
-            {
                 context.Response.StatusCode = 401;
                 // K8SE TODO: move this to resource map
                 throw new InvalidOperationException("Couldn't recognize AppName");
