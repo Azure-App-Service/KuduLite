@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Core.Functions
 {
@@ -211,7 +212,15 @@ namespace Kudu.Core.Functions
                     var scaleTrigger = new ScaleTrigger
                     {
                         Type = triggerType,
-                        Metadata = PopulateMetadataDictionary(function.Binding, function.FunctionName)
+                        Metadata = PopulateMetadataDictionary(function.Binding, function.FunctionName),
+
+                        //based on the trigger type we get the generator, code to get the 
+                        //IFunctionTriggerAuthGenerator authGen = getTriggerAuthGen(triggerType);
+                        // if (authGen != null) {
+                        //     AuthenticationRef = authGen.PopulateAuthenticationRef(function.Binding, function.FunctionName)
+                        // }
+                         AuthenticationRef = PopulateAuthenticationRef(function.Binding, function.FunctionName)
+                        
                     };
                     yield return scaleTrigger;
                 }
@@ -349,6 +358,53 @@ namespace Kudu.Core.Functions
             };
 
             return true;
+        }
+
+        internal static IDictionary<string, string> PopulateAuthenticationRef(JToken t, string functionName) 
+        {
+            IDictionary<string, string> functionData = t.ToObject<Dictionary<string, JToken>>()
+                .Where(i => i.Value.Type == JTokenType.String)
+                .ToDictionary(k => k.Key, v => v.Value.ToString());
+
+                IDictionary<string, string> secrets = new Dictionary<string, string>();
+                //SSL, PLAINTEXT, SASL_PLAINTEXT, SASL_SSL
+               // if (functionData["protocol"] == 'SSL') {
+                    //from this find all the data for secret
+
+                    //data:
+                    // sasl: "plaintext"
+                    // username: "admin"
+                    // password: "admin"
+                    // tls: "enable"
+                    // ca: <your ca>
+                    // cert: <your cert>
+                    // key: <your key>
+                    
+               // }
+                // :TODO remove this hard coding
+                secrets.Add("sasl", "plaintext");
+                secrets.Add("username", "admin");
+                secrets.Add("password", "admin");
+                //create  secret "functionname + triggerauth + secret".yaml
+                //Runs build ctl command and creates secret
+                K8SEDeploymentHelper.CreateSecrets(functionName, secrets);
+
+                IDictionary<string, string> authRef = new Dictionary<string, string>();
+                //use secrets and generate authRef 
+                
+                // spec:
+                // secretTargetRef:
+                // - parameter: sasl
+                //     name: keda-kafka-secrets
+                //     key: sasl
+                // - parameter: username
+                //     name: keda-kafka-secrets
+                //     key: username
+
+                //generate authref name as "functionname + triggerauth".yaml
+                //Runs build ctl command and creates TriggerAuthentication CRD
+                //K8SEDeploymentHelper.CreateTriggerAuthenticationRef(authRef);
+            return authRef;
         }
 
         // match https://github.com/Azure/azure-functions-core-tools/blob/6bfab24b2743f8421475d996402c398d2fe4a9e0/src/Azure.Functions.Cli/Kubernetes/KEDA/V2/KedaV2Resource.cs#L91
