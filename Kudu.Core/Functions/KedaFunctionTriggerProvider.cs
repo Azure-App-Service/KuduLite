@@ -212,6 +212,8 @@ namespace Kudu.Core.Functions
                     var scaleTrigger = new ScaleTrigger
                     {
                         Type = triggerType,
+                        
+                        Console.WriteLine("SUXXXXXXX creating scale trigger data     ");
                         Metadata = PopulateMetadataDictionary(function.Binding, function.FunctionName),
 
                         //based on the trigger type we get the generator, code to get the 
@@ -387,9 +389,10 @@ namespace Kudu.Core.Functions
                 secrets.Add("password", "admin");
                 //create  secret "functionname + triggerauth + secret".yaml
                 //Runs build ctl command and creates secret
-                K8SEDeploymentHelper.CreateSecrets(functionName, secrets);
+                K8SEDeploymentHelper.CreateSecrets(functionName+"authRef-secrets", secrets);
 
                 IDictionary<string, string> authRef = new Dictionary<string, string>();
+                authRef.Add("name",functionName);
                 //use secrets and generate authRef 
                 
                 // spec:
@@ -403,7 +406,9 @@ namespace Kudu.Core.Functions
 
                 //generate authref name as "functionname + triggerauth".yaml
                 //Runs build ctl command and creates TriggerAuthentication CRD
-                //K8SEDeploymentHelper.CreateTriggerAuthenticationRef(authRef);
+
+                //
+                K8SEDeploymentHelper.CreateTriggerAuthenticationRef(functionName+"-authRef-secrets");
             return authRef;
         }
 

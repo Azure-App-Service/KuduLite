@@ -124,10 +124,14 @@ namespace Kudu.Core.K8SE
             RunBuildCtlCommand(cmd.ToString(), "Updating function app triggers...");
         }
 
-        public static void CreateTriggerAuthenticationRef(string appName, IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)
+        public static void CreateTriggerAuthenticationRef(string secretName)
         {
 
             //here run BuildCtlArgumentsHelper create secret and create TriggerAuthentication
+            var cmd = new StringBuilder();
+            BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "createTriggerAuthentication");
+            BuildCtlArgumentsHelper.AddSecretName(cmd, secretName);
+            RunBuildCtlCommand(cmd.ToString(), "SUXXXXXXX Creating Trigger Authentication...");
         }
 
         public static void CreateSecrets(string appName, IDictionary<string, string> secretData)
