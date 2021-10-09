@@ -13,7 +13,6 @@ http://github.com/summerstyle/jsonTreeViewer
 Copyright 2017 Vera Lobacheva (http://iamvera.com)
 Released under the MIT license (LICENSE.txt)
 -->
-
 <div class="row" style="margin-top: 20px">
     <div class="col-xs-offset 1 col-xs-11 col-sm-offset-2 col-sm-8 col-md-offset-3 col-md-6">
         <div class="btn-toolbar" role="toolbar">
@@ -37,9 +36,13 @@ Released under the MIT license (LICENSE.txt)
         </div>
     </div>
 </div>
+
 <!-- For source JSON -->
-<div class="code" id="source_json" data-header="Source JSON" style="margin-top: 20px">
-    <div id="wrapper">
+<div class="code" id="source_json" data-header="Source JSON" style="margin-top:20px;">    
+    <div class="d-flex justify-content-center">
+          <i class="fa-3x fas fa-circle-notch fa-spin" id="jsonLoadingSpinner" style="color:#007bff"></i>
+    </div> 
+    <div id="wrapper">   
     </div>
 </div>
 
@@ -101,8 +104,10 @@ Released under the MIT license (LICENSE.txt)
         url: $.urlParam('view_url'),
         type: "GET",
         success: function(data) {
-            console.log("deployment going on" + data["value"]);
             dataStr = data;
+
+           $("#jsonLoadingSpinner").hide();
+
             // Create json-tree
             tree = jsonTree.create(data, wrapper);
 
@@ -112,6 +117,6 @@ Released under the MIT license (LICENSE.txt)
             });
         },
         dataType: "json",
-        timeout: 2000
+        timeout: 60000
     });
 </script>

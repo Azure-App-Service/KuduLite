@@ -1,54 +1,69 @@
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Routing.Constraints;
-using Kudu.Contracts.Settings;
-using Kudu.Core.Settings;
-using Kudu.Core;
 using System.IO;
-using System.Net.Http.Formatting;
+using System.Net;
 using System.Reflection;
-using Microsoft.AspNetCore.Http;
+using AspNetCore.RouteAnalyzer;
+using Kudu.Contracts;
+using Kudu.Contracts.Infrastructure;
+using Kudu.Contracts.Scan;
+using Kudu.Contracts.Settings;
+using Kudu.Contracts.SourceControl;
+using Kudu.Contracts.Tracing;
+using Kudu.Core;
+using Kudu.Core.Commands;
+using Kudu.Core.Deployment;
 using Kudu.Core.Helpers;
 using Kudu.Core.Infrastructure;
-using Kudu.Contracts.Infrastructure;
-using Kudu.Core.Tracing;
-using Kudu.Contracts.Tracing;
-using Kudu.Services.Web.Infrastructure;
-using Kudu.Core.Deployment;
-using Kudu.Contracts.SourceControl;
+using Kudu.Core.Scan;
+using Kudu.Core.Settings;
 using Kudu.Core.SourceControl;
-using Kudu.Services.GitServer;
-using Kudu.Core.Commands;
-using Newtonsoft.Json.Serialization;
-using Kudu.Services.Web.Tracing;
 using Kudu.Core.SSHKey;
+using Kudu.Core.Tracing;
 using Kudu.Services.Diagnostics;
+using Kudu.Services.GitServer;
 using Kudu.Services.Performance;
+using Kudu.Services.Scan;
 using Kudu.Services.TunnelServer;
+using Kudu.Services.Web.Infrastructure;
+using Kudu.Services.Web.Tracing;
+using Kudu.Services.LinuxConsumptionInstanceAdmin;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.Routing.Constraints;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Serialization;
+using Swashbuckle.AspNetCore.Swagger;
+using Environment = Kudu.Core.Environment;
 using ILogger = Kudu.Core.Deployment.ILogger;
+using Microsoft.AspNetCore.Authentication;
+using Kudu.Services.Web.Services;
+using Kudu.Core.K8SE;
+using System.Net.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
+using IApplicationLifetime = Microsoft.AspNetCore.Hosting.IApplicationLifetime;
 
 namespace Kudu.Services.Web
 {
     public class Startup
     {
-        private readonly IHostingEnvironment _hostingEnvironment;
-        private IEnvironment _webAppEnvironment;
-        private IHttpContextAccessor _httpContextAccessor;
-        private static readonly ServerConfiguration serverConfiguration = new ServerConfiguration();
+        private readonly IWebHostEnvironment _hostingEnvironment;
+        private IEnvironment _webAppRuntimeEnvironment;
+        private IDeploymentSettingsManager _noContextDeploymentsSettingsManager;
+        private static readonly ServerConfiguration ServerConfiguration = new ServerConfiguration();
 
-        public Startup(IConfiguration configuration, IHostingEnvironment hostingEnvironment)
+        public Startup(IConfiguration configuration, IWebHostEnvironment hostingEnvironment)
         {
-            Console.WriteLine("\nStartup : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+            Console.WriteLine(@"Startup : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
             Configuration = configuration;
-            this._hostingEnvironment = hostingEnvironment;
+            _hostingEnvironment = hostingEnvironment;
         }
 
         private IConfiguration Configuration { get; }
@@ -59,33 +74,42 @@ namespace Kudu.Services.Web
         /// to the container. It uses the Extension pattern.
         /// </summary>
         /// <todo>
-        ///   CORE TODO Remove initializing contextAccessor : This is new. See if over time we can refactor away the need for this?
+        ///   CORE TODO Remove initializing contextAccessor : See if over time we can refactor away the need for this?
         ///   It's kind of a quick hack/compatibility shim. Ideally you want to get the request context only from where
         ///   it's specifically provided to you (Request.HttpContext in a controller, or as an Invoke() parameter in
         ///   a middleware) and pass it wherever its needed.
         /// </todo>
         public void ConfigureServices(IServiceCollection services)
         {
+            Console.WriteLine(@"Configure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+            FileSystemHelpers.DeleteDirectorySafe("/home/site/locks/deployment");
+            // configure basic authentication 
 
-            Console.WriteLine("\nConfigure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
-            
             services.Configure<FormOptions>(options =>
             {
                 options.MultipartBodyLengthLimit = 52428800;
-                options.ValueCountLimit = 500000;
-                options.KeyLengthLimit = 500000;
+                options.ValueCountLimit = 1000000;
+                options.KeyLengthLimit = 1000000;
             });
-           
-            // Controllers are in a separate project, this ensures this can 
-            //
+
+            services.AddRouteAnalyzer();
+
+            // Kudu.Services contains all the Controllers 
             var kuduServicesAssembly = Assembly.Load("Kudu.Services");
 
-            services.AddMvcCore()
-                .AddRazorPages()
-                .AddAuthorization()
-                .AddJsonFormatters()
-                .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver())
-                .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices();            
+            services.AddMvcCore(options => options.EnableEndpointRouting = false)
+                .AddRazorPages().AddMvcOptions(options => options.EnableEndpointRouting = false)
+                .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices()
+                .AddApiExplorer();
+
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo {Title = "Kudu API Docs"});
+                // Setting the comments path for the Swagger JSON and UI.
+                var xmlFile = $"Kudu.Services.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                c.IncludeXmlComments(xmlPath);
+            });
 
             services.AddGZipCompression();
 
@@ -101,9 +125,9 @@ namespace Kudu.Services.Web
                         .AddConsole();
                 });
 
-            var contextAccessor = new HttpContextAccessor();
-            this._httpContextAccessor = contextAccessor;
-            services.AddSingleton<IHttpContextAccessor>(contextAccessor);
+            services.AddSingleton<IHttpContextAccessor>(new HttpContextAccessor());
+            services.AddSingleton<ILinuxConsumptionEnvironment, LinuxConsumptionEnvironment>();
+            services.AddSingleton<ILinuxConsumptionInstanceManager, LinuxConsumptionInstanceManager>();
 
             KuduWebUtil.EnsureHomeEnvironmentVariable();
 
@@ -111,48 +135,61 @@ namespace Kudu.Services.Web
 
             IEnvironment environment = KuduWebUtil.GetEnvironment(_hostingEnvironment);
 
-            _webAppEnvironment = environment;
+            _webAppRuntimeEnvironment = environment;
 
             KuduWebUtil.EnsureDotNetCoreEnvironmentVariable(environment);
-            
-            //CORE TODO Check this
+
+            // CORE TODO Check this
             // fix up invalid /home/site/deployments/settings.xml
             KuduWebUtil.EnsureValidDeploymentXmlSettings(environment);
 
             // Add various folders that never change to the process path. All child processes will inherit this
             KuduWebUtil.PrependFoldersToPath(environment);
-            
+
+            // Add middleware for Linux Consumption authentication and authorization
+            // when KuduLIte is running in service fabric mesh
+            services.AddLinuxConsumptionAuthentication();
+            services.AddLinuxConsumptionAuthorization(environment);
+
             // General
-            services.AddSingleton<IServerConfiguration>(serverConfiguration);
+            services.AddScoped<IServerConfiguration, ServerConfiguration>();
 
             // CORE TODO Looks like this doesn't ever actually do anything, can refactor out?
             services.AddSingleton<IBuildPropertyProvider>(new BuildPropertyProvider());
 
-            IDeploymentSettingsManager noContextDeploymentsSettingsManager =
+            _noContextDeploymentsSettingsManager =
                 new DeploymentSettingsManager(new XmlSettings.Settings(KuduWebUtil.GetSettingsPath(environment)));
-            TraceServices.TraceLevel = noContextDeploymentsSettingsManager.GetTraceLevel();
+            TraceServices.TraceLevel = _noContextDeploymentsSettingsManager.GetTraceLevel();
+
+            // Its required to register the IHttpContextAccessor first
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+            services.AddScoped<IEnvironment>(provider => {
+                var httpContext = provider.GetRequiredService<IHttpContextAccessor>().HttpContext;
+                return KuduWebUtil.GetEnvironment(_hostingEnvironment, provider.GetRequiredService<IDeploymentSettingsManager>(), httpContext);
+            });
 
             // Per request environment
-            services.AddScoped<IEnvironment>(sp => KuduWebUtil.GetEnvironment(_hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>()));
+            services.AddScoped(sp =>
+                KuduWebUtil.GetEnvironment(_hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>()));
 
-            services.AddDeployementServices(environment);
+            services.AddDeploymentServices(environment);
 
             /*
-             * CORE TODO all this business around ITracerFactory/ITracer/GetTracer()/
+             * CORE TODO Refactor ITracerFactory/ITracer/GetTracer()/
              * ILogger needs serious refactoring:
              * - Names should be changed to make it clearer that ILogger is for deployment
-             * logging and ITracer and friends are for Kudu tracing
+             *   logging and ITracer and friends are for Kudu tracing
              * - ILogger is a first-class citizen in .NET core and has it's own meaning. We should be using it
              *   where appropriate (and not name-colliding with it)
              * - ITracer vs. ITraceFactory is redundant and confusing.
-             * - All this stuff with funcs and factories and TraceServices is overcomplicated.
-             * TraceServices only serves to confuse stuff now that we're avoiding
+             * - TraceServices only serves to confuse stuff now that we're avoiding
              */
-            Func<IServiceProvider, ITracer> resolveTracer = sp => KuduWebUtil.GetTracer(sp);
+            Func<IServiceProvider, ITracer> resolveTracer = KuduWebUtil.GetTracer;
             ITracer CreateTracerThunk() => resolveTracer(services.BuildServiceProvider());
 
             // First try to use the current request profiler if any, otherwise create a new one
-            var traceFactory = new TracerFactory(() => {
+            var traceFactory = new TracerFactory(() =>
+            {
                 var sp = services.BuildServiceProvider();
                 var context = sp.GetRequiredService<IHttpContextAccessor>().HttpContext;
                 return TraceServices.GetRequestTracer(context) ?? resolveTracer(sp);
@@ -168,92 +205,70 @@ namespace Kudu.Services.Web
 
             TraceServices.SetTraceFactory(CreateTracerThunk);
 
-            services.AddSingleton<IDictionary<string, IOperationLock>>(KuduWebUtil.GetNamedLocks(traceFactory,environment));
+            services.AddSingleton<IDictionary<string, IOperationLock>>(
+                KuduWebUtil.GetNamedLocks(traceFactory, environment));
 
             // CORE TODO ShutdownDetector, used by LogStreamManager.
             //var shutdownDetector = new ShutdownDetector();
             //shutdownDetector.Initialize()
 
-            var noContextTraceFactory = new TracerFactory(() => KuduWebUtil.GetTracerWithoutContext(environment, noContextDeploymentsSettingsManager));
-            var etwTraceFactory = new TracerFactory(() => new ETWTracer(string.Empty, string.Empty));
+            var noContextTraceFactory = new TracerFactory(() =>
+                KuduWebUtil.GetTracerWithoutContext(environment, _noContextDeploymentsSettingsManager));
 
             services.AddTransient<IAnalytics>(sp => new Analytics(sp.GetRequiredService<IDeploymentSettingsManager>(),
-                                                                  sp.GetRequiredService<IServerConfiguration>(),
-                                                                  noContextTraceFactory));
-            
-            // CORE TODO Trace unhandled exceptions
-            //AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
-            //{
-            //    var ex = args.ExceptionObject as Exception;
-            //    if (ex != null)
-            //    {
-            //        kernel.Get<IAnalytics>().UnexpectedException(ex);
-            //    }
-            //};
+                sp.GetRequiredService<IServerConfiguration>(),
+                noContextTraceFactory));
 
             // CORE TODO
             // Trace shutdown event
             // Cannot use shutdownDetector.Token.Register because of race condition
             // with NinjectServices.Stop via WebActivator.ApplicationShutdownMethodAttribute
-            //Shutdown += () => TraceShutdown(environment, noContextDeploymentsSettingsManager);
+            // Shutdown += () => TraceShutdown(environment, noContextDeploymentsSettingsManager);
 
             // LogStream service
-            // The hooks and log stream start endpoint are low traffic end-points. Re-using it to avoid creating another lock
-            var logStreamManagerLock = KuduWebUtil.GetNamedLocks(traceFactory, environment)["hooks"];
+            services.AddLogStreamService(_webAppRuntimeEnvironment,traceFactory);
 
-            services.AddTransient(sp => new LogStreamManager(Path.Combine(environment.RootPath, Constants.LogFilesPath),
-                                                             sp.GetRequiredService<IEnvironment>(),
-                                                             sp.GetRequiredService<IDeploymentSettingsManager>(),
-                                                             sp.GetRequiredService<ITracer>(),
-                                                             logStreamManagerLock));
-            
             // Deployment Service
             services.AddWebJobsDependencies();
 
-            services.AddScoped<ILogger>(sp => KuduWebUtil.GetLogger(sp));
+            services.AddScoped<ILogger>(KuduWebUtil.GetDeploymentLogger);
 
             services.AddScoped<IDeploymentManager, DeploymentManager>();
+            
             services.AddScoped<IFetchDeploymentManager, FetchDeploymentManager>();
+
+            services.AddScoped<IScanManager, ScanManager>();
+            
             services.AddScoped<ISSHKeyManager, SSHKeyManager>();
 
             services.AddScoped<IRepositoryFactory>(
-                sp => KuduWebUtil.GetDeploymentLock(traceFactory,environment).RepositoryFactory = new RepositoryFactory(
-                sp.GetRequiredService<IEnvironment>(), sp.GetRequiredService<IDeploymentSettingsManager>(), sp.GetRequiredService<ITraceFactory>()));
+                sp => KuduWebUtil.GetDeploymentLock(traceFactory, environment).RepositoryFactory =
+                    new RepositoryFactory(
+                        sp.GetRequiredService<IEnvironment>(), sp.GetRequiredService<IDeploymentSettingsManager>(),
+                        sp.GetRequiredService<ITraceFactory>()));
 
-            // CORE NOTE This was previously wired up in Ninject with .InSingletonScope. I'm not sure how that worked,
-            // since it depends on an IEnvironment, which was set up with .PerRequestScope. I have made this per request.
             services.AddScoped<IApplicationLogsReader, ApplicationLogsReader>();
 
             // Git server
-            services.AddGitServer(KuduWebUtil.GetDeploymentLock(traceFactory,environment));
+            services.AddGitServer(KuduWebUtil.GetDeploymentLock(traceFactory, environment));
 
             // Git Servicehook Parsers
             services.AddGitServiceHookParsers();
 
-            // CORE TODO
-            // SiteExtensions
-            //kernel.Bind<ISiteExtensionManager>().To<SiteExtensionManager>().InRequestScope();
-
-            // CORE TODO
-            // Functions
-            //kernel.Bind<IFunctionManager>().To<FunctionManager>().InRequestScope();
-
             services.AddScoped<ICommandExecutor, CommandExecutor>();
 
-            // CORE TODO This stuff should probably go in a separate method
-            // (they don't really fit into "ConfigureServices"), and much of it is probably no longer needed
-            //MigrateSite(environment, noContextDeploymentsSettingsManager);
-            //RemoveOldTracePath(environment);
-            //RemoveTempFileFromUserDrive(environment);
+            // KuduWebUtil.MigrateSite(environment, noContextDeploymentsSettingsManager);
+            // RemoveOldTracePath(environment);
+            // RemoveTempFileFromUserDrive(environment);
 
-            //// Temporary fix for https://github.com/npm/npm/issues/5905
+            // CORE TODO Windows Fix: Temporary fix for https://github.com/npm/npm/issues/5905
             //EnsureNpmGlobalDirectory();
             //EnsureUserProfileDirectory();
 
             //// Skip SSL Certificate Validate
-            //if (Kudu.Core.Environment.SkipSslValidation)
+            //if (Environment.SkipSslValidation)
             //{
-            //     ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
+            //    ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
             //}
 
             //// Make sure webpages:Enabled is true. Even though we set it in web.config, it could be overwritten by
@@ -276,9 +291,9 @@ namespace Kudu.Services.Web
             //        kernel.Get<IAnalytics>(),
             //        kernel.Get<ITraceFactory>()));
             //GlobalConfiguration.Configuration.Filters.Add(new EnsureRequestIdHandlerAttribute());
-            
+
             //FileTarget target = LogManager.Configuration.FindTargetByName("file") as FileTarget;
-            //String logfile = _webAppEnvironment.LogFilesPath + "/.txt";
+            //String logfile = _webAppRuntimeEnvironment.LogFilesPath + "/.txt";
             //target.FileName = logfile;
         }
 
@@ -297,64 +312,82 @@ namespace Kudu.Services.Web
             return uriBuilder.Uri;
         }
 
-        public void Configure(IApplicationBuilder app, 
+        public void Configure(IApplicationBuilder app,
             IApplicationLifetime applicationLifetime,
             ILoggerFactory loggerFactory)
         {
-            Console.WriteLine("\nConfigure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+            Console.WriteLine(@"Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
-            loggerFactory.AddEventSourceLogger();
+            KuduWebUtil.MigrateToNetCorePatch(_webAppRuntimeEnvironment);
             
-            app.UseMvcWithDefaultRoute();
-
-            if (_hostingEnvironment.IsDevelopment())
+            if (HostEnvironmentEnvExtensions.IsDevelopment(_hostingEnvironment))
             {
                 app.UseDeveloperExceptionPage();
-                //app.UseBrowserLink();
             }
             else
             {
-                // CORE TODO
                 app.UseExceptionHandler("/Error");
             }
-            
+
+            if (_webAppRuntimeEnvironment.IsOnLinuxConsumption)
+            {
+                app.UseLinuxConsumptionRouteMiddleware();
+            }
+
+            var webSocketOptions = new WebSocketOptions()
+            {
+                KeepAliveInterval = TimeSpan.FromSeconds(15)
+            };
+            app.UseMiddleware<InstanceMiddleware>();
+
+            app.UseWebSockets(webSocketOptions);
+
             var containsRelativePath = new Func<HttpContext, bool>(i =>
                 i.Request.Path.Value.StartsWith("/Default", StringComparison.OrdinalIgnoreCase));
-            
+
             app.MapWhen(containsRelativePath, application => application.Run(async context =>
             {
-                //context.Response.StatusCode = StatusCodes.Status500InternalServerError;
                 await context.Response.WriteAsync("Kestrel Running");
             }));
-            
+
+            var containsRelativeProvisionPath = new Func<HttpContext, bool>(i =>
+                i.Request.Path.Value.StartsWith("/api/provision", StringComparison.OrdinalIgnoreCase));
+
+            app.UseTraceMiddleware();
+
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                app.UseKubeMiddleware();
+            }
+
+            ProxyRequestIfRelativeUrlMatches(@"/webssh", "http", "127.0.0.1", KuduWebUtil.GetWebSSHProxyPort(), app);
+
+            app.MapWhen(containsRelativeProvisionPath, application => application.Run(async context =>
+            {
+                FileSystemHelpers.EnsureDirectory("/home/apps/"+context.Request.Path.Value.Replace("/api/provision/", ""));
+                FileSystemHelpers.EnsureDirectory("/home/apps/" + context.Request.Path.Value.Replace("/api/provision/", "")+"/site");
+                await context.Response.WriteAsync("App Provisioned");
+            }));
+
             var containsRelativePath2 = new Func<HttpContext, bool>(i =>
                 i.Request.Path.Value.StartsWith("/info", StringComparison.OrdinalIgnoreCase));
-            
-            app.MapWhen(containsRelativePath2, application => application.Run(async context =>
-            {
-                await context.Response.WriteAsync("{\"Version\":\""+Constants.KuduBuild+"\"}");
-            }));
-          
-            
+
+            app.MapWhen(containsRelativePath2,
+                application => application.Run(async context =>
+                {
+                    await context.Response.WriteAsync("{\"Version\":\"" + Constants.KuduBuild + "\"}");
+                }));
+
             app.UseResponseCompression();
-            
-            var containsRelativePath3 = new Func<HttpContext, bool>(i =>
-                i.Request.Path.Value.StartsWith("/AppServiceTunnel/Tunnel.ashx", StringComparison.OrdinalIgnoreCase));
 
-            //app.Map("/api/debugext2", a => a.UseMiddleware<DebugExtensionMiddleware>());
-            app.MapWhen(containsRelativePath3, builder => builder.UseMiddleware<DebugExtensionMiddleware>());
-            
-            app.UseTraceMiddleware();
-            
+            //var containsRelativePath3 = new Func<HttpContext, bool>(i =>
+            //    i.Request.Path.Value.StartsWith("/AppServiceTunnel/Tunnel.ashx", StringComparison.OrdinalIgnoreCase));
+
+            //app.MapWhen(containsRelativePath3, builder => builder.UseMiddleware<DebugExtensionMiddleware>());
+
             applicationLifetime.ApplicationStopping.Register(OnShutdown);
-            
+
             app.UseStaticFiles();
-
-            ProxyRequestsIfRelativeUrlMatch(@"/webssh", "http", "127.0.0.1", "3000", app);
-
-            //ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
-
-            //ProxyRequestsIfRelativeUrlMatch(@"/AppServiceTunnel/Tunnel.ashx", "http", "127.0.0.1", "5000", app);
 
             var configuration = app.ApplicationServices.GetRequiredService<IServerConfiguration>();
 
@@ -363,181 +396,256 @@ namespace Kudu.Services.Web
             //GlobalConfiguration.Configuration.Formatters.Clear();
             //GlobalConfiguration.Configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
 
-            var jsonFormatter = new JsonMediaTypeFormatter();
-            //GlobalConfiguration.Configuration.Formatters.Add(jsonFormatter);
-            //GlobalConfiguration.Configuration.DependencyResolver = new NinjectWebApiDependencyResolver(kernel);
-            //GlobalConfiguration.Configuration.Filters.Add(new TraceExceptionFilterAttribute());
+
+            // CORE TODO concept of "deprecation" in routes for traces, Do we need this for linux ?
 
 
-            // CORE TODO concept of "deprecation" in routes for traces, Do we need this ?
+            app.MapWhen(
+                c => c.Request.Path.ToString().EndsWith("/git-receive-pack", StringComparison.OrdinalIgnoreCase),
+                appBranch => appBranch.RunReceivePackHandler());
 
-            // Push url
-            foreach (var url in new[] { "/git-receive-pack", $"/{configuration.GitServerRoot}/git-receive-pack" })
-            {
-                app.Map(url, appBranch => appBranch.RunReceivePackHandler());
-            };
-
-            // Fetch hook
-            app.Map("/deploy", appBranch => appBranch.RunFetchHandler());
+            app.MapWhen(
+                c => c.Request.Path.ToString().EndsWith("/git-upload-pack", StringComparison.OrdinalIgnoreCase),
+                appBranch => appBranch.RunUploadPackHandler());
+            //app.MapWhen("/{repository}/git-upload-pack", appBranch => appBranch.RunUploadPackHandler());
 
             // Log streaming
             app.Map("/api/logstream", appBranch => appBranch.RunLogStreamHandler());
 
-            // Clone url
-            foreach (var url in new[] { "/git-upload-pack", $"/{configuration.GitServerRoot}/git-upload-pack" })
-            {
-                app.Map(url, appBranch => appBranch.RunUploadPackHandler());
-            };
 
-            // CORE TODO - Test this
+            // Clone url
             // Custom GIT repositories, which can be served from any directory that has a git repo
-            foreach (var url in new[] { "/git-custom-repository", "/git/{*path}" })
-            {
-                app.Map(url, appBranch => appBranch.RunCustomGitRepositoryHandler());
-            };
-            
-            app.UseFileServer(new FileServerOptions
-            {
-                FileProvider = new PhysicalFileProvider(
-                    _webAppEnvironment.WebRootPath),
-                RequestPath = "/wwwroot",
-                EnableDirectoryBrowsing = true
-            });
-            
-            //app.UseStaticFiles();
+
+            app.UseSwagger();
+
+            app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "Kudu API Docs"); });
+
             app.UseMvc(routes =>
             {
-                Console.WriteLine("\nSetting Up Routes : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+                Console.WriteLine(@"Setting Up Routes : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+                routes.MapRouteAnalyzer("/routes"); // Add
 
-                // CORE TODO Default route needed?
                 routes.MapRoute(
                     name: "default",
                     template: "{controller}/{action=Index}/{id?}");
-                
+
                 // Git Service
-                routes.MapRoute("git-info-refs-root", "info/refs", new { controller = "InfoRefs", action = "Execute" });
-                routes.MapRoute("git-info-refs", configuration.GitServerRoot + "/info/refs", new { controller = "InfoRefs", action = "Execute" });
+                routes.MapRoute("git-info-refs", "/{repository}" + "/info/refs",
+                    new {controller = "InfoRefs", action = "Execute"});
 
                 // Scm (deployment repository)
-                routes.MapHttpRouteDual("scm-info", "scm/info", new { controller = "LiveScm", action = "GetRepositoryInfo" });
-                routes.MapHttpRouteDual("scm-clean", "scm/clean", new { controller = "LiveScm", action = "Clean" });
-                routes.MapHttpRouteDual("scm-delete", "scm", new { controller = "LiveScm", action = "Delete" }, new { verb = new HttpMethodRouteConstraint("DELETE") });
+                routes.MapHttpRouteDual("scm-info", "scm/info",
+                    new {controller = "LiveScm", action = "GetRepositoryInfo"});
+                routes.MapHttpRouteDual("scm-clean", "scm/clean", new {controller = "LiveScm", action = "Clean"});
+                routes.MapHttpRouteDual("scm-delete", "scm", new {controller = "LiveScm", action = "Delete"},
+                    new {verb = new HttpMethodRouteConstraint("DELETE")});
 
 
                 // Scm files editor
-                routes.MapHttpRouteDual("scm-get-files", "scmvfs/{*path}", new { controller = "LiveScmEditor", action = "GetItem" }, new { verb = new HttpMethodRouteConstraint("GET", "HEAD") });
-                routes.MapHttpRouteDual("scm-put-files", "scmvfs/{*path}", new { controller = "LiveScmEditor", action = "PutItem" }, new { verb = new HttpMethodRouteConstraint("PUT") });
-                routes.MapHttpRouteDual("scm-delete-files", "scmvfs/{*path}", new { controller = "LiveScmEditor", action = "DeleteItem" }, new { verb = new HttpMethodRouteConstraint("DELETE") });
+                routes.MapHttpRouteDual("scm-get-files", "scmvfs/{*path}",
+                    new {controller = "LiveScmEditor", action = "GetItem"},
+                    new {verb = new HttpMethodRouteConstraint("GET", "HEAD")});
+                routes.MapHttpRouteDual("scm-put-files", "scmvfs/{*path}",
+                    new {controller = "LiveScmEditor", action = "PutItem"},
+                    new {verb = new HttpMethodRouteConstraint("PUT")});
+                routes.MapHttpRouteDual("scm-delete-files", "scmvfs/{*path}",
+                    new {controller = "LiveScmEditor", action = "DeleteItem"},
+                    new {verb = new HttpMethodRouteConstraint("DELETE")});
 
                 // Live files editor
-                routes.MapHttpRouteDual("vfs-get-files", "vfs/{*path}", new { controller = "Vfs", action = "GetItem" }, new { verb = new HttpMethodRouteConstraint("GET", "HEAD") });
-                routes.MapHttpRouteDual("vfs-put-files", "vfs/{*path}", new { controller = "Vfs", action = "PutItem" }, new { verb = new HttpMethodRouteConstraint("PUT") });
-                routes.MapHttpRouteDual("vfs-delete-files", "vfs/{*path}", new { controller = "Vfs", action = "DeleteItem" }, new { verb = new HttpMethodRouteConstraint("DELETE") });
-                
+                routes.MapHttpRouteDual("vfs-get-files", "vfs/{*path}", new {controller = "Vfs", action = "GetItem"},
+                    new {verb = new HttpMethodRouteConstraint("GET", "HEAD")});
+                routes.MapHttpRouteDual("vfs-put-files", "vfs/{*path}", new {controller = "Vfs", action = "PutItem"},
+                    new {verb = new HttpMethodRouteConstraint("PUT")});
+                routes.MapHttpRouteDual("vfs-delete-files", "vfs/{*path}",
+                    new {controller = "Vfs", action = "DeleteItem"},
+                    new {verb = new HttpMethodRouteConstraint("DELETE")});
+
                 // Zip file handler
-                routes.MapHttpRouteDual("zip-get-files", "zip/{*path}", new { controller = "Zip", action = "GetItem" }, new { verb = new HttpMethodRouteConstraint("GET", "HEAD") });
-                routes.MapHttpRouteDual("zip-put-files", "zip/{*path}", new { controller = "Zip", action = "PutItem" }, new { verb = new HttpMethodRouteConstraint("PUT") });
-                
+                routes.MapHttpRouteDual("zip-get-files", "zip/{*path}", new {controller = "Zip", action = "GetItem"},
+                    new {verb = new HttpMethodRouteConstraint("GET", "HEAD")});
+                routes.MapHttpRouteDual("zip-put-files", "zip/{*path}", new {controller = "Zip", action = "PutItem"},
+                    new {verb = new HttpMethodRouteConstraint("PUT")});
+
                 // Zip push deployment
-                routes.MapRoute("zip-push-deploy", "api/zipdeploy", new { controller = "PushDeployment", action = "ZipPushDeploy" }, new { verb = new HttpMethodRouteConstraint("POST") });
-                routes.MapRoute("zip-war-deploy", "api/wardeploy", new { controller = "PushDeployment", action = "WarPushDeploy" }, new { verb = new HttpMethodRouteConstraint("POST") });
-                
-                // Live Command Line
-                routes.MapHttpRouteDual("execute-command", "command", new { controller = "Command", action = "ExecuteCommand" }, new { verb = new HttpMethodRouteConstraint("POST") });
+                routes.MapRoute("zip-push-deploy", "api/zipdeploy",
+                    new {controller = "PushDeployment", action = "ZipPushDeploy"},
+                    new {verb = new HttpMethodRouteConstraint("POST")});
+                routes.MapRoute("zip-push-deploy-url", "api/zipdeploy",
+                    new {controller = "PushDeployment", action = "ZipPushDeployViaUrl"},
+                    new {verb = new HttpMethodRouteConstraint("PUT")});
+                routes.MapRoute("zip-war-deploy", "api/wardeploy",
+                    new {controller = "PushDeployment", action = "WarPushDeploy"},
+                    new {verb = new HttpMethodRouteConstraint("POST")});
+
+                routes.MapHttpRouteDual("onedeploy", "publish",
+                    new { controller = "PushDeployment", action = "OneDeploy" });
+
 
                 // Deployments
-                routes.MapHttpRouteDual("all-deployments", "deployments", new { controller = "Deployment", action = "GetDeployResults" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpRouteDual("one-deployment-get", "deployments/{id}", new { controller = "Deployment", action = "GetResult" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpRouteDual("one-deployment-put", "deployments/{id?}", new { controller = "Deployment", action = "Deploy" }, new { verb = new HttpMethodRouteConstraint("PUT") });
-                routes.MapHttpRouteDual("one-deployment-delete", "deployments/{id}", new { controller = "Deployment", action = "Delete" }, new { verb = new HttpMethodRouteConstraint("DELETE")});
-                routes.MapHttpRouteDual("one-deployment-log", "deployments/{id}/log", new { controller = "Deployment", action = "GetLogEntry" });
-                routes.MapHttpRouteDual("one-deployment-log-details", "deployments/{id}/log/{logId}", new { controller = "Deployment", action = "GetLogEntryDetails" });
+                routes.MapHttpRouteDual("all-deployments", "deployments",
+                    new {controller = "Deployment", action = "GetDeployResults"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpRouteDual("one-deployment-get", "deployments/{id}",
+                    new {controller = "Deployment", action = "GetResult"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpRouteDual("one-deployment-put", "deployments/{id?}",
+                    new {controller = "Deployment", action = "Deploy"},
+                    new {verb = new HttpMethodRouteConstraint("PUT")});
+                routes.MapHttpRouteDual("one-deployment-delete", "deployments/{id}",
+                    new {controller = "Deployment", action = "Delete"},
+                    new {verb = new HttpMethodRouteConstraint("DELETE")});
+                routes.MapHttpRouteDual("one-deployment-log", "deployments/{id}/log",
+                    new {controller = "Deployment", action = "GetLogEntry"});
+                routes.MapHttpRouteDual("one-deployment-log-details", "deployments/{id}/log/{logId}",
+                    new {controller = "Deployment", action = "GetLogEntryDetails"});
+                routes.MapHttpRouteDual("update-container-tag", "app/update",
+                    new { controller = "Deployment", action = "UpdateContainerTag" });
 
                 // Deployment script
-                routes.MapRoute("get-deployment-script", "api/deploymentscript", new { controller = "Deployment", action = "GetDeploymentScript" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapRoute("get-deployment-script", "api/deploymentscript",
+                    new {controller = "Deployment", action = "GetDeploymentScript"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+
+                // Revision script
+                routes.MapRoute("get-deployment-revision", "api/revisions/{appName}",
+                    new { controller = "Revision", action = "GetMyRevisions" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
+
+                // Revision script
+                routes.MapRoute("revert-deployment-revision", "api/revisions/redeploy/{appName}/{deploymentId}",
+                    new { controller = "Revision", action = "RedployDeployemnt" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
 
                 // IsDeploying status 
-                routes.MapRoute("is-deployment-underway", "api/isDeploying", new { controller = "Deployment", action = "IsDeploying" }, new { verb = new HttpMethodRouteConstraint("GET") });
-
-                // SSHKey
-                routes.MapHttpRouteDual("get-sshkey", "api/sshkey", new { controller = "SSHKey", action = "GetPublicKey" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpRouteDual("put-sshkey", "api/sshkey", new { controller = "SSHKey", action = "SetPrivateKey" }, new { verb = new HttpMethodRouteConstraint("PUT") });
-                routes.MapHttpRouteDual("delete-sshkey", "api/sshkey", new { controller = "SSHKey", action = "DeleteKeyPair" }, new { verb = new HttpMethodRouteConstraint("DELETE") });
+                routes.MapRoute("is-deployment-underway", "api/isdeploying",
+                    new {controller = "Deployment", action = "IsDeploying"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
 
                 // Environment
-                routes.MapHttpRouteDual("get-env", "environment", new { controller = "Environment", action = "Get" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapHttpRouteDual("get-env", "environment", new {controller = "Environment", action = "Get"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
 
                 // Settings
-                routes.MapHttpRouteDual("set-setting", "settings", new { controller = "Settings", action = "Set" }, new { verb = new HttpMethodRouteConstraint("POST") });
-                routes.MapHttpRouteDual("get-all-settings", "settings", new { controller = "Settings", action = "GetAll" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpRouteDual("get-setting", "settings/{key}", new { controller = "Settings", action = "Get" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpRouteDual("delete-setting", "settings/{key}", new { controller = "Settings", action = "Delete" }, new { verb = new HttpMethodRouteConstraint("DELETE") });
+                routes.MapHttpRouteDual("set-setting", "settings", new {controller = "Settings", action = "Set"},
+                    new {verb = new HttpMethodRouteConstraint("POST")});
+                routes.MapHttpRouteDual("get-all-settings", "settings",
+                    new {controller = "Settings", action = "GetAll"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpRouteDual("get-setting", "settings/{key}", new {controller = "Settings", action = "Get"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpRouteDual("delete-setting", "settings/{key}",
+                    new {controller = "Settings", action = "Delete"},
+                    new {verb = new HttpMethodRouteConstraint("DELETE")});
 
                 // Diagnostics
-                routes.MapHttpRouteDual("diagnostics", "dump", new { controller = "Diagnostics", action = "GetLog" });
-                routes.MapHttpRouteDual("diagnostics-set-setting", "diagnostics/settings", new { controller = "Diagnostics", action = "Set" }, new { verb = new HttpMethodRouteConstraint("POST") });
-                routes.MapHttpRouteDual("diagnostics-get-all-settings", "diagnostics/settings", new { controller = "Diagnostics", action = "GetAll" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpRouteDual("diagnostics-get-setting", "diagnostics/settings/{key}", new { controller = "Diagnostics", action = "Get" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpRouteDual("diagnostics-delete-setting", "diagnostics/settings/{key}", new { controller = "Diagnostics", action = "Delete" }, new { verb = new HttpMethodRouteConstraint("DELETE") });
+                routes.MapHttpRouteDual("diagnostics", "dump", new {controller = "Diagnostics", action = "GetLog"});
+                routes.MapHttpRouteDual("diagnostics-set-setting", "diagnostics/settings",
+                    new {controller = "Diagnostics", action = "Set"},
+                    new {verb = new HttpMethodRouteConstraint("POST")});
+                routes.MapHttpRouteDual("diagnostics-get-all-settings", "diagnostics/settings",
+                    new {controller = "Diagnostics", action = "GetAll"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpRouteDual("diagnostics-get-setting", "diagnostics/settings/{key}",
+                    new {controller = "Diagnostics", action = "Get"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpRouteDual("diagnostics-delete-setting", "diagnostics/settings/{key}",
+                    new {controller = "Diagnostics", action = "Delete"},
+                    new {verb = new HttpMethodRouteConstraint("DELETE")});
 
-                // CORE TODO - Works now , | shutdown logic left
-                // Logs
-                foreach (var url in new[] { "/logstream", "/logstream/{*path}" })
-                {
-                    app.Map(url, appBranch => appBranch.RunLogStreamHandler());
-                };
-                //routes.MapHttpRouteDual<LogStreamHandler>(kernel, "logstream", "logstream/{*path}");
-                routes.MapHttpRouteDual("recent-logs", "api/logs/recent", new { controller = "Diagnostics", action = "GetRecentLogs" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapHttpRouteDual("recent-logs", "api/logs/recent",
+                    new {controller = "Diagnostics", action = "GetRecentLogs"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
 
                 // Enable these for Linux and Windows Containers.
                 if (!OSDetector.IsOnWindows() || (OSDetector.IsOnWindows() && EnvironmentHelper.IsWindowsContainers()))
                 {
-                    routes.MapRoute("current-docker-logs-zip", "api/logs/docker/zip", new { controller = "Diagnostics", action = "GetDockerLogsZip" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                    routes.MapRoute("current-docker-logs", "api/logs/docker", new { controller = "Diagnostics", action = "GetDockerLogs" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                    routes.MapRoute("current-docker-logs-zip", "api/logs/docker/zip",
+                        new {controller = "Diagnostics", action = "GetDockerLogsZip"},
+                        new {verb = new HttpMethodRouteConstraint("GET")});
+                    routes.MapRoute("current-docker-logs", "api/logs/docker",
+                        new {controller = "Diagnostics", action = "GetDockerLogs"},
+                        new {verb = new HttpMethodRouteConstraint("GET")});
                 }
 
-                // CORE TODO
                 var processControllerName = OSDetector.IsOnWindows() ? "Process" : "LinuxProcess";
 
                 // Processes
-                routes.MapHttpProcessesRoute("all-processes", "", new { controller = processControllerName, action = "GetAllProcesses" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpProcessesRoute("one-process-get", "/{id}", new { controller = processControllerName, action = "GetProcess" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpProcessesRoute("one-process-delete", "/{id}", new { controller = processControllerName, action = "KillProcess" }, new { verb = new HttpMethodRouteConstraint("DELETE") });
-                routes.MapHttpProcessesRoute("one-process-dump", "/{id}/dump", new { controller = processControllerName, action = "MiniDump" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpProcessesRoute("start-process-profile", "/{id}/profile/start", new { controller = processControllerName, action = "StartProfileAsync" }, new { verb = new HttpMethodRouteConstraint("POST") });
-                routes.MapHttpProcessesRoute("stop-process-profile", "/{id}/profile/stop", new { controller = processControllerName, action = "StopProfileAsync" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpProcessesRoute("all-threads", "/{id}/threads", new { controller = processControllerName, action = "GetAllThreads" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpProcessesRoute("one-process-thread", "/{processId}/threads/{threadId}", new { controller = processControllerName, action = "GetThread" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpProcessesRoute("all-modules", "/{id}/modules", new { controller = processControllerName, action = "GetAllModules" }, new { verb = new HttpMethodRouteConstraint("GET") });
-                routes.MapHttpProcessesRoute("one-process-module", "/{id}/modules/{baseAddress}", new { controller = processControllerName, action = "GetModule" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapHttpProcessesRoute("all-processes", "",
+                    new {controller = processControllerName, action = "GetAllProcesses"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpProcessesRoute("one-process-get", "/{id}",
+                    new {controller = processControllerName, action = "GetProcess"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpProcessesRoute("one-process-delete", "/{id}",
+                    new {controller = processControllerName, action = "KillProcess"},
+                    new {verb = new HttpMethodRouteConstraint("DELETE")});
+                routes.MapHttpProcessesRoute("one-process-dump", "/{id}/dump",
+                    new {controller = processControllerName, action = "MiniDump"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpProcessesRoute("start-process-profile", "/{id}/profile/start",
+                    new {controller = processControllerName, action = "StartProfileAsync"},
+                    new {verb = new HttpMethodRouteConstraint("POST")});
+                routes.MapHttpProcessesRoute("stop-process-profile", "/{id}/profile/stop",
+                    new {controller = processControllerName, action = "StopProfileAsync"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpProcessesRoute("all-threads", "/{id}/threads",
+                    new {controller = processControllerName, action = "GetAllThreads"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpProcessesRoute("one-process-thread", "/{processId}/threads/{threadId}",
+                    new {controller = processControllerName, action = "GetThread"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpProcessesRoute("all-modules", "/{id}/modules",
+                    new {controller = processControllerName, action = "GetAllModules"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
+                routes.MapHttpProcessesRoute("one-process-module", "/{id}/modules/{baseAddress}",
+                    new {controller = processControllerName, action = "GetModule"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
 
                 // Runtime
-                routes.MapHttpRouteDual("runtime", "diagnostics/runtime", new { controller = "Runtime", action = "GetRuntimeVersions" }, new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapHttpRouteDual("runtime", "diagnostics/runtime",
+                    new {controller = "Runtime", action = "GetRuntimeVersions"},
+                    new {verb = new HttpMethodRouteConstraint("GET")});
 
                 // Docker Hook Endpoint
-                if (!OSDetector.IsOnWindows()|| (OSDetector.IsOnWindows() && EnvironmentHelper.IsWindowsContainers()))
+                if (!OSDetector.IsOnWindows() || (OSDetector.IsOnWindows() && EnvironmentHelper.IsWindowsContainers()))
                 {
-                    routes.MapHttpRouteDual("docker", "docker/hook", new { controller = "Docker", action = "ReceiveHook" }, new { verb = new HttpMethodRouteConstraint("POST") });
+                    routes.MapHttpRouteDual("docker", "docker/hook",
+                        new {controller = "Docker", action = "ReceiveHook"},
+                        new {verb = new HttpMethodRouteConstraint("POST")});
                 }
-                
+
+                routes.MapHttpRouteDual("sync-function-triggers-put", "operations/settriggers",
+                   new { controller = "Function", action = "SyncTrigger" },
+                   new { verb = new HttpMethodRouteConstraint("POST") });
+
                 // catch all unregistered url to properly handle not found
-                // this is to work arounf the issue in TraceModule where we see double OnBeginRequest call
-                // for the same request (404 and then 200 statusCode).
-                //routes.MapRoute("error-404", "{*path}", new { controller = "Error404", action = "Handle" });
+                // routes.MapRoute("error-404", "{*path}", new {controller = "Error404", action = "Handle"});
             });
-            Console.WriteLine("\nExiting Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
+            Console.WriteLine(@"Exiting Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
         }
 
         // <summary>
         // Used for Reverse Proxying. Forwards a request to another path based on a
         // relative path to Kestrel
         // </summary>
-        // <param name="app"></param>
-        // <param name="relativeUrl"></param>
-        // <param name="scheme"></param>
-        // <param name="host">The proxy server host</param>
-        // <param name="port">The proxy server port. This field is always required</param>
-        private static void ProxyRequestsIfRelativeUrlMatch(
+        // <param name="app">
+        // Object to configure an application's request pipeline.
+        // </param>
+        // <param name="relativeUrl">
+        // String is matched if the request URI path is prepended by it
+        // </param>
+        // <param name="scheme">
+        // A String that contains the scheme for the proxy URI
+        // </param>
+        // <param name="host">
+        //  A String that contains the host for the proxy URI
+        // </param>
+        // <param name="port">
+        //  A String that contains the host for the proxy URI. Cannot be null
+        // </param>
+        private static void ProxyRequestIfRelativeUrlMatches(
             string relativeUrl,
             string scheme,
             string host,
@@ -545,30 +653,47 @@ namespace Kudu.Services.Web
             IApplicationBuilder app)
         {
             var containsRelativePath = new Func<HttpContext, bool>(i =>
-                i.Request.Path.Value.StartsWith(relativeUrl, StringComparison.OrdinalIgnoreCase));
-                app.MapWhen(containsRelativePath, builder => builder.RunProxy(new ProxyOptions
-                {
-                    Scheme = scheme,
-                    Host = host,
-                    Port = port
-                }));
+                i.Request.Path.Value.StartsWith("/webssh", StringComparison.OrdinalIgnoreCase));
+            app.MapWhen(containsRelativePath, builder => builder.RunProxy(new ProxyOptions
+            {
+                Scheme = scheme,
+                Host = host,
+                Port = port,
+            }));
         }
 
-        
-        private static HttpContext GetHttpContext(HttpContext httpContext) => httpContext;
-        
+        // <summary>
+        // Returns a lambda function that checks if an incoming request object's url path
+        // is prepended by a string
+        // </summary>
+        // <param name="relativeUrl">
+        // String keyword with which incoming request's path is matched
+        // </param>
+        // <param name="httpContext">
+        // The HttpContext object of an incoming request
+        // </param>
         private static Func<HttpContext, bool> ContainsRelativeUrl(string relativeUrl, HttpContext httpContext)
         {
             return x => httpContext.Request.Path.Value.StartsWith(relativeUrl, StringComparison.OrdinalIgnoreCase);
         }
-        
+
+        // <summary>
+        // Returns a lambda function that checks if an incoming request object's url path
+        // is prepended by a string
+        // </summary>
+        // <param name="relativeUrl">
+        // String keyword with which incoming request's path is matched
+        // </param>
+        // <param name="httpContext">
+        // The HttpContext object of an incoming request
+        // </param>
         private void OnShutdown()
         {
-            //Wait while the data is flushed
-            System.Threading.Thread.Sleep(1000);
-            Console.WriteLine("Removing Deployment Locks");
+            KuduWebUtil.TraceShutdown(_webAppRuntimeEnvironment, _noContextDeploymentsSettingsManager);
+            // Cleaning up deployment locks
+            Console.WriteLine(@"Removing Deployment Locks");
             FileSystemHelpers.DeleteDirectorySafe("/home/site/locks/deployment");
-            Console.WriteLine("Done!");
+            Console.WriteLine(@"Shutting Down!");
         }
     }
 }

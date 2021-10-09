@@ -129,7 +129,7 @@ namespace Kudu.Services.FetchHelpers
         private void UpdateStatusFile(object state)
         {
             string changeset = (string)state;
-            IDeploymentStatusFile statusFile = _status.Open(changeset);
+            IDeploymentStatusFile statusFile = _status.Open(changeset, _environment);
             statusFile.UpdateProgress(string.Format(CultureInfo.CurrentCulture,
                                         _failedCount == 0 ? Resources.OneDrive_SynchronizingProgress : Resources.OneDrive_SynchronizingProgressWithFailure,
                                         ((_successCount + _failedCount) * 100) / _totals,
@@ -215,7 +215,7 @@ namespace Kudu.Services.FetchHelpers
             requestUri = string.Format(CultureInfo.InvariantCulture, "{0}/{1}", await GetItemUri(accessToken, requestUri, rootUri), "view.changes");
 
             ChangesResult result = new ChangesResult();
-            IDeploymentStatusFile statusFile = _status.Open(changeset);
+            IDeploymentStatusFile statusFile = _status.Open(changeset, _environment);
             var loop = 0;
             using (var client = CreateHttpClient(accessToken))
             {

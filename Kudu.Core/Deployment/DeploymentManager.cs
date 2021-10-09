@@ -12,9 +12,11 @@ using Kudu.Contracts.Tracing;
 using Kudu.Core.Helpers;
 using Kudu.Core.Hooks;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.K8SE;
 using Kudu.Core.Settings;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
+using Microsoft.AspNetCore.Http;
 
 namespace Kudu.Core.Deployment
 {
@@ -33,6 +35,7 @@ namespace Kudu.Core.Deployment
         private readonly IDeploymentSettingsManager _settings;
         private readonly IDeploymentStatusManager _status;
         private readonly IWebHooksManager _hooksManager;
+        private readonly IDictionary<string, string> _appSettings;
 
         private const string RestartTriggerReason = "App deployment";
         private const string XmlLogFile = "log.xml";
@@ -48,8 +51,9 @@ namespace Kudu.Core.Deployment
                                  IDeploymentStatusManager status,
                                  IDictionary<string, IOperationLock> namedLocks,
                                  ILogger globalLogger,
-                                 IWebHooksManager hooksManager)
-            : this(builderFactory, environment, traceFactory, analytics, settings, status, namedLocks["deployment"], globalLogger, hooksManager)
+                                 IWebHooksManager hooksManager,
+                                 IHttpContextAccessor httpContextAccessor)
+            : this(builderFactory, environment, traceFactory, analytics, settings, status, namedLocks["deployment"], globalLogger, hooksManager, httpContextAccessor)
         { }
 
         public DeploymentManager(ISiteBuilderFactory builderFactory,
@@ -60,10 +64,12 @@ namespace Kudu.Core.Deployment
                                  IDeploymentStatusManager status,
                                  IOperationLock deploymentLock,
                                  ILogger globalLogger,
-                                 IWebHooksManager hooksManager)
+                                 IWebHooksManager hooksManager,
+                                 IHttpContextAccessor httpContextAccessor)
         {
             _builderFactory = builderFactory;
-            _environment = environment;
+            _environment = GetEnvironment(httpContextAccessor, environment);
+            _appSettings = GetAppSettings(httpContextAccessor);
             _traceFactory = traceFactory;
             _analytics = analytics;
             _deploymentLock = deploymentLock;
@@ -71,6 +77,35 @@ namespace Kudu.Core.Deployment
             _settings = settings;
             _status = status;
             _hooksManager = hooksManager;
+        }
+
+        private IEnvironment GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
+        {
+            IEnvironment _environment;
+            if (!K8SEDeploymentHelper.IsK8SEEnvironment() || accessor == null)
+            {
+                _environment = environment;
+            }
+            else
+            {
+                var context = accessor.HttpContext;
+                _environment = (IEnvironment)context.Items["environment"];
+            }
+            return _environment;
+        }
+
+        internal static IDictionary<string, string> GetAppSettings(IHttpContextAccessor accessor, Func<bool> isK8SeEnvironment = null)
+        {
+            isK8SeEnvironment = isK8SeEnvironment ?? K8SEDeploymentHelper.IsK8SEEnvironment;
+
+            IDictionary<string, string> appSettings = new Dictionary<string, string>();
+            if (isK8SeEnvironment() && accessor != null)
+            {
+                var context = accessor.HttpContext;
+                appSettings = (IDictionary<string, string>) context.Items["appSettings"];
+            }
+
+            return appSettings;
         }
 
         private bool IsDeploying
@@ -92,7 +127,7 @@ namespace Kudu.Core.Deployment
 
         public DeployResult GetResult(string id)
         {
-             return GetResult(id, _status.ActiveDeploymentId, IsDeploying);   
+            return GetResult(id, _status.ActiveDeploymentId, IsDeploying);
         }
 
         public IEnumerable<LogEntry> GetLogEntries(string id)
@@ -159,7 +194,7 @@ namespace Kudu.Core.Deployment
                     throw new InvalidOperationException(String.Format(CultureInfo.CurrentCulture, Resources.Error_UnableToDeleteDeploymentActive, id));
                 }
 
-                _status.Delete(id);
+                _status.Delete(id, _environment);
             }
         }
 
@@ -175,128 +210,149 @@ namespace Kudu.Core.Deployment
             Console.WriteLine("Deploy Async");
             using (var deploymentAnalytics = new DeploymentAnalytics(_analytics, _settings))
             {
-                    Exception exception = null;
-                    ITracer tracer = _traceFactory.GetTracer();
-                    IDisposable deployStep = null;
-                    ILogger innerLogger = null;
-                    string targetBranch = null;
+                Exception exception = null;
+                ITracer tracer = _traceFactory.GetTracer();
+                IDisposable deployStep = null;
+                ILogger innerLogger = null;
+                string targetBranch = null;
 
-                    // If we don't get a changeset, find out what branch we should be deploying and get the commit ID from it
+                // If we don't get a changeset, find out what branch we should be deploying and get the commit ID from it
+                if (changeSet == null)
+                {
+                    targetBranch = _settings.GetBranch();
+
+                    changeSet = repository.GetChangeSet(targetBranch);
+
                     if (changeSet == null)
                     {
-                        targetBranch = _settings.GetBranch();
+                        throw new InvalidOperationException(String.Format(
+                            "The current deployment branch is '{0}', but nothing has been pushed to it",
+                            targetBranch));
+                    }
+                }
 
-                        changeSet = repository.GetChangeSet(targetBranch);
+                string id = changeSet.Id;
+                _environment.CurrId = id;
+                IDeploymentStatusFile statusFile = null;
+                try
+                {
+                    deployStep = tracer.Step($"DeploymentManager.Deploy(id:{id})");
+                    // Remove the old log file for this deployment id
+                    string logPath = GetLogPath(id);
+                    FileSystemHelpers.DeleteFileSafe(logPath);
 
-                        if (changeSet == null)
+                    statusFile = GetOrCreateStatusFile(changeSet, tracer, deployer);
+
+                    statusFile.MarkPending();
+
+                    ILogger logger = GetLogger(changeSet.Id);
+                    if (needFileUpdate)
+                    {
+                        using (tracer.Step("Updating to specific changeset"))
                         {
-                            throw new InvalidOperationException(String.Format(
-                                "The current deployment branch is '{0}', but nothing has been pushed to it",
-                                targetBranch));
+
+                            innerLogger = logger.Log(Resources.Log_UpdatingBranch, targetBranch ?? id);
+
+                            using (var writer = new ProgressWriter())
+                            {
+                                // Update to the specific changeset or branch
+                                repository.Update(targetBranch ?? id);
+                            }
                         }
                     }
 
-                    string id = changeSet.Id;
-                    IDeploymentStatusFile statusFile = null;
-                    try
+                    if (_settings.ShouldUpdateSubmodules())
                     {
-                        deployStep = tracer.Step($"DeploymentManager.Deploy(id:{id})");
-                        // Remove the old log file for this deployment id
-                        string logPath = GetLogPath(id);
-                        FileSystemHelpers.DeleteFileSafe(logPath);
-
-                        statusFile = GetOrCreateStatusFile(changeSet, tracer, deployer);
-                        statusFile.MarkPending();
-
-                        ILogger logger = GetLogger(changeSet.Id);
-
-                        if (needFileUpdate)
+                        using (tracer.Step("Updating submodules"))
                         {
-                            using (tracer.Step("Updating to specific changeset"))
-                            {
-                                innerLogger = logger.Log(Resources.Log_UpdatingBranch, targetBranch ?? id);
+                            innerLogger = logger.Log(Resources.Log_UpdatingSubmodules);
 
-                                using (var writer = new ProgressWriter())
-                                {
-                                    // Update to the specific changeset or branch
-                                    repository.Update(targetBranch ?? id);
-                                }
-                            }
+                            repository.UpdateSubmodules();
                         }
+                    }
 
-                        if (_settings.ShouldUpdateSubmodules())
+                    if (clean)
+                    {
+                        tracer.Trace("Cleaning {0} repository", repository.RepositoryType);
+
+                        innerLogger = logger.Log(Resources.Log_CleaningRepository, repository.RepositoryType);
+
+                        repository.Clean();
+                    }
+
+                    // set to null as Build() below takes over logging
+                    innerLogger = null;
+
+                    // Perform the build deployment of this changeset
+                    await Build(changeSet, tracer, deployStep, repository, deploymentInfo, deploymentAnalytics, fullBuildByDefault);
+
+                    if ((!(OSDetector.IsOnWindows() &&
+                          !EnvironmentHelper.IsWindowsContainers()) &&
+                        _settings.RestartAppContainerOnGitDeploy()) ||
+                        K8SEDeploymentHelper.IsK8SEEnvironment())
+                    {
+                        if (K8SEDeploymentHelper.IsK8SEEnvironment())
                         {
-                            using (tracer.Step("Updating submodules"))
-                            {
-                                innerLogger = logger.Log(Resources.Log_UpdatingSubmodules);
-
-                                repository.UpdateSubmodules();
-                            }
+                            //logger.Log(Resources.Log_TriggeringK8SERestart);
                         }
-
-                        if (clean)
-                        {
-                            tracer.Trace("Cleaning {0} repository", repository.RepositoryType);
-
-                            innerLogger = logger.Log(Resources.Log_CleaningRepository, repository.RepositoryType);
-
-                            repository.Clean();
-                        }
-
-                        // set to null as Build() below takes over logging
-                        innerLogger = null;
-
-                        // Perform the build deployment of this changeset
-                        await Build(changeSet, tracer, deployStep, repository, deploymentInfo, deploymentAnalytics, fullBuildByDefault);
-
-                        if (!(OSDetector.IsOnWindows() && 
-                              !EnvironmentHelper.IsWindowsContainers()) && 
-                            _settings.RestartAppContainerOnGitDeploy())
+                        else
                         {
                             logger.Log(Resources.Log_TriggeringContainerRestart);
-                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason);
                         }
+
+                        string appName = _environment.K8SEAppName;
+                        string repoUrl = deploymentInfo == null ? "empty" : deploymentInfo.RepositoryUrl;
+                        if(deploymentInfo == null)
+                        {
+                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, appSettings: _appSettings);
+                        }
+                        else
+                        {
+                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, deploymentInfo == null ? null : deploymentInfo.RepositoryUrl, deploymentInfo.TargetPath, appSettings:_appSettings);
+                        }
+                        logger.Log($"Deployment Pod Rollout Started! Use 'kubectl -n k8se-apps get pods {appName} --watch' to monitor the rollout status");
+                        logger.Log($"Deployment Pod Rollout Started! Use kubectl watch deplotment {appName} to monitor the rollout status");
                     }
-                    catch (Exception ex)
+                }
+                catch (Exception ex)
+                {
+                    exception = ex;
+
+                    if (innerLogger != null)
                     {
-                        exception = ex;
-
-                        if (innerLogger != null)
-                        {
-                            innerLogger.Log(ex);
-                        }
-
-                        if (statusFile != null)
-                        {
-                            MarkStatusComplete(statusFile, success: false);
-                        }
-
-                        tracer.TraceError(ex);
-
-                        deploymentAnalytics.Error = ex.ToString();
-
-                        if (deployStep != null)
-                        {
-                            deployStep.Dispose();
-                        }
+                        innerLogger.Log(ex);
                     }
 
-                    // Reload status file with latest updates
-                    statusFile = _status.Open(id);
-                    using (tracer.Step("Reloading status file with latest updates"))
+                    if (statusFile != null)
                     {
-                        if (statusFile != null)
-                        {
-                            await _hooksManager.PublishEventAsync(HookEventTypes.PostDeployment, statusFile);
-                        }
+                        MarkStatusComplete(statusFile, success: false);
                     }
 
-                    if (exception != null)
+                    tracer.TraceError(ex);
+
+                    deploymentAnalytics.Error = ex.ToString();
+
+                    if (deployStep != null)
                     {
-                        tracer.TraceError(exception);
-                        throw new DeploymentFailedException(exception);
+                        deployStep.Dispose();
                     }
-           
+                }
+
+                // Reload status file with latest updates
+                statusFile = _status.Open(id, _environment);
+                using (tracer.Step("Reloading status file with latest updates"))
+                {
+                    if (statusFile != null)
+                    {
+                        await _hooksManager.PublishEventAsync(HookEventTypes.PostDeployment, statusFile);
+                    }
+                }
+
+                if (exception != null)
+                {
+                    tracer.TraceError(exception);
+                    throw new DeploymentFailedException(exception);
+                }
             }
         }
 
@@ -306,7 +362,7 @@ namespace Kudu.Core.Deployment
             using (tracer.Step("Creating temporary deployment"))
             {
                 changeSet = changeSet != null && changeSet.IsTemporary ? changeSet : CreateTemporaryChangeSet();
-                IDeploymentStatusFile statusFile = _status.Create(changeSet.Id);
+                IDeploymentStatusFile statusFile = _status.Create(changeSet.Id, _environment);
                 statusFile.Id = changeSet.Id;
                 statusFile.Message = changeSet.Message;
                 statusFile.Author = changeSet.AuthorName;
@@ -326,7 +382,7 @@ namespace Kudu.Core.Deployment
             {
                 if (changeSet.IsTemporary)
                 {
-                    _status.Delete(changeSet.Id);
+                    _status.Delete(changeSet.Id, _environment);
                 }
             });
         }
@@ -345,7 +401,7 @@ namespace Kudu.Core.Deployment
             // Order the results by date (newest first). Previously, we supported OData to allow
             // arbitrary queries, but that was way overkill and brought in too many large binaries.
             IEnumerable<DeployResult> results;
-            results = EnumerateResults().OrderByDescending(t => t.ReceivedTime).ToList();                
+            results = EnumerateResults().OrderByDescending(t => t.ReceivedTime).ToList();
             try
             {
                 results = PurgeDeployments(results);
@@ -386,7 +442,7 @@ namespace Kudu.Core.Deployment
                 toDelete.AddRange(GetPurgeTemporaryDeployments(results));
                 toDelete.AddRange(GetPurgeFailedDeployments(results));
                 toDelete.AddRange(GetPurgeObsoleteDeployments(results));
-                
+
                 if (toDelete.Any())
                 {
                     var tracer = _traceFactory.GetTracer();
@@ -394,7 +450,7 @@ namespace Kudu.Core.Deployment
                     {
                         foreach (DeployResult delete in toDelete)
                         {
-                            _status.Delete(delete.Id);
+                            _status.Delete(delete.Id, _environment);
 
                             tracer.Trace("Remove {0}, {1}, received at {2}",
                                          delete.Id.Substring(0, Math.Min(delete.Id.Length, 9)),
@@ -498,11 +554,11 @@ namespace Kudu.Core.Deployment
             using (tracer.Step("Collecting changeset information"))
             {
                 // Check if the status file already exists. This would happen when we're doing a redeploy
-                IDeploymentStatusFile statusFile = _status.Open(id);
+                IDeploymentStatusFile statusFile = _status.Open(id, _environment);
                 if (statusFile == null)
                 {
                     // Create the status file and store information about the commit
-                    statusFile = _status.Create(id);
+                    statusFile = _status.Create(id, _environment);
                 }
                 statusFile.Message = changeSet.Message;
                 statusFile.Author = changeSet.AuthorName;
@@ -517,7 +573,7 @@ namespace Kudu.Core.Deployment
 
         private DeployResult GetResult(string id, string activeDeploymentId, bool isDeploying)
         {
-            var file = VerifyDeployment(id, isDeploying);            
+            var file = VerifyDeployment(id, isDeploying);
             if (file == null)
             {
                 return null;
@@ -572,7 +628,7 @@ namespace Kudu.Core.Deployment
                 logger = GetLogger(id);
                 ILogger innerLogger = logger.Log(Resources.Log_PreparingDeployment, TrimId(id));
 
-                currentStatus = _status.Open(id);
+                currentStatus = _status.Open(id, _environment);
                 currentStatus.Complete = false;
                 currentStatus.StartTime = DateTime.UtcNow;
                 currentStatus.Status = DeployStatus.Building;
@@ -589,6 +645,7 @@ namespace Kudu.Core.Deployment
                 var perDeploymentSettings = DeploymentSettingsManager.BuildPerDeploymentSettingsManager(repository.RepositoryPath, settingsProviders);
 
                 string delayMaxInStr = perDeploymentSettings.GetValue(SettingsKeys.MaxRandomDelayInSec);
+                perDeploymentSettings.SetValue(SettingsKeys.DoBuildDuringDeployment, fullBuildByDefault.ToString());
                 if (!String.IsNullOrEmpty(delayMaxInStr))
                 {
                     int maxDelay;
@@ -612,7 +669,7 @@ namespace Kudu.Core.Deployment
                 {
                     using (tracer.Step("Determining deployment builder"))
                     {
-                        builder = _builderFactory.CreateBuilder(tracer, innerLogger, perDeploymentSettings, repository);
+                        builder = _builderFactory.CreateBuilder(tracer, innerLogger, perDeploymentSettings, repository, deploymentInfo);
                         deploymentAnalytics.ProjectType = builder.ProjectType;
                         tracer.Trace("Builder is {0}", builder.GetType().Name);
                     }
@@ -648,11 +705,11 @@ namespace Kudu.Core.Deployment
                     NextManifestFilePath = GetDeploymentManifestPath(id),
                     PreviousManifestFilePath = GetActiveDeploymentManifestPath(),
                     IgnoreManifest = deploymentInfo != null && deploymentInfo.CleanupTargetDirectory,
-                                                                             // Ignoring the manifest will cause kudusync to delete sub-directories / files
-                                                                            // in the destination directory that are not present in the source directory,
-                                                                            // without checking the manifest to see if the file was copied over to the destination
-                                                                            // during a previous kudusync operation. This effectively performs a clean deployment
-                                                                            // from the source to the destination directory
+                    // Ignoring the manifest will cause kudusync to delete sub-directories / files
+                    // in the destination directory that are not present in the source directory,
+                    // without checking the manifest to see if the file was copied over to the destination
+                    // during a previous kudusync operation. This effectively performs a clean deployment
+                    // from the source to the destination directory
                     Tracer = tracer,
                     Logger = logger,
                     GlobalLogger = _globalLogger,
@@ -682,21 +739,31 @@ namespace Kudu.Core.Deployment
                     try
                     {
                         await builder.Build(context);
+
                         builder.PostBuild(context);
 
+                        if (FunctionAppHelper.LooksLikeFunctionApp() && _environment.IsOnLinuxConsumption)
+                        {
+                            // A Linux consumption function app deployment requires (no matter whether it is oryx build or basic deployment)
+                            // 1. packaging the output folder
+                            // 2. upload the artifact to user's storage account
+                            // 3. reset the container workers after deployment
+                            await LinuxConsumptionDeploymentHelper.SetupLinuxConsumptionFunctionAppDeployment(_environment, _settings, context);
+                        }
+
                         await PostDeploymentHelper.SyncFunctionsTriggers(
-                            _environment.RequestId, 
-                            new PostDeploymentTraceListener(tracer, logger), 
+                            _environment.RequestId,
+                            new PostDeploymentTraceListener(tracer, logger),
                             deploymentInfo?.SyncFunctionsTriggersPath);
 
                         if (_settings.TouchWatchedFileAfterDeployment())
                         {
                             TryTouchWatchedFile(context, deploymentInfo);
                         }
-                        
+
                         if (_settings.RunFromLocalZip() && deploymentInfo is ZipDeploymentInfo)
                         {
-                            await PostDeploymentHelper.UpdateSiteVersion(deploymentInfo as ZipDeploymentInfo, _environment, logger);
+                            await PostDeploymentHelper.UpdatePackageName(deploymentInfo as ZipDeploymentInfo, _environment, logger);
                         }
 
                         FinishDeployment(id, deployStep);
@@ -727,7 +794,7 @@ namespace Kudu.Core.Deployment
 
         private void PreDeployment(ITracer tracer)
         {
-            if (Environment.IsAzureEnvironment() 
+            if (Environment.IsAzureEnvironment()
                 && FileSystemHelpers.DirectoryExists(_environment.SSHKeyPath)
                 && OSDetector.IsOnWindows())
             {
@@ -736,7 +803,7 @@ namespace Kudu.Core.Deployment
 
                 if (!String.Equals(src, dst, StringComparison.OrdinalIgnoreCase))
                 {
-                    // copy %HOME%\.ssh to %USERPROFILE%\.ssh key to workaround 
+                    // copy %HOME%\.ssh to %USERPROFILE%\.ssh key to workaround
                     // npm with private ssh git dependency
                     using (tracer.Step("Copying SSH keys"))
                     {
@@ -777,17 +844,22 @@ namespace Kudu.Core.Deployment
 
         private static string GetOutputPath(DeploymentInfoBase deploymentInfo, IEnvironment environment, IDeploymentSettingsManager perDeploymentSettings)
         {
-            string targetPath = perDeploymentSettings.GetTargetPath();
-            
-            if (string.IsNullOrWhiteSpace(targetPath))
+            string targetSubDirectoryRelativePath = perDeploymentSettings.GetTargetPath();
+
+            if (string.IsNullOrWhiteSpace(targetSubDirectoryRelativePath))
             {
-                targetPath = deploymentInfo?.TargetPath;
+                targetSubDirectoryRelativePath = deploymentInfo?.TargetSubDirectoryRelativePath;
             }
-            
-            if (!string.IsNullOrWhiteSpace(targetPath))
+
+            if (deploymentInfo?.Deployer == Constants.OneDeploy)
             {
-                targetPath = targetPath.Trim('\\', '/');
-                return Path.GetFullPath(Path.Combine(environment.WebRootPath, targetPath));
+                return string.IsNullOrWhiteSpace(deploymentInfo?.TargetRootPath) ? environment.WebRootPath : deploymentInfo.TargetRootPath;
+            }
+
+            if (!string.IsNullOrWhiteSpace(targetSubDirectoryRelativePath))
+            {
+                targetSubDirectoryRelativePath = targetSubDirectoryRelativePath.Trim('\\', '/');
+                return Path.GetFullPath(Path.Combine(environment.WebRootPath, targetSubDirectoryRelativePath));
             }
 
             return environment.WebRootPath;
@@ -819,14 +891,14 @@ namespace Kudu.Core.Deployment
         /// </summary>
         private IDeploymentStatusFile VerifyDeployment(string id, bool isDeploying)
         {
-            IDeploymentStatusFile statusFile = _status.Open(id);
-            
+            IDeploymentStatusFile statusFile = _status.Open(id, _environment);
+
             if (statusFile == null)
             {
                 return null;
             }
-            
-            
+
+
             if (statusFile.Complete)
             {
                 return statusFile;
@@ -857,7 +929,7 @@ namespace Kudu.Core.Deployment
                 ILogger logger = GetLogger(id);
                 logger.Log(Resources.Log_DeploymentSuccessful);
 
-                IDeploymentStatusFile currentStatus = _status.Open(id);
+                IDeploymentStatusFile currentStatus = _status.Open(id, _environment);
                 MarkStatusComplete(currentStatus, success: true);
 
                 _status.ActiveDeploymentId = id;
@@ -868,7 +940,7 @@ namespace Kudu.Core.Deployment
         }
 
         private static void TryTouchWatchedFile(DeploymentContext context, DeploymentInfoBase deploymentInfo)
-        {	        
+        {
             try
             {
                 string watchedFileRelativePath = deploymentInfo?.WatchedFilePath;
@@ -876,7 +948,7 @@ namespace Kudu.Core.Deployment
                 {
                     watchedFileRelativePath = "web.config";
                 }
-                
+
                 string watchedFileAbsolutePath = Path.Combine(context.OutputPath, watchedFileRelativePath);
 
                 if (File.Exists(watchedFileAbsolutePath))
@@ -922,7 +994,7 @@ namespace Kudu.Core.Deployment
         {
             var path = GetLogPath(id);
             var logger = GetLoggerForFile(path);
-            return new ProgressLogger(id, _status, new CascadeLogger(logger, _globalLogger));
+            return new ProgressLogger(id, _status, new CascadeLogger(logger, _globalLogger), _environment);
         }
 
         /// <summary>

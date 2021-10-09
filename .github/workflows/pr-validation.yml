@@ -1,0 +1,25 @@
+name: Pull Request Validation for feature/k8se
+
+on:
+  push:
+    branches: [ feature/k8se ]
+  pull_request:
+    branches: [ feature/k8se ]
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.x
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore
+    - name: Test
+      run: dotnet test --no-build --verbosity normal

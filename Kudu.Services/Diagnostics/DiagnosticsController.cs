@@ -17,6 +17,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Kudu.Services.Infrastructure;
 using System.Threading.Tasks;
+using Kudu.Core.Helpers;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Services.Performance
 {
@@ -46,8 +48,14 @@ namespace Kudu.Services.Performance
                 Path.Combine(environment.RootPath, Constants.LogFilesPath),
                 Path.Combine(environment.WebRootPath, Constants.NpmDebugLogFile),
             };
-
-            _environment = environment;
+            if (!K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                _environment = environment;
+            }
+            else
+            {
+                _environment = (IEnvironment)HttpContext.Items["environment"];
+            }
             _applicationLogsReader = applicationLogsReader;
             _tracer = tracer;
             _settingsManager = new DiagnosticsSettingsManager(Path.Combine(environment.DiagnosticsPath, Constants.SettingsJsonFile), _tracer);

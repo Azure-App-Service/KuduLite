@@ -1,26 +1,29 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Kudu.Contracts.Settings;
-using Kudu.Core.Settings;
-using XmlSettings;
-using Kudu.Core;
+﻿using System.IO;
+using System.IO.Compression;
 using Kudu.Contracts.Infrastructure;
-using Kudu.Core.Tracing;
+using Kudu.Contracts.Settings;
+using Kudu.Contracts.SourceControl;
+using Kudu.Contracts.Tracing;
+using Kudu.Core;
 using Kudu.Core.Deployment;
 using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Hooks;
-using Kudu.Contracts.SourceControl;
-using Kudu.Services.ServiceHookHandlers;
+using Kudu.Core.Settings;
 using Kudu.Core.SourceControl.Git;
+using Kudu.Core.Tracing;
+using Kudu.Services.Performance;
+using Kudu.Services.ServiceHookHandlers;
 using Kudu.Services.Web.Services;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.ResponseCompression;
-using Microsoft.Azure.Web.DataProtection;
+using Microsoft.Extensions.DependencyInjection;
+using XmlSettings;
 
 namespace Kudu.Services.Web
-{ 
+{
     public static class ServiceExtensions
     {
-        public static void AddGitServiceHookParsers(this IServiceCollection services)
+        internal static void AddGitServiceHookParsers(this IServiceCollection services)
         {
             services.AddScoped<IServiceHookHandler, GenericHandler>();
             services.AddScoped<IServiceHookHandler, GitHubHandler>();
@@ -35,8 +38,21 @@ namespace Kudu.Services.Web
             services.AddScoped<IServiceHookHandler, VSOHandler>();
             services.AddScoped<IServiceHookHandler, OneDriveHandler>();
         }
+
+        internal static void AddLogStreamService(this IServiceCollection services, 
+            IEnvironment environment, 
+            ITraceFactory traceFactory)
+        {
+            var logStreamManagerLock = KuduWebUtil.GetNamedLocks(traceFactory, environment)["hooks"];
+
+            services.AddTransient(sp => new LogStreamManager(Path.Combine(environment.RootPath, Constants.LogFilesPath),
+                sp.GetRequiredService<IEnvironment>(),
+                sp.GetRequiredService<IDeploymentSettingsManager>(),
+                sp.GetRequiredService<ITracer>(),
+                logStreamManagerLock));
+        }
         
-        public static void AddGitServer(this IServiceCollection services, IOperationLock deploymentLock)
+        internal static void AddGitServer(this IServiceCollection services, IOperationLock deploymentLock)
         {
             services.AddTransient<IDeploymentEnvironment, DeploymentEnvironment>();
             services.AddScoped<IGitServer>(sp =>
@@ -50,13 +66,14 @@ namespace Kudu.Services.Web
                     sp.GetRequiredService<ITraceFactory>()));
         }
 
-        public static void AddGZipCompression(this IServiceCollection services)
+        internal static void AddGZipCompression(this IServiceCollection services)
         {
-            services.Configure<GzipCompressionProviderOptions>(options => options.Level = System.IO.Compression.CompressionLevel.Optimal);
+            services.Configure<GzipCompressionProviderOptions>(options =>
+                options.Level = CompressionLevel.Optimal);
             services.AddResponseCompression();
         }
 
-        public static void AddWebJobsDependencies(this IServiceCollection services)
+        internal static void AddWebJobsDependencies(this IServiceCollection services)
         {
             //IContinuousJobsManager continuousJobManager = new AggregateContinuousJobsManager(
             //    etwTraceFactory,
@@ -71,7 +88,7 @@ namespace Kudu.Services.Web
             //                     .InTransientScope();
         }
 
-        public static void AddDeployementServices(this IServiceCollection services, IEnvironment environment)
+        internal static void AddDeploymentServices(this IServiceCollection services, IEnvironment environment)
         {
             services.AddScoped<ISettings>(sp => new XmlSettings.Settings(KuduWebUtil.GetSettingsPath(environment)));
             services.AddScoped<IDeploymentSettingsManager, DeploymentSettingsManager>();

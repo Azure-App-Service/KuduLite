@@ -4,6 +4,6 @@
     {
         string ApplicationName { get; }
 
-        string GitServerRoot { get; }
+        string GitServerRoot { get; set; }
     }
 }

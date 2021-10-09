@@ -172,7 +172,7 @@
     <value>There is a deployment currently in progress. Please try again when it completes.</value>
   </data>
   <data name="Error_RunFromRemoteZipConfigured" xml:space="preserve">
-    <value>Run-From-Zip is set to a remote URL using WEBSITE_USE_ZIP app setting. Deployment is not supported in this configuration.</value>
+    <value>Run-From-Zip is set to a remote URL using WEBSITE_RUN_FROM_PACKAGE or WEBSITE_USE_ZIP app setting. Deployment is not supported in this configuration.</value>
   </data>
   <data name="Error_DeploymentNotFound" xml:space="preserve">
     <value>Deployment '{0}' not found.</value>
@@ -314,5 +314,14 @@
   </data>
   <data name="Vso_Synchronizing" xml:space="preserve">
     <value>Synchronizing changes from VSTS ...</value>
+  </data>
+  <data name="LastScanMsg" xml:space="preserve">
+    <value>Check results of last scan</value>
+  </data>
+  <data name="NoScanModifiedFiles" xml:space="preserve">
+    <value>No files modified since last scan</value>
+  </data>
+  <data name="ScanInProgress" xml:space="preserve">
+    <value>Something is blocking the scan. It might be that a scan is already in progress or a deployment is underway.</value>
   </data>
 </root>

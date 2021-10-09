@@ -2,12 +2,13 @@
 {
     public interface IEnvironment
     {
+        string CurrId { get; set; }
         string RootPath { get; }                // e.g. /
         string SiteRootPath { get; }            // e.g. /site
         string RepositoryPath { get; set; }     // e.g. /site/repository
         string WebRootPath { get; }             // e.g. /site/wwwroot
-        string DeploymentsPath { get; }         // e.g. /site/deployments
-        string DeploymentToolsPath { get; }     // e.g. /site/deployments/tools
+        string DeploymentsPath { get;  }         // e.g. /site/deployments
+        string DeploymentToolsPath { get;  }     // e.g. /site/deployments/tools
         string SiteExtensionSettingsPath { get; }     // e.g. /site/siteextensions
         string DiagnosticsPath { get; }         // e.g. /site/diagnostics
         string LocksPath { get; }               // e.g. /site/locks
@@ -30,5 +31,9 @@
         string RequestId { get; }               // e.g. x-arr-log-id or x-ms-request-id header value
         string KuduConsoleFullPath { get; }     // e.g. KuduConsole/kudu.dll
         string SitePackagesPath { get; }        // e.g. /data/SitePackages
+        bool IsOnLinuxConsumption { get; }      // e.g. True on Linux Consumption. False on App Service.
+        bool IsK8SEApp { get; }
+        string K8SEAppName { get;  }
+        string K8SEAppType { get; }
     }
 }

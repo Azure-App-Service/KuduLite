@@ -29,6 +29,8 @@ using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using Kudu.Services.Zip;
 using System.IO.Compression;
+using Kudu.Core.K8SE;
+using Org.BouncyCastle.Ocsp;
 
 namespace Kudu.Services.Deployment
 {
@@ -36,13 +38,13 @@ namespace Kudu.Services.Deployment
     {
         private static DeploymentsCacheItem _cachedDeployments = DeploymentsCacheItem.None;
 
-        private readonly IEnvironment _environment;
+        private IEnvironment _environment;
         private readonly IAnalytics _analytics;
         private readonly IDeploymentManager _deploymentManager;
         private readonly IDeploymentStatusManager _status;
         private readonly IDeploymentSettingsManager _settings;
         private readonly ITracer _tracer;
-        private readonly IOperationLock _deploymentLock;
+        private readonly AllSafeLinuxLock _deploymentLock;
         private readonly IRepositoryFactory _repositoryFactory;
 
         public DeploymentController(ITracer tracer,
@@ -53,16 +55,31 @@ namespace Kudu.Services.Deployment
                                     IDeploymentSettingsManager settings,
                                     //IOperationLock deploymentLock,
                                     IDictionary<string, IOperationLock> namedLocks,
-                                    IRepositoryFactory repositoryFactory)
+                                    IRepositoryFactory repositoryFactory,
+                                    IHttpContextAccessor accessor)
         {
             _tracer = tracer;
-            _environment = environment;
             _analytics = analytics;
             _deploymentManager = deploymentManager;
             _status = status;
             _settings = settings;
-            _deploymentLock = namedLocks["deployment"];
+            _deploymentLock = (AllSafeLinuxLock) namedLocks["deployment"];
             _repositoryFactory = repositoryFactory;
+            GetEnvironment(accessor, environment);
+        }
+
+
+        private void GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
+        {
+            var context = accessor.HttpContext;
+            if (!K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                _environment = environment;
+            }
+            else
+            {
+                _environment = (IEnvironment) context.Items["environment"];
+            }
         }
 
         /// <summary>
@@ -106,7 +123,13 @@ namespace Kudu.Services.Deployment
         [HttpGet]
         public IActionResult IsDeploying()
         {
-            return Json(new Dictionary<string,bool>(){{"value" , _deploymentLock.IsHeld}});
+            string msg = "";
+            if (_deploymentLock.IsHeld)
+            {
+                msg = _deploymentLock.GetLockMsg();
+            }
+
+            return Json(new Dictionary<string, string>() { { "value", _deploymentLock.IsHeld.ToString() }, { "msg", msg } });
         }
         
         
@@ -117,6 +140,11 @@ namespace Kudu.Services.Deployment
         [HttpPut]
         public async Task<IActionResult> Deploy(string id = null)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
             JObject jsonContent = GetJsonContent();
 
             // Just block here to read the json payload from the body
@@ -214,7 +242,7 @@ namespace Kudu.Services.Deployment
                                     changeSet = repository.GetChangeSet(targetBranch);
                                 }
 
-                                IDeploymentStatusFile statusFile = _status.Open(changeSet.Id);
+                                IDeploymentStatusFile statusFile = _status.Open(changeSet.Id, _environment);
                                 if (statusFile != null && statusFile.Status == DeployStatus.Success)
                                 {
                                     await PostDeploymentHelper.PerformAutoSwap(
@@ -246,14 +274,14 @@ namespace Kudu.Services.Deployment
         {
             var id = deployResult.Id;
             string path = Path.Combine(_environment.DeploymentsPath, id);
-            IDeploymentStatusFile statusFile = _status.Open(id);
+            IDeploymentStatusFile statusFile = _status.Open(id, _environment);
             if (statusFile != null)
             {
                 return StatusCode(StatusCodes.Status409Conflict, String.Format("Deployment with id '{0}' exists", id));
             }
 
             FileSystemHelpers.EnsureDirectory(path);
-            statusFile = _status.Create(id);
+            statusFile = _status.Create(id, _environment);
             statusFile.Status = deployResult.Status;
             statusFile.Message = deployResult.Message;
             statusFile.Deployer = deployResult.Deployer;
@@ -380,7 +408,13 @@ namespace Kudu.Services.Deployment
                 _tracer.Trace("Current Etag: {0}, Cached Etag: {1}", currentEtag, cachedDeployments.Etag);
             }
 
-            if (EtagEquals(Request, currentEtag))
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
+            // Avoid Caching when on K8
+            if (EtagEquals(Request, currentEtag) && !K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 result = StatusCode(StatusCodes.Status304NotModified);
             }
@@ -388,7 +422,7 @@ namespace Kudu.Services.Deployment
             {
                 using (_tracer.Step("DeploymentService.GetDeployResults"))
                 {
-                    if (!currentEtag.Equals(cachedDeployments.Etag))
+                    if (!currentEtag.Equals(cachedDeployments.Etag) || K8SEDeploymentHelper.IsK8SEEnvironment())
                     {
                         cachedDeployments = new DeploymentsCacheItem
                         {
@@ -419,6 +453,11 @@ namespace Kudu.Services.Deployment
         [HttpGet]
         public IActionResult GetLogEntry(string id)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
             using (_tracer.Step("DeploymentService.GetLogEntry"))
             {
                 try
@@ -449,6 +488,11 @@ namespace Kudu.Services.Deployment
         [HttpGet]
         public IActionResult GetLogEntryDetails(string id, string logId)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
             using (_tracer.Step("DeploymentService.GetLogEntryDetails"))
             {
                 try
@@ -476,6 +520,11 @@ namespace Kudu.Services.Deployment
         [HttpGet]
         public IActionResult GetResult(string id)
         {
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                Request.Scheme = "https";
+            }
+
             using (_tracer.Step("DeploymentService.GetResult"))
             {
                 DeployResult pending;
@@ -533,6 +582,25 @@ namespace Kudu.Services.Deployment
 
             pending = null;
             return false;
+        }
+
+
+        /// <summary>
+        /// Updates Image tag of a custom container app when running in the K8SE Environment
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost]
+        public IActionResult UpdateContainerTag()
+        {
+            if(!K8SEDeploymentHelper.IsK8SEEnvironment()
+                || !Request.Headers.ContainsKey("LINUXFXVERSION")
+                || !Request.Headers["LINUXFXVERSION"].First().StartsWith("DOCKER|"))
+            {
+                return StatusCode(Microsoft.AspNetCore.Http.StatusCodes.Status405MethodNotAllowed);
+            }
+            string linuxFxVersion = Request.Headers["LINUXFXVERSION"].First().Replace("DOCKER|", "");
+            K8SEDeploymentHelper.UpdateImageTag(K8SEDeploymentHelper.GetAppName(Request.HttpContext), linuxFxVersion);
+            return Ok();
         }
 
         /// <summary>

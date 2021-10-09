@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <TieredCompilation>true</TieredCompilation>
   </PropertyGroup>
   <PropertyGroup>
@@ -8,6 +8,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.2.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Kudu.Contracts\Kudu.Contracts.csproj" />
@@ -28,8 +30,18 @@
   </ItemGroup>
   <PropertyGroup>
     <NoWarn>$(NoWarn);NU1701</NoWarn>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <NoWarn>$(NoWarn);CS1570</NoWarn>
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+    <NoWarn>$(NoWarn);CS1572</NoWarn>
+    <NoWarn>$(NoWarn);CS1587</NoWarn>
+    <NoWarn>$(NoWarn);CS1998</NoWarn>
+    <NoWarn>$(NoWarn);CS0472</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
     <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
+  </PropertyGroup>
+  <PropertyGroup>
+    <DocumentationFile>/opt/Kudu/Kudu.Services.xml</DocumentationFile>
   </PropertyGroup>
 </Project>

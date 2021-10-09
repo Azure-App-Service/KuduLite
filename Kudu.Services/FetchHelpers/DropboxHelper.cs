@@ -197,7 +197,7 @@ namespace Kudu.Services
 
                 Logger.Log(String.Format("{0} downloaded files, {1} successful retries.", _fileCount, _retriedCount));
 
-                IDeploymentStatusFile statusFile = _status.Open(dropboxInfo.TargetChangeset.Id);
+                IDeploymentStatusFile statusFile = _status.Open(dropboxInfo.TargetChangeset.Id, _environment);
                 statusFile.UpdateMessage(message);
                 statusFile.UpdateProgress(String.Format(CultureInfo.CurrentCulture, Resources.Dropbox_Committing, _successCount));
 
@@ -446,7 +446,7 @@ namespace Kudu.Services
         private void UpdateStatusFile(object state)
         {
             string changeset = (string)state;
-            IDeploymentStatusFile statusFile = _status.Open(changeset);
+            IDeploymentStatusFile statusFile = _status.Open(changeset, _environment);
             statusFile.UpdateProgress(String.Format(CultureInfo.CurrentCulture,
                                         _failedCount == 0 ? Resources.Dropbox_SynchronizingProgress : Resources.Dropbox_SynchronizingProgressWithFailure,
                                         ((_successCount + _failedCount) * 100) / _totals,

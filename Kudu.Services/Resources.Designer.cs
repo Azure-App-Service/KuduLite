@@ -19,7 +19,7 @@ namespace Kudu.Services {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -331,7 +331,7 @@ namespace Kudu.Services {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Run-From-Zip is set to a remote URL using WEBSITE_USE_ZIP app setting. Deployment is not supported in this configuration..
+        ///   Looks up a localized string similar to Run-From-Zip is set to a remote URL using WEBSITE_RUN_FROM_PACKAGE or WEBSITE_USE_ZIP app setting. Deployment is not supported in this configuration..
         /// </summary>
         internal static string Error_RunFromRemoteZipConfigured {
             get {
@@ -372,6 +372,15 @@ namespace Kudu.Services {
         internal static string Error_WebJobsStopped {
             get {
                 return ResourceManager.GetString("Error_WebJobsStopped", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Check results of last scan.
+        /// </summary>
+        internal static string LastScanMsg {
+            get {
+                return ResourceManager.GetString("LastScanMsg", resourceCulture);
             }
         }
         
@@ -417,6 +426,15 @@ namespace Kudu.Services {
         internal static string LogStream_Welcome {
             get {
                 return ResourceManager.GetString("LogStream_Welcome", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No files modified since last scan.
+        /// </summary>
+        internal static string NoScanModifiedFiles {
+            get {
+                return ResourceManager.GetString("NoScanModifiedFiles", resourceCulture);
             }
         }
         
@@ -534,6 +552,15 @@ namespace Kudu.Services {
         internal static string ReceivingChanges {
             get {
                 return ResourceManager.GetString("ReceivingChanges", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Something is blocking the scan. It might be that a scan is already in progress or a deployment is underway..
+        /// </summary>
+        internal static string ScanInProgress {
+            get {
+                return ResourceManager.GetString("ScanInProgress", resourceCulture);
             }
         }
         

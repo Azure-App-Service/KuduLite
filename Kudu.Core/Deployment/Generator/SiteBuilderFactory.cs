@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.K8SE;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
+using Microsoft.AspNetCore.Http;
 
 namespace Kudu.Core.Deployment.Generator
 {
@@ -16,23 +19,34 @@ namespace Kudu.Core.Deployment.Generator
         private readonly IEnvironment _environment;
         private readonly IBuildPropertyProvider _propertyProvider;
 
-        public SiteBuilderFactory(IBuildPropertyProvider propertyProvider, IEnvironment environment)
+        public SiteBuilderFactory(IBuildPropertyProvider propertyProvider, IEnvironment environment, IHttpContextAccessor accessor)
         {
             _propertyProvider = propertyProvider;
-            _environment = environment;
+            _environment = GetEnvironment(accessor, environment);
         }
 
-        public ISiteBuilder CreateBuilder(ITracer tracer, ILogger logger, IDeploymentSettingsManager settings, IRepository repository)
+        private IEnvironment GetEnvironment(IHttpContextAccessor accessor, IEnvironment environment)
         {
-            string repositoryRoot = repository.RepositoryPath;
-
-            string enableOryxBuild = System.Environment.GetEnvironmentVariable("ENABLE_ORYX_BUILD");
-            if (!string.IsNullOrEmpty(enableOryxBuild))
+            IEnvironment _environment;
+            if (!K8SEDeploymentHelper.IsK8SEEnvironment() || accessor==null)
             {
-                if (enableOryxBuild.Equals("true", StringComparison.OrdinalIgnoreCase))
-                {
-                    return new OryxBuilder(_environment, settings, _propertyProvider, repositoryRoot);
-                }
+                _environment = environment;
+            }
+            else
+            {
+                var context = accessor.HttpContext;
+                _environment = (IEnvironment)context.Items["environment"];
+            }
+            return _environment;
+        }
+
+        public ISiteBuilder CreateBuilder(ITracer tracer, ILogger logger, IDeploymentSettingsManager settings, IRepository repository, DeploymentInfoBase deploymentInfo)
+        {
+
+            string repositoryRoot = _environment.RepositoryPath;
+            if (!string.IsNullOrEmpty(repository.RepositoryPath))
+            {
+                repositoryRoot = repository.RepositoryPath;
             }
 
             // Use the cached vs projects file finder for: a. better performance, b. ignoring solutions/projects under node_modules
@@ -65,12 +79,24 @@ namespace Kudu.Core.Deployment.Generator
             {
                 return new RunFromZipSiteBuilder();
             }
-            
-            if (!settings.DoBuildDuringDeployment())
+
+            if (deploymentInfo != null && (!deploymentInfo.ShouldBuildArtifact && !settings.DoBuildDuringDeployment() && repository.RepositoryType != RepositoryType.Git))
             {
                 var projectPath = !String.IsNullOrEmpty(targetProjectPath) ? targetProjectPath : repositoryRoot;
                 return new BasicBuilder(_environment, settings, _propertyProvider, repositoryRoot, projectPath);
             }
+
+            string enableOryxBuild = System.Environment.GetEnvironmentVariable("ENABLE_ORYX_BUILD");
+            if (!string.IsNullOrEmpty(enableOryxBuild) && (deploymentInfo != null && deploymentInfo.ShouldBuildArtifact) || settings.DoBuildDuringDeployment())
+            {
+                if (StringUtils.IsTrueLike(enableOryxBuild))
+                {
+                    return new OryxBuilder(_environment, settings, _propertyProvider, repositoryRoot);
+                }
+            }
+
+            tracer.Trace("After Oryx determination.");
+
 
             if (!String.IsNullOrEmpty(targetProjectPath))
             {

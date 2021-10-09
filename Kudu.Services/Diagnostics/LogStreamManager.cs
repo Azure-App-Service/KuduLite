@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -25,11 +24,10 @@ namespace Kudu.Services.Performance
         private const string FilterQueryKey = "filter";
         private const string AzureDriveEnabledKey = "AzureDriveEnabled";
 
-        // Azure 3 mins timeout, heartbeat every mins keep alive.
         private static string[] LogFileExtensions = new string[] { ".txt", ".log", ".htm" };
 
-        // TODO Set back to 1 minute
-        private static TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(5);
+        // Azure 3 mins timeout, heartbeat every mins keep alive.
+        private static TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(60);
 
         private readonly object _thisLock = new object();
         private readonly string _logPath;
@@ -46,6 +44,9 @@ namespace Kudu.Services.Performance
         private DateTime _lastTraceTime;
         private DateTime _startTime;
         private TimeSpan _timeout;
+        private Stopwatch stopwatch;
+
+        private const string volatileLogsPath = "/appsvctmp/volatile/logs/runtime";
 
         // CORE TODO
         //private ShutdownDetector _shutdownDetector;
@@ -77,7 +78,7 @@ namespace Kudu.Services.Performance
             _lastTraceTime = _startTime;
 
             DisableResponseBuffering(context);
-            var stopwatch = Stopwatch.StartNew();
+            stopwatch = Stopwatch.StartNew();
             
             // CORE TODO Shutdown detector registration
 
@@ -97,17 +98,75 @@ namespace Kudu.Services.Performance
 
             var firstPath = routePath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
 
-            path = FileSystemHelpers.EnsureDirectory(Path.Combine(_logPath, routePath));
+            // Ensure mounted logFiles dir 
+            string mountedLogFilesDir = Path.Combine(_logPath, routePath);
 
+            FileSystemHelpers.EnsureDirectory(mountedLogFilesDir);
+
+            if (ShouldMonitiorMountedLogsPath(mountedLogFilesDir))
+            {
+                path = mountedLogFilesDir;
+            }
+            else
+            {
+                path = volatileLogsPath;
+            }
+
+            context.Response.Headers.Add("Content-Type", "text/event-stream");
 
             await WriteInitialMessage(context);
 
             // CORE TODO Get the fsw and keep it in scope here with a using that ends at the end
-            
+
             lock (_thisLock)
             {
                 Initialize(path, context);
             }
+
+            if (_logFiles != null)
+            {
+                NotifyClientWithLineBreak("Starting Log Tail -n 10 of existing logs ----", context);
+
+                try
+                {
+
+
+                    foreach (string log in _logFiles.Keys)
+                    {
+
+                        var reader = new StreamReader(log, Encoding.ASCII);
+
+                        var vfsPath = GetFileVfsPath(log);
+
+                        var printLine = log + " " + (!string.IsNullOrEmpty(vfsPath) ? " (" + vfsPath + ")" : "");
+
+                        NotifyClientWithLineBreak(String.Format(
+                                    CultureInfo.CurrentCulture,
+                                    printLine,
+                                    DateTime.UtcNow.ToString("s"),
+                                    System.Environment.NewLine), context);
+
+                        foreach (string logLine in Tail(reader, 10))
+                        {
+                            await context.Response.WriteAsync(logLine);
+                            await context.Response.WriteAsync(System.Environment.NewLine);
+                        }
+                        await context.Response.WriteAsync(System.Environment.NewLine);
+                    }
+                }
+                catch (Exception)
+                {
+                    // best effort to get tail logs
+                }
+
+                NotifyClientWithLineBreak("Ending Log Tail of existing logs ---", context);
+            }
+            else
+            {
+                _tracer.TraceError("LogStream: No pervious logfiles");
+            }
+
+            NotifyClientWithLineBreak("Starting Live Log Stream ---", context);
 
             // CORE TODO diagnostics setting for enabling app logging            
 
@@ -143,10 +202,71 @@ namespace Kudu.Services.Performance
             }
         }
 
+        ///<summary>Returns the end of a text reader.</summary>
+        ///<param name="reader">The reader to read from.</param>
+        ///<param name="lineCount">The number of lines to return.</param>
+        ///<returns>The last lineCount lines from the reader.</returns>
+        public string[] Tail(TextReader reader, int lineCount)
+        {
+            var buffer = new List<string>(lineCount);
+            string line;
+            for (int i = 0; i < lineCount; i++)
+            {
+                line = reader.ReadLine();
+                if (line == null) return buffer.ToArray();
+                buffer.Add(line);
+            }
+
+            int lastLine = lineCount - 1;           //The index of the last line read from the buffer.  Everything > this index was read earlier than everything <= this indes
+
+            while (null != (line = reader.ReadLine()))
+            {
+                lastLine++;
+                if (lastLine == lineCount) lastLine = 0;
+                buffer[lastLine] = line;
+            }
+
+            if (lastLine == lineCount - 1) return buffer.ToArray();
+            var retVal = new string[lineCount];
+            buffer.CopyTo(lastLine + 1, retVal, 0, lineCount - lastLine - 1);
+            buffer.CopyTo(0, retVal, lineCount - lastLine - 1, lastLine + 1);
+            return retVal;
+        }
+
         private static Task WriteInitialMessage(HttpContext context)
         {
-            var msg = String.Format(CultureInfo.CurrentCulture, Resources.LogStream_Welcome, DateTime.UtcNow.ToString("s"), System.Environment.NewLine);
+            var msg = String.Format( 
+                CultureInfo.CurrentCulture, 
+                Resources.LogStream_Welcome, 
+                DateTime.UtcNow.ToString("s"), 
+                System.Environment.NewLine);
+
             return context.Response.WriteAsync(msg);
+        }
+        
+        /// <summary>
+        /// Determines if Kudu Should Monitor Mounted Logs directory,
+        /// or the mounted fs logs dir, if kudu
+        /// </summary>
+        /// <returns></returns>
+        private static bool ShouldMonitiorMountedLogsPath(string mountedDirPath)
+        {
+            int count = 0;
+            string dateToday = DateTime.Now.ToString("yyyy_MM_dd");
+
+            if (FileSystemHelpers.DirectoryExists(mountedDirPath))
+            {
+                // if more than two log files present that are generated today, 
+                // use this directory; first file for a date is the marker file
+                foreach (var file in Directory.GetFiles(mountedDirPath, "*", SearchOption.AllDirectories))
+                {
+                    if (file.Contains(dateToday) && ++count > 1)
+                    {
+                        break;
+                    }
+                }
+            }
+            return count==2;
         }
 
         private void Initialize(string path, HttpContext context)
@@ -252,10 +372,10 @@ namespace Kudu.Services.Performance
         
         private void DisableResponseBuffering(HttpContext context)
         {
-            IHttpBufferingFeature bufferingFeature = context.Features.Get<IHttpBufferingFeature>();
+            IHttpResponseBodyFeature bufferingFeature = context.Features.Get<IHttpResponseBodyFeature>();
             if (bufferingFeature != null)
             {
-                bufferingFeature.DisableResponseBuffering();
+                bufferingFeature.DisableBuffering();
             }
         }
         
@@ -293,14 +413,6 @@ namespace Kudu.Services.Performance
                     {
                         TerminateClient(String.Format(CultureInfo.CurrentCulture, Resources.LogStream_Timeout, DateTime.UtcNow.ToString("s"), (int)ts.TotalMinutes, System.Environment.NewLine), context);
                     }
-                    else
-                    {
-                        ts = DateTime.UtcNow.Subtract(_lastTraceTime);
-                        if (ts >= HeartbeatInterval)
-                        {
-                            NotifyClient(String.Format(CultureInfo.CurrentCulture, Resources.LogStream_Heartbeat, DateTime.UtcNow.ToString("s"), (int)ts.TotalMinutes, System.Environment.NewLine),context);
-                        }
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -330,12 +442,32 @@ namespace Kudu.Services.Performance
                 if (lines.Count() > 0)
                 {
                     _lastTraceTime = DateTime.UtcNow;
+                    stopwatch = Stopwatch.StartNew();
                     NotifyClient(lines,context);
                 }
             }
         }
 
+        private async void NotifyClientWithLineBreak(string line, HttpContext context)
+        {
+            if (!context.RequestAborted.IsCancellationRequested)
+            {
+                try
+                {
+                    await context.Response.WriteAsync(System.Environment.NewLine);
+                    await context.Response.WriteAsync(line);
+                    await context.Response.WriteAsync(System.Environment.NewLine);
+                }
+                catch (Exception)
+                {
+                    _tracer.TraceError("Error notifying client");
+                }
+            }
+        }
+
         /*
+         * CORE TODO : Rest API to watch a particular file by LogStream
+         * /
         private string ParseRequest(HttpContext context)
         {
             _filter = context.Request.QueryString[FilterQueryKey];
@@ -390,6 +522,7 @@ namespace Kudu.Services.Performance
                 {
                     try
                     {
+                        await context.Response.WriteAsync(System.Environment.NewLine);
                         foreach (var line in lines)
                         {
                             await context.Response.WriteAsync(line);
@@ -568,6 +701,16 @@ namespace Kudu.Services.Performance
         {
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        private string GetFileVfsPath(string filePath)
+        {
+            string relativePath = filePath.IndexOf("LogFiles") > 0 ? filePath.Substring(filePath.IndexOf("LogFiles")).Replace("\\", "/") : "";
+            string fileName = Uri.EscapeDataString(relativePath.Substring(relativePath.LastIndexOf("/")+1));
+            string encodedUrl = relativePath.Substring(0, relativePath.LastIndexOf("/")+1) + fileName;
+
+            return filePath.Contains("LogFiles") ? 
+                _environment.AppBaseUrlPrefix + "/api/vfs/" + encodedUrl : "";
         }
 
         protected virtual void Dispose(bool disposing)

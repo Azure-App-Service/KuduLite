@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <TieredCompilation>true</TieredCompilation>
   </PropertyGroup>
   <PropertyGroup>
@@ -24,18 +24,22 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="KubernetesClient" Version="1.5.25" />
     <PackageReference Include="LibGit2Sharp" Version="0.25.2" />
     <PackageReference Include="log4net" Version="2.0.8" />
     <PackageReference Include="Mercurial.Net" Version="1.1.1.607" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
     <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
-    <PackageReference Include="System.Text.RegularExpressions" />
-    <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" />
+    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.2.0" />
     <PackageReference Include="Microsoft.Azure.WebSites.DataProtection" Version="0.1.78-alpha" />
     <PackageReference Include="ncrontab" Version="3.3.0" />
     <PackageReference Include="NuGet.Protocol" Version="4.8.0" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.4.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.5.0" />
     <PackageReference Include="System.IO.Abstractions" Version="2.1.0.192" />
+    <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
     <PackageReference Include="XmlSettings" Version="0.1.3" />
+    <PackageReference Include="System.Runtime.Caching" Version="4.5.0" />
   </ItemGroup>
 
   <ItemGroup>

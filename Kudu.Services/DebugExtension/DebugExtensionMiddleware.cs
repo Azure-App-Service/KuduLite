@@ -51,7 +51,7 @@ namespace Kudu.Services.TunnelServer
         {
             if (loggerFactory == null)
             {
-                loggerFactory = new LoggerFactory();
+                loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
 
                 string level = Environment.GetEnvironmentVariable("APPSVC_TUNNEL_VERBOSITY");
                 LogLevel logLevel = LogLevel.Information;
@@ -76,9 +76,9 @@ namespace Kudu.Services.TunnelServer
                     }
                     Console.WriteLine("Setting LogLevel to " + level);
                 }
-
-                loggerFactory.AddConsole(logLevel);
             }
+
+            
 
             if (_logger == null)
             {
@@ -113,11 +113,22 @@ namespace Kudu.Services.TunnelServer
                 {
                 }
 
+                bool continueIpCheck = true;
+                int debugPort = 2222;
+
                 try
                 {
                     if (ipAddress == null)
                     {
                         ipAddress = System.IO.File.ReadAllText("/appsvctmp/ipaddr_" + Environment.GetEnvironmentVariable("WEBSITE_ROLE_INSTANCE_ID"));
+                        if(ipAddress != null && ipAddress.Contains(':'))
+                        {
+                            string[] ipAddrPortStr = ipAddress.Split(":");
+                            ipAddress = ipAddrPortStr[0];
+                            debugPort = Int32.Parse(ipAddrPortStr[1]);
+                            continueIpCheck = false;
+                            _logger.LogInformation("HandleWebSocketConnection: VNET Conatiner PORT : " + tunnelPort);
+                    }
                         _logger.LogInformation("HandleWebSocketConnection: Found IP Address from appsvctmp file: " + ipAddress);
                     }
                 }
@@ -127,7 +138,7 @@ namespace Kudu.Services.TunnelServer
 
                 try
                 {
-                    if (ipAddress == null)
+                    if (continueIpCheck && ipAddress == null)
                     {
                         ipAddress = System.IO.File.ReadAllText("/home/site/ipaddr_" + Environment.GetEnvironmentVariable("WEBSITE_ROLE_INSTANCE_ID"));
                         _logger.LogInformation("HandleWebSocketConnection: Found IP Address from share file: " + ipAddress);
@@ -144,20 +155,21 @@ namespace Kudu.Services.TunnelServer
 
                 _logger.LogInformation("HandleWebSocketConnection: Final IP Address: " + ipAddress);
 
-                int debugPort = 2222;
-
-                try
+                if (continueIpCheck)
                 {
-                    debugPort = Int32.Parse(Environment.GetEnvironmentVariable("APPSVC_TUNNEL_PORT"));
-
-                    if (debugPort <= 0)
+                    try
                     {
-                        throw new Exception("Debuggee not found. Please start your site in debug mode and then attach debugger.");
+                        debugPort = Int32.Parse(Environment.GetEnvironmentVariable("APPSVC_TUNNEL_PORT"));
+
+                       if (debugPort <= 0)
+                        {
+                            throw new Exception("Debuggee not found. Please start your site in debug mode and then attach debugger.");
+                        }
                     }
-                }
-                catch (Exception)
-                {
-                    debugPort = 2222;
+                    catch (Exception)
+                    {
+                        debugPort = 2222;
+                    }
                 }
 
                 string remoteDebug = "FALSE";

@@ -76,7 +76,7 @@ namespace Kudu.Core.Tracing
                 strb.AppendFormat("{0}=\"{1}\" ", attrib.Key, attrib.Value);
             }
 
-            KuduEventSource.Log.GenericEvent(ServerConfiguration.GetApplicationName(),
+            KuduEventGenerator.Log().GenericEvent(ServerConfiguration.GetApplicationName(),
                                          strb.ToString(),
                                          _requestId,
                                          string.Empty,

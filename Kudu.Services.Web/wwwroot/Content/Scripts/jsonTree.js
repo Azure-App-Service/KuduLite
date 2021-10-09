@@ -379,9 +379,26 @@ var jsonTree = (function() {
      */
     function NodeString(label, val, isLast) {
         this.type = "string";
+        var fileExtsToWhiteList = [".log",".txt",".zip",".py",".js",".xml"];
         if(val!=null&&val.includes("/api/")){
             var urlStartIdx = val.indexOf("/api/");
-            val = "<span style=\"color:#953b39\"><a href=\"/newui/jsonviewer?view_url="+val.substring(urlStartIdx,val.length)+"\">"+val+"</a></span>";
+            var shouldShowJSONViewerURL = true;
+            /*
+            for(ext in fileExtsToWhiteList){
+                if(val.includes(ext)){
+                    shouldShowJSONViewerURL = false;
+                    break;
+                }   
+            }
+            */
+            if(val.length>3&&(val.charAt(val.length-3) === "." || val.charAt(val.length-4) === ".")){
+                shouldShowJSONViewerURL = false;
+            }
+            if(shouldShowJSONViewerURL) {
+                val = "<span style=\"color:#953b39\"><a href=\"/newui/jsonviewer?view_url=" + val.substring(urlStartIdx, val.length) + "\">" + val + "</a></span>";
+            }else{
+                val = "<span style=\"color:#953b39\"><a href=\""+val+"\">"+val+"</a></span>";
+            }
         }
         _NodeSimple.call(this, label, '"' + val + '"', isLast);
     }

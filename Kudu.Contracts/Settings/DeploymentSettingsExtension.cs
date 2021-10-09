@@ -2,13 +2,14 @@
 using System.Diagnostics;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.SourceControl;
+using Kudu.Contracts.Tracing;
 
 namespace Kudu.Contracts.Settings
 {
     public static class DeploymentSettingsExtension
     {
         public static readonly TimeSpan DefaultCommandIdleTimeout = TimeSpan.FromMinutes(1);
-        public static readonly TimeSpan DefaultLogStreamTimeout = TimeSpan.FromMinutes(30);
+        public static readonly TimeSpan DefaultLogStreamTimeout = TimeSpan.FromMinutes(120);
         public static readonly TimeSpan DefaultWebJobsRestartTime = TimeSpan.FromMinutes(1);
         public static readonly TimeSpan DefaultJobsIdleTimeout = TimeSpan.FromMinutes(2);
         public const TraceLevel DefaultTraceLevel = TraceLevel.Error;
@@ -245,7 +246,6 @@ namespace Kudu.Contracts.Settings
         public static bool DoBuildDuringDeployment(this IDeploymentSettingsManager settings)
         {
             string value = settings.GetValue(SettingsKeys.DoBuildDuringDeployment);
-
             // A default value should be set on a per-deployment basis depending on the context, but
             // returning true by default here as an indicator of generally expected behavior
             return value == null || StringUtils.IsTrueLike(value);

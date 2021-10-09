@@ -1,0 +1,73 @@
+@page
+@model Kudu.Services.Web.Pages.Detectors.IndexModel
+@{
+    var ownerName = Environment.GetEnvironmentVariable("WEBSITE_OWNER_NAME") ?? "";
+    var subscriptionId = ownerName;
+    var resourceGroup = Environment.GetEnvironmentVariable("WEBSITE_RESOURCE_GROUP") ?? "";
+    var siteName = Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME") ?? "";
+    var hostName = Environment.GetEnvironmentVariable("HTTP_HOST") ?? "";
+    var slotName = "";
+    var isFunctionApp = Environment.GetEnvironmentVariable("FUNCTIONS_WORKER_RUNTIME") != null;
+
+    var index = ownerName.IndexOf('+');
+    if (index >= 0)
+    {
+        subscriptionId = ownerName.Substring(0, index);
+    }
+
+    string detectorPath;
+    string troubleshootExt = "";
+    if (isFunctionApp)
+    {
+        troubleshootExt = "appsvc.troubleshoot%3Dtrue%7C"; // "appsvc.troubleshoot=true|"
+        detectorPath = "diagnostics%2Ffunctionappdownanderrors"; // "diagnostics/functionappdownanderrors"
+    }
+    else if (Kudu.Core.Helpers.OSDetector.IsOnWindows())
+    {
+        detectorPath = "diagnostics%2Favailability%2Fanalysis"; // "diagnostics/availability/analysis"
+    }
+    else
+    {
+        detectorPath = "detectors%2FLinuxAppDown"; // "detectors/LinuxAppDown"
+    }
+
+    var hostNameIndex = hostName.IndexOf('.');
+    if (hostNameIndex >= 0)
+    {
+        hostName = hostName.Substring(0, hostNameIndex);
+    }
+
+    var runtimeSuffxIndex = siteName.IndexOf("__");
+    if (runtimeSuffxIndex >= 0)
+    {
+        siteName = siteName.Substring(0, runtimeSuffxIndex);
+    }
+
+    // Get the slot name
+    if (!hostName.Equals(siteName, StringComparison.CurrentCultureIgnoreCase))
+    {
+        var slotNameIndex = siteName.Length;
+        if (hostName.Length > slotNameIndex && hostName[slotNameIndex] == '-')
+        {
+            // Fix up hostName by removing "-SLOTNAME"
+            slotName = hostName.Substring(slotNameIndex + 1);
+            hostName = hostName.Substring(0, slotNameIndex);
+        }
+    }
+
+    var isSlot = !String.IsNullOrWhiteSpace(slotName) && !slotName.Equals("production", StringComparison.CurrentCultureIgnoreCase);
+
+    var detectorDeepLink = "https://portal.azure.com/?websitesextension_ext="
+            + troubleshootExt
+            + "asd.featurePath%3D"
+            + detectorPath
+            + "#resource/subscriptions/" + subscriptionId
+            + "/resourceGroups/" + resourceGroup
+            + "/providers/Microsoft.Web/sites/"
+            + hostName
+            + (isSlot ? "/slots/" + slotName : "")
+            + "/troubleshoot";
+
+    Response.Redirect(detectorDeepLink);
+}
+

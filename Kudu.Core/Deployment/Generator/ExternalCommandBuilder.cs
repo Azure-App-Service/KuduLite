@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Kudu.Contracts.Settings;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.Tracing;
+using Kudu.Core.Helpers;
 using NuGet.Versioning;
 
 namespace Kudu.Core.Deployment.Generator
@@ -16,6 +17,7 @@ namespace Kudu.Core.Deployment.Generator
     //
     //  ExternalCommandBuilder
     //      CustomBuilder
+    //      OryxBuilder
     //      GeneratorSiteBuilder
     //          BaseBasicBuilder
     //              BasicBuilder
@@ -61,11 +63,17 @@ namespace Kudu.Core.Deployment.Generator
             {
                 var fi = new FileInfo(file);
                 string scriptFilePath = null;
-                if (string.Equals(".ps1", fi.Extension, StringComparison.OrdinalIgnoreCase))
+
+                if (OSDetector.IsOnWindows())
                 {
-                    scriptFilePath = string.Format(CultureInfo.InvariantCulture, "PowerShell.exe -ExecutionPolicy RemoteSigned -File \"{0}\"", file);
+                    scriptFilePath = GetWindowsPostBuildFilepath(context, fi);
                 }
-                else
+                else if (!OSDetector.IsOnWindows())
+                {
+                    scriptFilePath = GetLinuxPostBuildFilepath(context, fi);
+                }
+
+                if (string.IsNullOrEmpty(scriptFilePath))
                 {
                     scriptFilePath = string.Format(CultureInfo.InvariantCulture, "\"{0}\"", file);
                 }
@@ -195,6 +203,7 @@ namespace Kudu.Core.Deployment.Generator
             {
                 var files = FileSystemHelpers.GetFiles(sf, "*")
                                         .Where(f => f.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase)
+                                            || f.EndsWith(".sh", StringComparison.OrdinalIgnoreCase)
                                             || f.EndsWith(".bat", StringComparison.OrdinalIgnoreCase)
                                             || f.EndsWith(".ps1", StringComparison.OrdinalIgnoreCase)).ToList();
 
@@ -203,6 +212,27 @@ namespace Kudu.Core.Deployment.Generator
             }
 
             return scriptFilesGroupedAndSorted;
+        }
+
+        private string GetLinuxPostBuildFilepath(DeploymentContext context, FileInfo fi)
+        {
+            if (string.Equals(".sh", fi.Extension, StringComparison.OrdinalIgnoreCase))
+            {
+                context.Logger.Log("Add execute permission for post build script " + fi.FullName);
+                PermissionHelper.Chmod("ugo+x", fi.FullName, Environment, DeploymentSettings, context.Logger);
+                return string.Format(CultureInfo.InvariantCulture, "\"{0}\"", fi.FullName);
+            }
+            return null;
+        }
+
+        private string GetWindowsPostBuildFilepath(DeploymentContext context, FileInfo fi)
+        {
+            if (string.Equals(".ps1", fi.Extension, StringComparison.OrdinalIgnoreCase))
+            {
+                context.Logger.Log("Execute post build script with RemoteSigned policy " + fi.FullName);
+                return string.Format(CultureInfo.InvariantCulture, "PowerShell.exe -ExecutionPolicy RemoteSigned -File \"{0}\"", fi.FullName);
+            }
+            return null;
         }
     }
 }

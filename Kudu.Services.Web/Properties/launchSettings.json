@@ -12,6 +12,8 @@
       "commandName": "IISExpress",
       "launchBrowser": true,
       "environmentVariables": {
+        "K8SE_BUILD_SERVICE": "yes",
+        "HOME": "C:\\work\\function-apps\\HttpFunApp1\\bin\\Debug\\netcoreapp3.1",
         "ASPNETCORE_ENVIRONMENT": "Production"
       },
       "applicationUrl": "http://0.0.0.0:16018/"
@@ -20,6 +22,10 @@
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {
+        "BUILD_FLAGS": "UseExpressBuild",
+        "ENABLE_ORYX_BUILD": "true",
+        "K8SE_BUILD_SERVICE": "true",
+        "HOME": "C:\\repos\\wwwroot",
         "ASPNETCORE_ENVIRONMENT": "Production"
       },
       "applicationUrl": "http://0.0.0.0:16018/"

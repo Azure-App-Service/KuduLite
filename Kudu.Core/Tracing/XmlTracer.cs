@@ -32,7 +32,6 @@ namespace Kudu.Core.Tracing
         private static long _salt = 0;
         private static DateTime _lastCleanup = DateTime.MinValue;
                 
-        public static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
         private bool startTagAdded = false;
 
         private readonly static TimeSpan ElapsedThreshold = TimeSpan.FromSeconds(10);
@@ -99,10 +98,7 @@ namespace Kudu.Core.Tracing
                     // generate trace file name base on attribs
                     _file = GenerateFileName(info);
                     if (!startTagAdded)
-                    {
-                        log.Debug("@@@StartTrace@@@" + DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff",
-                                      CultureInfo.InvariantCulture) + "," + ServerConfiguration.GetApplicationName() +
-                                  ",");
+                    { 
                         startTagAdded = true;
                     }
                 }
@@ -133,7 +129,6 @@ namespace Kudu.Core.Tracing
                 }
 
                 FileSystemHelpers.AppendAllTextToFile(_file, strb.ToString());
-                log.Debug(Regex.Replace(strb.ToString(), @"\t|\n|\r", ""));
                 _infos.Push(info);
                 _isStartElement = true;
 
@@ -174,7 +169,6 @@ namespace Kudu.Core.Tracing
                 strb.AppendLine(String.Format("<!-- duration: {0:0}ms -->", elapsed.TotalMilliseconds));
 
                 FileSystemHelpers.AppendAllTextToFile(_file, strb.ToString());
-                log.Debug(Regex.Replace(strb.ToString(), @"\t|\n|\r", ""));
                 _isStartElement = false;
 
                 // adjust filename with statusCode
@@ -222,7 +216,6 @@ namespace Kudu.Core.Tracing
                 if (isOutgoingResponse&&zeroInfos)
                 {
                     startTagAdded = false;
-                    log.Debug("@@@EndTrace@@@\n\n\n");
                 }
             }
         }

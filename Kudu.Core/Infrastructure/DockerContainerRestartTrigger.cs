@@ -1,7 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using Kudu.Contracts.Deployment;
+using Kudu.Core.Functions;
 using Kudu.Core.Helpers;
+using Kudu.Core.K8SE;
+using Newtonsoft.Json;
 
 namespace Kudu.Core.Infrastructure
 {
@@ -20,8 +27,39 @@ namespace Kudu.Core.Infrastructure
             "The last modification Kudu made to this file was at {0}, for the following reason: {1}.",
             System.Environment.NewLine);
 
-        public static void RequestContainerRestart(IEnvironment environment, string reason)
+        public static void RequestContainerRestart(IEnvironment environment, string reason, string repositoryUrl = null, string appSubPath = "", IDictionary<string,string> appSettings = null)
         {
+            if (appSettings is null)
+            {
+                appSettings = new Dictionary<string, string>();
+            }
+
+            if (K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                string appName = environment.K8SEAppName;
+                string appType = environment.K8SEAppType;
+                string buildNumber = environment.CurrId;
+                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(repositoryUrl, appName, appType, appSettings);
+                var buildMetadata = new BuildMetadata()
+                {
+                    AppName = appName,
+                    BuildVersion = buildNumber,
+                    AppSubPath = appSubPath
+                };
+
+                //Only for function apps functionTriggers will be non-null/non-empty
+                if (functionTriggers?.Any() == true)
+                {
+                    K8SEDeploymentHelper.UpdateFunctionAppTriggers(appName, functionTriggers, buildMetadata);
+                }
+                else
+                {
+                    K8SEDeploymentHelper.UpdateBuildNumber(appName, buildMetadata);
+                }
+
+                return;
+            }
+
             if (OSDetector.IsOnWindows() && !EnvironmentHelper.IsWindowsContainers())
             {
                 throw new NotSupportedException("RequestContainerRestart is only supported on Linux and Windows Containers");

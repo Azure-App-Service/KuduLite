@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
 using System.IO.Compression;
 using Kudu.Contracts.Tracing;
+using Kudu.Core.Helpers;
 using Kudu.Core.Tracing;
 
 namespace Kudu.Core.Infrastructure
@@ -107,8 +110,10 @@ namespace Kudu.Core.Infrastructure
             return entry;
         }
 
-        public static void Extract(this ZipArchive archive, string directoryName)
+        public static IDictionary<string, string> Extract(this ZipArchive archive, string directoryName)
         {
+            IDictionary<string, string> symLinks = new Dictionary<string, string>();
+            bool isSymLink = false;
             foreach (ZipArchiveEntry entry in archive.Entries)
             {
                 string path = Path.Combine(directoryName, entry.FullName);
@@ -125,16 +130,58 @@ namespace Kudu.Core.Infrastructure
                     {
                         fileInfo.Directory.Create();
                     }
-
                     using (Stream zipStream = entry.Open(),
-                                  fileStream = fileInfo.Open(FileMode.Create, FileAccess.Write))
+                        fileStream = fileInfo.Open(FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
                     {
                         zipStream.CopyTo(fileStream);
                     }
 
-                    fileInfo.LastWriteTimeUtc = entry.LastWriteTime.ToUniversalTime().DateTime;
+                    isSymLink = false;
+                    string originalFileName = string.Empty;
+
+                    if (!OSDetector.IsOnWindows())
+                    {
+                        try
+                        {
+                            using (Stream fs = fileInfo.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                            {
+                                byte[] buffer = new byte[4];
+                                fs.Read(buffer, 0, buffer.Length);
+                                fs.Close();
+
+                                var str = System.Text.Encoding.Default.GetString(buffer);
+                                if (str.StartsWith("../"))
+                                {
+                                    using (StreamReader reader = fileInfo.OpenText())
+                                    {
+                                        symLinks[entry.FullName] = reader.ReadToEnd();
+                                    }
+                                    isSymLink = true;
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new Exception("Could not identify symlinks in zip file : " + ex.ToString());
+                        }
+                    }
+
+                    try
+                    {
+                        fileInfo.LastWriteTimeUtc = entry.LastWriteTime.ToUniversalTime().DateTime;
+                    }
+                    catch(Exception)
+                    {
+                        //best effort
+                    }
+
+                    if(isSymLink)
+                    {
+                        fileInfo.Delete();
+                    }
                 }
             }
+            return symLinks;
         }
 
         private static string EnsureTrailingSlash(string input)

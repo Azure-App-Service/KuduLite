@@ -14,7 +14,7 @@ namespace Kudu.Core.SourceControl.Git
         // Command to launch the post receive hook
         // CORE NOTE modified the script to run "dotnet," assuming EXEPATH points
         // to a framework-dependent Core app.
-        public static string KUDUCOMMAND = "dotnet \"$" + EXEPATH + "\" " +
+        public static string KUDUCOMMAND = "benv dotnet=3-lts dotnet \"$" + EXEPATH + "\" " +
                                            "\"$" + APPPATH + "\" " +
                                            "\"$" + MSBUILD + "\" " +
                                            "\"$" + DEPLOYER + "\"";

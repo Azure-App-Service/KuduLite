@@ -22,14 +22,23 @@ using Kudu.Core.SourceControl.Git;
 using Kudu.Core.Tracing;
 using System.Reflection;
 using XmlSettings;
+using k8s;
+using IRepository = Kudu.Core.SourceControl.IRepository;
+using log4net;
+using log4net.Config;
 
 namespace Kudu.Console
 {
     internal class Program
     {
-        
+        private static IEnvironment env;
+        private static IDeploymentSettingsManager settingsManager;
+        private static string appRoot;
+
         private static int Main(string[] args)
         {
+            var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
+            XmlConfigurator.Configure(logRepository, new FileInfo("log4net.config"));
             // Turn flag on in app.config to wait for debugger on launch
             if (ConfigurationManager.AppSettings["WaitForDebuggerOnStart"] == "true")
             {
@@ -55,14 +64,14 @@ namespace Kudu.Console
             System.Console.Error.NewLine = "\n";
             System.Console.Out.NewLine = "\n";
 
-            string appRoot = args[0];
+            appRoot = args[0];
             string wapTargets = args[1];
             string deployer = args.Length == 2 ? null : args[2];
             string requestId = System.Environment.GetEnvironmentVariable(Constants.RequestIdHeader);
 
-            IEnvironment env = GetEnvironment(appRoot, requestId);
+            env = GetEnvironment(appRoot, requestId);
             ISettings settings = new XmlSettings.Settings(GetSettingsPath(env));
-            IDeploymentSettingsManager settingsManager = new DeploymentSettingsManager(settings);
+            settingsManager = new DeploymentSettingsManager(settings);
 
             // Setup the trace
             TraceLevel level = settingsManager.GetTraceLevel();
@@ -74,7 +83,7 @@ namespace Kudu.Console
             string deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
 
             IOperationLock deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
-            
+
             if (deploymentLock.IsHeld)
             {
                 return PerformDeploy(appRoot, wapTargets, deployer, lockPath, env, settingsManager, level, tracer, traceFactory, deploymentLock);
@@ -117,7 +126,6 @@ namespace Kudu.Console
 
             // Adjust repo path
             env.RepositoryPath = Path.Combine(env.SiteRootPath, settingsManager.GetRepositoryPath());
-
             string statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
             string hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
 
@@ -126,7 +134,7 @@ namespace Kudu.Console
             IOperationLock hooksLock = new LockFile(hooksLockPath, traceFactory);
             
             IBuildPropertyProvider buildPropertyProvider = new BuildPropertyProvider();
-            ISiteBuilderFactory builderFactory = new SiteBuilderFactory(buildPropertyProvider, env);
+            ISiteBuilderFactory builderFactory = new SiteBuilderFactory(buildPropertyProvider, env, null);
             var logger = new ConsoleLogger();
 
             IRepository gitRepository;
@@ -139,11 +147,16 @@ namespace Kudu.Console
                 gitRepository = new GitExeRepository(env, settingsManager, traceFactory);
             }
 
+            env.CurrId = gitRepository.GetChangeSet(settingsManager.GetBranch()).Id;
+
             IServerConfiguration serverConfiguration = new ServerConfiguration();
+
             IAnalytics analytics = new Analytics(settingsManager, serverConfiguration, traceFactory);
 
             IWebHooksManager hooksManager = new WebHooksManager(tracer, env, hooksLock);
+
             IDeploymentStatusManager deploymentStatusManager = new DeploymentStatusManager(env, analytics, statusLock);
+
             IDeploymentManager deploymentManager = new DeploymentManager(builderFactory,
                                                           env,
                                                           traceFactory,
@@ -152,7 +165,8 @@ namespace Kudu.Console
                                                           deploymentStatusManager,
                                                           deploymentLock,
                                                           GetLogger(env, level, logger),
-                                                          hooksManager);
+                                                          hooksManager,
+                                                          null); // K8 todo
 
             var step = tracer.Step(XmlTracer.ExecutingExternalProcessTrace, new Dictionary<string, string>
             {
@@ -180,7 +194,7 @@ namespace Kudu.Console
                     {
                         string branch = settingsManager.GetBranch();
                         ChangeSet changeSet = gitRepository.GetChangeSet(branch);
-                        IDeploymentStatusFile statusFile = deploymentStatusManager.Open(changeSet.Id);
+                        IDeploymentStatusFile statusFile = deploymentStatusManager.Open(changeSet.Id, env);
                         if (statusFile != null && statusFile.Status == DeployStatus.Success)
                         {
                             PostDeploymentHelper.PerformAutoSwap(env.RequestId,
@@ -191,10 +205,17 @@ namespace Kudu.Console
                 }
                 catch (Exception e)
                 {
+                    System.Console.WriteLine(e.InnerException);
                     tracer.TraceError(e);
                     System.Console.Error.WriteLine(e.GetBaseException().Message);
                     System.Console.Error.WriteLine(Resources.Log_DeploymentError);
                     return 1;
+                }
+                finally
+                { 
+                    System.Console.WriteLine("Deployment Logs : '"+
+                    env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" + 
+                    gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");
                 }
             }
 
@@ -250,6 +271,7 @@ namespace Kudu.Console
         private static IEnvironment GetEnvironment(string siteRoot, string requestId)
         {
             string root = Path.GetFullPath(Path.Combine(siteRoot, ".."));
+            string appName = root.Replace("/home/apps/","");
 
             // CORE TODO : test by setting SCM_REPOSITORY_PATH 
             // REVIEW: this looks wrong because it ignores SCM_REPOSITORY_PATH
@@ -267,12 +289,14 @@ namespace Kudu.Console
             }
 
             // CORE TODO Handing in a null IHttpContextAccessor (and KuduConsoleFullPath) again
-            return new Kudu.Core.Environment(root,
+            var env=  new Kudu.Core.Environment(root,
                 EnvironmentHelper.NormalizeBinPath(binPath),
                 repositoryPath,
                 requestId,
                 Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu.dll"),
-                null);
+                null,
+                appName);
+            return env;
         }
     }
 }

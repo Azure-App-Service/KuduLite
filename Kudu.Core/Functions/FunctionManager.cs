@@ -444,7 +444,7 @@ namespace Kudu.Core.Functions
         /// <param name="zip">the <see cref="ZipArchive"/> to be populated with function app content.</param>
         /// <param name="includeAppSettings">Optional: indicates whether to add local.settings.json or not to the archive. Default is false.</param>
         /// <param name="includeCsproj">Optional: indicates whether to add a .csproj to the archive. Default is false.</param>
-        /// <param name="projectName">Optional: the name for *.csproj file if <paramref name="includeCsproj"/> is true. Default is appName.</param>
+        /// <param name="projectName">Optional: the name for *.csproj file if <paramref name="includeCsproj"/> is true. Default is AppName.</param>
         public void CreateArchive(ZipArchive zip, bool includeAppSettings = false, bool includeCsproj = false, string projectName = null)
         {
             var tracer = _traceFactory.GetTracer();

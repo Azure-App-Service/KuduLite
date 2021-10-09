@@ -53,7 +53,6 @@ namespace Kudu.Core.Deployment
             return statusLock.LockOperation(() =>
             {
                 string path = Path.Combine(environment.DeploymentsPath, id, StatusFile);
-
                 if (!FileSystemHelpers.FileExists(path))
                 {
                     return null;
@@ -220,8 +219,11 @@ namespace Kudu.Core.Deployment
             string siteName = ServerConfiguration.GetApplicationName();
             if (String.IsNullOrEmpty(siteName))
             {
+                Console.WriteLine("Gettin Site Root");
                 // Otherwise get it from the root directory name
                 siteName = Path.GetFileName(environment.RootPath);
+                Console.WriteLine("siteName "+siteName);
+
             }
 
             return siteName;

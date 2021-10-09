@@ -5,6 +5,20 @@ namespace Kudu
 {
     public static class Constants
     {
+        //Scan functionality files
+        public const string ScanLockFile = "scan.lock";
+        public static string ScanStatusFile = "status.json";
+        public static string ScanLogFile = "scan_log.log";
+        public static string ScanFolderName = "Scan_";
+        public static string MaxScans = "2";
+        public static string ScanDir = "/home/site/wwwroot";
+        public static string ScriptPath = "/custom_scripts/daily_scan_script.sh";
+        public static string ScanCommand = ScriptPath+" "+ScanDir;
+        public static string ScanTimeOutMillSec = "1200000";    // 20 mins
+        public static string ScanManifest = "modified_times.json";
+        public static string AggregrateScanResults = "aggregrate_scans.log";
+        public static string TempScanFile = "temp_scan_monitor";
+
         public const string WebRoot = "wwwroot";
         public const string MappedSite = "/_app";
         public const string RepositoryPath = "repository";
@@ -84,6 +98,8 @@ namespace Kudu
         public const string LogicAppJson = "logicapp.json";
         public const string LogicAppUrlKey = "LOGICAPP_URL";
 
+        public const string AppSettingsRegex = "%.*?%";
+
         public const string SiteExtensionProvisioningStateCreated = "Created";
         public const string SiteExtensionProvisioningStateAccepted = "Accepted";
         public const string SiteExtensionProvisioningStateSucceeded = "Succeeded";
@@ -105,6 +121,8 @@ namespace Kudu
         public const string SiteAuthEncryptionKey = "WEBSITE_AUTH_ENCRYPTION_KEY";
         public const string HttpHost = "HTTP_HOST";
         public const string WebSiteSwapSlotName = "WEBSITE_SWAP_SLOTNAME";
+        public const string AzureWebsiteInstanceId = "WEBSITE_INSTANCE_ID";
+        public const string ContainerName = "CONTAINER_NAME";
 
         public const string Function = "function";
         public const string Functions = "functions";
@@ -116,6 +134,7 @@ namespace Kudu
         public const string FunctionsPortal = "FunctionsPortal";
         public const string FunctionKeyNewFormat = "~0.7";
         public const string FunctionRunTimeVersion = "FUNCTIONS_EXTENSION_VERSION";
+        public const string ScmRunFromPackage = "SCM_RUN_FROM_PACKAGE";
         public const string WebSiteSku = "WEBSITE_SKU";
         public const string WebSiteElasticScaleEnabled = "WEBSITE_ELASTIC_SCALING_ENABLED";
         public const string DynamicSku = "Dynamic";
@@ -124,11 +143,31 @@ namespace Kudu
         public const string HubName = "HubName";
         public const string DurableTaskStorageConnection = "connection";
         public const string DurableTaskStorageConnectionName = "azureStorageConnectionStringName";
+        public const string DurableTaskSqlConnectionName = "connectionStringName";
+        public const string DurableTaskStorageProvider = "storageProvider";
+        public const string DurableTaskMicrosoftSqlProviderType = "mssql";
+        public const string MicrosoftSqlScaler = "mssql";
+        public const string AzureQueueScaler = "azure-queue";
         public const string DurableTask = "durableTask";
+        public const string WorkflowAppKind = "workflowApp";
+        public const string WorkflowExtensionName = "workflow";
+        public const string WorkflowSettingsName = "Settings";
         public const string Extensions = "extensions";
         public const string SitePackages = "SitePackages";
-        public const string SiteVersionTxt = "siteversion.txt";
         public const string PackageNameTxt = "packagename.txt";
-        public const string KuduBuild = "1.0.0.5";
+        public const string KuduBuild = "1.0.0.7";
+
+        public const string WebSSHReverseProxyPortEnvVar = "KUDU_WEBSSH_PORT";
+        public const string WebSSHReverseProxyDefaultPort = "3000";
+
+        public const string LinuxLogEventStreamName = "MS_KUDU_LOGS";
+        public const string WebSiteHomeStampName = "WEBSITE_HOME_STAMPNAME";
+        public const string WebSiteStampDeploymentId = "WEBSITE_STAMP_DEPLOYMENT_ID";
+        public const string IsK8SEEnvironment = "K8SE_BUILD_SERVICE";
+
+        public const string OneDeploy = "OneDeploy";
+        public const string ArtifactStagingDirectoryName = "extracted";
+
+        public const string K8SEAppTypeDefault = "functionapp,kubernetes,linux";
     }
 }

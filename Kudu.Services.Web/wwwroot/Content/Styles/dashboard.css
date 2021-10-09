@@ -188,3 +188,21 @@ a {
     text-decoration:none;
     color:  #252e3e;
 }
+
+/* Bootstrap Media Query Breakpoints */
+
+@media only screen and (min-width : 768px) {
+    .border-between{
+        content: "";
+    }
+}
+
+@media only screen and (min-width : 992px) {
+    .border-between{
+        content: " ";
+    }
+}
+
+@media only screen and (min-width : 1200px) {
+
+}
