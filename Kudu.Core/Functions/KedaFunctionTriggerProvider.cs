@@ -209,11 +209,12 @@ namespace Kudu.Core.Functions
                 var triggerType = GetKedaTriggerType(function.Type);
                 if (!string.IsNullOrEmpty(triggerType))
                 {
+                    Console.WriteLine("SUXXXXXXX creating scale trigger data");
                     var scaleTrigger = new ScaleTrigger
                     {
                         Type = triggerType,
                         
-                        Console.WriteLine("SUXXXXXXX creating scale trigger data     ");
+                        
                         Metadata = PopulateMetadataDictionary(function.Binding, function.FunctionName),
 
                         //based on the trigger type we get the generator, code to get the 
