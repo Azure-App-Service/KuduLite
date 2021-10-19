@@ -125,8 +125,17 @@ namespace Kudu.Core
             RootPath = rootPath;
 
             SiteRootPath = Path.Combine(rootPath, Constants.SiteFolder);
+            if(k8seAppName == null)
+            {
+                _tempPath = Path.GetTempPath();
+                Console.WriteLine("k8seAppName is null. tempPath=" + _tempPath);
+            }
+            else
+            {
+                _tempPath = Path.Combine(Path.GetTempPath(), k8seAppName);
+                Console.WriteLine("k8seAppName is " + k8seAppName +". tempPath=" + _tempPath);
+            }
 
-            _tempPath = Path.GetTempPath();
             _repositoryPath = repositoryPath;
             _zipTempPath = Path.Combine(_tempPath, Constants.ZipTempPath);
             _webRootPath = Path.Combine(SiteRootPath, Constants.WebRoot);

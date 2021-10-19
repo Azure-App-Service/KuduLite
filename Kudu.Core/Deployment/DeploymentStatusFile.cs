@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Core.Infrastructure;
@@ -32,12 +33,23 @@ namespace Kudu.Core.Deployment
             {
                 Initialize(document);
             }
+
+            // Ensure that the status file is created before we enter this code block
+            Task ensureLogFileExists = Task.Run(() =>
+                OperationManager.Attempt(() =>
+                {
+                    if (!FileSystemHelpers.FileExists(_statusFile))
+                    {
+                        throw new FileNotFoundException("Status file doesn't exist. Will wait for 1 second and retry");
+                    }
+                }, 5, 250));
         }
 
         public static DeploymentStatusFile Create(string id, IEnvironment environment, IOperationLock statusLock)
         {
             string path = Path.Combine(environment.DeploymentsPath, id);
 
+            Console.WriteLine("id=" +id + ": Creating statusFile at " + path);
             FileSystemHelpers.EnsureDirectory(path);
 
             DateTime utcNow = DateTime.UtcNow;
@@ -53,11 +65,14 @@ namespace Kudu.Core.Deployment
             return statusLock.LockOperation(() =>
             {
                 string path = Path.Combine(environment.DeploymentsPath, id, StatusFile);
-                if (!FileSystemHelpers.FileExists(path))
+
+                if(!FileSystemHelpers.FileExists(path))
                 {
+                    Console.WriteLine("id=" +id + ": DeploymentStatusFile.open. path=" + path +". FileNotFound");
                     return null;
                 }
 
+                Console.WriteLine("id=" + id + ": DeploymentStatusFile.open. path=" + path + ". FileExists");
                 try
                 {
                     XDocument document = null;

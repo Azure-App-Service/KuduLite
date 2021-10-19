@@ -61,10 +61,17 @@ namespace Kudu.Services.Web
             }
 
             // Cache the App Environment for this request
-            context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appType));
+            if (!context.Items.ContainsKey("environment"))
+            {
+                Console.WriteLine("KubeMiddlware: adding environment. appName=" + appName + ",appType=" + appType);
+                context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appType));
+            }
 
             // Cache the appName for this request
-            context.Items.TryAdd("appName", appName);
+            if (!context.Items.ContainsKey("appName")) {
+                Console.WriteLine("KubeMiddlware: appName=" + appName);
+                context.Items.TryAdd("appName", appName);
+            }
 
             // Add All AppSettings to the context.
             K8SEDeploymentHelper.UpdateContextWithAppSettings(context);

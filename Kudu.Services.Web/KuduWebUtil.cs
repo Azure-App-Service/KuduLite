@@ -36,7 +36,7 @@ namespace Kudu.Services.Web
 
         private static Dictionary<string, IOperationLock> _namedLocks;
 
-        private static DeploymentLockFile _deploymentLock;
+        private static IOperationLock _deploymentLock;
 
         // <summary>
         // This method initializes status,ssh,hooks & deployment locks used by Kudu to ensure
@@ -81,9 +81,7 @@ namespace Kudu.Services.Web
             var statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
             var sshKeyLockPath = Path.Combine(lockPath, Constants.SSHKeyLockFile);
             var hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
-            _deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
-            _deploymentLock.InitializeAsyncLocks();
-
+            _deploymentLock = new NoOpLock();
             var statusLock = new LockFile(statusLockPath, traceFactory);
             statusLock.InitializeAsyncLocks();
             var sshKeyLock = new LockFile(sshKeyLockPath, traceFactory);
@@ -470,7 +468,7 @@ namespace Kudu.Services.Web
         /// <param name="traceFactory"></param>
         /// <param name="environment"></param>
         /// <returns></returns>
-        internal static DeploymentLockFile GetDeploymentLock(ITraceFactory traceFactory, IEnvironment environment)
+        internal static IOperationLock GetDeploymentLock(ITraceFactory traceFactory, IEnvironment environment)
         {
             if (_namedLocks == null || _deploymentLock == null)
             {

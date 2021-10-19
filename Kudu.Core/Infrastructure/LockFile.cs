@@ -24,13 +24,13 @@ namespace Kudu.Core.Infrastructure
         
         public LockFile(string path) 
         {
-            _lock =  new WindowsLockFile(path);
+            _lock =  new NoOpLock();
             
         }
 
         public LockFile(string path, ITraceFactory traceFactory, bool ensureLock = false)
         {
-            _lock = new WindowsLockFile(path,traceFactory,ensureLock);
+            _lock = new NoOpLock();
       
         }
         

@@ -439,12 +439,21 @@ namespace Kudu.Core.Deployment
             if (results.Any())
             {
                 var toDelete = new List<DeployResult>();
-                toDelete.AddRange(GetPurgeTemporaryDeployments(results));
+                //toDelete.AddRange(GetPurgeTemporaryDeployments(results));
                 toDelete.AddRange(GetPurgeFailedDeployments(results));
                 toDelete.AddRange(GetPurgeObsoleteDeployments(results));
 
                 if (toDelete.Any())
                 {
+                    var purgeTempDeployments = GetPurgeTemporaryDeployments(results);
+                    foreach (DeployResult temp in purgeTempDeployments)
+                    {
+                        Console.WriteLine("We used to Remove {0}, {1}, received at {2}, but not doing now",
+                                     temp.Id.Substring(0, Math.Min(temp.Id.Length, 9)),
+                                     temp.Status,
+                                     temp.ReceivedTime);
+                    }
+
                     var tracer = _traceFactory.GetTracer();
                     using (tracer.Step("Purge deployment items"))
                     {
@@ -452,6 +461,10 @@ namespace Kudu.Core.Deployment
                         {
                             _status.Delete(delete.Id, _environment);
 
+                            Console.WriteLine("Remove {0}, {1}, received at {2}",
+                                         delete.Id.Substring(0, Math.Min(delete.Id.Length, 9)),
+                                         delete.Status,
+                                         delete.ReceivedTime);
                             tracer.Trace("Remove {0}, {1}, received at {2}",
                                          delete.Id.Substring(0, Math.Min(delete.Id.Length, 9)),
                                          delete.Status,
@@ -559,7 +572,12 @@ namespace Kudu.Core.Deployment
                 {
                     // Create the status file and store information about the commit
                     statusFile = _status.Create(id, _environment);
+                    Console.WriteLine("id=" + id + ": In GetOrCreateStatusFile. statusFile was NULL. So, created it.");
+                }else
+                {
+                    Console.WriteLine("id=" + id + ": In GetOrCreateStatusFile. statusFile already exists");
                 }
+
                 statusFile.Message = changeSet.Message;
                 statusFile.Author = changeSet.AuthorName;
                 statusFile.Deployer = deployer;
