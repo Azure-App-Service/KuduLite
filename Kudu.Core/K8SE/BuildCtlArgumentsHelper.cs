@@ -41,6 +41,11 @@ namespace Kudu.Core.K8SE
             args.AppendFormat(" -secretName {0}", secretName);
         }
 
+        internal static void AddAuthRefSecretKeys(StringBuilder args, string authRefSecretKeys)
+        {
+            args.AppendFormat(" -authRefSecretKeys {0}", authRefSecretKeys);
+        }
+
 
     }
 }

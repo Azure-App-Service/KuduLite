@@ -390,7 +390,7 @@ namespace Kudu.Core.Functions
                 secrets.Add("password", "admin");
                 //create  secret "functionname + triggerauth + secret".yaml
                 //Runs build ctl command and creates secret
-                K8SEDeploymentHelper.CreateSecrets(functionName+"authRef-secrets", secrets);
+               // K8SEDeploymentHelper.CreateSecrets(functionName+"authRef-secrets", secrets);
 
                 IDictionary<string, string> authRef = new Dictionary<string, string>();
                 authRef.Add("name",functionName);
@@ -409,7 +409,8 @@ namespace Kudu.Core.Functions
                 //Runs build ctl command and creates TriggerAuthentication CRD
 
                 //
-                K8SEDeploymentHelper.CreateTriggerAuthenticationRef(functionName+"-authRef-secrets");
+
+            K8SEDeploymentHelper.CreateTriggerAuthenticationRef(functionName, "username,password", functionName);
             return authRef;
         }
 
