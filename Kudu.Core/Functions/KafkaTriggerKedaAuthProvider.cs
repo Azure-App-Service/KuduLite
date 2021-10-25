@@ -9,6 +9,16 @@ namespace Kudu.Core.Functions
 {
     public class KafkaTriggerKedaAuthProvider : IKedaAuthRefProvider
     {
+        public static readonly Dictionary<string, string> TriggerBindingToKedaProperty = new Dictionary<string, string>()
+        {
+            { "AuthenticationMode", "sasl" },
+            { "username", "username" },
+            { "password", "password" },
+            { "SslCaLocation", "ca" },
+            { "SslCertificateLocation", "cert" },
+            { "SslKeyLocation", "key" }
+        };
+    
         public IDictionary<string, string> PopulateAuthenticationRef(JToken t, string functionName) 
         {
             IDictionary<string, string> functionData = t.ToObject<Dictionary<string, JToken>>()
@@ -57,23 +67,24 @@ namespace Kudu.Core.Functions
 
                 IDictionary<string, string> authRef = new Dictionary<string, string>();
                 authRef.Add("name",functionName);
-                //use secrets and generate authRef 
-                
-                // spec:
-                // secretTargetRef:
-                // - parameter: sasl
-                //     name: keda-kafka-secrets
-                //     key: sasl
-                // - parameter: username
-                //     name: keda-kafka-secrets
-                //     key: username
+            //use secrets and generate authRef 
 
-                //generate authref name as "functionname + triggerauth".yaml
-                //Runs build ctl command and creates TriggerAuthentication CRD
+            // spec:
+            // secretTargetRef:
+            // - parameter: sasl
+            //     name: keda-kafka-secrets
+            //     key: sasl
+            // - parameter: username
+            //     name: keda-kafka-secrets
+            //     key: username
 
-                //
+            //generate authref name as "functionname + triggerauth".yaml
+            //Runs build ctl command and creates TriggerAuthentication CRD
 
-            K8SEDeploymentHelper.CreateTriggerAuthenticationRef(functionName, "username,password", functionName);
+            //
+
+            // functionName + "-secrets" is the filename for appsettings secrets
+            K8SEDeploymentHelper.CreateTriggerAuthenticationRef(functionName + "-secrets", "username,password", functionName);
             return authRef;
         }
     }

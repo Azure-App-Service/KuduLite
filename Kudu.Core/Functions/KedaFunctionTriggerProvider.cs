@@ -15,7 +15,7 @@ namespace Kudu.Core.Functions
         public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, string appName = null, string appType = null, IDictionary<string, string> appSettings = null)
         {
             appSettings = appSettings ?? new Dictionary<string, string>();
-            
+
             if (!File.Exists(zipFilePath))
             {
                 return null;
@@ -89,7 +89,7 @@ namespace Kudu.Core.Functions
                 return bindingExpressionTarget;
             }
 
-            var matchEvaluator = new MatchEvaluator((Func<Match, string>) ReplaceMatchedBindingExpression);
+            var matchEvaluator = new MatchEvaluator((Func<Match, string>)ReplaceMatchedBindingExpression);
 
             foreach (var scaleTrigger in scaleTriggers)
             {
@@ -148,10 +148,10 @@ namespace Kudu.Core.Functions
         internal static string ParseHostJsonPayload(string payload)
         {
             var payloadJson = JObject.Parse(payload);
-            var extensions = (JObject) payloadJson["extensions"];
+            var extensions = (JObject)payloadJson["extensions"];
             if (extensions != null)
             {
-                var hostJsonPayload = new JObject {{"extensions", extensions}};
+                var hostJsonPayload = new JObject { { "extensions", extensions } };
                 return hostJsonPayload.ToString();
             }
             else
@@ -210,28 +210,22 @@ namespace Kudu.Core.Functions
                 if (!string.IsNullOrEmpty(triggerType))
                 {
                     Console.WriteLine("SUXXXXXXX creating scale trigger data");
-                     IKedaAuthRefProvider authProvider = getTriggerAuthProvider(triggerType);
-                    var scaleTrigger = new ScaleTrigger
-                    {
-                        Type = triggerType,
-                        
-                        
-                        Metadata = PopulateMetadataDictionary(function.Binding, function.FunctionName)
+                    var scaleTrigger = new ScaleTrigger();
+                    scaleTrigger.Type = triggerType;
+                    scaleTrigger.Metadata = PopulateMetadataDictionary(function.Binding, function.FunctionName);
 
-                        //based on the trigger type we get the generator, code to get the 
-                       
-                         if (authProvider != null) {
-                             AuthenticationRef = authProvider.PopulateAuthenticationRef(function.Binding, function.FunctionName)
-                         }
-                         //AuthenticationRef = PopulateAuthenticationRef(function.Binding, function.FunctionName)
-                        
-                    };
+                    IKedaAuthRefProvider authProvider = getTriggerAuthProvider(triggerType);
+                    if (authProvider != null)
+                    {
+                        scaleTrigger.AuthenticationRef = authProvider.PopulateAuthenticationRef(function.Binding, function.FunctionName);
+                    }
+
                     yield return scaleTrigger;
                 }
             }
         }
 
-        internal static IKedaAuthRefProvider getTriggerAuthProvider(string triggerType) 
+        internal static IKedaAuthRefProvider getTriggerAuthProvider(string triggerType)
         {
             if (string.Equals(triggerType, "kafkatrigger", StringComparison.OrdinalIgnoreCase)) {
                 return new KafkaTriggerKedaAuthProvider();
@@ -372,69 +366,69 @@ namespace Kudu.Core.Functions
             return true;
         }
 
-        internal static IDictionary<string, string> PopulateAuthenticationRef(JToken t, string functionName) 
+        internal static IDictionary<string, string> PopulateAuthenticationRef(JToken t, string functionName)
         {
             IDictionary<string, string> functionData = t.ToObject<Dictionary<string, JToken>>()
                 .Where(i => i.Value.Type == JTokenType.String)
                 .ToDictionary(k => k.Key, v => v.Value.ToString());
 
-                IDictionary<string, string> secrets = new Dictionary<string, string>();
-                IList<String> authSecretKeys = new List<String>();
-                IDictionary<string, string> secretNameToKedaParam = new Dictionary<string, string>();
-                //SSL, PLAINTEXT, SASL_PLAINTEXT, SASL_SSL
-               if (functionData["Protocol"] == "SaslPlaintext" || functionData["Protocol"] == "Plaintext") {
-                    //from this find all the data for secret
-                    authSecretKeys.Add("AuthenticationMode");
-                    authSecretKeys.Add("username");
-                    authSecretKeys.Add("password");
-                    //data:
-                    // sasl: "plaintext"
-                    // username: "admin"
-                    // password: "admin"
-                    // tls: "enable"
-                    // ca: <your ca> SslCaLocation
-                    // cert: <your cert> SslCertificateLocation
-                    // key: <your key> SslKeyLocation
-                    
-                } else if (functionData["Protocol"] == "SaslSsl") {
-                     authSecretKeys.Add("AuthenticationMode"); //:TODO check -AuthenticationMode is the binding name, but k4 will use secret name as parameter in trigger auth 
-                     authSecretKeys.Add("username");
-                     authSecretKeys.Add("password");
-                     authSecretKeys.Add("tls");
-                     authSecretKeys.Add("SslCaLocation");
-                     authSecretKeys.Add("SslCertificateLocation");
-                     authSecretKeys.Add("SslKeyLocation");
-                } else if (functionData["Protocol"] == "SSL") {
-                     authSecretKeys.Add("tls"); //this boolean flag 
-                     authSecretKeys.Add("SslCaLocation");
-                     authSecretKeys.Add("SslCertificateLocation");
-                     authSecretKeys.Add("SslKeyLocation");
-                }
-                // :TODO remove this hard coding
-                secrets.Add("sasl", "plaintext");
-                secrets.Add("username", "admin");
-                secrets.Add("password", "admin");
-                //create  secret "functionname + triggerauth + secret".yaml
-                //Runs build ctl command and creates secret
-               // K8SEDeploymentHelper.CreateSecrets(functionName+"authRef-secrets", secrets);
+            IDictionary<string, string> secrets = new Dictionary<string, string>();
+            IList<String> authSecretKeys = new List<String>();
+            IDictionary<string, string> secretNameToKedaParam = new Dictionary<string, string>();
+            //SSL, PLAINTEXT, SASL_PLAINTEXT, SASL_SSL
+            if (functionData["Protocol"] == "SaslPlaintext" || functionData["Protocol"] == "Plaintext") {
+                //from this find all the data for secret
+                authSecretKeys.Add("AuthenticationMode");
+                authSecretKeys.Add("username");
+                authSecretKeys.Add("password");
+                //data:
+                // sasl: "plaintext"
+                // username: "admin"
+                // password: "admin"
+                // tls: "enable"
+                // ca: <your ca> SslCaLocation
+                // cert: <your cert> SslCertificateLocation
+                // key: <your key> SslKeyLocation
 
-                IDictionary<string, string> authRef = new Dictionary<string, string>();
-                authRef.Add("name",functionName);
-                //use secrets and generate authRef 
-                
-                // spec:
-                // secretTargetRef:
-                // - parameter: sasl
-                //     name: keda-kafka-secrets
-                //     key: sasl
-                // - parameter: username
-                //     name: keda-kafka-secrets
-                //     key: username
+            } else if (functionData["Protocol"] == "SaslSsl") {
+                authSecretKeys.Add("AuthenticationMode"); //:TODO check -AuthenticationMode is the binding name, but k4 will use secret name as parameter in trigger auth 
+                authSecretKeys.Add("username");
+                authSecretKeys.Add("password");
+                authSecretKeys.Add("tls");
+                authSecretKeys.Add("SslCaLocation");
+                authSecretKeys.Add("SslCertificateLocation");
+                authSecretKeys.Add("SslKeyLocation");
+            } else if (functionData["Protocol"] == "SSL") {
+                authSecretKeys.Add("tls"); //this boolean flag 
+                authSecretKeys.Add("SslCaLocation");
+                authSecretKeys.Add("SslCertificateLocation");
+                authSecretKeys.Add("SslKeyLocation");
+            }
+            // :TODO remove this hard coding
+            secrets.Add("sasl", "plaintext");
+            secrets.Add("username", "admin");
+            secrets.Add("password", "admin");
+            //create  secret "functionname + triggerauth + secret".yaml
+            //Runs build ctl command and creates secret
+            // K8SEDeploymentHelper.CreateSecrets(functionName+"authRef-secrets", secrets);
 
-                //generate authref name as "functionname + triggerauth".yaml
-                //Runs build ctl command and creates TriggerAuthentication CRD
+            IDictionary<string, string> authRef = new Dictionary<string, string>();
+            authRef.Add("name", functionName);
+            //use secrets and generate authRef 
 
-                //
+            // spec:
+            // secretTargetRef:
+            // - parameter: sasl
+            //     name: keda-kafka-secrets
+            //     key: sasl
+            // - parameter: username
+            //     name: keda-kafka-secrets
+            //     key: username
+
+            //generate authref name as "functionname + triggerauth".yaml
+            //Runs build ctl command and creates TriggerAuthentication CRD
+
+            //
 
             K8SEDeploymentHelper.CreateTriggerAuthenticationRef(functionName, "username,password", functionName);
             return authRef;
@@ -515,3 +509,5 @@ namespace Kudu.Core.Functions
         }
     }
 }
+    
+
