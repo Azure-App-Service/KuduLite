@@ -210,24 +210,33 @@ namespace Kudu.Core.Functions
                 if (!string.IsNullOrEmpty(triggerType))
                 {
                     Console.WriteLine("SUXXXXXXX creating scale trigger data");
+                     IKedaAuthRefProvider authProvider = getTriggerAuthProvider(triggerType);
                     var scaleTrigger = new ScaleTrigger
                     {
                         Type = triggerType,
                         
                         
-                        Metadata = PopulateMetadataDictionary(function.Binding, function.FunctionName),
+                        Metadata = PopulateMetadataDictionary(function.Binding, function.FunctionName)
 
                         //based on the trigger type we get the generator, code to get the 
-                        //IFunctionTriggerAuthGenerator authGen = getTriggerAuthGen(triggerType);
-                        // if (authGen != null) {
-                        //     AuthenticationRef = authGen.PopulateAuthenticationRef(function.Binding, function.FunctionName)
-                        // }
-                         AuthenticationRef = PopulateAuthenticationRef(function.Binding, function.FunctionName)
+                       
+                         if (authProvider != null) {
+                             AuthenticationRef = authProvider.PopulateAuthenticationRef(function.Binding, function.FunctionName)
+                         }
+                         //AuthenticationRef = PopulateAuthenticationRef(function.Binding, function.FunctionName)
                         
                     };
                     yield return scaleTrigger;
                 }
             }
+        }
+
+        internal static IKedaAuthRefProvider getTriggerAuthProvider(string triggerType) 
+        {
+            if (string.Equals(triggerType, "kafkatrigger", StringComparison.OrdinalIgnoreCase)) {
+                return new KafkaTriggerKedaAuthProvider();
+            }
+            return null;
         }
 
         internal static string GetFunctionName(ZipArchiveEntry zipEntry)
@@ -370,20 +379,37 @@ namespace Kudu.Core.Functions
                 .ToDictionary(k => k.Key, v => v.Value.ToString());
 
                 IDictionary<string, string> secrets = new Dictionary<string, string>();
+                IList<String> authSecretKeys = new List<String>();
+                IDictionary<string, string> secretNameToKedaParam = new Dictionary<string, string>();
                 //SSL, PLAINTEXT, SASL_PLAINTEXT, SASL_SSL
-               // if (functionData["protocol"] == 'SSL') {
+               if (functionData["Protocol"] == "SaslPlaintext" || functionData["Protocol"] == "Plaintext") {
                     //from this find all the data for secret
-
+                    authSecretKeys.Add("AuthenticationMode");
+                    authSecretKeys.Add("username");
+                    authSecretKeys.Add("password");
                     //data:
                     // sasl: "plaintext"
                     // username: "admin"
                     // password: "admin"
                     // tls: "enable"
-                    // ca: <your ca>
-                    // cert: <your cert>
-                    // key: <your key>
+                    // ca: <your ca> SslCaLocation
+                    // cert: <your cert> SslCertificateLocation
+                    // key: <your key> SslKeyLocation
                     
-               // }
+                } else if (functionData["Protocol"] == "SaslSsl") {
+                     authSecretKeys.Add("AuthenticationMode"); //:TODO check -AuthenticationMode is the binding name, but k4 will use secret name as parameter in trigger auth 
+                     authSecretKeys.Add("username");
+                     authSecretKeys.Add("password");
+                     authSecretKeys.Add("tls");
+                     authSecretKeys.Add("SslCaLocation");
+                     authSecretKeys.Add("SslCertificateLocation");
+                     authSecretKeys.Add("SslKeyLocation");
+                } else if (functionData["Protocol"] == "SSL") {
+                     authSecretKeys.Add("tls"); //this boolean flag 
+                     authSecretKeys.Add("SslCaLocation");
+                     authSecretKeys.Add("SslCertificateLocation");
+                     authSecretKeys.Add("SslKeyLocation");
+                }
                 // :TODO remove this hard coding
                 secrets.Add("sasl", "plaintext");
                 secrets.Add("username", "admin");
