@@ -20,13 +20,12 @@ using Newtonsoft.Json.Linq;
 using System.Net.Http;
 using System.Collections.Generic;
 using Kudu.Core.Helpers;
-using System.Threading;
-using System.Collections;
 using Kudu.Core.K8SE;
 using Kudu.Contracts.Deployment;
 using Kudu.Services.Util;
 using System.Text;
 using Kudu.Services.Arm;
+using Kudu.Contracts.Infrastructure;
 
 namespace Kudu.Services.Deployment
 {
@@ -91,11 +90,18 @@ namespace Kudu.Services.Deployment
             {
                 var buildHeader = false;
 
-                if (HttpContext.Request.Headers.ContainsKey("SCM_DO_BUILD_DURING_DEPLOYMENT"))
+                if (K8SEDeploymentHelper.IsK8SEEnvironment() && HttpContext.Items.ContainsKey("appSettings"))
                 {
-                    string header = HttpContext.Request.Headers["SCM_DO_BUILD_DURING_DEPLOYMENT"];
-                    buildHeader = !String.IsNullOrEmpty(header) && (header == "1" || header.Equals(Boolean.TrueString, StringComparison.OrdinalIgnoreCase));
+                    var appSettings = (IDictionary<string, string>)HttpContext.Items["appSettings"];
+                    var scm_do_build_during_deployment_setting = appSettings?.FirstOrDefault(kv => kv.Key.Equals("scm_do_build_during_deployment", StringComparison.OrdinalIgnoreCase));
+
+                    if (scm_do_build_during_deployment_setting != null && !scm_do_build_during_deployment_setting.Value.Equals(default(KeyValuePair<string, string>)))
+                    {
+                        buildHeader = StringUtils.IsTrueLike(scm_do_build_during_deployment_setting.Value.Value);
+                    }
                 }
+
+                _tracer.Step($"scm_do_build_during_deployment is {buildHeader}");
 
                 var deploymentInfo = new ArtifactDeploymentInfo(_environment, _traceFactory)
                 {
