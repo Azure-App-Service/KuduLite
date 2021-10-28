@@ -124,34 +124,15 @@ namespace Kudu.Core.K8SE
             RunBuildCtlCommand(cmd.ToString(), "Updating function app triggers...");
         }
 
-        public static void CreateTriggerAuthenticationRef(string secretName, string authRefSecretsKeys, string appName)
+        public static void CreateTriggerAuthenticationRef(string secretName, string authRefSecretKeyToParamMap, string appName)
         {
-
-            //var triggerAuthSecretTargetRefJson = GetTriggerAuthSecretTargetRefJson(secretName, authRefSecretsKeys);
-            // if (string.IsNullOrEmpty(functionAppPatchJson))
-            // {
-            //     return;
-            // }
-
-            //here run BuildCtlArgumentsHelper create secret and create TriggerAuthentication
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "createTriggerAuth");
             BuildCtlArgumentsHelper.AddSecretName(cmd, secretName);
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
-           // BuildCtlArgumentsHelper.AddTriggerAuthSecretTargetRef(cmd, triggerAuthSecretTargetRefJson);
-            BuildCtlArgumentsHelper.AddAuthRefSecretKeys(cmd, authRefSecretsKeys);
+            BuildCtlArgumentsHelper.AddAuthRefSecretKeyToParamMap(cmd, authRefSecretKeyToParamMap);
             Console.WriteLine("SUXXXXXXX Creating Trigger Authentication...");
             RunBuildCtlCommand(cmd.ToString(), "SUXXXXXXX Creating Trigger Authentication...");
-        }
-
-        public static void CreateSecrets(string appName, IDictionary<string, string> secretData)
-        {
-            var secrets = JsonConvert.SerializeObject(secretData);
-            var cmd = new StringBuilder();
-            BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "createSecret");
-            BuildCtlArgumentsHelper.AddSecretName(cmd, appName);
-            BuildCtlArgumentsHelper.AddSecretData(cmd, secrets);
-            RunBuildCtlCommand(cmd.ToString(), "SUXXXXXXX Creating secret...");
         }
 
         private static string RunBuildCtlCommand(string args, string msg)
