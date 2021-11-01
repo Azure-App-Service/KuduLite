@@ -31,11 +31,6 @@ namespace Kudu.Core.K8SE
             args.AppendFormat(" -jsonToPatch {0}", jsonToPatch);
         }
 
-        internal static void AddSecretData(StringBuilder args, string secretData)
-        {
-            args.AppendFormat(" -secretData {0}", secretData);
-        }
-
         internal static void AddSecretName(StringBuilder args, string secretName)
         {
             args.AppendFormat(" -secretName {0}", secretName);
