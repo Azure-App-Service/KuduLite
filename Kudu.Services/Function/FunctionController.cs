@@ -41,7 +41,7 @@ namespace Kudu.Services.Function
         [HttpPost]
         public async Task<IActionResult> SyncTrigger()
         {
-            try
+           /* try
             {
                 var headers = Request.Headers.ToDictionary(a => a.Key, a => a.Value.AsEnumerable());
                 var authResult = await SyncTriggerAuthenticator.AuthenticateCaller(headers);
@@ -53,7 +53,7 @@ namespace Kudu.Services.Function
             catch (Exception e)
             {
                 return StatusCode(StatusCodes.Status401Unauthorized, e.Message);
-            }
+            }*/
 
 
             IActionResult result = Ok();

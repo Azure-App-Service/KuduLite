@@ -11,8 +11,6 @@ namespace Kudu.Core.Functions
         [JsonProperty(PropertyName = "metadata")]
         public IDictionary<string, string> Metadata { get; set; }
 
-        // authenticationRef:
-        // name: keda-trigger-auth-kafka-credential
         [JsonProperty(PropertyName = "authenticationRef")]
         public IDictionary<string, string> AuthenticationRef { get; set; }
     }

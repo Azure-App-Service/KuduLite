@@ -131,8 +131,7 @@ namespace Kudu.Core.K8SE
             BuildCtlArgumentsHelper.AddSecretName(cmd, secretName);
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
             BuildCtlArgumentsHelper.AddAuthRefSecretKeyToParamMap(cmd, authRefSecretKeyToParamMap);
-            Console.WriteLine("SUXXXXXXX Creating Trigger Authentication...");
-            RunBuildCtlCommand(cmd.ToString(), "SUXXXXXXX Creating Trigger Authentication...");
+            RunBuildCtlCommand(cmd.ToString(), "Creating Trigger Authentication...");
         }
 
         private static string RunBuildCtlCommand(string args, string msg)
@@ -254,37 +253,6 @@ namespace Kudu.Core.K8SE
             Console.WriteLine("Test Str:     " + str);
             return str;
         }
-
-        //  private static string GetTriggerAuthSecretTargetRefJson(List<string> secretKeys, string secretName)
-        // {
-        //     if ((secretKeys == null)
-        //     {
-        //         return null;
-        //     }
-
-        //     List<TriggerAuthSecretTarget> triggerAuthSecretTargetRef = null;
-        //     foreach (var key in secretKeys)
-        //     {
-        //         TriggerAuthSecretTarget authSecret = new TriggerAuthSecretTarget{
-        //             parameter = key,
-        //             name = secretName,
-        //             key = key
-        //         };
-        //         triggerAuthSecretTargetRef.Add(authSecretRef);
-        //     }
-
-        //     var patchTriggerAuthJson = new PatchTriggerAuthJson { 
-        //             TriggerAuthSpec = new TriggerAuthSpec {
-        //                 SecretTargetRef = triggerAuthSecretTargetRef
-        //             } ;
-        //         };
-           
-        //     Console.WriteLine("Trigger Auth patch is : " + patchTriggerAuthJson);
-
-        //     var triggerAuthBase64 = System.Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes(JsonConvert.SerializeObject(patchTriggerAuthJson))); 
-        //     return triggerAuthBase64;
-        // }
-
         private static string GetBuildMetadataStr(BuildMetadata buildMetadata)
         {
             return $"{buildMetadata.AppName}|{buildMetadata.BuildVersion}|{System.Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes(JsonConvert.SerializeObject(buildMetadata)))}";
