@@ -46,13 +46,10 @@ namespace Kudu.Core.Functions
             IDictionary<string, string> authRef = new Dictionary<string, string>();
             authRef.Add(TriggerAuthConstants.TRIGGER_AUTH_REF_NAME_KEY, functionName);
 
+            
             try
             {
-                string secretKeyToKedaParamMap = System.Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes(JsonConvert.SerializeObject(secretKeyToKedaParam)));
-
-                // functionName + "-secrets" is the filename for appsettings secrets
-                K8SEDeploymentHelper.CreateTriggerAuthenticationRef(functionName + "-secrets", secretKeyToKedaParamMap, functionName);
-
+                CreateTriggerAuthenticationRef(secretKeyToKedaParam, functionName); 
             }
             catch (Exception ex)
             {
@@ -62,7 +59,15 @@ namespace Kudu.Core.Functions
            
             return authRef;
         }
-    
+
+        internal virtual void CreateTriggerAuthenticationRef(IDictionary<string, string> secretKeyToKedaParam, string functionName)
+        {
+            string secretKeyToKedaParamMap = System.Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes(JsonConvert.SerializeObject(secretKeyToKedaParam)));
+
+            // functionName + "-secrets" is the filename for appsettings secrets
+            K8SEDeploymentHelper.CreateTriggerAuthenticationRef(functionName + "-secrets", secretKeyToKedaParamMap, functionName);
+        }
+
         internal string getKedaProperty(string triggerBinding)
         {
             if (triggerBinding == null)
