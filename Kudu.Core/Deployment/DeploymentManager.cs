@@ -53,7 +53,7 @@ namespace Kudu.Core.Deployment
                                  ILogger globalLogger,
                                  IWebHooksManager hooksManager,
                                  IHttpContextAccessor httpContextAccessor)
-            : this(builderFactory, environment, traceFactory, analytics, settings, status, namedLocks["deployment"], globalLogger, hooksManager, httpContextAccessor)
+            : this(builderFactory, environment, traceFactory, analytics, settings, status, namedLocks[Constants.DeploymentLockName], globalLogger, hooksManager, httpContextAccessor)
         { }
 
         public DeploymentManager(ISiteBuilderFactory builderFactory,

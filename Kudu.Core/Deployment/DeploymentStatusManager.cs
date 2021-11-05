@@ -17,7 +17,7 @@ namespace Kudu.Core.Deployment
         public DeploymentStatusManager(IEnvironment environment,
                                        IAnalytics analytics,
                                        IDictionary<string, IOperationLock> namedLocks)
-            : this(environment, analytics, namedLocks["status"])
+            : this(environment, analytics, namedLocks[Constants.StatusLockName])
         { }
 
         public DeploymentStatusManager(IEnvironment environment,

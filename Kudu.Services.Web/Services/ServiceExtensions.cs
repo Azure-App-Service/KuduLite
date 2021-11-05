@@ -43,7 +43,7 @@ namespace Kudu.Services.Web
             IEnvironment environment, 
             ITraceFactory traceFactory)
         {
-            var logStreamManagerLock = KuduWebUtil.GetNamedLocks(traceFactory, environment)["hooks"];
+            var logStreamManagerLock = KuduWebUtil.GetNamedLocks(traceFactory, environment)[Constants.HooksLockName];
 
             services.AddTransient(sp => new LogStreamManager(Path.Combine(environment.RootPath, Constants.LogFilesPath),
                 sp.GetRequiredService<IEnvironment>(),

@@ -33,7 +33,7 @@ namespace Kudu.Services.SourceControl
                                  IDeploymentStatusManager status)
         {
             _tracer = tracer;
-            _deploymentLock = namedLocks["deployment"];
+            _deploymentLock = namedLocks[Constants.DeploymentLockName];
             _environment = environment;
             _repository = repositoryFactory.GetGitRepository();
             _serverConfiguration = serverConfiguration;

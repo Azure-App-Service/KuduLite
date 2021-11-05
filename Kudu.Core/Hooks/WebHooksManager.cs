@@ -43,7 +43,7 @@ namespace Kudu.Core.Hooks
             ITracer tracer,
             IEnvironment environment,
             IDictionary<string, IOperationLock> namedLocks)
-            : this(tracer, environment, namedLocks["hooks"])
+            : this(tracer, environment, namedLocks[Constants.HooksLockName])
         { }
 
         public WebHooksManager(

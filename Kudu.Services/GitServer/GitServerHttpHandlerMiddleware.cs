@@ -29,7 +29,7 @@ namespace Kudu.Services.GitServer
             GitServer = gitServer;
             Tracer = tracer;
             DeploymentManager = deploymentManager;
-            DeploymentLock = namedLocks["deployment"];
+            DeploymentLock = namedLocks[Constants.DeploymentLockName];
         }
 
         public virtual bool IsReusable

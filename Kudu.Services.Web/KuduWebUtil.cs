@@ -93,10 +93,10 @@ namespace Kudu.Services.Web
 
             _namedLocks = new Dictionary<string, IOperationLock>
             {
-                {"status", statusLock},
-                {"ssh", sshKeyLock},
-                {"hooks", hooksLock},
-                {"deployment", _deploymentLock}
+                {Constants.StatusLockName, statusLock},
+                {Constants.SshLockName, sshKeyLock},
+                {Constants.HooksLockName, hooksLock},
+                {Constants.DeploymentLockName, _deploymentLock}
             };
         }
 
