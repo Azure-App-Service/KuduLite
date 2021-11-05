@@ -69,6 +69,11 @@ namespace Kudu.Core.Infrastructure
         // http://weblogs.sqlteam.com/mladenp/archive/2008/10/21/Different-ways-how-to-escape-an-XML-string-in-C.aspx
         public static string EscapeXmlText(string value)
         {
+            if (string.IsNullOrEmpty(value))
+            {
+                return value;
+            }
+
             string result = value;
             foreach (var pair in EscapeXmlChars)
             {
