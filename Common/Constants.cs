@@ -30,6 +30,10 @@ namespace Kudu
         public const string StatusLockFile = "status.lock";
         public const string SSHKeyLockFile = "sshkey.lock";
         public const string HooksLockFile = "hooks.lock";
+        public const string StatusLockName = "status";
+        public const string SshLockName = "ssh";
+        public const string HooksLockName = "hooks";
+        public const string DeploymentLockName = "deployment";
         public const string SSHKeyPath = ".ssh";
         public const string NpmDebugLogFile = "npm-debug.log";
 

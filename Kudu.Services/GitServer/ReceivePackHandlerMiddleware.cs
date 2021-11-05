@@ -56,7 +56,7 @@ namespace Kudu.Services.GitServer
             IEnvironment environment)
         {
             //Get the deployment lock from the locks dictionary
-            var deploymentLock = namedLocks["deployment"];
+            var deploymentLock = namedLocks[Constants.DeploymentLockName];
 
             using (tracer.Step("RpcService.ReceivePack"))
             {

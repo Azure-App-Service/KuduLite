@@ -38,7 +38,7 @@ namespace Kudu.Core.Deployment
             IDeploymentManager deploymentManager,
             IDeploymentStatusManager status,
             IHttpContextAccessor httpContextAccessor)
-            : this(settings, environment, tracer, namedLocks["deployment"], deploymentManager, status, httpContextAccessor)
+            : this(settings, environment, tracer, namedLocks[Constants.DeploymentLockName], deploymentManager, status, httpContextAccessor)
         { }
 
         public FetchDeploymentManager(

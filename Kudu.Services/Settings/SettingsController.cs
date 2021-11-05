@@ -21,7 +21,7 @@ namespace Kudu.Services.Settings
             IDictionary<string, IOperationLock> namedLocks)
         {
             _settingsManager = settingsManager;
-            _deploymentLock = namedLocks["deployment"];
+            _deploymentLock = namedLocks[Constants.DeploymentLockName];
         }
 
         /// <summary>

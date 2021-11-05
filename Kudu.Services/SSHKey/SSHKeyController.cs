@@ -26,7 +26,7 @@ namespace Kudu.Services.SSHKey
         {
             _tracer = tracer;
             _sshKeyManager = sshKeyManager;
-            _sshKeyLock = namedLocks["ssh"];
+            _sshKeyLock = namedLocks[Constants.SshLockName];
         }
 
         /// <summary>

@@ -27,7 +27,7 @@ namespace Kudu.Core.Scan
         public ScanManager(ITracer tracer, IDictionary<string, IOperationLock> namedLocks)
         {
             _tracer = tracer;
-            _scanLock = (AllSafeLinuxLock) namedLocks["deployment"];
+            _scanLock = (AllSafeLinuxLock) namedLocks[Constants.DeploymentLockName];
         }
 
         private static void UpdateScanStatus(String folderPath,ScanStatus status,String Id)
