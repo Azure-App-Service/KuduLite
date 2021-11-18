@@ -173,5 +173,8 @@ namespace Kudu
         public const string ArtifactStagingDirectoryName = "extracted";
 
         public const string K8SEAppTypeDefault = "functionapp,kubernetes,linux";
+
+        public const string IsBuildJob = "IS_BUILD_JOB"; //this is to indicate the current pod is build job pod.
+        public const string UseBuildJob = "USE_BUILD_JOB"; // this is an EC to control whether to use build job. used by build service.
     }
 }

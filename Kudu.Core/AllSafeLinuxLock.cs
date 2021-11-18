@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.SourceControl;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.K8SE;
 using Kudu.Core.Tracing;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -15,23 +16,37 @@ namespace Kudu.Core
     /// <summary>
     /// This 
     /// </summary>
-    public class AllSafeLinuxLock :IOperationLock
+    public class AllSafeLinuxLock : IOperationLock
     {
         private ITraceFactory _traceFactory;
-        private static readonly string locksPath = "/home/site/locks";
-	private const int lockTimeout = 1200; //in seconds
+        private readonly string locksPath = "/home/site/locks"; //The default lock path when the lock is not per site.
+        private const int lockTimeout = 1200; //in seconds
         private string defaultMsg = Resources.DeploymentLockOccMsg;
         private string Msg;
         public AllSafeLinuxLock(string path, ITraceFactory traceFactory)
         {
             _traceFactory = traceFactory;
+            if (K8SEDeploymentHelper.IsBuildJob() || K8SEDeploymentHelper.UseBuildJob())
+            {
+                //Use per site lock after build job is enabled.
+                locksPath = path;
+            }
         }
+
+        public string LocksPath
+        {
+            get
+            {
+                return locksPath;
+            }
+        }
+
         public bool IsHeld
         {
             get
             {
                 Exception exception = null;
-                if (FileSystemHelpers.DirectoryExists(locksPath+"/deployment"))
+                if (FileSystemHelpers.DirectoryExists(locksPath + "/deployment"))
                 {
                     //Console.WriteLine("IsHeld - DirectoryExists");
                     try
@@ -54,10 +69,10 @@ namespace Kudu.Core
                     {
                         // There is some problem with reading the lock info file
                         // Avoid deadlock by releasing this lock/removing the dir
-                        if (exception!=null)
+                        if (exception != null)
                         {
                             //Console.WriteLine("IsHeld - there were exceptions twice -releasing the lock - ie deleting the lock directory");
-                            FileSystemHelpers.DeleteDirectorySafe(locksPath+"/deployment");
+                            FileSystemHelpers.DeleteDirectorySafe(locksPath + "/deployment");
                         }
                     }
                 }
@@ -65,27 +80,27 @@ namespace Kudu.Core
             }
         }
 
-        private static bool IsLockValid()
+        private bool IsLockValid()
         {
             //Console.WriteLine("IsLockValid - InfoFileExists "+FileSystemHelpers.FileExists(locksPath+"/deployment/info.lock"));
-            if (!FileSystemHelpers.FileExists(locksPath+"/deployment/info.lock")) return false;
-            var lockInfo = JObject.Parse(File.ReadAllText(locksPath+"/deployment/info.lock"));
+            if (!FileSystemHelpers.FileExists(locksPath + "/deployment/info.lock")) return false;
+            var lockInfo = JObject.Parse(File.ReadAllText(locksPath + "/deployment/info.lock"));
             //Console.WriteLine(lockInfo);
             var workerId = lockInfo[$"heldByWorker"].ToString();
             var expStr = lockInfo[$"lockExpiry"].ToString();
             //Console.WriteLine("IsLockValid - LockExpiry "+expStr);
             //Console.WriteLine("IsLockValid - HeldByWorker "+workerId);
-            
+
             //Should never have null expiry
             if (string.IsNullOrEmpty(expStr))
             {
                 Console.WriteLine("IsLockValid - Null Expiry | This is Bad");
-                FileSystemHelpers.DeleteDirectorySafe(locksPath+"/deployment");
-                return false;   
+                FileSystemHelpers.DeleteDirectorySafe(locksPath + "/deployment");
+                return false;
             }
-            
+
             var exp = Convert.ToDateTime(expStr.ToString());
-            
+
             if (exp > DateTime.UtcNow)
             {
                 //Console.WriteLine("Expiry Time - "+exp);
@@ -94,13 +109,13 @@ namespace Kudu.Core
                 return true;
             }
             //Console.WriteLine("IsLockValid - Lock is Past expiry - Deleting Lock Dir");
-            FileSystemHelpers.DeleteDirectorySafe(locksPath+"/deployment");
+            FileSystemHelpers.DeleteDirectorySafe(locksPath + "/deployment");
             return false;
         }
 
-        private static void CreateLockInfoFile(string operationName)
+        private void CreateLockInfoFile(string operationName)
         {
-            FileSystemHelpers.CreateDirectory(locksPath+"/deployment");
+            FileSystemHelpers.CreateDirectory(locksPath + "/deployment");
             //Console.WriteLine("CreatingLockDir - Created Actually");
             var lockInfo = new LinuxLockInfo();
             lockInfo.heldByPID = Process.GetCurrentProcess().Id;
@@ -110,14 +125,46 @@ namespace Kudu.Core
             lockInfo.lockExpiry = DateTime.UtcNow.AddSeconds(lockTimeout);
             //Console.WriteLine("CreatingLockDir - LockInfoObj : "+lockInfo);
             var json = JsonConvert.SerializeObject(lockInfo);
-            FileSystemHelpers.WriteAllText(locksPath+"/deployment/info.lock",json);
+            FileSystemHelpers.WriteAllText(locksPath + "/deployment/info.lock", json);
         }
-        
-        public OperationLockInfo LockInfo { get; }
-        
+
+        public OperationLockInfo LockInfo
+        {
+            get
+            {
+                if (IsHeld)
+                {
+                    var info = ReadLockInfo();
+                    _traceFactory.GetTracer().Trace("Lock '{0}' is currently held by '{1}' operation started at {2}.", locksPath + "/deployment/info.lock", info.OperationName, info.AcquiredDateTime);
+                    return info;
+                }
+
+                // lock info represent no owner
+                return new OperationLockInfo();
+            }
+        }
+
+
+        private OperationLockInfo ReadLockInfo()
+        {
+            try
+            {
+                return JsonConvert.DeserializeObject<OperationLockInfo>(FileSystemHelpers.ReadAllTextFromFile(locksPath + "/deployment/info.lock")) ?? new OperationLockInfo { OperationName = "unknown" };
+            }
+            catch (Exception ex)
+            {
+                _traceFactory.GetTracer().TraceError(ex);
+                return new OperationLockInfo
+                {
+                    OperationName = "unknown",
+                    StackTrace = ex.ToString()
+                };
+            };
+        }
+
         public bool Lock(string operationName)
         {
-            if (FileSystemHelpers.DirectoryExists(locksPath+"/deployment"))
+            if (FileSystemHelpers.DirectoryExists(locksPath + "/deployment"))
             {
                 // Directory exists implies a lock exists
                 // Either lock info is still being written or it exists
@@ -135,9 +182,9 @@ namespace Kudu.Core
 
         public void InitializeAsyncLocks()
         {
-           //no-op
+            //no-op
         }
-        
+
         public IRepositoryFactory RepositoryFactory { get; set; }
 
         public Task LockAsync(string operationName)
@@ -147,12 +194,12 @@ namespace Kudu.Core
 
         public void Release()
         {
-            if (FileSystemHelpers.DirectoryExists(locksPath+"/deployment"))
+            if (FileSystemHelpers.DirectoryExists(locksPath + "/deployment"))
             {
                 //Console.WriteLine("Releasing Lock - RemovingDir");
                 _traceFactory.GetTracer().Trace("Releasing Lock ");
-                FileSystemHelpers.DeleteDirectorySafe(locksPath+"/deployment");
-                
+                FileSystemHelpers.DeleteDirectorySafe(locksPath + "/deployment");
+
             }
             else
             {
@@ -163,7 +210,7 @@ namespace Kudu.Core
         public string GetLockMsg()
         {
             //throw new NotImplementedException();
-            if(Msg == null || "".Equals(Msg))
+            if (Msg == null || "".Equals(Msg))
             {
                 return defaultMsg;
             }
@@ -174,7 +221,7 @@ namespace Kudu.Core
         public void SetLockMsg(string msg)
         {
             this.Msg = msg;
-            
+
         }
 
         private class LinuxLockInfo
@@ -187,7 +234,7 @@ namespace Kudu.Core
 
             public override string ToString()
             {
-                return "Expiry: "+lockExpiry+"; PID : "+heldByPID+" ; TID : "+heldByTID+" ; OP: "+heldByOp+" ; Worker : "+heldByWorker;
+                return "Expiry: " + lockExpiry + "; PID : " + heldByPID + " ; TID : " + heldByTID + " ; OP: " + heldByOp + " ; Worker : " + heldByWorker;
             }
         }
     }

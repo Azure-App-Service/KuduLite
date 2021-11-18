@@ -5,9 +5,14 @@ namespace Kudu.Tests
 {
     public class TestMockedEnvironment
     {
-        public static IEnvironment GetMockedEnvironment(string rootPath = "rootPath", string binPath = "binPath", string repositoryPath = "repositoryPath", string requestId = "requestId", string kuduConsoleFullPath = "kuduConsoleFullPath")
+        public static IEnvironment GetMockedEnvironment(string rootPath = "rootPath", string binPath = "binPath", string repositoryPath = "repositoryPath", string requestId = "requestId", string kuduConsoleFullPath = "kuduConsoleFullPath", string appName = null)
         {
-            return new Environment(rootPath, binPath, repositoryPath, requestId, kuduConsoleFullPath, new HttpContextAccessor());
+            if (appName != null)
+            {
+                rootPath = rootPath + "/" + appName;
+            }
+
+            return new Environment(rootPath, binPath, repositoryPath, requestId, kuduConsoleFullPath, new HttpContextAccessor(), appName);
         }
     }
 }
