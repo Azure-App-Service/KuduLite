@@ -55,6 +55,7 @@ namespace Kudu.Console
 
             if (args.Length < 2)
             {
+                //example: kudu.exe /home/apps/layliunode2/site /opt/Kudu/msbuild
                 System.Console.WriteLine("Usage: kudu.exe appRoot wapTargets [deployer]");
                 return 1;
             }
@@ -67,9 +68,8 @@ namespace Kudu.Console
             appRoot = args[0];
             string wapTargets = args[1];
             string deployer = args.Length == 2 ? null : args[2];
-            string requestId = System.Environment.GetEnvironmentVariable(Constants.RequestIdHeader);
 
-            env = GetEnvironment(appRoot, requestId);
+            env = GetEnvironment(appRoot);
             ISettings settings = new XmlSettings.Settings(GetSettingsPath(env));
             settingsManager = new DeploymentSettingsManager(settings);
 
@@ -268,10 +268,12 @@ namespace Kudu.Console
             return Path.Combine(environment.DeploymentsPath, Constants.DeploySettingsPath);
         }
 
-        private static IEnvironment GetEnvironment(string siteRoot, string requestId)
+        private static IEnvironment GetEnvironment(string siteRoot)
         {
             string root = Path.GetFullPath(Path.Combine(siteRoot, ".."));
             string appName = root.Replace("/home/apps/","");
+            var requestIdEnv = string.Format(Constants.RequestIdEnvFormat, appName);
+            string requestId = System.Environment.GetEnvironmentVariable(requestIdEnv);
 
             // CORE TODO : test by setting SCM_REPOSITORY_PATH 
             // REVIEW: this looks wrong because it ignores SCM_REPOSITORY_PATH

@@ -60,8 +60,28 @@ namespace Kudu.Services.Web
                 siteRepoDir = "/site/repository";
             }
 
+            //Use the appName from git as the real app name of the current git operation.
+            string[] pathParts = context.Request.Path.ToString().Split("/");
+
+            if (pathParts != null && pathParts.Length >= 1 && IsGitRoute(context.Request.Path))
+            {
+                appName = pathParts[1];
+                appName = appName.Trim().Replace(".git", "");
+                if (!FileSystemHelpers.DirectoryExists(homeDir + appName))
+                {
+                    context.Response.StatusCode = 404;
+                    await context.Response.WriteAsync("The repository does not exist", Encoding.UTF8);
+                    return;
+                }
+            }
+
+            serverConfig.GitServerRoot = appName + ".git";
+
+            // TODO: Use Path.Combine
+            environment.RepositoryPath = $"{homeDir}{appName}{siteRepoDir}";
+
             // Cache the App Environment for this request
-            context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appType));
+            context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, context, appNamenamespace, appType));
 
             // Cache the appName for this request
             context.Items.TryAdd("appName", appName);
@@ -118,23 +138,6 @@ namespace Kudu.Services.Web
                 context.Items.TryAdd("appNamespace", appNamenamespace);
             }
 
-            string[] pathParts = context.Request.Path.ToString().Split("/");
-
-            if (pathParts != null && pathParts.Length >= 1 && IsGitRoute(context.Request.Path))
-            {
-                appName = pathParts[1];
-                appName = appName.Trim().Replace(".git", "");
-                if (!FileSystemHelpers.DirectoryExists(homeDir + appName))
-                {
-                    context.Response.StatusCode = 404;
-                    await context.Response.WriteAsync("The repository does not exist", Encoding.UTF8);
-                    return;
-                }
-            }
-
-            serverConfig.GitServerRoot = appName + ".git";
-            // TODO: Use Path.Combine
-            environment.RepositoryPath = $"{homeDir}{appName}{siteRepoDir}";
             await _next.Invoke(context);
         }
 

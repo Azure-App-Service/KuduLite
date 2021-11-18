@@ -163,14 +163,12 @@ namespace Kudu.Services.Web
 
             // Its required to register the IHttpContextAccessor first
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
+            // Per request environment
             services.AddScoped<IEnvironment>(provider => {
                 var httpContext = provider.GetRequiredService<IHttpContextAccessor>().HttpContext;
                 return KuduWebUtil.GetEnvironment(_hostingEnvironment, provider.GetRequiredService<IDeploymentSettingsManager>(), httpContext);
             });
-
-            // Per request environment
-            services.AddScoped(sp =>
-                KuduWebUtil.GetEnvironment(_hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>()));
 
             services.AddDeploymentServices(environment);
 

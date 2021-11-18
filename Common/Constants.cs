@@ -93,6 +93,7 @@ namespace Kudu
 
         public const string ArrLogIdHeader = "x-arr-log-id";
         public const string RequestIdHeader = "x-ms-request-id";
+        public const string RequestIdEnvFormat = "x-ms-request-id@@{0}";
         public const string ClientRequestIdHeader = "x-ms-client-request-id";
         public const string RequestDateTimeUtc = "RequestDateTimeUtc";
 

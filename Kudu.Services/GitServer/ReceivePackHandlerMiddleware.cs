@@ -36,6 +36,7 @@ using Microsoft.AspNetCore.Builder;
 using System.Text;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Services.GitServer
 {
@@ -93,15 +94,19 @@ namespace Kudu.Services.GitServer
                         ChangeSet tempChangeSet;
                         using (deploymentManager.CreateTemporaryDeployment(Resources.ReceivingChanges, out tempChangeSet))
                         {
+                            var env = GetEnvironment(context, environment);
+                            var requestIdEnv = string.Format(Constants.RequestIdEnvFormat, env.K8SEAppName);
+
                             // to pass to kudu.exe post receive hook
-                            System.Environment.SetEnvironmentVariable(Constants.RequestIdHeader, environment.RequestId);
+                            System.Environment.SetEnvironmentVariable(requestIdEnv, env.RequestId);
+
                             try
                             {
                                 gitServer.Receive(context.Request.Body, context.Response.Body);
                             }
                             finally
                             {
-                                System.Environment.SetEnvironmentVariable(Constants.RequestIdHeader, null);
+                                System.Environment.SetEnvironmentVariable(requestIdEnv, null);
                             }
                         }
 
@@ -127,6 +132,19 @@ namespace Kudu.Services.GitServer
             response.Headers["Expires"] = "Fri, 01 Jan 1980 00:00:00 GMT";
             response.Headers["Pragma"] = "no-cache";
             response.Headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate";
+        }
+
+
+        private IEnvironment GetEnvironment(HttpContext context, IEnvironment environment)
+        {
+            if (!K8SEDeploymentHelper.IsK8SEEnvironment())
+            {
+                return environment;
+            }
+            else
+            {
+                return (IEnvironment)context.Items["environment"];
+            }
         }
     }
 
