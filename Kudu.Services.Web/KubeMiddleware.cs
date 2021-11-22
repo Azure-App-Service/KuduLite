@@ -49,15 +49,13 @@ namespace Kudu.Services.Web
             string siteRepoDir = "";
             if (OSDetector.IsOnWindows())
             {
-                // K8SE TODO : Move to constants
-                homeDir = "C:\\repos\\apps\\";
-                siteRepoDir = "\\site\\repository";
+                homeDir = Constants.WindowsAppHomeDir;
+                siteRepoDir = Constants.WindowsSiteRepoDir;
             }
             else
             {
-                // K8SE TODO : Move to constants
-                homeDir = "/home/apps/";
-                siteRepoDir = "/site/repository";
+                homeDir = Constants.LinuxAppHomeDir;
+                siteRepoDir = Constants.LinuxSiteRepoDir;
             }
 
             //Use the appName from git as the real app name of the current git operation.
@@ -163,7 +161,7 @@ namespace Kudu.Services.Web
             string appNamespace = null,
             string appType = null)
         {
-            var root = KubeMiddleware.ResolveRootPath(home, appName);
+            var root = PathResolver.ResolveRootPath(home, appName);
             var siteRoot = Path.Combine(root, Constants.SiteFolder);
             var repositoryPath = Path.Combine(siteRoot,
                 settings == null ? Constants.RepositoryPath : settings.GetRepositoryPath());
@@ -173,32 +171,6 @@ namespace Kudu.Services.Web
                 Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
             return new Core.Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId,
                 kuduConsoleFullPath, null, appName, appNamespace, appType);
-        }
-
-        /// <summary>
-        /// Resolves the root path for the app being served by
-        /// Multitenant Kudu
-        /// </summary>
-        /// <param name="home"></param>
-        /// <param name="appName"></param>
-        /// <returns></returns>
-        public static string ResolveRootPath(string home, string appName)
-        {
-            // The HOME path should always be set correctly
-            //var path = System.Environment.ExpandEnvironmentVariables(@"%HOME%");
-            var path = $"{home}{appName}";
-
-            FileSystemHelpers.EnsureDirectory(path);
-            FileSystemHelpers.EnsureDirectory($"{path}/site/artifacts/hostingstart");
-            // For users running Windows Azure Pack 2 (WAP2), %HOME% actually points to the site folder,
-            // which we don't want here. So yank that segment if we detect it.
-            if (Path.GetFileName(path).Equals(Constants.SiteFolder, StringComparison.OrdinalIgnoreCase))
-            {
-                path = Path.GetDirectoryName(path);
-            }
-
-            return path;
-
         }
     }
 
