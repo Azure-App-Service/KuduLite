@@ -11,7 +11,7 @@ namespace Kudu.Services.Web.Tracing
         private static readonly object TraceKey = new object();
         private static readonly object TraceFileKey = new object();
 
-        private static Func<ITracer> _traceFactory;
+        private static Func<IServiceProvider, ITracer> _traceFactory;
 
         // CORE TODO The CurrentRequestTraceFile - Done and HttpMethod properties
         // were replaced with methods that require the caller to pass the context, as HttpContext.Current
@@ -35,7 +35,7 @@ namespace Kudu.Services.Web.Tracing
 
         internal static TraceLevel TraceLevel { get; set; }
 
-        public static void SetTraceFactory(Func<ITracer> traceFactory)
+        public static void SetTraceFactory(Func<IServiceProvider, ITracer> traceFactory)
         {
             _traceFactory = traceFactory;
         }
@@ -70,7 +70,7 @@ namespace Kudu.Services.Web.Tracing
                 httpContext.Items[TraceFileKey] = String.Format(Constants.TraceFileFormat, Environment.MachineName,
                     Guid.NewGuid().ToString("D"));
 
-                tracer = _traceFactory();
+                tracer = _traceFactory(httpContext.RequestServices);
                 httpContext.Items[TraceKey] = tracer;
             }
 

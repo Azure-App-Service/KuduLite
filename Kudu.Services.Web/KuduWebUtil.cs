@@ -26,6 +26,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Authorization;
 using Environment = Kudu.Core.Environment;
 using Org.BouncyCastle.Asn1.Ocsp;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Services.Web
 {
@@ -332,19 +333,50 @@ namespace Kudu.Services.Web
         /// default configuration during the runtime.
         /// </summary>
         internal static IEnvironment GetEnvironment(IWebHostEnvironment hostingEnvironment,
-            IDeploymentSettingsManager settings = null,
             HttpContext httpContext = null)
         {
+            string appName = null;
+            string appNamenamespace = null;
+            string appType = null;
             var root = PathResolver.ResolveRootPath();
+            if (httpContext != null)
+            {
+                appName = K8SEDeploymentHelper.GetAppName(httpContext);
+                appNamenamespace = K8SEDeploymentHelper.GetAppNamespace(httpContext);
+                appType = K8SEDeploymentHelper.GetAppKind(httpContext);
+
+                string homeDir = "";
+                if (OSDetector.IsOnWindows())
+                {
+                    homeDir = Constants.WindowsAppHomeDir;
+                }
+                else
+                {
+                    homeDir = Constants.LinuxAppHomeDir;
+                }
+
+                // Cache the App Environment for this request
+                root = PathResolver.ResolveRootPath(homeDir, appName);
+            }
+
             var siteRoot = Path.Combine(root, Constants.SiteFolder);
-            var repositoryPath = Path.Combine(siteRoot,
-                settings == null ? Constants.RepositoryPath : settings.GetRepositoryPath());
+            var repositoryPath = Path.Combine(siteRoot, Constants.RepositoryPath);
             var binPath = AppContext.BaseDirectory;
             var requestId = httpContext != null ? httpContext.Request.GetRequestId() : null;
             var kuduConsoleFullPath =
                 Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
             return new Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId,
-                kuduConsoleFullPath, null);
+                kuduConsoleFullPath, null, appName, appNamenamespace, appType);
+        }
+
+        internal static void UpdateEnvironmentBySettings(IEnvironment environment,
+            IDeploymentSettingsManager settings = null)
+        {
+            if (settings != null)
+            {
+                var repositoryPath = settings.GetRepositoryPath();
+                environment.RepositoryPath = Path.Combine(environment.SiteRootPath, repositoryPath);
+            }
         }
 
         /// <summary>

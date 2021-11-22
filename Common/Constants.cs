@@ -25,6 +25,11 @@ namespace Kudu
         public const string ZipTempPath = "zipdeploy";
         public const string ZipExtractPath = "extracted";
 
+        public const string WindowsAppHomeDir = @"C:\repos\apps\";
+        public const string LinuxAppHomeDir = "/home/apps/";
+        public const string WindowsSiteRepoDir = @"\site\repository";
+        public const string LinuxSiteRepoDir = "/site/repository";
+
         public const string LockPath = "locks";
         public const string DeploymentLockFile = "deployments.lock";
         public const string StatusLockFile = "status.lock";
