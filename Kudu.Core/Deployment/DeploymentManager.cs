@@ -9,10 +9,12 @@ using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
+using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Helpers;
 using Kudu.Core.Hooks;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.K8SE;
+using Kudu.Core.Kube;
 using Kudu.Core.Settings;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
@@ -301,6 +303,22 @@ namespace Kudu.Core.Deployment
                         }
 
                         string appName = _environment.K8SEAppName;
+
+                        if (K8SEDeploymentHelper.IsBuildJob())
+                        {
+                            tracer.Trace("Upload deployment files");
+                            var authKey = System.Environment.GetEnvironmentVariable(Constants.WebSiteAuthEncryptionKey);
+                            var token = AuthHelper.CreateToken(authKey);
+                            var host = System.Environment.GetEnvironmentVariable(Constants.HttpHost);
+                            
+                            DeploymentFileHelper deploymentFileHelper = new DeploymentFileHelper(host, changeSet.Id, token, tracer);
+                            var artifactFilePath = _environment.SiteRootPath + "/artifacts/" + _environment.CurrId + "/" + Constants.ArtifactZipFileName;
+
+                            await deploymentFileHelper.UploadArtifact(artifactFilePath);
+                            await deploymentFileHelper.UploadLog(_environment.SiteRootPath);
+                            await deploymentFileHelper.UploadCompleteFile(_environment.SiteRootPath);
+                        }
+                        
                         string repoUrl = deploymentInfo == null ? "empty" : deploymentInfo.RepositoryUrl;
                         if(deploymentInfo == null)
                         {
@@ -601,6 +619,25 @@ namespace Kudu.Core.Deployment
             };
         }
 
+        public bool DoFullBuild(IRepository repository,DeploymentInfoBase deploymentInfo, bool doFullBuildByDefault)
+        {
+            var perDeploymentSettings = this.PreparePerDeploymentSettingsManager(doFullBuildByDefault, repository.RepositoryPath);
+
+            return perDeploymentSettings.DeployWithOryxBuild(deploymentInfo.ShouldBuildArtifact);
+        }
+
+        public IDeploymentSettingsManager PreparePerDeploymentSettingsManager(bool fullBuildByDefault, string repositoryPath)
+        {
+            var perDeploymentDefaults = new Dictionary<string, string> { { SettingsKeys.DoBuildDuringDeployment, fullBuildByDefault.ToString() } };
+            var settingsProviders = _settings.SettingsProviders.Concat(
+                new[] { new BasicSettingsProvider(perDeploymentDefaults, SettingsProvidersPriority.PerDeploymentDefault) });
+
+            var perDeploymentSettings = DeploymentSettingsManager.BuildPerDeploymentSettingsManager(repositoryPath, settingsProviders);
+
+            perDeploymentSettings.SetValue(SettingsKeys.DoBuildDuringDeployment, fullBuildByDefault.ToString());
+            return perDeploymentSettings;
+        }
+
         /// <summary>
         /// Builds and deploys a particular changeset. Puts all build artifacts in a deployments/{id}
         /// </summary>
@@ -638,14 +675,9 @@ namespace Kudu.Core.Deployment
                 ISiteBuilder builder = null;
 
                 // Add in per-deploy default settings values based on the details of this deployment
-                var perDeploymentDefaults = new Dictionary<string, string> { { SettingsKeys.DoBuildDuringDeployment, fullBuildByDefault.ToString() } };
-                var settingsProviders = _settings.SettingsProviders.Concat(
-                    new[] { new BasicSettingsProvider(perDeploymentDefaults, SettingsProvidersPriority.PerDeploymentDefault) });
-
-                var perDeploymentSettings = DeploymentSettingsManager.BuildPerDeploymentSettingsManager(repository.RepositoryPath, settingsProviders);
+                var perDeploymentSettings = PreparePerDeploymentSettingsManager(fullBuildByDefault, repository.RepositoryPath);
 
                 string delayMaxInStr = perDeploymentSettings.GetValue(SettingsKeys.MaxRandomDelayInSec);
-                perDeploymentSettings.SetValue(SettingsKeys.DoBuildDuringDeployment, fullBuildByDefault.ToString());
                 if (!String.IsNullOrEmpty(delayMaxInStr))
                 {
                     int maxDelay;

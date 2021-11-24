@@ -248,7 +248,7 @@ namespace Kudu.Core.Helpers
             }
 
             int numOfArtifacts = OryxBuildConstants.FunctionAppBuildSettings.ConsumptionBuildMaxFiles;
-            DeploymentHelper.PurgeBuildArtifactsIfNecessary(artifactDirectory, BuildArtifactType.Squashfs, context.Tracer, numOfArtifacts);
+            Deployment.DeploymentHelper.PurgeBuildArtifactsIfNecessary(artifactDirectory, BuildArtifactType.Squashfs, context.Tracer, numOfArtifacts);
             return file;
         }
     }
