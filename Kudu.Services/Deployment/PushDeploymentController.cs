@@ -574,58 +574,9 @@ namespace Kudu.Services.Deployment
         }
 
 
-        private Task LocalZipFetch(IRepository repository, DeploymentInfoBase deploymentInfo, string targetBranch,
-            ILogger logger, ITracer tracer)
+        private Task LocalZipFetch(IRepository repository, DeploymentInfoBase deploymentInfo, string targetBranch, ILogger logger, ITracer tracer)
         {
-            var zipDeploymentInfo = (ArtifactDeploymentInfo)deploymentInfo;
-
-            // For this kind of deployment, RepositoryUrl is a local path.
-            var sourceZipFile = zipDeploymentInfo.RepositoryUrl;
-            var extractTargetDirectory = repository.RepositoryPath;
-
-            var info = FileSystemHelpers.FileInfoFromFileName(sourceZipFile);
-            var sizeInMb = (info.Length / (1024f * 1024f)).ToString("0.00", CultureInfo.InvariantCulture);
-
-            var message = String.Format(
-                CultureInfo.InvariantCulture,
-                "Cleaning up temp folders from previous zip deployments and extracting pushed zip file {0} ({1} MB) to {2}",
-                info.FullName,
-                sizeInMb,
-                extractTargetDirectory);
-
-            logger.Log(message);
-
-            using (tracer.Step(message))
-            {
-                // If extractTargetDirectory already exists, rename it so we can delete it concurrently with
-                // the unzip (along with any other junk in the folder)
-                var targetInfo = FileSystemHelpers.DirectoryInfoFromDirectoryName(extractTargetDirectory);
-                if (targetInfo.Exists)
-                {
-                    var moveTarget = Path.Combine(targetInfo.Parent.FullName, Path.GetRandomFileName());
-                    targetInfo.MoveTo(moveTarget);
-                }
-
-                DeleteFilesAndDirsExcept(sourceZipFile, extractTargetDirectory, tracer);
-
-                FileSystemHelpers.CreateDirectory(extractTargetDirectory);
-
-                using (var file = info.OpenRead())
-
-                using (var zip = new ZipArchive(file, ZipArchiveMode.Read))
-                {
-                    deploymentInfo.repositorySymlinks = zip.Extract(extractTargetDirectory);
-
-                    if (!OSDetector.IsOnWindows())
-                    {
-                        CreateZipSymlinks(deploymentInfo.repositorySymlinks, extractTargetDirectory);
-                        PermissionHelper.ChmodRecursive("777", extractTargetDirectory, tracer, TimeSpan.FromMinutes(1));
-                    }
-                }
-            }
-
-            CommitRepo(repository, zipDeploymentInfo);
-            return Task.CompletedTask;
+            return DeploymentHelper.LocalZipFetch(_environment.ZipTempPath, repository, deploymentInfo, logger, tracer);
         }
 
         private async Task LocalZipHandler(IRepository repository, DeploymentInfoBase deploymentInfo,
@@ -668,7 +619,7 @@ namespace Kudu.Services.Deployment
                 }
             }
 
-            CommitRepo(repository, zipDeploymentInfo);
+            DeploymentHelper.CommitRepo(repository, zipDeploymentInfo);
 
             bool isFunctionJson(string fullName)
             {
@@ -685,19 +636,6 @@ namespace Kudu.Services.Deployment
             // least 1 commit in the IRepository. Even though there is no repo per se in this
             // scenario, deployment pipeline still generates a NullRepository
             repository.Commit(zipDeploymentInfo.Message, zipDeploymentInfo.Author, zipDeploymentInfo.AuthorEmail);
-        }
-
-        private static void CreateZipSymlinks(IDictionary<string, string> symLinks, string extractTargetDirectory)
-        {
-            if (!OSDetector.IsOnWindows() && symLinks != null)
-            {
-                foreach (var symlinkPair in symLinks)
-                {
-                    string symLinkFilePath = Path.Combine(extractTargetDirectory, symlinkPair.Key);
-                    FileSystemHelpers.EnsureDirectory(FileSystemHelpers.GetDirectoryName(Path.Combine(extractTargetDirectory, symlinkPair.Key)));
-                    FileSystemHelpers.CreateRelativeSymlinks(symLinkFilePath, symlinkPair.Value, TimeSpan.FromSeconds(5));
-                }
-            }
         }
 
         private async Task WriteSitePackageZip(ArtifactDeploymentInfo zipDeploymentInfo, ITracer tracer)
@@ -728,37 +666,8 @@ namespace Kudu.Services.Deployment
                 }
             }
 
-            DeploymentHelper.PurgeBuildArtifactsIfNecessary(_environment.SitePackagesPath, BuildArtifactType.Zip,
+            Core.Deployment.DeploymentHelper.PurgeBuildArtifactsIfNecessary(_environment.SitePackagesPath, BuildArtifactType.Zip,
                 tracer, _settings.GetMaxZipPackageCount());
-        }
-
-        private void DeleteFilesAndDirsExcept(string fileToKeep, string dirToKeep, ITracer tracer)
-        {
-            // Best effort. Using the "Safe" variants does retries and swallows exceptions but
-            // we may catch something non-obvious.
-            try
-            {
-                var files = FileSystemHelpers.GetFiles(_environment.ZipTempPath, "*")
-                    .Where(p => !PathUtilityFactory.Instance.PathsEquals(p, fileToKeep));
-
-                foreach (var file in files)
-                {
-                    FileSystemHelpers.DeleteFileSafe(file);
-                }
-
-                var dirs = FileSystemHelpers.GetDirectories(_environment.ZipTempPath)
-                    .Where(p => !PathUtilityFactory.Instance.PathsEquals(p, dirToKeep));
-
-                foreach (var dir in dirs)
-                {
-                    FileSystemHelpers.DeleteDirectorySafe(dir);
-                }
-            }
-            catch (Exception ex)
-            {
-                tracer.TraceError(ex, "Exception encountered during zip folder cleanup");
-                throw;
-            }
         }
 
         private string GetArticfactURLFromARMJSON(JObject requestObject)
@@ -868,10 +777,10 @@ namespace Kudu.Services.Deployment
                 }
 
                 // Deletes all files and directories except for artifactFileStagingPath and artifactDirectoryStagingPath
-                DeleteFilesAndDirsExcept(artifactFileStagingPath, artifactDirectoryStagingPath, tracer);
+                DeploymentHelper.DeleteFilesAndDirsExcept(artifactFileStagingPath, artifactDirectoryStagingPath, _environment.ZipTempPath, tracer);
 
                 // The deployment flow expects at least 1 commit in the IRepository commit, refer to CommitRepo() for more info
-                CommitRepo(repository, artifactDeploymentInfo);
+                DeploymentHelper.CommitRepo(repository, artifactDeploymentInfo);
             }
         }
 

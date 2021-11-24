@@ -1,6 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.IO.Compression;
-using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.SourceControl;
 using Kudu.Contracts.Tracing;
@@ -8,6 +8,7 @@ using Kudu.Core;
 using Kudu.Core.Deployment;
 using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Hooks;
+using Kudu.Core.K8SE;
 using Kudu.Core.Settings;
 using Kudu.Core.SourceControl.Git;
 using Kudu.Core.Tracing;
@@ -44,8 +45,9 @@ namespace Kudu.Services.Web
         {
             services.AddTransient(sp =>
             {
+                var env = sp.GetEnvironment(environment);
                 var traceFactory = sp.GetRequiredService<ITraceFactory>();
-                var logStreamManagerLock = KuduWebUtil.GetNamedLocks(traceFactory, environment)[Constants.HooksLockName];
+                var logStreamManagerLock = KuduWebUtil.GetNamedLocks(traceFactory, env)[Constants.HooksLockName];
                 return new LogStreamManager(Path.Combine(environment.RootPath, Constants.LogFilesPath),
                     sp.GetRequiredService<IEnvironment>(),
                     sp.GetRequiredService<IDeploymentSettingsManager>(),
@@ -59,8 +61,9 @@ namespace Kudu.Services.Web
             services.AddTransient<IDeploymentEnvironment, DeploymentEnvironment>();
             services.AddScoped<IGitServer>(sp =>
             {
-                var tracerFactory = sp.GetRequiredService<ITraceFactory>();
-                var deploymentLock = KuduWebUtil.GetDeploymentLock(tracerFactory, environment);
+                var env = sp.GetEnvironment(environment);
+                var traceFactory = sp.GetRequiredService<ITraceFactory>();
+                var deploymentLock = KuduWebUtil.GetDeploymentLock(traceFactory, env);
                 return new GitExeServer(
                     sp.GetRequiredService<IEnvironment>(),
                     deploymentLock,
@@ -68,7 +71,7 @@ namespace Kudu.Services.Web
                     sp.GetRequiredService<IRepositoryFactory>(),
                     sp.GetRequiredService<IDeploymentEnvironment>(),
                     sp.GetRequiredService<IDeploymentSettingsManager>(),
-                    tracerFactory);
+                    traceFactory);
             });
         }
 
@@ -108,6 +111,16 @@ namespace Kudu.Services.Web
             services.AddScoped<IDeploymentStatusManager, DeploymentStatusManager>();
             services.AddScoped<ISiteBuilderFactory, SiteBuilderFactory>();
             services.AddScoped<IWebHooksManager, WebHooksManager>();
+        }
+
+        internal static IEnvironment GetEnvironment(this IServiceProvider sp, IEnvironment environment)
+        {
+            if (K8SEDeploymentHelper.IsBuildJob() || K8SEDeploymentHelper.UseBuildJob())
+            {
+                return sp.GetRequiredService<IEnvironment>();
+            }
+
+            return environment;
         }
     }
 }

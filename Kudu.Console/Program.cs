@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading.Tasks;
 using Kudu.Console.Services;
 using Kudu.Contracts.Infrastructure;
@@ -16,16 +18,16 @@ using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Helpers;
 using Kudu.Core.Hooks;
 using Kudu.Core.Infrastructure;
+using Kudu.Core.K8SE;
+using Kudu.Core.Kube;
 using Kudu.Core.Settings;
 using Kudu.Core.SourceControl;
 using Kudu.Core.SourceControl.Git;
 using Kudu.Core.Tracing;
-using System.Reflection;
-using XmlSettings;
-using k8s;
-using IRepository = Kudu.Core.SourceControl.IRepository;
 using log4net;
 using log4net.Config;
+using XmlSettings;
+using IRepository = Kudu.Core.SourceControl.IRepository;
 
 namespace Kudu.Console
 {
@@ -34,6 +36,10 @@ namespace Kudu.Console
         private static IEnvironment env;
         private static IDeploymentSettingsManager settingsManager;
         private static string appRoot;
+        private static ITracer tracer;
+        private static TraceLevel level;
+        private static ITraceFactory traceFactory;
+        private static ConsoleLogger logger = new ConsoleLogger();
 
         private static int Main(string[] args)
         {
@@ -57,6 +63,7 @@ namespace Kudu.Console
             {
                 //example: kudu.exe /home/apps/layliunode2/site /opt/Kudu/msbuild
                 System.Console.WriteLine("Usage: kudu.exe appRoot wapTargets [deployer]");
+                System.Console.WriteLine("Usage: kudu.exe appRoot buildType gitRepositoryUri [deployer]");
                 return 1;
             }
 
@@ -70,13 +77,13 @@ namespace Kudu.Console
             string deployer = args.Length == 2 ? null : args[2];
 
             env = GetEnvironment(appRoot);
-            ISettings settings = new XmlSettings.Settings(GetSettingsPath(env));
+            ISettings settings = new XmlSettings.Settings(GetSettingsPath());
             settingsManager = new DeploymentSettingsManager(settings);
 
             // Setup the trace
-            TraceLevel level = settingsManager.GetTraceLevel();
-            ITracer tracer = GetTracer(env, level);
-            ITraceFactory traceFactory = new TracerFactory(() => tracer);
+            level = settingsManager.GetTraceLevel();
+            tracer = GetTracer();
+            traceFactory = new TracerFactory(() => tracer);
 
             // Calculate the lock path
             string lockPath = Path.Combine(env.SiteRootPath, Constants.LockPath);
@@ -84,38 +91,135 @@ namespace Kudu.Console
 
             IOperationLock deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
 
-            if (deploymentLock.IsHeld)
+            if (K8SEDeploymentHelper.IsBuildJob())
             {
-                return PerformDeploy(appRoot, wapTargets, deployer, lockPath, env, settingsManager, level, tracer, traceFactory, deploymentLock);
+                string buildType = args[1];
+                string repositoryUri = args[2];
+                return RunBuildJob(buildType, repositoryUri, deployer, lockPath, deploymentLock);
             }
 
-            // Cross child process lock is not working on linux via mono.
-            // When we reach here, deployment lock must be HELD! To solve above issue, we lock again before continue.
-            try
+            if (K8SEDeploymentHelper.UseBuildJob())
             {
-                return deploymentLock.LockOperation(() =>
+                if (deploymentLock.IsHeld)
                 {
-                    return PerformDeploy(appRoot, wapTargets, deployer, lockPath, env, settingsManager, level, tracer, traceFactory, deploymentLock);
-                }, "Performing deployment", TimeSpan.Zero);
+                    return BuildJobHelper.RunWithBuildJob(appRoot, env, "git", level, tracer).Result;
+                }
+
+                // Cross child process lock is not working on linux via mono.
+                // When we reach here, deployment lock must be HELD! To solve above issue, we lock again before continue.
+                try
+                {
+                    return deploymentLock.LockOperation(() =>
+                    {
+                        return BuildJobHelper.RunWithBuildJob(appRoot, env, "git", level, tracer).Result;
+                    }, "DeployWithBuildJob", TimeSpan.Zero);
+                }
+                catch (LockOperationException)
+                {
+                    return -1;
+                }
             }
-            catch (LockOperationException)
+            else
             {
-                return -1;
+                if (deploymentLock.IsHeld)
+                {
+                    return RunWithoutBuildJob(wapTargets, deployer, lockPath, deploymentLock);
+                }
+
+                // Cross child process lock is not working on linux via mono.
+                // When we reach here, deployment lock must be HELD! To solve above issue, we lock again before continue.
+                try
+                {
+                    return deploymentLock.LockOperation(() =>
+                    {
+                        return RunWithoutBuildJob(wapTargets, deployer, lockPath, deploymentLock);
+                    }, "Performing deployment", TimeSpan.Zero);
+                }
+                catch (LockOperationException)
+                {
+                    return -1;
+                }
             }
         }
 
-        private static int PerformDeploy(
-            string appRoot,
+        private static int RunBuildJob(string buildType, string repositoryUri, string deployer, string lockPath,
+            IOperationLock deploymentLock)
+        {
+            var step = tracer.Step(XmlTracer.ExecutingExternalProcessTrace, new Dictionary<string, string>
+            {
+                { "type", "process" },
+                { "path", "kudu.exe" },
+                { "arguments", $"{appRoot} {buildType} {repositoryUri}" }
+            });
+
+            int result = 0;
+            using (step)
+            {
+                result = PerformDeploy(deployer, lockPath, deploymentLock, () => PrepareRepositoryForBuildJob(buildType, repositoryUri));
+
+                if (result == 0)
+                {
+                    BuildJobHelper.DeleteBuildJob(tracer);
+                }
+            }
+
+            if (logger.HasErrors || result == 1)
+            {
+                return 1;
+            }
+
+            using (tracer.Step("Perform deploy exiting successfully")) { };
+            return result;
+        }
+
+        private static int RunWithoutBuildJob(
             string wapTargets,
             string deployer,
             string lockPath,
-            IEnvironment env,
-            IDeploymentSettingsManager settingsManager,
-            TraceLevel level,
-            ITracer tracer,
-            ITraceFactory traceFactory,
             IOperationLock deploymentLock)
         {
+            var step = tracer.Step(XmlTracer.ExecutingExternalProcessTrace, new Dictionary<string, string>
+            {
+                { "type", "process" },
+                { "path", "kudu.exe" },
+                { "arguments", $"{appRoot} {wapTargets}" }
+            });
+
+            int result = 0;
+
+            using (step)
+            {
+                Func<IRepository> getRepository = () =>
+                    {
+                        if (settingsManager.UseLibGit2SharpRepository())
+                        {
+                            return new LibGit2SharpRepository(env, settingsManager, traceFactory);
+                        }
+                        else
+                        {
+                            return new GitExeRepository(env, settingsManager, traceFactory);
+                        }
+                    };
+
+                result = PerformDeploy(deployer, lockPath, deploymentLock, getRepository);
+            }
+
+            if (logger.HasErrors || result == 1)
+            {
+                return 1;
+            }
+
+            using (tracer.Step("Perform deploy exiting successfully")) { };
+            return result;
+        }
+
+        private static int PerformDeploy(
+            string deployer,
+            string lockPath,
+            IOperationLock deploymentLock,
+            Func<IRepository> getRepository)
+        {
+
             System.Environment.SetEnvironmentVariable("GIT_DIR", null, System.EnvironmentVariableTarget.Process);
 
             // Skip SSL Certificate Validate
@@ -129,25 +233,15 @@ namespace Kudu.Console
             string statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
             string hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
 
-            
             IOperationLock statusLock = new LockFile(statusLockPath, traceFactory);
             IOperationLock hooksLock = new LockFile(hooksLockPath, traceFactory);
-            
+
             IBuildPropertyProvider buildPropertyProvider = new BuildPropertyProvider();
             ISiteBuilderFactory builderFactory = new SiteBuilderFactory(buildPropertyProvider, env, null);
-            var logger = new ConsoleLogger();
 
-            IRepository gitRepository;
-            if (settingsManager.UseLibGit2SharpRepository())
-            {
-                gitRepository = new LibGit2SharpRepository(env, settingsManager, traceFactory);
-            }
-            else
-            {
-                gitRepository = new GitExeRepository(env, settingsManager, traceFactory);
-            }
+            var repository = getRepository();
 
-            env.CurrId = gitRepository.GetChangeSet(settingsManager.GetBranch()).Id;
+            env.CurrId = repository.GetChangeSet(settingsManager.GetBranch()).Id;
 
             IServerConfiguration serverConfiguration = new ServerConfiguration();
 
@@ -164,70 +258,101 @@ namespace Kudu.Console
                                                           settingsManager,
                                                           deploymentStatusManager,
                                                           deploymentLock,
-                                                          GetLogger(env, level, logger),
+                                                          GetLogger(),
                                                           hooksManager,
                                                           null); // K8 todo
 
-            var step = tracer.Step(XmlTracer.ExecutingExternalProcessTrace, new Dictionary<string, string>
+            try
             {
-                { "type", "process" },
-                { "path", "kudu.exe" },
-                { "arguments", appRoot + " " + wapTargets }
-            });
-
-            using (step)
-            {
-                try
-                {
-                    // although the api is called DeployAsync, most expensive works are done synchronously.
-                    // need to launch separate task to go async explicitly (consistent with FetchDeploymentManager)
-                    var deploymentTask = Task.Run(async () => await deploymentManager.DeployAsync(gitRepository, changeSet: null, deployer: deployer, clean: false));
+                // although the api is called DeployAsync, most expensive works are done synchronously.
+                // need to launch separate task to go async explicitly (consistent with FetchDeploymentManager)
+                var deploymentTask = Task.Run(async () => await deploymentManager.DeployAsync(repository, changeSet: null, deployer: deployer, clean: false));
 
 #pragma warning disable 4014
-                    // Track pending task
-                    PostDeploymentHelper.TrackPendingOperation(deploymentTask, TimeSpan.Zero);
+                // Track pending task
+                PostDeploymentHelper.TrackPendingOperation(deploymentTask, TimeSpan.Zero);
 #pragma warning restore 4014
 
-                    deploymentTask.Wait();
+                deploymentTask.Wait();
 
-                    if (PostDeploymentHelper.IsAutoSwapEnabled())
+                if (PostDeploymentHelper.IsAutoSwapEnabled())
+                {
+                    string branch = settingsManager.GetBranch();
+                    ChangeSet changeSet = repository.GetChangeSet(branch);
+                    IDeploymentStatusFile statusFile = deploymentStatusManager.Open(changeSet.Id, env);
+                    if (statusFile != null && statusFile.Status == DeployStatus.Success)
                     {
-                        string branch = settingsManager.GetBranch();
-                        ChangeSet changeSet = gitRepository.GetChangeSet(branch);
-                        IDeploymentStatusFile statusFile = deploymentStatusManager.Open(changeSet.Id, env);
-                        if (statusFile != null && statusFile.Status == DeployStatus.Success)
-                        {
-                            PostDeploymentHelper.PerformAutoSwap(env.RequestId,
-                                    new PostDeploymentTraceListener(tracer, deploymentManager.GetLogger(changeSet.Id)))
-                                .Wait();
-                        }
+                        PostDeploymentHelper.PerformAutoSwap(env.RequestId,
+                                new PostDeploymentTraceListener(tracer, deploymentManager.GetLogger(changeSet.Id)))
+                            .Wait();
                     }
                 }
-                catch (Exception e)
-                {
-                    System.Console.WriteLine(e.InnerException);
-                    tracer.TraceError(e);
-                    System.Console.Error.WriteLine(e.GetBaseException().Message);
-                    System.Console.Error.WriteLine(Resources.Log_DeploymentError);
-                    return 1;
-                }
-                finally
-                { 
-                    System.Console.WriteLine("Deployment Logs : '"+
-                    env.AppBaseUrlPrefix+ "/newui/jsonviewer?view_url=/api/deployments/" + 
-                    gitRepository.GetChangeSet(settingsManager.GetBranch()).Id+"/log'");
-                }
             }
-
-            if (logger.HasErrors)
+            catch (Exception e)
             {
+                System.Console.WriteLine(e.InnerException);
+                tracer.TraceError(e);
+                System.Console.Error.WriteLine(e.GetBaseException().Message);
+                System.Console.Error.WriteLine(Resources.Log_DeploymentError);
                 return 1;
             }
-            tracer.Step("Perform deploy exiting successfully");
+            finally
+            {
+                System.Console.WriteLine("Deployment Logs : '" +
+                env.AppBaseUrlPrefix + "/newui/jsonviewer?view_url=/api/deployments/" +
+                repository.GetChangeSet(settingsManager.GetBranch()).Id + "/log'");
+            }
             return 0;
         }
 
-        private static ITracer GetTracer(IEnvironment env, TraceLevel level)
+        private static IRepository PrepareRepositoryForBuildJob(string buildType, string repositoryUri)
+        {
+            try
+            {
+                var authKey = System.Environment.GetEnvironmentVariable(Constants.WebSiteAuthEncryptionKey);
+                var token = AuthHelper.CreateToken(authKey);
+                if (buildType == "zip")
+                {
+                    DeploymentFileHelper helper = new DeploymentFileHelper(null, null, token, tracer);
+                    Uri uri = new Uri(repositoryUri);
+                    var localFilePath = Path.Combine(env.ZipTempPath, uri.Segments.Last());
+                    helper.Download(localFilePath, repositoryUri).Wait();
+
+                    ArtifactDeploymentInfo zipDeploymentInfo = new ArtifactDeploymentInfo(env, traceFactory)
+                    {
+                        RepositoryUrl = localFilePath,
+                    };
+
+                    IRepository repository = zipDeploymentInfo.GetRepository();
+                    DeploymentHelper.LocalZipFetch(env.ZipTempPath, zipDeploymentInfo.GetRepository(), zipDeploymentInfo, logger, tracer).Wait();
+
+                    return repository;
+                }
+                else if (buildType == "git")
+                {
+                    var repository = new GitExeRepository(env, settingsManager, traceFactory)
+                    {
+                        SkipPostReceiveHookCheck = true
+                    };
+
+                    repository.Initialize();
+                    repository.ConfigExtralHeader(repositoryUri, $"x-ms-site-restricted-token:{token}");
+                    repository.FetchWithoutConflict(repositoryUri, "master");
+                    return repository;
+                }
+                else
+                {
+                    throw new NotSupportedException($"build Type {buildType} is not supported");
+                }
+            }
+            catch (Exception e)
+            {
+                tracer.Step(nameof(PrepareRepositoryForBuildJob), new Dictionary<string, string> { { "Exception", e.Message }, { "Stack", e.StackTrace } });
+                throw;
+            }
+        }
+
+        private static ITracer GetTracer()
         {
             if (level > TraceLevel.Off)
             {
@@ -247,7 +372,7 @@ namespace Kudu.Console
             return NullTracer.Instance;
         }
 
-        private static ILogger GetLogger(IEnvironment env, TraceLevel level, ILogger primary)
+        private static ILogger GetLogger()
         {
             if (level > TraceLevel.Off)
             {
@@ -255,23 +380,22 @@ namespace Kudu.Console
                 if (!String.IsNullOrEmpty(logFile))
                 {
                     string logPath = Path.Combine(env.RootPath, Constants.DeploymentTracePath, logFile);
-                    //return new CascadeLogger(primary, new TextLogger(logPath));
-                    return new CascadeLogger(primary, new TextLogger(logPath));
+                    return new CascadeLogger(logger, new TextLogger(logPath));
                 }
             }
 
-            return primary;
+            return logger;
         }
 
-        private static string GetSettingsPath(IEnvironment environment)
+        private static string GetSettingsPath()
         {
-            return Path.Combine(environment.DeploymentsPath, Constants.DeploySettingsPath);
+            return Path.Combine(env.DeploymentsPath, Constants.DeploySettingsPath);
         }
 
         private static IEnvironment GetEnvironment(string siteRoot)
         {
             string root = Path.GetFullPath(Path.Combine(siteRoot, ".."));
-            string appName = root.Replace("/home/apps/","");
+            string appName = root.Replace("/home/apps/", "");
             var requestIdEnv = string.Format(Constants.RequestIdEnvFormat, appName);
             string requestId = System.Environment.GetEnvironmentVariable(requestIdEnv);
 
@@ -291,13 +415,13 @@ namespace Kudu.Console
             }
 
             // CORE TODO Handing in a null IHttpContextAccessor (and KuduConsoleFullPath) again
-            var env=  new Kudu.Core.Environment(root,
-                EnvironmentHelper.NormalizeBinPath(binPath),
-                repositoryPath,
-                requestId,
-                Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu.dll"),
-                null,
-                appName);
+            var env = new Kudu.Core.Environment(root,
+            EnvironmentHelper.NormalizeBinPath(binPath),
+            repositoryPath,
+            requestId,
+            Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu.dll"),
+            null,
+            appName);
             return env;
         }
     }

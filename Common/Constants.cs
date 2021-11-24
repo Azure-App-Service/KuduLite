@@ -22,8 +22,10 @@ namespace Kudu
         public const string WebRoot = "wwwroot";
         public const string MappedSite = "/_app";
         public const string RepositoryPath = "repository";
+        public const string TempPath = "tmp";
         public const string ZipTempPath = "zipdeploy";
         public const string ZipExtractPath = "extracted";
+        public const string ArtifactZipFileName = "artifact.zip";
 
         public const string WindowsAppHomeDir = @"C:\repos\apps\";
         public const string LinuxAppHomeDir = "/home/apps/";
@@ -52,10 +54,13 @@ namespace Kudu
         public const string SiteExtensionLogsDirectory = "siteExtLogs";
         public const string DeploySettingsPath = "settings.xml";
         public const string ActiveDeploymentFile = "active";
+        public const string BuildCompleteFile = "buildComplete";
         public const string ScriptsPath = "Scripts";
         public const string NodeModulesPath = "node_modules";
         public const string FirstDeploymentManifestFileName = "firstDeploymentManifest";
         public const string ManifestFileName = "manifest";
+
+        
 
         public const string AppDataPath = "App_Data";
         public const string DataPath = "data";
@@ -181,6 +186,8 @@ namespace Kudu
         public const string K8SEAppTypeDefault = "functionapp,kubernetes,linux";
 
         public const string IsBuildJob = "IS_BUILD_JOB"; //this is to indicate the current pod is build job pod.
-        public const string UseBuildJob = "USE_BUILD_JOB"; // this is an EC to control whether to use build job. used by build service.
+        public const string UseBuildJob = "USE_BUILD_JOB"; // this is an EC to control whether to use build job. will be used by build service.
+        public const string WebSiteAuthEncryptionKey = "WEBSITE_AUTH_ENCRYPTION_KEY";
+        public const string BuildJobImageRepositoryName = "build-job";
     }
 }

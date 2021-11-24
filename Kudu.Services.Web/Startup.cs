@@ -197,10 +197,12 @@ namespace Kudu.Services.Web
 
             TraceServices.SetTraceFactory(KuduWebUtil.GetTracer);
 
-            services.AddScoped<IDictionary<string, IOperationLock>>(sp=>
+            services.AddScoped<IDictionary<string, IOperationLock>>(sp =>
             {
+                //per request service
+                var env = sp.GetEnvironment(environment);
                 var traceFactory = sp.GetRequiredService<ITraceFactory>();
-                return KuduWebUtil.GetNamedLocks(traceFactory, environment);
+                return KuduWebUtil.GetNamedLocks(traceFactory, env);
             });
 
             // CORE TODO ShutdownDetector, used by LogStreamManager.
@@ -239,12 +241,13 @@ namespace Kudu.Services.Web
             services.AddScoped<IRepositoryFactory>(
                 sp =>
                 {
+                    var env = sp.GetEnvironment(environment);
                     var traceFactory = sp.GetRequiredService<ITraceFactory>();
                     var repositoryFactory =
                         new RepositoryFactory(
                             sp.GetRequiredService<IEnvironment>(), sp.GetRequiredService<IDeploymentSettingsManager>(),
                             traceFactory);
-                    KuduWebUtil.GetDeploymentLock(traceFactory, environment).RepositoryFactory = repositoryFactory;
+                    KuduWebUtil.GetDeploymentLock(traceFactory, env).RepositoryFactory = repositoryFactory;
                     return repositoryFactory;
                 });
 

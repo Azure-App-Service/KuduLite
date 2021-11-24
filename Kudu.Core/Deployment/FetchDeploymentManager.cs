@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Abstractions;
 using System.Threading.Tasks;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
@@ -12,6 +11,7 @@ using Kudu.Core.Helpers;
 using Kudu.Core.Hooks;
 using Kudu.Core.Infrastructure;
 using Kudu.Core.K8SE;
+using Kudu.Core.Kube;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
 using Microsoft.AspNetCore.Http;
@@ -241,14 +241,22 @@ namespace Kudu.Core.Deployment
                             // unless for GenericHandler where specific commitId is specified
                             bool deploySpecificCommitId = !String.IsNullOrEmpty(deploymentInfo.CommitId);
 
-                            await _deploymentManager.DeployAsync(
-                                repository,
-                                changeSet,
-                                deploymentInfo.Deployer,
-                                clean: false,
-                                deploymentInfo: deploymentInfo,
-                                needFileUpdate: deploySpecificCommitId,
-                                fullBuildByDefault: deploymentInfo.DoFullBuildByDefault);
+                            var needOryxBuild = _deploymentManager.DoFullBuild(repository, deploymentInfo, deploymentInfo.DoFullBuildByDefault);
+                            if (needOryxBuild && (K8SEDeploymentHelper.UseBuildJob() || K8SEDeploymentHelper.IsBuildJob()))
+                            {
+                                await BuildJobHelper.RunWithBuildJob(_environment.SiteRootPath, _environment, "zip", _tracer.TraceLevel, _tracer, deploymentInfo.RepositoryUrl.Replace(_environment.RootPath, "").TrimStart('/'));
+                            }
+                            else
+                            {
+                                await _deploymentManager.DeployAsync(
+                                    repository,
+                                    changeSet,
+                                    deploymentInfo.Deployer,
+                                    clean: false,
+                                    deploymentInfo: deploymentInfo,
+                                    needFileUpdate: deploySpecificCommitId,
+                                    fullBuildByDefault: deploymentInfo.DoFullBuildByDefault);
+                            }
                         }
                     }
                     catch (Exception ex)
