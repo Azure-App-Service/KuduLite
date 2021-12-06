@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Core.Functions
 {
@@ -14,7 +15,7 @@ namespace Kudu.Core.Functions
         public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, string appName = null, string appType = null, IDictionary<string, string> appSettings = null)
         {
             appSettings = appSettings ?? new Dictionary<string, string>();
-            
+
             if (!File.Exists(zipFilePath))
             {
                 return null;
@@ -88,7 +89,7 @@ namespace Kudu.Core.Functions
                 return bindingExpressionTarget;
             }
 
-            var matchEvaluator = new MatchEvaluator((Func<Match, string>) ReplaceMatchedBindingExpression);
+            var matchEvaluator = new MatchEvaluator((Func<Match, string>)ReplaceMatchedBindingExpression);
 
             foreach (var scaleTrigger in scaleTriggers)
             {
@@ -147,10 +148,10 @@ namespace Kudu.Core.Functions
         internal static string ParseHostJsonPayload(string payload)
         {
             var payloadJson = JObject.Parse(payload);
-            var extensions = (JObject) payloadJson["extensions"];
+            var extensions = (JObject)payloadJson["extensions"];
             if (extensions != null)
             {
-                var hostJsonPayload = new JObject {{"extensions", extensions}};
+                var hostJsonPayload = new JObject { { "extensions", extensions } };
                 return hostJsonPayload.ToString();
             }
             else
@@ -208,14 +209,27 @@ namespace Kudu.Core.Functions
                 var triggerType = GetKedaTriggerType(function.Type);
                 if (!string.IsNullOrEmpty(triggerType))
                 {
-                    var scaleTrigger = new ScaleTrigger
+                    var scaleTrigger = new ScaleTrigger();
+                    scaleTrigger.Type = triggerType;
+                    scaleTrigger.Metadata = PopulateMetadataDictionary(function.Binding, function.FunctionName);
+
+                    IKedaAuthRefProvider authProvider = getTriggerAuthProvider(triggerType);
+                    if (authProvider != null)
                     {
-                        Type = triggerType,
-                        Metadata = PopulateMetadataDictionary(function.Binding, function.FunctionName)
-                    };
+                        scaleTrigger.AuthenticationRef = authProvider.PopulateAuthenticationRef(function.Binding, function.FunctionName);
+                    }
+
                     yield return scaleTrigger;
                 }
             }
+        }
+
+        internal static IKedaAuthRefProvider getTriggerAuthProvider(string triggerType)
+        {
+            if (string.Equals(triggerType, TriggerTypes.Kafka, StringComparison.OrdinalIgnoreCase)) {
+                return new KafkaTriggerKedaAuthProvider();
+            }
+            return null;
         }
 
         internal static string GetFunctionName(ZipArchiveEntry zipEntry)
@@ -239,25 +253,25 @@ namespace Kudu.Core.Functions
 
             switch (triggerType)
             {
-                case "queuetrigger":
+                case TriggerTypes.AzureStorageQueue:
                     return "azure-queue";
 
-                case "kafkatrigger":
+                case TriggerTypes.Kafka:
                     return "kafka";
 
-                case "blobtrigger":
+                case TriggerTypes.AzureBlobStorage:
                     return "azure-blob";
 
-                case "servicebustrigger":
+                case TriggerTypes.AzureServiceBus:
                     return "azure-servicebus";
 
-                case "eventhubtrigger":
+                case TriggerTypes.AzureEventHubs:
                     return "azure-eventhub";
 
-                case "rabbitmqtrigger":
+                case TriggerTypes.RabbitMq:
                     return "rabbitmq";
 
-                case "httptrigger":
+                case TriggerTypes.Http:
                     return "httpTrigger";
 
                 default:
@@ -423,6 +437,9 @@ namespace Kudu.Core.Functions
             public const string AzureStorageQueue = "queuetrigger";
             public const string Kafka = "kafkatrigger";
             public const string RabbitMq = "rabbitmqtrigger";
+            public const string Http = "httptrigger";
         }
     }
 }
+    
+

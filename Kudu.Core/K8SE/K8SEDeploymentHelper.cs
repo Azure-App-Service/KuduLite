@@ -125,6 +125,16 @@ namespace Kudu.Core.K8SE
             RunBuildCtlCommand(cmd.ToString(), "Updating function app triggers...");
         }
 
+        public static void CreateTriggerAuthenticationRef(string secretName, string authRefSecretKeyToParamMap, string appName)
+        {
+            var cmd = new StringBuilder();
+            BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "createTriggerAuth");
+            BuildCtlArgumentsHelper.AddSecretName(cmd, secretName);
+            BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+            BuildCtlArgumentsHelper.AddAuthRefSecretKeyToParamMap(cmd, authRefSecretKeyToParamMap);
+            RunBuildCtlCommand(cmd.ToString(), "Creating Trigger Authentication...");
+        }
+
         private static string RunBuildCtlCommand(string args, string msg)
         {
             Console.WriteLine($"{msg} : {args}");
@@ -244,7 +254,6 @@ namespace Kudu.Core.K8SE
             Console.WriteLine("Test Str:     " + str);
             return str;
         }
-
         private static string GetBuildMetadataStr(BuildMetadata buildMetadata)
         {
             return $"{buildMetadata.AppName}|{buildMetadata.BuildVersion}|{System.Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes(JsonConvert.SerializeObject(buildMetadata)))}";

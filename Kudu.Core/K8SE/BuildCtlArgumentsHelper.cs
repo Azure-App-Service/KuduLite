@@ -31,5 +31,16 @@ namespace Kudu.Core.K8SE
             args.AppendFormat(" -jsonToPatch {0}", jsonToPatch);
         }
 
+        internal static void AddSecretName(StringBuilder args, string secretName)
+        {
+            args.AppendFormat(" -secretName {0}", secretName);
+        }
+
+        internal static void AddAuthRefSecretKeyToParamMap(StringBuilder args, string authRefSecretKeyToParamMap)
+        {
+            args.AppendFormat(" -secretKeyToKedaParamMap {0}", authRefSecretKeyToParamMap);
+        }
+
+
     }
 }
