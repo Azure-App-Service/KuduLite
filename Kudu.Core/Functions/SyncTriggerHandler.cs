@@ -55,9 +55,10 @@ namespace Kudu.Core.Functions
                     return new Tuple<IEnumerable<ScaleTrigger>, string>(null, "Function trigger payload is null or empty.");
                 }
 
+                string appName = _environment.K8SEAppName;
+                string appNamespace = _environment.K8SEAppNamespace;
                 scaleTriggers =
-                    KedaFunctionTriggerProvider.GetFunctionTriggersFromSyncTriggerPayload(functionTriggersPayload,
-                         _appSettings);
+                    KedaFunctionTriggerProvider.GetFunctionTriggersFromSyncTriggerPayload(appName, appNamespace, functionTriggersPayload);
                 if (!scaleTriggers.Any())
                 {
                     return new Tuple<IEnumerable<ScaleTrigger>, string>(null, "No triggers in the payload");

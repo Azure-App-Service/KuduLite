@@ -302,13 +302,13 @@ namespace Kudu.Core.Deployment
 
                         string appName = _environment.K8SEAppName;
                         string repoUrl = deploymentInfo == null ? "empty" : deploymentInfo.RepositoryUrl;
-                        if(deploymentInfo == null)
+                        if(deploymentInfo == null) //:TODO handle this case , deployment info can't be null
                         {
-                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, appSettings: _appSettings);
+                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason);
                         }
                         else
                         {
-                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, deploymentInfo == null ? null : deploymentInfo.RepositoryUrl, deploymentInfo.TargetPath, appSettings:_appSettings);
+                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, deploymentInfo == null ? null : deploymentInfo.RepositoryUrl, deploymentInfo.TargetPath);
                         }
                         logger.Log($"Deployment Pod Rollout Started! Use 'kubectl -n k8se-apps get pods {appName} --watch' to monitor the rollout status");
                         logger.Log($"Deployment Pod Rollout Started! Use kubectl watch deplotment {appName} to monitor the rollout status");

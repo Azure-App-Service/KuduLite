@@ -37,5 +37,9 @@ namespace Kudu.Core.Deployment
 
         // This is used when getting the artifact file from the remote URL
         public string RemoteURL { get; set; }
+
+        public string AppName { get; set; }
+
+        public string AppNamespace { get; set; }
     }
 }
