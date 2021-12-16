@@ -9,6 +9,7 @@ using Kudu.Core.Functions;
 using Kudu.Core.Helpers;
 using Kudu.Core.K8SE;
 using Newtonsoft.Json;
+using Kudu.Core.Deployment;
 
 namespace Kudu.Core.Infrastructure
 {
@@ -27,7 +28,7 @@ namespace Kudu.Core.Infrastructure
             "The last modification Kudu made to this file was at {0}, for the following reason: {1}.",
             System.Environment.NewLine);
 
-        public static void RequestContainerRestart(IEnvironment environment, string reason, string repositoryUrl = null, string appSubPath = "")
+        public static void RequestContainerRestart(IEnvironment environment, string reason, DeploymentInfoBase deploymentInfo = null)
         {/*
             if (appMetadata is null)
             {
@@ -37,15 +38,15 @@ namespace Kudu.Core.Infrastructure
             if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 string appName = environment.K8SEAppName;
-                string appNamespace = environment.K8SEAppNamespace;
+                string appNamespace = "";
                 string appType = environment.K8SEAppType;
                 string buildNumber = environment.CurrId;
-                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(repositoryUrl, appName, appNamespace, appType);
+                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(deploymentInfo.RepositoryUrl, appName, appNamespace, appType);
                 var buildMetadata = new BuildMetadata()
                 {
                     AppName = appName,
                     BuildVersion = buildNumber,
-                    AppSubPath = appSubPath
+                    AppSubPath = deploymentInfo.TargetRootPath
                 };
 
                 //Only for function apps functionTriggers will be non-null/non-empty
