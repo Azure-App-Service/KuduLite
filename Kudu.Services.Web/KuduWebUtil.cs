@@ -311,8 +311,9 @@ namespace Kudu.Services.Web
             var requestId = httpContext != null ? httpContext.Request.GetRequestId() : null;
             var kuduConsoleFullPath =
                 Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
+            string appNamespace = System.Environment.GetEnvironmentVariable("APPS_NAMESPACE");
             return new Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId,
-                kuduConsoleFullPath, null);
+                kuduConsoleFullPath, null,null,appNamespace);
         }
 
         /// <summary>
