@@ -130,12 +130,12 @@ namespace Kudu.Core.Functions
             kedaScaleTriggers.AddRange(GetStandardScaleTriggers(standardTriggers));
 
             var secretProvider = new SecretProvider();
-            var appSettingsContent =  secretProvider.GetSecretContent(appName + "-secrets".ToLower(), appNamespace);
+            var appSettingsContentTask = secretProvider.GetSecretContent(appName + "-secrets".ToLower(), appNamespace);
             /*if (string.IsNullOrEmpty(appSettingsContent))
             {
                 return false;
             }*/
-
+            var appSettingsContent = appSettingsContentTask.Result;
             var json = JsonConvert.SerializeObject(appSettingsContent);
             var appSettingsData = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
 
