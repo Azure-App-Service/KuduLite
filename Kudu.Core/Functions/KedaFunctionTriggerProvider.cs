@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using Kudu.Core.K8SE;
 using Kudu.Core.Kube;
 using Newtonsoft.Json;
+using k8s;
 
 namespace Kudu.Core.Functions
 {
@@ -129,21 +130,27 @@ namespace Kudu.Core.Functions
             var kedaScaleTriggers = new List<ScaleTrigger>();
             kedaScaleTriggers.AddRange(GetStandardScaleTriggers(standardTriggers));
 
-            var secretProvider = new SecretProvider();
-            var appSettingsContent =  secretProvider.GetSecretContent(appName + "-secrets".ToLower(), appNamespace);
+            var config = KubernetesClientConfiguration.BuildConfigFromConfigFile();
+            // Use the config object to create a client.
+            var client = new Kubernetes(config);
+
+            var secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace);
+            var appsettingsSecretData = secret.StringData;
+            //var secretProvider = new SecretProvider();
+            //var appSettingsContent =  secretProvider.GetSecretContent(appName + "-secrets".ToLower(), appNamespace);
             /*if (string.IsNullOrEmpty(appSettingsContent))
             {
                 return false;
             }*/
 
-            var json = JsonConvert.SerializeObject(appSettingsContent);
-            var appSettingsData = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+            //var json = JsonConvert.SerializeObject(appSettingsContent);
+            //var appSettingsData = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
 
            // var appSettingsJObject = JObject.Parse(appSettingsContent);
             //var appSettingsData = (string)appSettingsJObject["data"];
 
             // Update Binding Expression for %..% notation
-            UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appSettingsData);
+            UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appsettingsSecretData);
 
             // Durable Functions triggers are treated as a group and get configuration from host.json
             if (durableTriggers.Any() && TryGetDurableKedaTrigger(hostJsonText, out ScaleTrigger durableScaleTrigger))
