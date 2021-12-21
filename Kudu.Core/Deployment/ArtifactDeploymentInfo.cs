@@ -39,7 +39,5 @@ namespace Kudu.Core.Deployment
         public string RemoteURL { get; set; }
 
         public string AppName { get; set; }
-
-        public string AppNamespace { get; set; }
     }
 }
