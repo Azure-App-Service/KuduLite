@@ -36,6 +36,7 @@ namespace Kudu.Core.Kube
             }
 
             return responseBodyContent;
+           // return responseMessage;
         }
 
         private async Task<string> GetAccessToken()

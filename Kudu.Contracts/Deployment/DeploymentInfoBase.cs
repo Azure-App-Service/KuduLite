@@ -19,6 +19,11 @@ namespace Kudu.Core.Deployment
             DoFullBuildByDefault = true;
         }
 
+        //  protected DeploymentInfoBase(string appNamespace)
+        // {
+        //     AppNamespace = appNamespace;
+        // }
+
         public RepositoryType RepositoryType { get; set; }
         public string RepositoryUrl { get; set; }
         public string Deployer { get; set; }

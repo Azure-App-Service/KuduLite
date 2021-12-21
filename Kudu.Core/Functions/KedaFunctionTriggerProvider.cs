@@ -135,9 +135,9 @@ namespace Kudu.Core.Functions
             {
                 return false;
             }*/
-            var appSettingsContent = appSettingsContentTask.Result;
-            var json = JsonConvert.SerializeObject(appSettingsContent);
-            var appSettingsData = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
+            //var appSettingsContent = appSettingsContentTask.Result;
+            //var json = JsonConvert.SerializeObject(appSettingsContent);
+            var appSettingsData = JsonConvert.DeserializeObject<Dictionary<string, string>>("");
 
            // var appSettingsJObject = JObject.Parse(appSettingsContent);
             //var appSettingsData = (string)appSettingsJObject["data"];
