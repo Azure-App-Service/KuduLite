@@ -130,7 +130,7 @@ namespace Kudu.Core.Functions
             var kedaScaleTriggers = new List<ScaleTrigger>();
             kedaScaleTriggers.AddRange(GetStandardScaleTriggers(standardTriggers));
 
-            var config = KubernetesClientConfiguration.BuildConfigFromConfigFile();
+            var config = KubernetesClientConfiguration.InClusterConfig();
             // Use the config object to create a client.
             var client = new Kubernetes(config);
 
