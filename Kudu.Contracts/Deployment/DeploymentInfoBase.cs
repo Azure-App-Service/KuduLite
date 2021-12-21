@@ -19,6 +19,11 @@ namespace Kudu.Core.Deployment
             DoFullBuildByDefault = true;
         }
 
+        //  protected DeploymentInfoBase(string appNamespace)
+        // {
+        //     AppNamespace = appNamespace;
+        // }
+
         public RepositoryType RepositoryType { get; set; }
         public string RepositoryUrl { get; set; }
         public string Deployer { get; set; }
@@ -105,5 +110,7 @@ namespace Kudu.Core.Deployment
         // Used to allow / disallow 'restart' on a per deployment basis, if needed.
         // For example: OneDeploy allows clients to enable / disable 'restart'.
         public bool RestartAllowed { get; set; }
+
+        public string AppNamespace { get; set; }
     }
 }

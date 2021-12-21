@@ -107,7 +107,7 @@ namespace Kudu.Core
             RequestId = !string.IsNullOrEmpty(requestId) ? requestId : Guid.Empty.ToString();
             _httpContextAccessor = httpContextAccessor;
             _k8seAppName = k8seAppName;
-            _k8seAppNamespace = k8seAppNamespace;
+            _k8seAppNamespace = System.Environment.GetEnvironmentVariable("APPS_NAMESPACE");//k8seAppNamespace;
             _k8seAppType = k8seAppType;
         }
 
@@ -136,7 +136,7 @@ namespace Kudu.Core
             _diagnosticsPath = Path.Combine(SiteRootPath, Constants.DiagnosticsPath);
             _locksPath = Path.Combine(SiteRootPath, Constants.LocksPath);
             _k8seAppName = k8seAppName;
-            _k8seAppNamespace = k8seAppNamespace;
+            _k8seAppNamespace = System.Environment.GetEnvironmentVariable("APPS_NAMESPACE");//k8seAppNamespace;
             _k8seAppType = k8seAppType;
 
             if (OSDetector.IsOnWindows())

@@ -146,7 +146,7 @@ namespace Kudu.Core.Functions
             //var json = JsonConvert.SerializeObject(appSettingsContent);
             //var appSettingsData = JsonConvert.DeserializeObject<Dictionary<string, string>>(json);
 
-           // var appSettingsJObject = JObject.Parse(appSettingsContent);
+            // var appSettingsJObject = JObject.Parse(appSettingsContent);
             //var appSettingsData = (string)appSettingsJObject["data"];
 
             // Update Binding Expression for %..% notation
@@ -247,7 +247,8 @@ namespace Kudu.Core.Functions
 
         internal static IKedaAuthRefProvider getTriggerAuthProvider(string triggerType)
         {
-            if (string.Equals(triggerType, TriggerTypes.Kafka, StringComparison.OrdinalIgnoreCase)) {
+            if (string.Equals(triggerType, TriggerTypes.Kafka, StringComparison.OrdinalIgnoreCase))
+            {
                 return new KafkaTriggerKedaAuthProvider();
             }
             return null;
@@ -462,5 +463,5 @@ namespace Kudu.Core.Functions
         }
     }
 }
-    
+
 
