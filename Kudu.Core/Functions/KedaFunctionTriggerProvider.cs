@@ -81,6 +81,7 @@ namespace Kudu.Core.Functions
         internal static void UpdateFunctionTriggerBindingExpression(
             IEnumerable<ScaleTrigger> scaleTriggers, IDictionary<string, string> appSettings)
         {
+            Console.WriteLine("XXXXXX App settings from kubernetes are"+appSettings);
             string ReplaceMatchedBindingExpression(Match match)
             {
                 var bindingExpressionTarget = match.Value.Replace("%", "");
@@ -100,6 +101,7 @@ namespace Kudu.Core.Functions
                 foreach (var metadata in scaleTrigger.Metadata)
                 {
                     var replacedValue = Regex.Replace(metadata.Value, Constants.AppSettingsRegex, matchEvaluator);
+                    Console.WriteLine("XXXXXX found binding for "+metadata.Key);
                     newMetadata[metadata.Key] = replacedValue;
                 }
 
@@ -125,6 +127,7 @@ namespace Kudu.Core.Functions
         {
 
             try {
+                Console.WriteLine("XXXXXXXX In Create Scale Triggers");
                 var durableTriggers = triggerBindings.Where(b => IsDurable(b));
                 var standardTriggers = triggerBindings.Where(b => !IsDurable(b));
 
