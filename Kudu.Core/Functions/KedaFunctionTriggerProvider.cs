@@ -79,7 +79,7 @@ namespace Kudu.Core.Functions
         }
 
         internal static void UpdateFunctionTriggerBindingExpression(
-            IEnumerable<ScaleTrigger> scaleTriggers, IDictionary<string, string> appSettings)
+            IEnumerable<ScaleTrigger> scaleTriggers, IDictionary<string, byte[]> appSettings)
         {
             Console.WriteLine("XXXXXX App settings from kubernetes are "+appSettings);
             string ReplaceMatchedBindingExpression(Match match)
@@ -87,10 +87,14 @@ namespace Kudu.Core.Functions
                 var bindingExpressionTarget = match.Value.Replace("%", "");
                 if (appSettings.ContainsKey(bindingExpressionTarget))
                 {
-                    return appSettings[bindingExpressionTarget];
+                    string val = Convert.ToBase64String(appSettings[bindingExpressionTarget]);
+                    return val;
+                    //return appSettings[bindingExpressionTarget];
                 }
 
-                return bindingExpressionTarget;
+                string valR = Convert.ToBase64String(appSettings[bindingExpressionTarget]);
+                return valR;
+                //return bindingExpressionTarget;
             }
 
             var matchEvaluator = new MatchEvaluator((Func<Match, string>)ReplaceMatchedBindingExpression);
@@ -101,7 +105,7 @@ namespace Kudu.Core.Functions
                 foreach (var metadata in scaleTrigger.Metadata)
                 {
                     var replacedValue = Regex.Replace(metadata.Value, Constants.AppSettingsRegex, matchEvaluator);
-                    Console.WriteLine("XXXXXX found binding for "+metadata.Key);
+                    Console.WriteLine("XXXXXX found binding for "+metadata.Key+" and value is "+replacedValue);
                     newMetadata[metadata.Key] = replacedValue;
                 }
 
@@ -140,7 +144,7 @@ namespace Kudu.Core.Functions
 
                 var secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace);
                 Console.WriteLine("XXXXXXX secret from kubernetes "+ secret.ToString());
-                var appsettingsSecretData = secret.StringData;
+                var appsettingsSecretData = secret.Data;
                 Console.WriteLine("XXXXXXX string data from kubernetes "+appsettingsSecretData);
                 // Update Binding Expression for %..% notation
                 UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appsettingsSecretData);
