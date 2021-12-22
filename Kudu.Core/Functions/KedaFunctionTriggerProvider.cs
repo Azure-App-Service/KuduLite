@@ -81,7 +81,7 @@ namespace Kudu.Core.Functions
         internal static void UpdateFunctionTriggerBindingExpression(
             IEnumerable<ScaleTrigger> scaleTriggers, IDictionary<string, string> appSettings)
         {
-            Console.WriteLine("XXXXXX App settings from kubernetes are"+appSettings);
+            Console.WriteLine("XXXXXX App settings from kubernetes are "+appSettings.ToString());
             string ReplaceMatchedBindingExpression(Match match)
             {
                 var bindingExpressionTarget = match.Value.Replace("%", "");
@@ -139,8 +139,9 @@ namespace Kudu.Core.Functions
                 var client = new Kubernetes(config);
 
                 var secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace);
+                Console.WriteLine("XXXXXXX secret from kubernetes "+secret);
                 var appsettingsSecretData = secret.StringData;
-
+                Console.WriteLine("XXXXXXX string data from kubernetes "+appsettingsSecretData.ToString());
                 // Update Binding Expression for %..% notation
                 UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appsettingsSecretData);
 
@@ -157,6 +158,7 @@ namespace Kudu.Core.Functions
 
                 return kedaScaleTriggers;
             }catch (Exception e) {
+                Console.WriteLine("XXXXXXX exception in scale triggers "+e.StackTrace);
                 var ex = e.StackTrace;
             }
             return null;
