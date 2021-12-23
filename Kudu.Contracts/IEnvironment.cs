@@ -35,5 +35,6 @@
         bool IsK8SEApp { get; }
         string K8SEAppName { get;  }
         string K8SEAppType { get; }
+        string K8SEAppNamespace { get; }
     }
 }

@@ -106,6 +106,8 @@ namespace Kudu.Core.Deployment
         // For example: OneDeploy allows clients to enable / disable 'restart'.
         public bool RestartAllowed { get; set; }
 
+        public string AppName { get; set; }
+
         //sepecifies the kubernetes namespace where the application is deployed
         public string AppNamespace { get; set; }
     }
