@@ -86,7 +86,6 @@ namespace Kudu.Core.Functions
                 var bindingExpressionTarget = match.Value.Replace("%", "");
                 if (appSettings.ContainsKey(bindingExpressionTarget))
                 {
-                    Console.WriteLine("XXXXXX found binding for "+ match.Value+" and value is "+Convert.ToBase64String(appSettings[bindingExpressionTarget]));
                     return Convert.ToBase64String(appSettings[bindingExpressionTarget]);
                 }
 
@@ -125,43 +124,34 @@ namespace Kudu.Core.Functions
 
         internal static IEnumerable<ScaleTrigger> CreateScaleTriggers(string appName, string appNamespace, IEnumerable<FunctionTrigger> triggerBindings, string hostJsonText)
         {
+            var durableTriggers = triggerBindings.Where(b => IsDurable(b));
+            var standardTriggers = triggerBindings.Where(b => !IsDurable(b));
 
-            try {
-                Console.WriteLine("XXXXXXXX In Create Scale Triggers");
-                var durableTriggers = triggerBindings.Where(b => IsDurable(b));
-                var standardTriggers = triggerBindings.Where(b => !IsDurable(b));
+            var kedaScaleTriggers = new List<ScaleTrigger>();
+            kedaScaleTriggers.AddRange(GetStandardScaleTriggers(standardTriggers));
 
-                var kedaScaleTriggers = new List<ScaleTrigger>();
-                kedaScaleTriggers.AddRange(GetStandardScaleTriggers(standardTriggers));
+            var config = KubernetesClientConfiguration.InClusterConfig();
+            // Use the config object to create a client.
+            var client = new Kubernetes(config);
 
-                var config = KubernetesClientConfiguration.InClusterConfig();
-                // Use the config object to create a client.
-                var client = new Kubernetes(config);
+            var secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace);
+            var appsettingsSecretData = secret.Data;
 
-                var secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace);
-                var appsettingsSecretData = secret.Data;
+            // Update Binding Expression for %..% notation
+            UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appsettingsSecretData);
 
-                // Update Binding Expression for %..% notation
-                UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appsettingsSecretData);
-
-                // Durable Functions triggers are treated as a group and get configuration from host.json
-                if (durableTriggers.Any() && TryGetDurableKedaTrigger(hostJsonText, out ScaleTrigger durableScaleTrigger))
-                {
-                    kedaScaleTriggers.Add(durableScaleTrigger);
-                }
-
-                bool IsDurable(FunctionTrigger function) =>
-                    function.Type.Equals("orchestrationTrigger", StringComparison.OrdinalIgnoreCase) ||
-                    function.Type.Equals("activityTrigger", StringComparison.OrdinalIgnoreCase) ||
-                    function.Type.Equals("entityTrigger", StringComparison.OrdinalIgnoreCase);
-
-                return kedaScaleTriggers;
-            }catch (Exception e) {
-                Console.WriteLine("XXXXXXX exception in scale triggers "+e.StackTrace);
-                var ex = e.StackTrace;
+            // Durable Functions triggers are treated as a group and get configuration from host.json
+            if (durableTriggers.Any() && TryGetDurableKedaTrigger(hostJsonText, out ScaleTrigger durableScaleTrigger))
+            {
+                kedaScaleTriggers.Add(durableScaleTrigger);
             }
-            return null;
-           
+
+            bool IsDurable(FunctionTrigger function) =>
+                function.Type.Equals("orchestrationTrigger", StringComparison.OrdinalIgnoreCase) ||
+                function.Type.Equals("activityTrigger", StringComparison.OrdinalIgnoreCase) ||
+                function.Type.Equals("entityTrigger", StringComparison.OrdinalIgnoreCase);
+
+            return kedaScaleTriggers;
         }
 
         internal static string ParseHostJsonPayload(string payload)
