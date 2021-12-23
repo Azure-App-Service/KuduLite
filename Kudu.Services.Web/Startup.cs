@@ -396,15 +396,7 @@ namespace Kudu.Services.Web
             //GlobalConfiguration.Configuration.Formatters.Clear();
             //GlobalConfiguration.Configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
 
-
-            // GlobalConfiguration.Configuration.EnableSystemDiagnosticsTracing();
-            // GlobalConfiguration.Configuration.Formatters.JsonFormatter.SerializerSettings.PreserveReferencesHandling = PreserveReferencesHandling.None;
-            // GlobalConfiguration.Configuration.Formatters.JsonFormatter.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
-            // GlobalConfiguration.Configuration.Formatters.JsonFormatter.SerializerSettings.Formatting = Formatting.Indented;
-            // GlobalConfiguration.Configuration.Formatters.Remove(GlobalConfiguration.Configuration.Formatters.XmlFormatter);
-
             // CORE TODO concept of "deprecation" in routes for traces, Do we need this for linux ?
-
 
             app.MapWhen(
                 c => c.Request.Path.ToString().EndsWith("/git-receive-pack", StringComparison.OrdinalIgnoreCase),

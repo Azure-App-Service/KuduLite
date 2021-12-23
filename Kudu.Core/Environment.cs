@@ -42,7 +42,6 @@ namespace Kudu.Core
         private readonly string _sitePackagesPath;
         private readonly string _secondaryJobsBinariesPath;
         private readonly string _k8seAppName;
-        private readonly string _k8seAppNamespace;
         private readonly string _k8seAppType;
 
 
@@ -66,7 +65,6 @@ namespace Kudu.Core
                 string requestId,
                 IHttpContextAccessor httpContextAccessor,
                 string k8seAppName = null,
-                string k8seAppNamespace = null,
                 string k8seAppType = null)
         {
             if (repositoryPath == null)
@@ -107,7 +105,6 @@ namespace Kudu.Core
             RequestId = !string.IsNullOrEmpty(requestId) ? requestId : Guid.Empty.ToString();
             _httpContextAccessor = httpContextAccessor;
             _k8seAppName = k8seAppName;
-            _k8seAppNamespace = System.Environment.GetEnvironmentVariable("APPS_NAMESPACE");//k8seAppNamespace;
             _k8seAppType = k8seAppType;
         }
 
@@ -119,7 +116,6 @@ namespace Kudu.Core
                 string kuduConsoleFullPath,
                 IHttpContextAccessor httpContextAccessor,
                 string k8seAppName = null,
-                string k8seAppNamespace = null,
                 string k8seAppType = null)
         {
             RootPath = rootPath;
@@ -136,7 +132,6 @@ namespace Kudu.Core
             _diagnosticsPath = Path.Combine(SiteRootPath, Constants.DiagnosticsPath);
             _locksPath = Path.Combine(SiteRootPath, Constants.LocksPath);
             _k8seAppName = k8seAppName;
-            _k8seAppNamespace = System.Environment.GetEnvironmentVariable("APPS_NAMESPACE");//k8seAppNamespace;
             _k8seAppType = k8seAppType;
 
             if (OSDetector.IsOnWindows())
@@ -493,14 +488,6 @@ namespace Kudu.Core
             get
             {
                 return _k8seAppName;
-            }
-        }
-
-        public string K8SEAppNamespace
-        {
-            get
-            {
-                return _k8seAppNamespace;
             }
         }
 

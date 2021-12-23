@@ -272,7 +272,6 @@ namespace Kudu.Console
         {
             string root = Path.GetFullPath(Path.Combine(siteRoot, ".."));
             string appName = root.Replace("/home/apps/","");
-            string appNamespace = System.Environment.GetEnvironmentVariable("APPS_NAMESPACE");
 
             // CORE TODO : test by setting SCM_REPOSITORY_PATH 
             // REVIEW: this looks wrong because it ignores SCM_REPOSITORY_PATH
@@ -296,8 +295,7 @@ namespace Kudu.Console
                 requestId,
                 Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu.dll"),
                 null,
-                appName,
-                appNamespace);
+                appName);
             return env;
         }
     }
