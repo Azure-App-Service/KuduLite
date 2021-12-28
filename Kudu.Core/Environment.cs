@@ -47,6 +47,12 @@ namespace Kudu.Core
 
 
         // This ctor is used only in unit tests
+
+        // added for test cases
+        public Environment()
+        {
+
+        }
         public Environment(
                 string rootPath,
                 string siteRootPath,

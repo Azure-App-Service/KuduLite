@@ -1,4 +1,7 @@
+using k8s;
+using k8s.Models;
 using Kudu.Core.Functions;
+using Moq;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -6,6 +9,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using Xunit;
+using static Kudu.Core.Functions.KedaFunctionTriggerProvider;
 
 namespace Kudu.Tests.Core.Function
 {
@@ -64,9 +68,9 @@ namespace Kudu.Tests.Core.Function
         }
 
         [Theory]
-        [InlineData("flowc1712a574433c1djobtriggers00", "10", "haassyad-scaling-lima", "workflowApp", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.ScaleMonitor.KEDA.TargetQueueLength"":10}}}}")]
-        [InlineData("flowdc234f1fbd9ff3fjobtriggers00", "20", "n/a", "workflowApp,functionapp", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.HostId"":""haassyad-applicationinsights""}}}}")]
-        public void WorkflowApp( string expectedQueueName, string expectedQueueLength, string appName, string appType, string hostJsonText)
+        [InlineData("flowc1712a574433c1djobtriggers00", "10", "haassyad-scaling-lima", "n/a", "workflowApp", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.ScaleMonitor.KEDA.TargetQueueLength"":10}}}}")]
+        [InlineData("flowdc234f1fbd9ff3fjobtriggers00", "20", "n/a", "n/a", "workflowApp,functionapp", @"{""version"":""2.0"",""extensionBundle"":{""id"": ""Microsoft.Azure.Functions.ExtensionBundle.Workflows"", ""version"": ""[1.*, 2.0.0)""}, ""extensions"":{""workflow"":{""Settings"":{""Runtime.HostId"":""haassyad-applicationinsights""}}}}")]
+        public void WorkflowApp( string expectedQueueName, string expectedQueueLength, string appName, string appNamespace, string appType, string hostJsonText)
         {
             // Generate a zip archive with a host.json with workflow extension enabled
             string zipFilePath = Path.GetTempFileName();
@@ -78,7 +82,7 @@ namespace Kudu.Tests.Core.Function
 
             try
             {
-                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath, appName, appType);
+                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath, appName, appNamespace, appType);
                 Assert.Single(result);
 
                 ScaleTrigger queueTrigger = Assert.Single(result, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));
@@ -263,11 +267,13 @@ namespace Kudu.Tests.Core.Function
                 }
             };
 
+            var myTopicData = System.Text.Encoding.UTF8.GetBytes("myTopic");
+            var consumerGroupData = System.Text.Encoding.UTF8.GetBytes("$Default");
 
             var appSettings = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase)
             {
-                {"topic", Convert.FromBase64String("myTopic")},
-                {"consumergroup", Convert.FromBase64String("$Default")} // should be case insensitive
+                {"topic", myTopicData},
+                {"consumergroup", consumerGroupData} // should be case insensitive
             };
 
             KedaFunctionTriggerProvider.UpdateFunctionTriggerBindingExpression(triggers, appSettings);

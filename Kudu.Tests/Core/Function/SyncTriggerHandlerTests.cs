@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Kudu.Core;
 using Kudu.Core.Functions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -16,7 +17,8 @@ namespace Kudu.Tests.Core.Function
         [InlineData(null)]
         public void GetScaleTriggersTest(string functionTriggerPayload)
         {
-            var syncTriggerHandler = new SyncTriggerHandler(null, null, null);
+            IEnvironment env = new Kudu.Core.Environment();
+            var syncTriggerHandler = new SyncTriggerHandler(env, null, null);
             var scaleTriggers = syncTriggerHandler.GetScaleTriggers(functionTriggerPayload);
             if (string.Equals(functionTriggerPayload, "Invalid json") || string.IsNullOrEmpty(functionTriggerPayload))
             {
@@ -43,7 +45,8 @@ namespace Kudu.Tests.Core.Function
 
             string serializedPayload = syncTriggersPayloadJson.ToString(Formatting.None);
 
-            var syncTriggerHandler = new SyncTriggerHandler(null, null, null);
+            IEnvironment env = new Kudu.Core.Environment();
+            var syncTriggerHandler = new SyncTriggerHandler(env, null, null);
             (IEnumerable<ScaleTrigger> triggers, string error) = syncTriggerHandler.GetScaleTriggers(serializedPayload);
             Assert.Null(error);
             Assert.NotNull(triggers);

@@ -86,10 +86,12 @@ namespace Kudu.Core.Functions
                 var bindingExpressionTarget = match.Value.Replace("%", "");
                 if (appSettings.ContainsKey(bindingExpressionTarget))
                 {
-                    return Convert.ToBase64String(appSettings[bindingExpressionTarget]);
+                    return System.Text.Encoding.UTF8.GetString(appSettings[bindingExpressionTarget]);
+                    //return Convert.ToBase64String(appSettings[bindingExpressionTarget]);
                 }
 
-                return Convert.ToBase64String(appSettings[bindingExpressionTarget]);
+                return System.Text.Encoding.UTF8.GetString(appSettings[bindingExpressionTarget]);
+                //return Convert.ToBase64String(appSettings[bindingExpressionTarget]);
             }
 
             var matchEvaluator = new MatchEvaluator((Func<Match, string>)ReplaceMatchedBindingExpression);
@@ -130,15 +132,24 @@ namespace Kudu.Core.Functions
             var kedaScaleTriggers = new List<ScaleTrigger>();
             kedaScaleTriggers.AddRange(GetStandardScaleTriggers(standardTriggers));
 
-            var config = KubernetesClientConfiguration.InClusterConfig();
-            // Use the config object to create a client.
-            var client = new Kubernetes(config);
+            try
+            {
+                var config = KubernetesClientConfiguration.InClusterConfig();
+                // Use the config object to create a client.
+                var client = new Kubernetes(config);
 
-            var secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace);
-            var appsettingsSecretData = secret.Data;
+                var secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace, null, null, null);
+                var appsettingsSecretData = secret.Data;
 
-            // Update Binding Expression for %..% notation
-            UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appsettingsSecretData);
+                // Update Binding Expression for %..% notation
+                UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appsettingsSecretData);
+            } catch (Exception ex)
+            {
+                Console.WriteLine("Error in binding trigger data");
+                //check if we have to throw error here
+                //throw ex;
+            }
+                
 
             // Durable Functions triggers are treated as a group and get configuration from host.json
             if (durableTriggers.Any() && TryGetDurableKedaTrigger(hostJsonText, out ScaleTrigger durableScaleTrigger))
@@ -151,7 +162,7 @@ namespace Kudu.Core.Functions
                 function.Type.Equals("activityTrigger", StringComparison.OrdinalIgnoreCase) ||
                 function.Type.Equals("entityTrigger", StringComparison.OrdinalIgnoreCase);
 
-            return kedaScaleTriggers;
+            return kedaScaleTriggers;    
         }
 
         internal static string ParseHostJsonPayload(string payload)
