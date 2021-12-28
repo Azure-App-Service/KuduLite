@@ -282,5 +282,39 @@ namespace Kudu.Tests.Core.Function
             Assert.Equal("$Default", metadata["ConsumerGroup"] );
             Assert.Equal("BrokerList", metadata["brokerList"]);
         }
+
+        [Fact]
+        public void CreateScaleTriggers_UpdateBindingExpressions_Continues_withException()
+        {
+            string jsonText = @"
+            {
+                ""functionName"": ""f1"",
+                ""bindings"": [{
+                  ""type"": ""queueTrigger"",
+                  ""connection"": ""AzureWebjobsStorage"",
+                  ""queueName"": ""%queueName%"",
+                  ""name"": ""test1"",
+                  ""testKey"": ""testValue""
+                }]
+            }";
+
+            var jsonObj = JObject.Parse(jsonText);
+            List<JObject> jsonData = new List<JObject>();
+            jsonData.Add(jsonObj);
+            var triggerBindings = jsonData
+              .Select(o => ParseFunctionJson(o["functionName"]?.ToString(), o))
+              .SelectMany(i => i);
+
+            //Exception thrown inside for kubernetes client
+            IEnumerable<ScaleTrigger> scaleTriggers = KedaFunctionTriggerProvider.CreateScaleTriggers("testapp", "testnamespace", triggerBindings, "");
+
+            var metadata = scaleTriggers?.FirstOrDefault().Metadata;
+
+            /* verifying that although binding expression is not updated with value, we get other
+             scale trigger data */
+            Assert.Equal("%queueName%", metadata["queueName"]);
+            Assert.Equal("testValue", metadata["testKey"]);
+        }
+
     }
 }

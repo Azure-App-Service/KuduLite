@@ -87,11 +87,9 @@ namespace Kudu.Core.Functions
                 if (appSettings.ContainsKey(bindingExpressionTarget))
                 {
                     return System.Text.Encoding.UTF8.GetString(appSettings[bindingExpressionTarget]);
-                    //return Convert.ToBase64String(appSettings[bindingExpressionTarget]);
                 }
 
                 return System.Text.Encoding.UTF8.GetString(appSettings[bindingExpressionTarget]);
-                //return Convert.ToBase64String(appSettings[bindingExpressionTarget]);
             }
 
             var matchEvaluator = new MatchEvaluator((Func<Match, string>)ReplaceMatchedBindingExpression);
@@ -145,9 +143,8 @@ namespace Kudu.Core.Functions
                 UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appsettingsSecretData);
             } catch (Exception ex)
             {
-                Console.WriteLine("Error in binding trigger data");
-                //check if we have to throw error here
-                //throw ex;
+                // not throwing exception as next steps need to be continued
+                Console.WriteLine("Error in updating trigger data with binding expressions for appName {0}", appName, ex.StackTrace);
             }
                 
 
