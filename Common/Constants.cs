@@ -187,7 +187,6 @@ namespace Kudu
 
         public const string IsBuildJob = "IS_BUILD_JOB"; //this is to indicate the current pod is build job pod.
         public const string UseBuildJob = "USE_BUILD_JOB"; // this is an EC to control whether to use build job. will be used by build service.
-        public const string WebSiteAuthEncryptionKey = "WEBSITE_AUTH_ENCRYPTION_KEY";
         public const string BuildJobImageRepositoryName = "build-job";
     }
 }
