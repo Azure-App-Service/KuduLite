@@ -307,7 +307,7 @@ namespace Kudu.Core.Deployment
                         if (K8SEDeploymentHelper.IsBuildJob())
                         {
                             tracer.Trace("Upload deployment files");
-                            var authKey = System.Environment.GetEnvironmentVariable(Constants.WebSiteAuthEncryptionKey);
+                            var authKey = System.Environment.GetEnvironmentVariable(Constants.SiteAuthEncryptionKey);
                             var token = AuthHelper.CreateToken(authKey);
                             var host = System.Environment.GetEnvironmentVariable(Constants.HttpHost);
                             

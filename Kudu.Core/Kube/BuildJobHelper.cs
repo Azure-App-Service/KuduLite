@@ -284,12 +284,16 @@ namespace Kudu.Core.Kube
                                                     {
                                                         Name = Constants.HttpHost,
                                                         Value = hostName
+                                                    },
+                                                    new V1EnvVar
+                                                    {
+                                                        Name = Constants.SiteAuthEncryptionKey,
+                                                        ValueFrom = new V1EnvVarSource { SecretKeyRef = new V1SecretKeySelector{ Name = $"{env.K8SEAppName}-secrets", Key = Constants.SiteAuthEncryptionKey} }
                                                     }
                                                 },
                                                 EnvFrom = new List<V1EnvFromSource>
                                                 {
-                                                    new V1EnvFromSource() { ConfigMapRef = new V1ConfigMapEnvSource() { Name = buildJobConfigMap } },
-                                                    new V1EnvFromSource() { SecretRef = new V1SecretEnvSource() { Name = $"{env.K8SEAppName}-secrets" } }
+                                                    new V1EnvFromSource() { ConfigMapRef = new V1ConfigMapEnvSource() { Name = buildJobConfigMap } }
                                                 },
                                                 ImagePullPolicy = "Always"
                                             },

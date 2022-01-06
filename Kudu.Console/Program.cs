@@ -309,7 +309,7 @@ namespace Kudu.Console
         {
             try
             {
-                var authKey = System.Environment.GetEnvironmentVariable(Constants.WebSiteAuthEncryptionKey);
+                var authKey = System.Environment.GetEnvironmentVariable(Constants.SiteAuthEncryptionKey);
                 var token = AuthHelper.CreateToken(authKey);
                 if (buildType == "zip")
                 {
