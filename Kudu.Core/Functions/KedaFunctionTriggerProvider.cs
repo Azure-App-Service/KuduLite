@@ -17,8 +17,6 @@ namespace Kudu.Core.Functions
     {
         public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, string appName = null, string appNamespace = null, string appType = null)
         {
-            //appSettings = appSettings ?? new Dictionary<string, string>();
-
             if (!File.Exists(zipFilePath))
             {
                 return null;
@@ -159,7 +157,7 @@ namespace Kudu.Core.Functions
                 function.Type.Equals("activityTrigger", StringComparison.OrdinalIgnoreCase) ||
                 function.Type.Equals("entityTrigger", StringComparison.OrdinalIgnoreCase);
 
-            return kedaScaleTriggers;    
+            return kedaScaleTriggers; 
         }
 
         internal static string ParseHostJsonPayload(string payload)

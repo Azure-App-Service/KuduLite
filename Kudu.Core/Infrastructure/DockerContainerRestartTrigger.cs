@@ -29,19 +29,14 @@ namespace Kudu.Core.Infrastructure
             System.Environment.NewLine);
 
         public static void RequestContainerRestart(IEnvironment environment, string reason, DeploymentInfoBase deploymentInfo = null)
-        {/*
-            if (appMetadata is null)
-            {
-                appMetadata = new Dictionary<string, string>();
-            }*/
-
+        {
             if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 string appName = environment.K8SEAppName;
-                string appNamespace = deploymentInfo.AppNamespace;
+                string appNamespace = deploymentInfo?.AppNamespace;
                 string appType = environment.K8SEAppType;
                 string buildNumber = environment.CurrId;
-                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(deploymentInfo.RepositoryUrl, appName, appNamespace, appType);
+                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(deploymentInfo?.RepositoryUrl, appName, appNamespace, appType);
                 var buildMetadata = new BuildMetadata()
                 {
                     AppName = appName,

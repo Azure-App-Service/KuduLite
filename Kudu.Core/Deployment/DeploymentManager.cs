@@ -302,7 +302,7 @@ namespace Kudu.Core.Deployment
 
                         string appName = _environment.K8SEAppName;
                         string repoUrl = deploymentInfo == null ? "empty" : deploymentInfo.RepositoryUrl;
-                        if(deploymentInfo == null) //:TODO handle this case , deployment info can't be null
+                        if(deploymentInfo == null)
                         {
                             DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason);
                         }
