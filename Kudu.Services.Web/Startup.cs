@@ -164,6 +164,7 @@ namespace Kudu.Services.Web
             // Its required to register the IHttpContextAccessor first
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
+            services.AddKubernetesClientFactory();
             // Per request environment
             services.AddScoped<IEnvironment>(provider => {
                 var httpContext = provider.GetRequiredService<IHttpContextAccessor>().HttpContext;

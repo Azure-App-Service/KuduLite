@@ -12,6 +12,7 @@ using System.Runtime.Caching;
 using System.Text;
 using Microsoft.Extensions.Primitives;
 using Kudu.Contracts.Infrastructure;
+using k8s;
 
 namespace Kudu.Core.K8SE
 {
@@ -201,26 +202,17 @@ namespace Kudu.Core.K8SE
             return appNamepace;
         }
 
-        public static void UpdateContextWithAppSettings(HttpContext context)
+        public static void UpdateContextWithAppSettings(IKubernetes client, HttpContext context)
         {
-            Dictionary<string, string> appSettings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
-            var appSettingsPrefix = "appsetting_";
-            var appSettingsWithHeader = context.Request.Headers
-                .Where(p => p.Key.StartsWith(appSettingsPrefix, StringComparison.OrdinalIgnoreCase));
+            var appName = GetAppName(context);
+            var appNamespace = GetAppNamespace(context);
 
-            foreach (var setting in appSettingsWithHeader)
+            // TODO: should get the secret name from the app defination.
+            var secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace, null, null, null);
+            if (secret.Data != null)
             {
-                var key = setting.Key.Substring(appSettingsPrefix.Length);
-                appSettings[key] = setting.Value;
+                context.Items.TryAdd("appSettings", secret.Data.ToDictionary(kv => kv.Key, kv => Encoding.UTF8.GetString(kv.Value)));
             }
-
-            // Filter out App Settings headers
-            foreach (var key in appSettingsWithHeader.ToList())
-            {
-                context.Request.Headers.Remove(key);
-            }
-
-            context.Items.TryAdd("appSettings", appSettings);
         }
 
         private static string GetFunctionAppPatchJson(IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)

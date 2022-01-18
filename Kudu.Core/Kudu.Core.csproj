@@ -24,11 +24,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="KubernetesClient" Version="1.5.25" />
+    <PackageReference Include="KubernetesClient" Version="1.6.35" />
     <PackageReference Include="LibGit2Sharp" Version="0.25.2" />
     <PackageReference Include="log4net" Version="2.0.8" />
     <PackageReference Include="Mercurial.Net" Version="1.1.1.607" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="6.0.0" />
     <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
     <PackageReference Include="System.Text.RegularExpressions" Version="4.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.2.0" />

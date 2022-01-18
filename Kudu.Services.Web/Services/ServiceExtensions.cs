@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using k8s;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.SourceControl;
 using Kudu.Contracts.Tracing;
@@ -121,6 +122,12 @@ namespace Kudu.Services.Web
             }
 
             return environment;
+        }
+
+        internal static void AddKubernetesClientFactory(this IServiceCollection services)
+        {
+            services.AddHttpClient();
+            services.AddSingleton<IKubernetesClientFactory, KubernetesClientFactory>();
         }
     }
 }
