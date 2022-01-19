@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Net.Http;
+using k8s;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.SourceControl;
 using Kudu.Contracts.Tracing;
@@ -9,6 +11,7 @@ using Kudu.Core.Deployment;
 using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Hooks;
 using Kudu.Core.K8SE;
+using Kudu.Core.Kube;
 using Kudu.Core.Settings;
 using Kudu.Core.SourceControl.Git;
 using Kudu.Core.Tracing;
@@ -121,6 +124,22 @@ namespace Kudu.Services.Web
             }
 
             return environment;
+        }
+
+        internal static void AddKubernetesClientFactory(this IServiceCollection services)
+        {
+            services.AddHttpClient("k8s")
+                .AddTypedClient<IKubernetes>((httpClient, serviceProvider) =>
+                {
+                    var config = KubernetesClientConfiguration.BuildDefaultConfig();
+                    return new Kubernetes(
+                        config,
+                        httpClient);
+                })
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = KubernetesClientUtil.ServerCertificateValidationCallback,
+                });
         }
     }
 }

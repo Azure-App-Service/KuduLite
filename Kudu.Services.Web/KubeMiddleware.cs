@@ -12,6 +12,8 @@ using Kudu.Core.Helpers;
 using System.IO;
 using System.Linq;
 using Kudu.Core.K8SE;
+using k8s;
+using Microsoft.Rest;
 
 namespace Kudu.Services.Web
 {
@@ -23,14 +25,16 @@ namespace Kudu.Services.Web
         private const string KuduConsoleFilename = "kudu.dll";
         private const string KuduConsoleRelativePath = "KuduConsole";
         private readonly RequestDelegate _next;
+        private readonly IKubernetes _kubernetes;
 
         /// <summary>
         /// Filter out unnecessary routes for Linux Consumption
         /// </summary>
         /// <param name="next">The next request middleware to be passed in</param>
-        public KubeMiddleware(RequestDelegate next)
+        public KubeMiddleware(RequestDelegate next, IKubernetes IKubernetes)
         {
             _next = next;
+            _kubernetes = IKubernetes;
         }
 
         /// <summary>
@@ -85,7 +89,7 @@ namespace Kudu.Services.Web
             context.Items.TryAdd("appName", appName);
 
             // Add All AppSettings to the context.
-            K8SEDeploymentHelper.UpdateContextWithAppSettings(context);
+            K8SEDeploymentHelper.UpdateContextWithAppSettings(_kubernetes, context);
 
             PodInstance instance = null;
 

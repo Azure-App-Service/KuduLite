@@ -24,7 +24,7 @@
   </Target>
   <ItemGroup>
     <PackageReference Include="AspNetCore.RouteAnalyzer" Version="0.5.3" />
-    <PackageReference Include="KubernetesClient" Version="1.5.25" />
+    <PackageReference Include="KubernetesClient" Version="4.0.26" />
     <PackageReference Include="log4net" Version="2.0.8" />
   </ItemGroup>
   <ItemGroup>
