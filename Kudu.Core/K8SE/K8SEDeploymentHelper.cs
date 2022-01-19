@@ -1,17 +1,19 @@
-﻿using Kudu.Contracts.Deployment;
-using Kudu.Contracts.Tracing;
-using Kudu.Core.Deployment;
-using Kudu.Core.Functions;
-using Microsoft.AspNetCore.Http;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Caching;
 using System.Text;
-using Microsoft.Extensions.Primitives;
+using k8s;
+using Kudu.Contracts.Deployment;
 using Kudu.Contracts.Infrastructure;
+using Kudu.Contracts.Settings;
+using Kudu.Contracts.Tracing;
+using Kudu.Core.Deployment;
+using Kudu.Core.Functions;
+using Kudu.Core.Kube;
+using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
 
 namespace Kudu.Core.K8SE
 {
@@ -201,26 +203,45 @@ namespace Kudu.Core.K8SE
             return appNamepace;
         }
 
-        public static void UpdateContextWithAppSettings(HttpContext context)
+        public static void UpdateContextWithAppSettings(IKubernetes client, HttpContext context)
         {
-            Dictionary<string, string> appSettings = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
-            var appSettingsPrefix = "appsetting_";
-            var appSettingsWithHeader = context.Request.Headers
-                .Where(p => p.Key.StartsWith(appSettingsPrefix, StringComparison.OrdinalIgnoreCase));
-
-            foreach (var setting in appSettingsWithHeader)
+            try
             {
-                var key = setting.Key.Substring(appSettingsPrefix.Length);
-                appSettings[key] = setting.Value;
-            }
+                var appName = GetAppName(context);
+                var appNamespace = GetAppNamespace(context);
+                if (string.IsNullOrEmpty(appNamespace))
+                {
+                    Console.WriteLine("appnamespace null");
+                    appNamespace = System.Environment.GetEnvironmentVariable(SettingsKeys.AppsNamespace);
+                    Console.WriteLine($"appnamespace {appNamespace}");
+                }
 
-            // Filter out App Settings headers
-            foreach (var key in appSettingsWithHeader.ToList())
+                Console.WriteLine(appName);
+                Console.WriteLine(appNamespace);
+
+                k8s.Models.V1Secret secret = null;
+                KubernetesClientUtil.ExecuteWithRetry(()=>
+                {
+                    // TODO: should get the secret name from the app defination.
+                    secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace);
+                });
+
+                if (secret.Data != null)
+                {
+                    context.Items.TryAdd("appSettings", secret.Data.ToDictionary(kv => kv.Key, kv => Encoding.UTF8.GetString(kv.Value)));
+                }
+            }
+            catch (Exception e)
             {
-                context.Request.Headers.Remove(key);
-            }
+                if (e.InnerException != null)
+                {
+                    Console.WriteLine(e.InnerException);
+                    Console.WriteLine(e.InnerException.Message);
+                    Console.WriteLine(e.InnerException.StackTrace);
+                }
 
-            context.Items.TryAdd("appSettings", appSettings);
+                throw;
+            }
         }
 
         private static string GetFunctionAppPatchJson(IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)
