@@ -13,6 +13,7 @@ using System.Text;
 using Microsoft.Extensions.Primitives;
 using Kudu.Contracts.Infrastructure;
 using k8s;
+using Kudu.Contracts.Settings;
 
 namespace Kudu.Core.K8SE
 {
@@ -204,14 +205,37 @@ namespace Kudu.Core.K8SE
 
         public static void UpdateContextWithAppSettings(IKubernetes client, HttpContext context)
         {
-            var appName = GetAppName(context);
-            var appNamespace = GetAppNamespace(context);
-
-            // TODO: should get the secret name from the app defination.
-            var secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace, null, null, null);
-            if (secret.Data != null)
+            try
             {
-                context.Items.TryAdd("appSettings", secret.Data.ToDictionary(kv => kv.Key, kv => Encoding.UTF8.GetString(kv.Value)));
+                var appName = GetAppName(context);
+                var appNamespace = GetAppNamespace(context);
+                if (string.IsNullOrEmpty(appNamespace))
+                {
+                    Console.WriteLine("appnamespace null");
+                    appNamespace = System.Environment.GetEnvironmentVariable(SettingsKeys.AppsNamespace);
+                    Console.WriteLine($"appnamespace {appNamespace}");
+                }
+
+                Console.WriteLine(appName);
+                Console.WriteLine(appNamespace);
+
+                // TODO: should get the secret name from the app defination.
+                var secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace, null, null, null);
+                if (secret.Data != null)
+                {
+                    context.Items.TryAdd("appSettings", secret.Data.ToDictionary(kv => kv.Key, kv => Encoding.UTF8.GetString(kv.Value)));
+                }
+            }
+            catch (Exception e)
+            {
+                if (e.InnerException != null)
+                {
+                    Console.WriteLine(e.InnerException);
+                    Console.WriteLine(e.InnerException.Message);
+                    Console.WriteLine(e.InnerException.StackTrace);
+                }
+
+                throw;
             }
         }
 

@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using Kudu.Core.K8SE;
 using k8s;
+using Microsoft.Rest;
 
 namespace Kudu.Services.Web
 {
@@ -24,16 +25,16 @@ namespace Kudu.Services.Web
         private const string KuduConsoleFilename = "kudu.dll";
         private const string KuduConsoleRelativePath = "KuduConsole";
         private readonly RequestDelegate _next;
-        private readonly IKubernetesClientFactory _kubernetesClientFactory;
+        private readonly IKubernetes _kubernetes;
 
         /// <summary>
         /// Filter out unnecessary routes for Linux Consumption
         /// </summary>
         /// <param name="next">The next request middleware to be passed in</param>
-        public KubeMiddleware(RequestDelegate next, IKubernetesClientFactory kubernetesClientFactory)
+        public KubeMiddleware(RequestDelegate next, IKubernetes IKubernetes)
         {
             _next = next;
-            _kubernetesClientFactory = kubernetesClientFactory;
+            _kubernetes = IKubernetes;
         }
 
         /// <summary>
@@ -87,9 +88,13 @@ namespace Kudu.Services.Web
             // Cache the appName for this request
             context.Items.TryAdd("appName", appName);
 
-            var kubernetesClient = _kubernetesClientFactory.CreateClient();
+            //var kubernetesClient = _kubernetesClientFactory.CreateClient();
             // Add All AppSettings to the context.
-            K8SEDeploymentHelper.UpdateContextWithAppSettings(kubernetesClient, context);
+
+            var m = (_kubernetes as ServiceClient<Kubernetes>)?.HttpMessageHandlers?.OfType<RetryDelegatingHandler>();
+            var handlerNames = (m == null) ? "null" : m.Count() + " " + string.Join("", m.Select(m => m.GetType().FullName));
+            Console.WriteLine($"{handlerNames}");
+            K8SEDeploymentHelper.UpdateContextWithAppSettings(_kubernetes, context);
 
             PodInstance instance = null;
 

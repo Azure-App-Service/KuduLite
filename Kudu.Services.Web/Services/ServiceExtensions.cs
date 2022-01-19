@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Net.Http;
 using k8s;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.SourceControl;
@@ -19,6 +21,8 @@ using Kudu.Services.Web.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Rest;
+using Microsoft.Rest.TransientFaultHandling;
 using XmlSettings;
 
 namespace Kudu.Services.Web
@@ -126,7 +130,54 @@ namespace Kudu.Services.Web
 
         internal static void AddKubernetesClientFactory(this IServiceCollection services)
         {
-            services.AddHttpClient();
+            Console.WriteLine("add client");
+            var handler = new RetryDelegatingHandler();
+            var retryPolicy = new RetryPolicy(
+                new HttpTransientErrorDetectionStrategy(),
+                3,
+                TimeSpan.FromSeconds(3));
+            //services.AddTransient(_ => handler);
+            services.AddHttpClient("K8s")
+                        .AddTypedClient<IKubernetes>((httpClient, serviceProvider) =>
+                        {
+                            var config = KubernetesClientConfiguration.BuildDefaultConfig();
+                            var client = new Kubernetes(
+                                config,
+                                httpClient);
+
+                            var m = client.HttpMessageHandlers?.OfType<RetryDelegatingHandler>();
+                            var handlerNames = (m == null) ? "null" : m.Count() + " " + string.Join("", m.Select(m => m.GetType().FullName));
+                            Console.WriteLine($"{handlerNames}");
+                            client.SetRetryPolicy(retryPolicy);
+                            return client;
+                        })
+                        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                        {
+                            ServerCertificateCustomValidationCallback = KubernetesClientFactory.ServerCertificateValidationCallback,
+                        });
+            ;//.AddHttpMessageHandler(_ => handler);
+
+            //services.AddTransient<RetryDelegatingHandler>(_ => handler);
+        }
+
+        internal static void AddKubernetesClientFactory2(this IServiceCollection services)
+        {
+            Console.WriteLine("add client");
+            var handler = new RetryDelegatingHandler();
+            handler.RetryPolicy = new RetryPolicy(
+                new HttpTransientErrorDetectionStrategy(),
+                3,
+                TimeSpan.FromSeconds(3));
+            //services.AddTransient(_ => handler);
+            services.AddHttpClient("k8s", c => { })
+                .ConfigureHttpMessageHandlerBuilder(builder =>
+                {
+                    builder.PrimaryHandler = new HttpClientHandler
+                    {
+                        ServerCertificateCustomValidationCallback = KubernetesClientFactory.ServerCertificateValidationCallback,
+                    };
+                }).AddHttpMessageHandler(_ => handler);
+            services.AddTransient<RetryDelegatingHandler>();
             services.AddSingleton<IKubernetesClientFactory, KubernetesClientFactory>();
         }
     }
