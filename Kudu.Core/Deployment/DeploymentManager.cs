@@ -326,7 +326,7 @@ namespace Kudu.Core.Deployment
                         }
                         else
                         {
-                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, deploymentInfo, appSettings:_appSettings);
+                            DockerContainerRestartTrigger.RequestContainerRestart(_environment, RestartTriggerReason, appSettings:_appSettings);
                         }
                         logger.Log($"Deployment Pod Rollout Started! Use 'kubectl -n k8se-apps get pods {appName} --watch' to monitor the rollout status");
                         logger.Log($"Deployment Pod Rollout Started! Use kubectl watch deplotment {appName} to monitor the rollout status");

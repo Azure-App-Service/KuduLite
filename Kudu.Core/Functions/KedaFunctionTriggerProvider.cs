@@ -78,17 +78,17 @@ namespace Kudu.Core.Functions
         }
 
         internal static void UpdateFunctionTriggerBindingExpression(
-            IEnumerable<ScaleTrigger> scaleTriggers, IDictionary<string, byte[]> appSettings)
+            IEnumerable<ScaleTrigger> scaleTriggers, IDictionary<string, string> appSettings)
         {
             string ReplaceMatchedBindingExpression(Match match)
             {
                 var bindingExpressionTarget = match.Value.Replace("%", "");
                 if (appSettings.ContainsKey(bindingExpressionTarget))
                 {
-                    return System.Text.Encoding.UTF8.GetString(appSettings[bindingExpressionTarget]);
+                    return appSettings[bindingExpressionTarget];
                 }
 
-                return System.Text.Encoding.UTF8.GetString(appSettings[bindingExpressionTarget]);
+                return bindingExpressionTarget;
             }
 
             var matchEvaluator = new MatchEvaluator((Func<Match, string>)ReplaceMatchedBindingExpression);
@@ -99,7 +99,6 @@ namespace Kudu.Core.Functions
                 foreach (var metadata in scaleTrigger.Metadata)
                 {
                     var replacedValue = Regex.Replace(metadata.Value, Constants.AppSettingsRegex, matchEvaluator);
-                    
                     newMetadata[metadata.Key] = replacedValue;
                 }
 
