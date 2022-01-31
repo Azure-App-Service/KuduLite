@@ -120,9 +120,7 @@ namespace Kudu.Services.Deployment
                     AuthorEmail = authorEmail,
                     Message = message,
                     RemoteURL = null,
-                    ShouldBuildArtifact = buildHeader,
-                    AppName = HttpContext.Request.Headers["x-k8se-app-name"],
-                    AppNamespace = HttpContext.Request.Headers["x-k8se-app-namespace"]
+                    ShouldBuildArtifact = buildHeader
                 };
 
                 if (_settings.RunFromLocalZip())

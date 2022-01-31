@@ -28,20 +28,19 @@ namespace Kudu.Core.Infrastructure
             "The last modification Kudu made to this file was at {0}, for the following reason: {1}.",
             System.Environment.NewLine);
 
-        public static void RequestContainerRestart(IEnvironment environment, string reason, DeploymentInfoBase deploymentInfo = null)
+        public static void RequestContainerRestart(IEnvironment environment, string reason, string repositoryUrl = null, string appSubPath = "", IDictionary<string,string> appSettings = null)
         {
             if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 string appName = environment.K8SEAppName;
-                string appNamespace = deploymentInfo?.AppNamespace;
                 string appType = environment.K8SEAppType;
                 string buildNumber = environment.CurrId;
-                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(deploymentInfo?.RepositoryUrl, appName, appNamespace, appType);
+                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(repositoryUrl, appName, appType, appSettings);
                 var buildMetadata = new BuildMetadata()
                 {
                     AppName = appName,
                     BuildVersion = buildNumber,
-                    AppSubPath = deploymentInfo.TargetRootPath
+                    AppSubPath = appSubPath
                 };
 
                 //Only for function apps functionTriggers will be non-null/non-empty

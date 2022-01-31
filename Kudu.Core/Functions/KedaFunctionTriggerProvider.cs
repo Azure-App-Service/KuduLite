@@ -15,8 +15,9 @@ namespace Kudu.Core.Functions
 {
     public static class KedaFunctionTriggerProvider
     {
-        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, string appName = null, string appNamespace = null, string appType = null)
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, string appName = null, string appType = null, IDictionary<string, string> appSettings = null)
         {
+            appSettings = appSettings ?? new Dictionary<string, string>();
             if (!File.Exists(zipFilePath))
             {
                 return null;
@@ -61,7 +62,7 @@ namespace Kudu.Core.Functions
                 return fullName.Equals(Constants.FunctionsHostConfigFile, StringComparison.OrdinalIgnoreCase);
             }
 
-            var triggers = CreateScaleTriggers(appName, appNamespace, triggerBindings, hostJsonText).ToList();
+            var triggers = CreateScaleTriggers(triggerBindings, hostJsonText, appSettings).ToList();
 
             var isWorkflowApp = appType?.ToLowerInvariant()?.Contains(Constants.WorkflowAppKind.ToLowerInvariant());
             if (isWorkflowApp.GetValueOrDefault(defaultValue: false))
@@ -106,21 +107,22 @@ namespace Kudu.Core.Functions
             }
         }
 
-        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string appName, string appNamespace, IEnumerable<JObject> functionsJson, string hostJsonText)
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(IEnumerable<JObject> functionsJson, string hostJsonText, IDictionary<string, string> appSettings)
         {
             var triggerBindings = functionsJson
                 .Select(o => ParseFunctionJson(o["functionName"]?.ToString(), o))
                 .SelectMany(i => i);
 
-            return CreateScaleTriggers(appName, appNamespace, triggerBindings, hostJsonText);
+            return CreateScaleTriggers(triggerBindings, hostJsonText, appSettings);
         }
 
-        public static IEnumerable<ScaleTrigger> GetFunctionTriggersFromSyncTriggerPayload(string appName, string appNamespace, string synctriggerPayload)
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggersFromSyncTriggerPayload(string synctriggerPayload,
+            IDictionary<string, string> appSettings)
         {
-            return CreateScaleTriggers(appName, appNamespace, ParseSyncTriggerPayload(synctriggerPayload), ParseHostJsonPayload(synctriggerPayload));
+            return CreateScaleTriggers(ParseSyncTriggerPayload(synctriggerPayload), ParseHostJsonPayload(synctriggerPayload), appSettings);
         }
 
-        internal static IEnumerable<ScaleTrigger> CreateScaleTriggers(string appName, string appNamespace, IEnumerable<FunctionTrigger> triggerBindings, string hostJsonText)
+        internal static IEnumerable<ScaleTrigger> CreateScaleTriggers(IEnumerable<FunctionTrigger> triggerBindings, string hostJsonText,  IDictionary<string, string> appSettings)
         {
             var durableTriggers = triggerBindings.Where(b => IsDurable(b));
             var standardTriggers = triggerBindings.Where(b => !IsDurable(b));
@@ -128,24 +130,9 @@ namespace Kudu.Core.Functions
             var kedaScaleTriggers = new List<ScaleTrigger>();
             kedaScaleTriggers.AddRange(GetStandardScaleTriggers(standardTriggers));
 
-            try
-            {
-                var config = KubernetesClientConfiguration.InClusterConfig();
-                // Use the config object to create a client.
-                var client = new Kubernetes(config);
-
-                var secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace, null, null, null);
-                var appsettingsSecretData = secret.Data;
-
-                // Update Binding Expression for %..% notation
-                UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appsettingsSecretData);
-            } catch (Exception ex)
-            {
-                // not throwing exception as next steps need to be continued
-                Console.WriteLine("Error in updating trigger data with binding expressions for appName {0}", appName, ex.StackTrace);
-            }
+            // Update Binding Expression for %..% notation
+            UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appSettings);
                 
-
             // Durable Functions triggers are treated as a group and get configuration from host.json
             if (durableTriggers.Any() && TryGetDurableKedaTrigger(hostJsonText, out ScaleTrigger durableScaleTrigger))
             {
