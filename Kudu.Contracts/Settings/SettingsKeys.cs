@@ -52,5 +52,11 @@
         public const string WebsiteHostname = "WEBSITE_HOSTNAME";
         public const string AuthEncryptionKey = "WEBSITE_AUTH_ENCRYPTION_KEY";
         public const string ContainerEncryptionKey = "CONTAINER_ENCRYPTION_KEY";
+        public const string PodDeploymentName = "POD_DEPLOYMENT_NAME";
+        public const string PodNamespace = "POD_NAMESPACE";
+        public const string AppsNamespace = "K8SE_APPS_NAMESPACE";
+        public const string BuildJobName = "JOB_NAME";
+        public const string BuildJobConfigMap = "BUILD_JOB_CONFIGMAP";
+        public const string BuildJobImage = "BUILD_JOB_IMAGE";
     }
 }

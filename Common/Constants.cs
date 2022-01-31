@@ -22,14 +22,25 @@ namespace Kudu
         public const string WebRoot = "wwwroot";
         public const string MappedSite = "/_app";
         public const string RepositoryPath = "repository";
+        public const string TempPath = "tmp";
         public const string ZipTempPath = "zipdeploy";
         public const string ZipExtractPath = "extracted";
+        public const string ArtifactZipFileName = "artifact.zip";
+
+        public const string WindowsAppHomeDir = @"C:\repos\apps\";
+        public const string LinuxAppHomeDir = "/home/apps/";
+        public const string WindowsSiteRepoDir = @"\site\repository";
+        public const string LinuxSiteRepoDir = "/site/repository";
 
         public const string LockPath = "locks";
         public const string DeploymentLockFile = "deployments.lock";
         public const string StatusLockFile = "status.lock";
         public const string SSHKeyLockFile = "sshkey.lock";
         public const string HooksLockFile = "hooks.lock";
+        public const string StatusLockName = "status";
+        public const string SshLockName = "ssh";
+        public const string HooksLockName = "hooks";
+        public const string DeploymentLockName = "deployment";
         public const string SSHKeyPath = ".ssh";
         public const string NpmDebugLogFile = "npm-debug.log";
 
@@ -43,10 +54,13 @@ namespace Kudu
         public const string SiteExtensionLogsDirectory = "siteExtLogs";
         public const string DeploySettingsPath = "settings.xml";
         public const string ActiveDeploymentFile = "active";
+        public const string BuildCompleteFile = "buildComplete";
         public const string ScriptsPath = "Scripts";
         public const string NodeModulesPath = "node_modules";
         public const string FirstDeploymentManifestFileName = "firstDeploymentManifest";
         public const string ManifestFileName = "manifest";
+
+        
 
         public const string AppDataPath = "App_Data";
         public const string DataPath = "data";
@@ -89,6 +103,7 @@ namespace Kudu
 
         public const string ArrLogIdHeader = "x-arr-log-id";
         public const string RequestIdHeader = "x-ms-request-id";
+        public const string RequestIdEnvFormat = "x-ms-request-id@@{0}";
         public const string ClientRequestIdHeader = "x-ms-client-request-id";
         public const string RequestDateTimeUtc = "RequestDateTimeUtc";
 
@@ -169,5 +184,9 @@ namespace Kudu
         public const string ArtifactStagingDirectoryName = "extracted";
 
         public const string K8SEAppTypeDefault = "functionapp,kubernetes,linux";
+
+        public const string IsBuildJob = "IS_BUILD_JOB"; //this is to indicate the current pod is build job pod.
+        public const string UseBuildJob = "USE_BUILD_JOB"; // this is an EC to control whether to use build job. will be used by build service.
+        public const string BuildJobImageRepositoryName = "build-job";
     }
 }

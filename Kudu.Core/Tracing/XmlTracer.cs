@@ -21,6 +21,7 @@ namespace Kudu.Core.Tracing
         public const string StartupRequestTrace = "Startup Request";
         public const string ProcessShutdownTrace = "Process Shutdown";
         public const string ExecutingExternalProcessTrace = "Executing external process";
+        public const string StartBuildJobTrace = "Build Job";
         public const string BackgroundTrace = "BackgroundTrace";
 
         public const int MaxXmlFiles = 200;

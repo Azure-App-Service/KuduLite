@@ -55,7 +55,7 @@ namespace Kudu.Tests.Core.Deployment.Oryx
         [InlineData("PYTHON", "3.6",
             "oryx build RepositoryPath -o BuildTempPath --platform python --platform-version 3.6 -i BuildTempPath -p compress_virtualenv=tar-gz -p virtualenv_name=antenv3.6")]
         [InlineData("PHP", "7.3",
-            "oryx build OutputPath -o OutputPath --platform php")]
+            "oryx build RepositoryPath -o OutputPath --platform php")]
         [InlineData("DOTNETCORE", "3.1",
             "oryx build RepositoryPath -o OutputPath --platform dotnet --platform-version 3.1 -i BuildTempPath")]
         public void CommandGenerationTest(string language, string version, string expectedCommand)

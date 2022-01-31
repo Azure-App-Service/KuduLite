@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.SourceControl;
@@ -287,6 +288,47 @@ namespace Kudu.Contracts.Settings
             }
             return DEFAULT_ALLOWED_ZIPS;
         }
-        
+
+        //TODO: Need to merge this logic with the builderFactory.
+        public static bool DeployWithOryxBuild(this IDeploymentSettingsManager settings, bool shouldBuildArtifact)
+        {
+            var command = settings.GetValue(SettingsKeys.Command);
+            if (!String.IsNullOrEmpty(command))
+            {
+                return false;
+            }
+
+            // If the user provided specific generator arguments, that overrides any detection logic
+            string scriptGeneratorArgs = settings.GetValue(SettingsKeys.ScriptGeneratorArgs);
+            if (!String.IsNullOrEmpty(scriptGeneratorArgs))
+            {
+                return false;
+            }
+
+            // If the repository has an explicit pointer to a project path to be deployed
+            // then use it.
+            string targetProjectPath = settings.GetValue(SettingsKeys.Project);
+            if (!String.IsNullOrEmpty(targetProjectPath))
+            {
+                return false;
+            }
+
+            if (settings.RunFromLocalZip())
+            {
+                return false;
+            }
+
+            string enableOryxBuild = System.Environment.GetEnvironmentVariable("ENABLE_ORYX_BUILD");
+
+            if (!string.IsNullOrEmpty(enableOryxBuild) && shouldBuildArtifact || settings.DoBuildDuringDeployment())
+            {
+                if (StringUtils.IsTrueLike(enableOryxBuild))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 }

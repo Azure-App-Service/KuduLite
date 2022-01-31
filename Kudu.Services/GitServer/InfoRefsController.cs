@@ -180,7 +180,7 @@ namespace Kudu.Services.GitServer
 
             // get repository for the WebRoot
             var initLock = GetInstance<IDictionary<string,IOperationLock>>();
-            initLock["deployment"].LockOperation(() =>
+            initLock[Constants.DeploymentLockName].LockOperation(() =>
             {
                 IRepository repository = _repositoryFactory.GetRepository();
 

@@ -23,5 +23,7 @@ namespace Kudu.Core.Deployment
         ILogger GetLogger(string id);
 
         string GetDeploymentScriptContent();
+
+        bool DoFullBuild(IRepository repository, DeploymentInfoBase deploymentInfo, bool fullBuildByDefault = true);
     }
 }

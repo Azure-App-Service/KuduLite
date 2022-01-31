@@ -265,34 +265,18 @@ namespace Kudu.Core.Functions
                 throw new ArgumentNullException(nameof(triggerType));
             }
 
-            triggerType = triggerType.ToLower();
-
-            switch (triggerType)
+            return triggerType.ToLower() switch
             {
-                case TriggerTypes.AzureStorageQueue:
-                    return "azure-queue";
-
-                case TriggerTypes.Kafka:
-                    return "kafka";
-
-                case TriggerTypes.AzureBlobStorage:
-                    return "azure-blob";
-
-                case TriggerTypes.AzureServiceBus:
-                    return "azure-servicebus";
-
-                case TriggerTypes.AzureEventHubs:
-                    return "azure-eventhub";
-
-                case TriggerTypes.RabbitMq:
-                    return "rabbitmq";
-
-                case TriggerTypes.Http:
-                    return "httpTrigger";
-
-                default:
-                    return string.Empty;
-            }
+                TriggerTypes.AzureBlobStorage => "azure-blob",
+                TriggerTypes.AzureCosmosDb => "azure-cosmosdb",
+                TriggerTypes.AzureEventHubs => "azure-eventhub",
+                TriggerTypes.AzureServiceBus => "azure-servicebus",
+                TriggerTypes.AzureStorageQueue => "azure-queue",
+                TriggerTypes.Http => "httpTrigger",
+                TriggerTypes.Kafka => "kafka",
+                TriggerTypes.RabbitMq => "rabbitmq",
+                _ => string.Empty,
+            };
         }
 
         internal static bool TryGetDurableKedaTrigger(string hostJsonText, out ScaleTrigger scaleTrigger)
@@ -420,6 +404,29 @@ namespace Kudu.Core.Functions
                     metadata["hostFromEnv"] = metadata["connectionStringSetting"];
                     metadata.Remove("connectionStringSetting");
                     break;
+
+                case TriggerTypes.AzureCosmosDb:
+
+                    // Following code supports CosmosDBTrigger binding fields as defined in both v3 and v4 versions of
+                    // Microsoft.Azure.WebJobs.Extensions.CosmosDB package. Also, it places default values for optional
+                    // fields to match the logic in extension library (https://github.com/Azure/azure-webjobs-sdk-extensions).
+
+                    const string DefaultConnectionStringName = "CosmosDB";
+                    const string DefaultLeaseCollectionName = "leases";
+
+                    metadata = new Dictionary<string, string>
+                    {
+                        // Not including 'scalerAddress' field since it can vary with environment.
+                        ["connection"] = metadata.GetValue("connection", "connectionStringSetting") ?? DefaultConnectionStringName,
+                        ["databaseId"] = metadata.GetValue("databaseName"),
+                        ["containerId"] = metadata.GetValue("containerName", "collectionName"),
+                        ["leaseConnection"] = metadata.GetValue("leaseConnection", "connection", "leaseConnectionStringSetting", "connectionStringSetting") ?? DefaultConnectionStringName,
+                        ["leaseDatabaseId"] = metadata.GetValue("leaseDatabaseName", "databaseName"),
+                        ["leaseContainerId"] = metadata.GetValue("leaseContainerName", "leaseCollectionName") ?? DefaultLeaseCollectionName,
+                        ["processorName"] = metadata.GetValue("leaseContainerPrefix", "leaseCollectionPrefix") ?? string.Empty,
+                    };
+
+                    break;
             }
 
             // Clean-up for all triggers
@@ -429,6 +436,12 @@ namespace Kudu.Core.Functions
 
             metadata["functionName"] = functionName;
             return metadata;
+        }
+
+        private static string GetValue(this IDictionary<string, string> dictionary, params string[] keys)
+        {
+            string containedKey = keys.FirstOrDefault(key => dictionary.ContainsKey(key));
+            return containedKey != null ? dictionary[containedKey] : null;
         }
 
         internal class FunctionTrigger
@@ -448,12 +461,13 @@ namespace Kudu.Core.Functions
         static class TriggerTypes
         {
             public const string AzureBlobStorage = "blobtrigger";
+            public const string AzureCosmosDb = "cosmosdbtrigger";
             public const string AzureEventHubs = "eventhubtrigger";
             public const string AzureServiceBus = "servicebustrigger";
             public const string AzureStorageQueue = "queuetrigger";
+            public const string Http = "httptrigger";
             public const string Kafka = "kafkatrigger";
             public const string RabbitMq = "rabbitmqtrigger";
-            public const string Http = "httptrigger";
         }
     }
 }

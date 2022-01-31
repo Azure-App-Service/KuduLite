@@ -163,14 +163,13 @@ namespace Kudu.Services.Web
 
             // Its required to register the IHttpContextAccessor first
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
+            services.AddKubernetesClientFactory();
+            // Per request environment
             services.AddScoped<IEnvironment>(provider => {
                 var httpContext = provider.GetRequiredService<IHttpContextAccessor>().HttpContext;
-                return KuduWebUtil.GetEnvironment(_hostingEnvironment, provider.GetRequiredService<IDeploymentSettingsManager>(), httpContext);
+                return KuduWebUtil.GetEnvironment(_hostingEnvironment, httpContext);
             });
-
-            // Per request environment
-            services.AddScoped(sp =>
-                KuduWebUtil.GetEnvironment(_hostingEnvironment, sp.GetRequiredService<IDeploymentSettingsManager>()));
 
             services.AddDeploymentServices(environment);
 
@@ -184,29 +183,28 @@ namespace Kudu.Services.Web
              * - ITracer vs. ITraceFactory is redundant and confusing.
              * - TraceServices only serves to confuse stuff now that we're avoiding
              */
-            Func<IServiceProvider, ITracer> resolveTracer = KuduWebUtil.GetTracer;
-            ITracer CreateTracerThunk() => resolveTracer(services.BuildServiceProvider());
-
             // First try to use the current request profiler if any, otherwise create a new one
-            var traceFactory = new TracerFactory(() =>
-            {
-                var sp = services.BuildServiceProvider();
-                var context = sp.GetRequiredService<IHttpContextAccessor>().HttpContext;
-                return TraceServices.GetRequestTracer(context) ?? resolveTracer(sp);
-            });
-
             services.AddScoped<ITracer>(sp =>
             {
                 var context = sp.GetRequiredService<IHttpContextAccessor>().HttpContext;
                 return TraceServices.GetRequestTracer(context) ?? NullTracer.Instance;
             });
 
-            services.AddSingleton<ITraceFactory>(traceFactory);
+            services.AddScoped<ITraceFactory>(sp =>
+            {
+                var tracer = sp.GetRequiredService<ITracer>();
+                return new TracerFactory(() => tracer);
+            });
 
-            TraceServices.SetTraceFactory(CreateTracerThunk);
+            TraceServices.SetTraceFactory(KuduWebUtil.GetTracer);
 
-            services.AddSingleton<IDictionary<string, IOperationLock>>(
-                KuduWebUtil.GetNamedLocks(traceFactory, environment));
+            services.AddScoped<IDictionary<string, IOperationLock>>(sp =>
+            {
+                //per request service
+                var env = sp.GetEnvironment(environment);
+                var traceFactory = sp.GetRequiredService<ITraceFactory>();
+                return KuduWebUtil.GetNamedLocks(traceFactory, env);
+            });
 
             // CORE TODO ShutdownDetector, used by LogStreamManager.
             //var shutdownDetector = new ShutdownDetector();
@@ -226,7 +224,7 @@ namespace Kudu.Services.Web
             // Shutdown += () => TraceShutdown(environment, noContextDeploymentsSettingsManager);
 
             // LogStream service
-            services.AddLogStreamService(_webAppRuntimeEnvironment,traceFactory);
+            services.AddLogStreamService(_webAppRuntimeEnvironment);
 
             // Deployment Service
             services.AddWebJobsDependencies();
@@ -242,15 +240,22 @@ namespace Kudu.Services.Web
             services.AddScoped<ISSHKeyManager, SSHKeyManager>();
 
             services.AddScoped<IRepositoryFactory>(
-                sp => KuduWebUtil.GetDeploymentLock(traceFactory, environment).RepositoryFactory =
-                    new RepositoryFactory(
-                        sp.GetRequiredService<IEnvironment>(), sp.GetRequiredService<IDeploymentSettingsManager>(),
-                        sp.GetRequiredService<ITraceFactory>()));
+                sp =>
+                {
+                    var env = sp.GetEnvironment(environment);
+                    var traceFactory = sp.GetRequiredService<ITraceFactory>();
+                    var repositoryFactory =
+                        new RepositoryFactory(
+                            sp.GetRequiredService<IEnvironment>(), sp.GetRequiredService<IDeploymentSettingsManager>(),
+                            traceFactory);
+                    KuduWebUtil.GetDeploymentLock(traceFactory, env).RepositoryFactory = repositoryFactory;
+                    return repositoryFactory;
+                });
 
             services.AddScoped<IApplicationLogsReader, ApplicationLogsReader>();
 
             // Git server
-            services.AddGitServer(KuduWebUtil.GetDeploymentLock(traceFactory, environment));
+            services.AddGitServer(environment);
 
             // Git Servicehook Parsers
             services.AddGitServiceHookParsers();

@@ -205,6 +205,11 @@ fi" + "\n";
             }
         }
 
+        public string ConfigExtralHeader(string hostName, string authHeader)
+        {
+            return Execute("config --add http.{0}.extraheader \"{1}\"", hostName, authHeader);
+        }
+
         public string Resolve(string id)
         {
             return Execute("rev-parse {0}", id).Trim();

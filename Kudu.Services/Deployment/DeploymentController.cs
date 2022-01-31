@@ -63,7 +63,7 @@ namespace Kudu.Services.Deployment
             _deploymentManager = deploymentManager;
             _status = status;
             _settings = settings;
-            _deploymentLock = (AllSafeLinuxLock) namedLocks["deployment"];
+            _deploymentLock = (AllSafeLinuxLock) namedLocks[Constants.DeploymentLockName];
             _repositoryFactory = repositoryFactory;
             GetEnvironment(accessor, environment);
         }

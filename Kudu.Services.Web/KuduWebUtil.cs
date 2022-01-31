@@ -26,17 +26,19 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Authorization;
 using Environment = Kudu.Core.Environment;
 using Org.BouncyCastle.Asn1.Ocsp;
+using Kudu.Core.K8SE;
 
 namespace Kudu.Services.Web
 {
-    internal static class KuduWebUtil
+    public static class KuduWebUtil
     {
         private const string KuduConsoleFilename = "kudu.dll";
         private const string KuduConsoleRelativePath = "KuduConsole";
+        private const string GlobalLockKey = "@@Global"; //Key for the global lock in namedSiteLocks
 
-        private static Dictionary<string, IOperationLock> _namedLocks;
-
-        private static DeploymentLockFile _deploymentLock;
+        //private static Dictionary<string, IOperationLock> _namedLocks;
+        private static IDictionary<string, IDictionary<string, IOperationLock>> namedSiteLocks;
+        private static object lockObj = new object();
 
         // <summary>
         // This method initializes status,ssh,hooks & deployment locks used by Kudu to ensure
@@ -76,13 +78,40 @@ namespace Kudu.Services.Web
         // </remarks>
         private static void SetupLocks(ITraceFactory traceFactory, IEnvironment environment)
         {
+            var _namedLocks = CreateLocks(traceFactory, environment);
+            var key = GetNamedLocksKey(environment);
+
+            if (namedSiteLocks == null)
+            {
+                lock (lockObj)
+                {
+                    namedSiteLocks = new Dictionary<string, IDictionary<string, IOperationLock>>()
+                    {
+                        { key, _namedLocks}
+                    };
+                }
+            }
+            else
+            {
+                lock (lockObj)
+                {   
+                    if (!namedSiteLocks.ContainsKey(key))
+                    {
+                        namedSiteLocks.Add(key, _namedLocks);
+                    }
+                }
+            }
+        }
+
+        private static Dictionary<string, IOperationLock> CreateLocks(ITraceFactory traceFactory, IEnvironment environment)
+        {
             var lockPath = Path.Combine(environment.SiteRootPath, Constants.LockPath);
             var deploymentLockPath = Path.Combine(lockPath, Constants.DeploymentLockFile);
             var statusLockPath = Path.Combine(lockPath, Constants.StatusLockFile);
             var sshKeyLockPath = Path.Combine(lockPath, Constants.SSHKeyLockFile);
             var hooksLockPath = Path.Combine(lockPath, Constants.HooksLockFile);
-            _deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
-            _deploymentLock.InitializeAsyncLocks();
+            var deploymentLock = DeploymentLockFile.GetInstance(deploymentLockPath, traceFactory);
+            deploymentLock.InitializeAsyncLocks();
 
             var statusLock = new LockFile(statusLockPath, traceFactory);
             statusLock.InitializeAsyncLocks();
@@ -91,15 +120,19 @@ namespace Kudu.Services.Web
             var hooksLock = new LockFile(hooksLockPath, traceFactory);
             hooksLock.InitializeAsyncLocks();
 
-            _namedLocks = new Dictionary<string, IOperationLock>
+            return new Dictionary<string, IOperationLock>
             {
-                {"status", statusLock},
-                {"ssh", sshKeyLock},
-                {"hooks", hooksLock},
-                {"deployment", _deploymentLock}
+                { Constants.StatusLockName, statusLock},
+                { Constants.SshLockName, sshKeyLock},
+                { Constants.HooksLockName, hooksLock},
+                { Constants.DeploymentLockName, deploymentLock}
             };
         }
 
+        private static string GetNamedLocksKey(IEnvironment environment)
+        {
+            return environment.GetNormalizedK8SEAppName() ?? GlobalLockKey;
+        }
 
         internal static void SetupFileServer(IApplicationBuilder app, string fileDirectoryPath, string requestPath)
         {
@@ -300,19 +333,50 @@ namespace Kudu.Services.Web
         /// default configuration during the runtime.
         /// </summary>
         internal static IEnvironment GetEnvironment(IWebHostEnvironment hostingEnvironment,
-            IDeploymentSettingsManager settings = null,
             HttpContext httpContext = null)
         {
+            string appName = null;
+            string appNamenamespace = null;
+            string appType = null;
             var root = PathResolver.ResolveRootPath();
+            if (httpContext != null)
+            {
+                appName = K8SEDeploymentHelper.GetAppName(httpContext);
+                appNamenamespace = K8SEDeploymentHelper.GetAppNamespace(httpContext);
+                appType = K8SEDeploymentHelper.GetAppKind(httpContext);
+
+                string homeDir = "";
+                if (OSDetector.IsOnWindows())
+                {
+                    homeDir = Constants.WindowsAppHomeDir;
+                }
+                else
+                {
+                    homeDir = Constants.LinuxAppHomeDir;
+                }
+
+                // Cache the App Environment for this request
+                root = PathResolver.ResolveRootPath(homeDir, appName);
+            }
+
             var siteRoot = Path.Combine(root, Constants.SiteFolder);
-            var repositoryPath = Path.Combine(siteRoot,
-                settings == null ? Constants.RepositoryPath : settings.GetRepositoryPath());
+            var repositoryPath = Path.Combine(siteRoot, Constants.RepositoryPath);
             var binPath = AppContext.BaseDirectory;
             var requestId = httpContext != null ? httpContext.Request.GetRequestId() : null;
             var kuduConsoleFullPath =
                 Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
             return new Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId,
-                kuduConsoleFullPath, null);
+                kuduConsoleFullPath, null, appName, appNamenamespace, appType);
+        }
+
+        internal static void UpdateEnvironmentBySettings(IEnvironment environment,
+            IDeploymentSettingsManager settings = null)
+        {
+            if (settings != null)
+            {
+                var repositoryPath = settings.GetRepositoryPath();
+                environment.RepositoryPath = Path.Combine(environment.SiteRootPath, repositoryPath);
+            }
         }
 
         /// <summary>
@@ -470,14 +534,11 @@ namespace Kudu.Services.Web
         /// <param name="traceFactory"></param>
         /// <param name="environment"></param>
         /// <returns></returns>
-        internal static DeploymentLockFile GetDeploymentLock(ITraceFactory traceFactory, IEnvironment environment)
+        public static DeploymentLockFile GetDeploymentLock(ITraceFactory traceFactory, IEnvironment environment)
         {
-            if (_namedLocks == null || _deploymentLock == null)
-            {
-                GetNamedLocks(traceFactory, environment);
-            }
+            var namedLocks = GetNamedLocks(traceFactory, environment);
 
-            return _deploymentLock;
+            return namedLocks[Constants.DeploymentLockName] as DeploymentLockFile;
         }
 
         /// <summary>
@@ -487,15 +548,12 @@ namespace Kudu.Services.Web
         /// <param name="traceFactory"></param>
         /// <param name="environment"></param>
         /// <returns></returns>
-        internal static Dictionary<string, IOperationLock> GetNamedLocks(ITraceFactory traceFactory,
+        public static IDictionary<string, IOperationLock> GetNamedLocks(ITraceFactory traceFactory,
             IEnvironment environment)
         {
-            if (_namedLocks == null)
-            {
-                SetupLocks(traceFactory, environment);
-            }
+            SetupLocks(traceFactory, environment);
 
-            return _namedLocks;
+            return namedSiteLocks[GetNamedLocksKey(environment)];
         }
 
         // <summary>

@@ -1,6 +1,8 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.IO.Compression;
-using Kudu.Contracts.Infrastructure;
+using System.Net.Http;
+using k8s;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.SourceControl;
 using Kudu.Contracts.Tracing;
@@ -8,6 +10,8 @@ using Kudu.Core;
 using Kudu.Core.Deployment;
 using Kudu.Core.Deployment.Generator;
 using Kudu.Core.Hooks;
+using Kudu.Core.K8SE;
+using Kudu.Core.Kube;
 using Kudu.Core.Settings;
 using Kudu.Core.SourceControl.Git;
 using Kudu.Core.Tracing;
@@ -40,30 +44,38 @@ namespace Kudu.Services.Web
         }
 
         internal static void AddLogStreamService(this IServiceCollection services, 
-            IEnvironment environment, 
-            ITraceFactory traceFactory)
+            IEnvironment environment)
         {
-            var logStreamManagerLock = KuduWebUtil.GetNamedLocks(traceFactory, environment)["hooks"];
-
-            services.AddTransient(sp => new LogStreamManager(Path.Combine(environment.RootPath, Constants.LogFilesPath),
-                sp.GetRequiredService<IEnvironment>(),
-                sp.GetRequiredService<IDeploymentSettingsManager>(),
-                sp.GetRequiredService<ITracer>(),
-                logStreamManagerLock));
+            services.AddTransient(sp =>
+            {
+                var env = sp.GetEnvironment(environment);
+                var traceFactory = sp.GetRequiredService<ITraceFactory>();
+                var logStreamManagerLock = KuduWebUtil.GetNamedLocks(traceFactory, env)[Constants.HooksLockName];
+                return new LogStreamManager(Path.Combine(environment.RootPath, Constants.LogFilesPath),
+                    sp.GetRequiredService<IEnvironment>(),
+                    sp.GetRequiredService<IDeploymentSettingsManager>(),
+                    sp.GetRequiredService<ITracer>(),
+                    logStreamManagerLock);
+            });
         }
         
-        internal static void AddGitServer(this IServiceCollection services, IOperationLock deploymentLock)
+        internal static void AddGitServer(this IServiceCollection services, IEnvironment environment)
         {
             services.AddTransient<IDeploymentEnvironment, DeploymentEnvironment>();
             services.AddScoped<IGitServer>(sp =>
-                new GitExeServer(
+            {
+                var env = sp.GetEnvironment(environment);
+                var traceFactory = sp.GetRequiredService<ITraceFactory>();
+                var deploymentLock = KuduWebUtil.GetDeploymentLock(traceFactory, env);
+                return new GitExeServer(
                     sp.GetRequiredService<IEnvironment>(),
                     deploymentLock,
                     KuduWebUtil.GetRequestTraceFile(sp),
                     sp.GetRequiredService<IRepositoryFactory>(),
                     sp.GetRequiredService<IDeploymentEnvironment>(),
                     sp.GetRequiredService<IDeploymentSettingsManager>(),
-                    sp.GetRequiredService<ITraceFactory>()));
+                    traceFactory);
+            });
         }
 
         internal static void AddGZipCompression(this IServiceCollection services)
@@ -90,11 +102,44 @@ namespace Kudu.Services.Web
 
         internal static void AddDeploymentServices(this IServiceCollection services, IEnvironment environment)
         {
+            var settings = new XmlSettings.Settings(KuduWebUtil.GetSettingsPath(environment));
             services.AddScoped<ISettings>(sp => new XmlSettings.Settings(KuduWebUtil.GetSettingsPath(environment)));
-            services.AddScoped<IDeploymentSettingsManager, DeploymentSettingsManager>();
+            services.AddScoped<IDeploymentSettingsManager, DeploymentSettingsManager>(sp =>
+            {
+                var manager = new DeploymentSettingsManager(sp.GetRequiredService<ISettings>());
+                var env = sp.GetRequiredService<IEnvironment>();
+                KuduWebUtil.UpdateEnvironmentBySettings(env, manager);
+                return manager;
+            });
             services.AddScoped<IDeploymentStatusManager, DeploymentStatusManager>();
             services.AddScoped<ISiteBuilderFactory, SiteBuilderFactory>();
             services.AddScoped<IWebHooksManager, WebHooksManager>();
+        }
+
+        internal static IEnvironment GetEnvironment(this IServiceProvider sp, IEnvironment environment)
+        {
+            if (K8SEDeploymentHelper.IsBuildJob() || K8SEDeploymentHelper.UseBuildJob())
+            {
+                return sp.GetRequiredService<IEnvironment>();
+            }
+
+            return environment;
+        }
+
+        internal static void AddKubernetesClientFactory(this IServiceCollection services)
+        {
+            services.AddHttpClient("k8s")
+                .AddTypedClient<IKubernetes>((httpClient, serviceProvider) =>
+                {
+                    var config = KubernetesClientConfiguration.BuildDefaultConfig();
+                    return new Kubernetes(
+                        config,
+                        httpClient);
+                })
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = KubernetesClientUtil.ServerCertificateValidationCallback,
+                });
         }
     }
 }

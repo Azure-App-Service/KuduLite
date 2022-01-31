@@ -1,10 +1,9 @@
-﻿using System;
-using System.Diagnostics;
-using System.Threading;
-using Kudu.Contracts.SourceControl;
-using Kudu.Core.Helpers;
+﻿using Kudu.Contracts.SourceControl;
 using Kudu.Core.SourceControl;
 using Kudu.Core.Tracing;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace Kudu.Core.Infrastructure
 {
@@ -14,23 +13,27 @@ namespace Kudu.Core.Infrastructure
     public class DeploymentLockFile : AllSafeLinuxLock
     {
         private static readonly ReaderWriterLockSlim rwl = new ReaderWriterLockSlim();
-        private readonly string _path;
-        private static DeploymentLockFile _deploymentLockFile;
-        //private static AllSafeLinuxLock _linuxLock;
+        private static IDictionary<string, DeploymentLockFile> _deploymentLockFiles = new Dictionary<string, DeploymentLockFile>(StringComparer.OrdinalIgnoreCase);
+        private static object lockObj = new object();
 
         public static DeploymentLockFile GetInstance(string path, ITraceFactory traceFactory)
         {
-            if (_deploymentLockFile == null)
+            DeploymentLockFile deploymentLockFile = new DeploymentLockFile(path, traceFactory);
+            var key = deploymentLockFile.LocksPath;
+
+            if (!_deploymentLockFiles.ContainsKey(key))
             {
-                _deploymentLockFile = new DeploymentLockFile(path,traceFactory);
+                lock (lockObj)
+                {
+                    _deploymentLockFiles.Add(key, deploymentLockFile);
+                }
             }
 
-            return _deploymentLockFile;
+            return _deploymentLockFiles[key];
         }
 
-        private DeploymentLockFile(string path, ITraceFactory traceFactory) : base(path,traceFactory)
+        private DeploymentLockFile(string path, ITraceFactory traceFactory) : base(path, traceFactory)
         {
-            _path = path;
             /*
             if (!OSDetector.IsOnWindows())
             {
@@ -40,7 +43,6 @@ namespace Kudu.Core.Infrastructure
             */
         }
 
-        
         public void OnLockAcquired()
         {
             IRepositoryFactory repositoryFactory = RepositoryFactory;
@@ -54,6 +56,5 @@ namespace Kudu.Core.Infrastructure
                 }
             }
         }
-       
     }
 }

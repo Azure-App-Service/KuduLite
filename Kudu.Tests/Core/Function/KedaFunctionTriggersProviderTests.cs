@@ -107,6 +107,103 @@ namespace Kudu.Tests.Core.Function
             }
         }
 
+        [Fact]
+        public void PopulateMetadataDictionary_CosmosDbTriggerV4()
+        {
+            // Test handling for the trigger defined in Cosmos DB WebJobs extension 4.0.0.
+            var bindingJObject = new JObject
+            {
+                ["type"] = "cosmosDbTrigger",
+                ["name"] = "myBinding",
+                ["connection"] = "myConnection",
+                ["databaseName"] = "myDatabaseName",
+                ["containerName"] = "myContainerName",
+                ["leaseConnection"] = "myLeaseConnection",
+                ["leaseDatabaseName"] = "myLeaseDatabaseName",
+                ["leaseContainerName"] = "myLeaseContainerName",
+                ["leaseContainerPrefix"] = "myLeaseContainerPrefix",
+            };
+
+            IDictionary<string, string> metadata = KedaFunctionTriggerProvider.PopulateMetadataDictionary(bindingJObject, "myFunction");
+
+            Assert.NotNull(metadata);
+            Assert.NotEmpty(metadata);
+
+            Assert.False(metadata.ContainsKey("type"));
+            Assert.False(metadata.ContainsKey("name"));
+
+            Assert.Equal("myConnection", metadata["connection"]);
+            Assert.Equal("myDatabaseName", metadata["databaseId"]);
+            Assert.Equal("myContainerName", metadata["containerId"]);
+            Assert.Equal("myLeaseConnection", metadata["leaseConnection"]);
+            Assert.Equal("myLeaseDatabaseName", metadata["leaseDatabaseId"]);
+            Assert.Equal("myLeaseContainerName", metadata["leaseContainerId"]);
+            Assert.Equal("myLeaseContainerPrefix", metadata["processorName"]);
+        }
+
+        [Fact]
+        public void PopulateMetadataDictionary_CosmosDbTriggerV3()
+        {
+            // Test handling for the trigger defined in Cosmos DB WebJobs extension 3.10.0.
+            var bindingJObject = new JObject
+            {
+                ["type"] = "cosmosDbTrigger",
+                ["name"] = "myBinding",
+                ["connectionStringSetting"] = "myConnectionStringSetting",
+                ["databaseName"] = "myDatabaseName",
+                ["collectionName"] = "myCollectionName",
+                ["leaseConnectionStringSetting"] = "myLeaseConnectionStringSetting",
+                ["leaseDatabaseName"] = "myLeaseDatabaseName",
+                ["leaseCollectionName"] = "myLeaseCollectionName",
+                ["leaseCollectionPrefix"] = "myLeaseCollectionPrefix",
+            };
+
+            IDictionary<string, string> metadata = KedaFunctionTriggerProvider.PopulateMetadataDictionary(bindingJObject, "myFunction");
+
+            Assert.NotNull(metadata);
+            Assert.NotEmpty(metadata);
+
+            Assert.False(metadata.ContainsKey("type"));
+            Assert.False(metadata.ContainsKey("name"));
+
+            Assert.Equal("myConnectionStringSetting", metadata["connection"]);
+            Assert.Equal("myDatabaseName", metadata["databaseId"]);
+            Assert.Equal("myCollectionName", metadata["containerId"]);
+            Assert.Equal("myLeaseConnectionStringSetting", metadata["leaseConnection"]);
+            Assert.Equal("myLeaseDatabaseName", metadata["leaseDatabaseId"]);
+            Assert.Equal("myLeaseCollectionName", metadata["leaseContainerId"]);
+            Assert.Equal("myLeaseCollectionPrefix", metadata["processorName"]);
+        }
+
+        [Fact]
+        public void PopulateMetadataDictionary_CosmosDbTriggerDefaults()
+        {
+            // Test default-value substitution if optional fields in trigger binding are not provided.
+            var bindingJObject = new JObject
+            {
+                ["type"] = "cosmosDbTrigger",
+                ["name"] = "myBinding",
+                ["databaseName"] = "myDatabaseName",
+                ["containerName"] = "myContainerName",
+            };
+
+            IDictionary<string, string> metadata = KedaFunctionTriggerProvider.PopulateMetadataDictionary(bindingJObject, "myFunction");
+
+            Assert.NotNull(metadata);
+            Assert.NotEmpty(metadata);
+
+            Assert.False(metadata.ContainsKey("type"));
+            Assert.False(metadata.ContainsKey("name"));
+
+            Assert.Equal("CosmosDB", metadata["connection"]);
+            Assert.Equal("myDatabaseName", metadata["databaseId"]);
+            Assert.Equal("myContainerName", metadata["containerId"]);
+            Assert.Equal("CosmosDB", metadata["leaseConnection"]);
+            Assert.Equal("myDatabaseName", metadata["leaseDatabaseId"]);
+            Assert.Equal("leases", metadata["leaseContainerId"]);
+            Assert.Equal(string.Empty, metadata["processorName"]);
+        }
+
          public void PopulateMetadataDictionary_KedaV1_CorrectlyPopulatesRabbitMQMetadata()
         {
             string jsonText = @"

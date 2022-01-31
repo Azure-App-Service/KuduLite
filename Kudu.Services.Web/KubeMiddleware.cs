@@ -12,6 +12,8 @@ using Kudu.Core.Helpers;
 using System.IO;
 using System.Linq;
 using Kudu.Core.K8SE;
+using k8s;
+using Microsoft.Rest;
 
 namespace Kudu.Services.Web
 {
@@ -23,14 +25,16 @@ namespace Kudu.Services.Web
         private const string KuduConsoleFilename = "kudu.dll";
         private const string KuduConsoleRelativePath = "KuduConsole";
         private readonly RequestDelegate _next;
+        private readonly IKubernetes _kubernetes;
 
         /// <summary>
         /// Filter out unnecessary routes for Linux Consumption
         /// </summary>
         /// <param name="next">The next request middleware to be passed in</param>
-        public KubeMiddleware(RequestDelegate next)
+        public KubeMiddleware(RequestDelegate next, IKubernetes IKubernetes)
         {
             _next = next;
+            _kubernetes = IKubernetes;
         }
 
         /// <summary>
@@ -49,25 +53,43 @@ namespace Kudu.Services.Web
             string siteRepoDir = "";
             if (OSDetector.IsOnWindows())
             {
-                // K8SE TODO : Move to constants
-                homeDir = "C:\\repos\\apps\\";
-                siteRepoDir = "\\site\\repository";
+                homeDir = Constants.WindowsAppHomeDir;
+                siteRepoDir = Constants.WindowsSiteRepoDir;
             }
             else
             {
-                // K8SE TODO : Move to constants
-                homeDir = "/home/apps/";
-                siteRepoDir = "/site/repository";
+                homeDir = Constants.LinuxAppHomeDir;
+                siteRepoDir = Constants.LinuxSiteRepoDir;
             }
 
+            //Use the appName from git as the real app name of the current git operation.
+            string[] pathParts = context.Request.Path.ToString().Split("/");
+
+            if (pathParts != null && pathParts.Length >= 1 && IsGitRoute(context.Request.Path))
+            {
+                appName = pathParts[1];
+                appName = appName.Trim().Replace(".git", "");
+                if (!FileSystemHelpers.DirectoryExists(homeDir + appName))
+                {
+                    context.Response.StatusCode = 404;
+                    await context.Response.WriteAsync("The repository does not exist", Encoding.UTF8);
+                    return;
+                }
+            }
+
+            serverConfig.GitServerRoot = appName + ".git";
+
+            // TODO: Use Path.Combine
+            environment.RepositoryPath = $"{homeDir}{appName}{siteRepoDir}";
+
             // Cache the App Environment for this request
-            context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, null, appNamenamespace, appType));
+            context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, context, appNamenamespace, appType));
 
             // Cache the appName for this request
             context.Items.TryAdd("appName", appName);
 
             // Add All AppSettings to the context.
-            K8SEDeploymentHelper.UpdateContextWithAppSettings(context);
+            K8SEDeploymentHelper.UpdateContextWithAppSettings(_kubernetes, context);
 
             PodInstance instance = null;
 
@@ -118,23 +140,6 @@ namespace Kudu.Services.Web
                 context.Items.TryAdd("appNamespace", appNamenamespace);
             }
 
-            string[] pathParts = context.Request.Path.ToString().Split("/");
-
-            if (pathParts != null && pathParts.Length >= 1 && IsGitRoute(context.Request.Path))
-            {
-                appName = pathParts[1];
-                appName = appName.Trim().Replace(".git", "");
-                if (!FileSystemHelpers.DirectoryExists(homeDir + appName))
-                {
-                    context.Response.StatusCode = 404;
-                    await context.Response.WriteAsync("The repository does not exist", Encoding.UTF8);
-                    return;
-                }
-            }
-
-            serverConfig.GitServerRoot = appName + ".git";
-            // TODO: Use Path.Combine
-            environment.RepositoryPath = $"{homeDir}{appName}{siteRepoDir}";
             await _next.Invoke(context);
         }
 
@@ -160,7 +165,7 @@ namespace Kudu.Services.Web
             string appNamespace = null,
             string appType = null)
         {
-            var root = KubeMiddleware.ResolveRootPath(home, appName);
+            var root = PathResolver.ResolveRootPath(home, appName);
             var siteRoot = Path.Combine(root, Constants.SiteFolder);
             var repositoryPath = Path.Combine(siteRoot,
                 settings == null ? Constants.RepositoryPath : settings.GetRepositoryPath());
@@ -170,32 +175,6 @@ namespace Kudu.Services.Web
                 Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
             return new Core.Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId,
                 kuduConsoleFullPath, null, appName, appNamespace, appType);
-        }
-
-        /// <summary>
-        /// Resolves the root path for the app being served by
-        /// Multitenant Kudu
-        /// </summary>
-        /// <param name="home"></param>
-        /// <param name="appName"></param>
-        /// <returns></returns>
-        public static string ResolveRootPath(string home, string appName)
-        {
-            // The HOME path should always be set correctly
-            //var path = System.Environment.ExpandEnvironmentVariables(@"%HOME%");
-            var path = $"{home}{appName}";
-
-            FileSystemHelpers.EnsureDirectory(path);
-            FileSystemHelpers.EnsureDirectory($"{path}/site/artifacts/hostingstart");
-            // For users running Windows Azure Pack 2 (WAP2), %HOME% actually points to the site folder,
-            // which we don't want here. So yank that segment if we detect it.
-            if (Path.GetFileName(path).Equals(Constants.SiteFolder, StringComparison.OrdinalIgnoreCase))
-            {
-                path = Path.GetDirectoryName(path);
-            }
-
-            return path;
-
         }
     }
 
