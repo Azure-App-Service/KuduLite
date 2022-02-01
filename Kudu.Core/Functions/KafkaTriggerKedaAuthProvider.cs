@@ -15,38 +15,67 @@ namespace Kudu.Core.Functions
         {
             IDictionary<string, string> functionData = bindings.ToObject<Dictionary<string, JToken>>()
                 .Where(i => i.Value.Type == JTokenType.String)
-                .ToDictionary(k => k.Key, v => v.Value.ToString());
+                .ToDictionary(k => k.Key.ToLower(), v => v.Value.ToString());
 
             IDictionary<string, string> secretKeyToKedaParam = new Dictionary<string, string>();
+            IDictionary<string, string> secretsForAppSettings = new Dictionary<string, string>();
 
             //creates the map of secret keys to keda params required for trigger auth
-            if (functionData[TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL] != "NotSet" && functionData[TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE] != "NotSet")
+            if (functionData.ContainsKey(TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL)  
+                    && !functionData[TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL].Equals(TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL_NOT_SET, StringComparison.OrdinalIgnoreCase) 
+                 && functionData.ContainsKey(TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE) 
+                    && !functionData[TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE].Equals(TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE_NOT_SET, StringComparison.OrdinalIgnoreCase))
             {
                 secretKeyToKedaParam.Add(TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE, getKedaProperty(TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE));
                 secretKeyToKedaParam.Add(TriggerAuthConstants.KAFKA_TRIGGER_USERNAME, getKedaProperty(TriggerAuthConstants.KAFKA_TRIGGER_USERNAME));
-                secretKeyToKedaParam.Add(TriggerAuthConstants.KAFKA_TRIGGER_PASSWORD, getKedaProperty(TriggerAuthConstants.KAFKA_TRIGGER_PASSWORD));               
+                secretKeyToKedaParam.Add(TriggerAuthConstants.KAFKA_TRIGGER_PASSWORD, getKedaProperty(TriggerAuthConstants.KAFKA_TRIGGER_PASSWORD));
+
+                secretsForAppSettings.Add(TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE, functionData[TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE]);
+                secretsForAppSettings.Add(TriggerAuthConstants.KAFKA_TRIGGER_USERNAME, functionData[TriggerAuthConstants.KAFKA_TRIGGER_USERNAME]);
+                secretsForAppSettings.Add(TriggerAuthConstants.KAFKA_TRIGGER_PASSWORD, functionData[TriggerAuthConstants.KAFKA_TRIGGER_PASSWORD]);               
+            }
+
+            if (functionData.ContainsKey(TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL) 
+                    && (functionData[TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL].Equals("SASL_SSL", StringComparison.OrdinalIgnoreCase)
+                        || functionData[TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL].Equals("SSL", StringComparison.OrdinalIgnoreCase))) {
+                secretKeyToKedaParam.Add(TriggerAuthConstants.KAFKA_TRIGGER_TLS, getKedaProperty(TriggerAuthConstants.KAFKA_TRIGGER_TLS));
+                secretsForAppSettings.Add(TriggerAuthConstants.KAFKA_TRIGGER_TLS, "enable");
             }
 
             if (functionData.ContainsKey(TriggerAuthConstants.KAFKA_TRIGGER_SSL_CA_LOCATION))
             {
                 secretKeyToKedaParam.Add(TriggerAuthConstants.KAFKA_TRIGGER_SSL_CA_LOCATION, getKedaProperty(TriggerAuthConstants.KAFKA_TRIGGER_SSL_CA_LOCATION));
+                secretsForAppSettings.Add(TriggerAuthConstants.KAFKA_TRIGGER_SSL_CA_LOCATION, functionData[TriggerAuthConstants.KAFKA_TRIGGER_SSL_CA_LOCATION]);
             }
 
             if (functionData.ContainsKey(TriggerAuthConstants.KAFKA_TRIGGER_SSL_CERT_LOCATION))
             {
                 secretKeyToKedaParam.Add(TriggerAuthConstants.KAFKA_TRIGGER_SSL_CERT_LOCATION, getKedaProperty(TriggerAuthConstants.KAFKA_TRIGGER_SSL_CERT_LOCATION));
-                secretKeyToKedaParam.Add(TriggerAuthConstants.KAFKA_TRIGGER_TLS, getKedaProperty(TriggerAuthConstants.KAFKA_TRIGGER_TLS));
+                secretsForAppSettings.Add(TriggerAuthConstants.KAFKA_TRIGGER_SSL_CERT_LOCATION, functionData[TriggerAuthConstants.KAFKA_TRIGGER_SSL_CERT_LOCATION]);
             }
 
             if (functionData.ContainsKey(TriggerAuthConstants.KAFKA_TRIGGER_SSL_KEY_LOCATION))
             {
                 secretKeyToKedaParam.Add(TriggerAuthConstants.KAFKA_TRIGGER_SSL_KEY_LOCATION, getKedaProperty(TriggerAuthConstants.KAFKA_TRIGGER_SSL_KEY_LOCATION));
+                secretsForAppSettings.Add(TriggerAuthConstants.KAFKA_TRIGGER_SSL_KEY_LOCATION, functionData[TriggerAuthConstants.KAFKA_TRIGGER_SSL_KEY_LOCATION]);
             }
 
+            //step 1: add the required trigger auth data as secrets in appsetting secrets file
+            string appNamespace = System.Environment.GetEnvironmentVariable("K8SE_APPS_NAMESPACE");
+            try
+            {
+                //add data as appsettings
+                K8SEDeploymentHelper.UpdateKubernetesSecrets(secretsForAppSettings, functionName + "-secrets", appNamespace);
+            }
+            catch (Exception ex)
+            {
+                //logging and continuing as keda handles if secret expected is not found
+                Console.WriteLine("Error while adding secrets required for trigger auth ", ex.ToString());
+            }
+            
+           //step 2: Create the trigger auth CRD
             IDictionary<string, string> authRef = new Dictionary<string, string>();
             authRef.Add(TriggerAuthConstants.TRIGGER_AUTH_REF_NAME_KEY, functionName);
-
-            
             try
             {
                 CreateTriggerAuthenticationRef(secretKeyToKedaParam, functionName); 

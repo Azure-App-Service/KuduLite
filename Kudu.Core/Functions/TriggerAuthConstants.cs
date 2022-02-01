@@ -8,17 +8,17 @@ namespace Kudu.Core.Functions
     {
         public const string TRIGGER_AUTH_REF_NAME_KEY = "name";
 
-        public const string KAFKA_TRIGGER_PROTOCOL = "Protocol";
-        public const string KAFKA_TRIGGER_AUTH_MODE = "AuthenticationMode";
-        public const string KAFKA_TRIGGER_USERNAME = "Username";
-        public const string KAFKA_TRIGGER_PASSWORD = "Password";
-        public const string KAFKA_TRIGGER_SSL_CA_LOCATION = "SslCaLocation";
-        public const string KAFKA_TRIGGER_SSL_CERT_LOCATION = "SslCertificateLocation";
-        public const string KAFKA_TRIGGER_SSL_KEY_LOCATION = "SslKeyLocation";
-        public const string KAFKA_TRIGGER_TLS = "Tls";
+        public const string KAFKA_TRIGGER_PROTOCOL = "protocol";
+        public const string KAFKA_TRIGGER_AUTH_MODE = "authenticationmode";
+        public const string KAFKA_TRIGGER_USERNAME = "username";
+        public const string KAFKA_TRIGGER_PASSWORD = "password";
+        public const string KAFKA_TRIGGER_SSL_CA_LOCATION = "sslcalocation";
+        public const string KAFKA_TRIGGER_SSL_CERT_LOCATION = "sslcertificatelocation";
+        public const string KAFKA_TRIGGER_SSL_KEY_LOCATION = "sslkeylocation";
+        public const string KAFKA_TRIGGER_TLS = "tls";
 
-        public const string KAFKA_TRIGGER_AUTH_MODE_NOT_SET = "NotSet";
-        public const string KAFKA_TRIGGER_PROTOCOL_NOT_SET = "NotSet";
+        public const string KAFKA_TRIGGER_AUTH_MODE_NOT_SET = "notset";
+        public const string KAFKA_TRIGGER_PROTOCOL_NOT_SET = "notset";
 
         public const string KAFKA_KEDA_PARAM_AUTH_MODE = "sasl";
         public const string KAFKA_KEDA_PARAM_USERNAME = "username";
