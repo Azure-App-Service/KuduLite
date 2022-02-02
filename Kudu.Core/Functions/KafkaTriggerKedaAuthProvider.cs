@@ -22,29 +22,30 @@ namespace Kudu.Core.Functions
         {
             IDictionary<string, string> functionData = bindings.ToObject<Dictionary<string, JToken>>()
                 .Where(i => i.Value.Type == JTokenType.String)
-                .ToDictionary(k => k.Key.ToLower(), v => v.Value.ToString());
+                .ToDictionary(k => k.Key, v => v.Value.ToString());
 
             IDictionary<string, string> secretKeyToKedaParam = new Dictionary<string, string>();
             IDictionary<string, string> secretsForAppSettings = new Dictionary<string, string>();
 
             //creates the map of secret keys to keda params required for trigger auth
             if (functionData.ContainsKey(TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL)  
-                    && !functionData[TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL].Equals(TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL_NOT_SET, StringComparison.OrdinalIgnoreCase) 
+                    && (functionData[TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL].Equals("SaslSsl", StringComparison.OrdinalIgnoreCase) 
+                    || functionData[TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL].Equals("SaslPlaintext", StringComparison.OrdinalIgnoreCase)
                  && functionData.ContainsKey(TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE) 
-                    && !functionData[TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE].Equals(TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE_NOT_SET, StringComparison.OrdinalIgnoreCase))
+                    && !functionData[TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE].Equals(TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE_NOT_SET, StringComparison.OrdinalIgnoreCase)))
             {
                 secretKeyToKedaParam.Add(TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE, getKedaProperty(TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE));
                 secretKeyToKedaParam.Add(TriggerAuthConstants.KAFKA_TRIGGER_USERNAME, getKedaProperty(TriggerAuthConstants.KAFKA_TRIGGER_USERNAME));
                 secretKeyToKedaParam.Add(TriggerAuthConstants.KAFKA_TRIGGER_PASSWORD, getKedaProperty(TriggerAuthConstants.KAFKA_TRIGGER_PASSWORD));
 
-                secretsForAppSettings.Add(TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE, functionData[TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE]);
+                secretsForAppSettings.Add(TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE, TriggerAuthConstants.KafkaTriggerAuthModeToKedaAuthModeProperty.GetValueOrDefault(functionData[TriggerAuthConstants.KAFKA_TRIGGER_AUTH_MODE]));
                 secretsForAppSettings.Add(TriggerAuthConstants.KAFKA_TRIGGER_USERNAME, functionData[TriggerAuthConstants.KAFKA_TRIGGER_USERNAME]);
                 secretsForAppSettings.Add(TriggerAuthConstants.KAFKA_TRIGGER_PASSWORD, functionData[TriggerAuthConstants.KAFKA_TRIGGER_PASSWORD]);               
             }
 
             if (functionData.ContainsKey(TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL) 
-                    && (functionData[TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL].Equals("SASL_SSL", StringComparison.OrdinalIgnoreCase)
-                        || functionData[TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL].Equals("SSL", StringComparison.OrdinalIgnoreCase))) {
+                    && (functionData[TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL].Equals("SaslSsl", StringComparison.OrdinalIgnoreCase)
+                        || functionData[TriggerAuthConstants.KAFKA_TRIGGER_PROTOCOL].Equals("Ssl", StringComparison.OrdinalIgnoreCase))) {
                 secretKeyToKedaParam.Add(TriggerAuthConstants.KAFKA_TRIGGER_TLS, getKedaProperty(TriggerAuthConstants.KAFKA_TRIGGER_TLS));
                 secretsForAppSettings.Add(TriggerAuthConstants.KAFKA_TRIGGER_TLS, "enable");
             }
