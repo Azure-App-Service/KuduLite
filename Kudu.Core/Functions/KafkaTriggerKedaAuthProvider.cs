@@ -12,12 +12,12 @@ namespace Kudu.Core.Functions
 {
     public class KafkaTriggerKedaAuthProvider : IKedaAuthRefProvider
     {
-        private readonly IKubernetes _kubernetesClient;
+        // private readonly IKubernetes _kubernetesClient;
 
-        public KafkaTriggerKedaAuthProvider(IKubernetes kubernetesClient)
-        {
-            _kubernetesClient = kubernetesClient;
-        }
+        // public KafkaTriggerKedaAuthProvider(IKubernetes kubernetesClient)
+        // {
+        //     _kubernetesClient = kubernetesClient;
+        // }
         public IDictionary<string, string> PopulateAuthenticationRef(JToken bindings, string functionName)
         {
             IDictionary<string, string> functionData = bindings.ToObject<Dictionary<string, JToken>>()
@@ -72,7 +72,7 @@ namespace Kudu.Core.Functions
             try
             {
                 //add data as appsettings
-                K8SEDeploymentHelper.UpdateKubernetesSecrets(_kubernetesClient, secretsForAppSettings, functionName + "-secrets", appNamespace);
+                K8SEDeploymentHelper.UpdateKubernetesSecrets(secretsForAppSettings, functionName + "-secrets", appNamespace);
             }
             catch (Exception ex)
             {

@@ -49,6 +49,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using IApplicationLifetime = Microsoft.AspNetCore.Hosting.IApplicationLifetime;
+using k8s;
 
 namespace Kudu.Services.Web
 {
@@ -165,6 +166,10 @@ namespace Kudu.Services.Web
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
             services.AddKubernetesClientFactory();
+
+            var sp = services.BuildServiceProvider();
+
+            K8SEDeploymentHelper.AddKubernetesClient(sp.GetRequiredService<IKubernetes>());
             // Per request environment
             services.AddScoped<IEnvironment>(provider => {
                 var httpContext = provider.GetRequiredService<IHttpContextAccessor>().HttpContext;

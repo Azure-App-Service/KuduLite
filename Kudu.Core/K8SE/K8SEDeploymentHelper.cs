@@ -29,6 +29,8 @@ namespace Kudu.Core.K8SE
 
         };
 
+        private static IKubernetes _kubernetesClient;
+
         // K8SE_BUILD_SERVICE not null or empty
         public static bool IsK8SEEnvironment()
         {
@@ -292,7 +294,7 @@ namespace Kudu.Core.K8SE
             return StringUtils.IsTrueLike(vaule);
         }
 
-        public static void UpdateKubernetesSecrets(IKubernetes _kubernetesClient, IDictionary<string, string> secretData, string secretName, string secretNamespace) {
+        public static void UpdateKubernetesSecrets(IDictionary<string, string> secretData, string secretName, string secretNamespace) {
 
             try {
                 IDictionary<string, IDictionary<string, string>> stringData = new Dictionary<string, IDictionary<string, string>>();
@@ -313,5 +315,10 @@ namespace Kudu.Core.K8SE
                throw e;
             }
         }
+
+        public static void AddKubernetesClient (IKubernetes kubernetesClient)
+       {
+           _kubernetesClient = kubernetesClient;
+       }
     }
 }
