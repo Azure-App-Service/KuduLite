@@ -226,7 +226,7 @@ namespace Kudu.Core.Functions
 
         internal static IKedaAuthRefProvider getTriggerAuthProvider(string triggerType)
         {
-            if (string.Equals(triggerType, TriggerTypes.Kafka, StringComparison.OrdinalIgnoreCase)) {
+            if (string.Equals(triggerType, "kafka", StringComparison.OrdinalIgnoreCase)) {
                 return new KafkaTriggerKedaAuthProvider();
             }
             return null;
