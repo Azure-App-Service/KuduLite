@@ -12,9 +12,9 @@ namespace Kudu.Core.Functions
         public const string KAFKA_TRIGGER_AUTH_MODE = "authenticationMode";
         public const string KAFKA_TRIGGER_USERNAME = "username";
         public const string KAFKA_TRIGGER_PASSWORD = "password";
-        public const string KAFKA_TRIGGER_SSL_CA_LOCATION = "SslCaLocation";
-        public const string KAFKA_TRIGGER_SSL_CERT_LOCATION = "SslCertificateLocation";
-        public const string KAFKA_TRIGGER_SSL_KEY_LOCATION = "SslKeyLocation";
+        public const string KAFKA_TRIGGER_SSL_CA_LOCATION = "sslCaLocation";
+        public const string KAFKA_TRIGGER_SSL_CERT_LOCATION = "sslCertificateLocation";
+        public const string KAFKA_TRIGGER_SSL_KEY_LOCATION = "sslKeyLocation";
         public const string KAFKA_TRIGGER_TLS = "tls";
 
         public const string KAFKA_TRIGGER_AUTH_MODE_NOT_SET = "NotSet";
@@ -27,6 +27,12 @@ namespace Kudu.Core.Functions
         public const string KAFKA_KEDA_PARAM_CERT_LOCATION = "cert";
         public const string KAFKA_KEDA_PARAM_KEY_LOCATION = "key";
         public const string KAFKA_KEDA_PARAM_TLS = "tls";
+
+        //Below protocol values must be same as BrokerProtocol values from kafka extension
+        public const string KAFKA_TRIGGER_SASL_SSL_PROTOCOL = "SaslSsl";
+        public const string KAFKA_TRIGGER_SSL_PROTOCOL = "Ssl";
+        public const string KAFKA_TRIGGER_SASL_PLAINTEXT_PROTOCOL = "SaslPlaintext";
+        public const string KAFKA_TRIGGER_PLAINTEXT_PROTOCOL = "Plaintext";
 
         public static readonly Dictionary<string, string> KafkaTriggerBindingToKedaProperty = new Dictionary<string, string>()
         {
