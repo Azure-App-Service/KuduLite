@@ -9,6 +9,7 @@ using Kudu.Contracts.Tracing;
 using Kudu.Core;
 using Kudu.Core.Deployment;
 using Kudu.Core.Deployment.Generator;
+using Kudu.Core.Extensions;
 using Kudu.Core.Hooks;
 using Kudu.Core.K8SE;
 using Kudu.Core.Kube;
@@ -19,6 +20,7 @@ using Kudu.Services.Performance;
 using Kudu.Services.ServiceHookHandlers;
 using Kudu.Services.Web.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection;
 using XmlSettings;
@@ -100,13 +102,20 @@ namespace Kudu.Services.Web
             //                     .InTransientScope();
         }
 
-        internal static void AddDeploymentServices(this IServiceCollection services, IEnvironment environment)
+        internal static void AddDeploymentServices(this IServiceCollection services)
         {
-            var settings = new XmlSettings.Settings(KuduWebUtil.GetSettingsPath(environment));
-            services.AddScoped<ISettings>(sp => new XmlSettings.Settings(KuduWebUtil.GetSettingsPath(environment)));
+            services.AddScoped<ISettings>(sp =>
+            {
+                var env = sp.GetRequiredService<IEnvironment>();
+                return new XmlSettings.Settings(KuduWebUtil.GetSettingsPath(env));
+            });
             services.AddScoped<IDeploymentSettingsManager, DeploymentSettingsManager>(sp =>
             {
-                var manager = new DeploymentSettingsManager(sp.GetRequiredService<ISettings>());
+                var k8sClient = sp.GetRequiredService<IKubernetes>();
+                var httpcontext = sp.GetRequiredService<IHttpContextAccessor>().HttpContext;
+                K8SEDeploymentHelper.UpdateContextWithAppSettings(k8sClient, httpcontext);
+
+                var manager = new DeploymentSettingsManager(sp.GetRequiredService<ISettings>(), httpcontext.GetAppSettings());
                 var env = sp.GetRequiredService<IEnvironment>();
                 KuduWebUtil.UpdateEnvironmentBySettings(env, manager);
                 return manager;

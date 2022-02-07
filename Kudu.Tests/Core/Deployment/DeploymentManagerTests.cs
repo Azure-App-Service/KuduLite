@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
 using Kudu.Core.Deployment;
+using Kudu.Core.Extensions;
 using Microsoft.AspNetCore.Http;
 using Xunit;
 
@@ -23,7 +22,7 @@ namespace Kudu.Tests.Core.Deployment
         
             IHttpContextAccessor accessor = new HttpContextAccessor();
             accessor.HttpContext = new DefaultHttpContext();
-            accessor.HttpContext.Items.Add("appSettings", appSettings);
+            accessor.HttpContext.SetAppSettings(() => appSettings);
 
             Assert.Equal(2, DeploymentManager.GetAppSettings(accessor, () => true).Count);
             Assert.Equal(functionsWorkerRuntimeValue, DeploymentManager.GetAppSettings(accessor, () => true)[functionsWorkerRuntimeKey]);

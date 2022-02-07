@@ -12,7 +12,12 @@ namespace Kudu.Core.Settings
         private readonly List<ISettingsProvider> _settingsProviders;
 
         public DeploymentSettingsManager(ISettings settings)
-            : this(settings, new EnvironmentSettingsProvider(), new DefaultSettingsProvider())
+           : this(settings, default(IDictionary<string, string>))
+        {
+        }
+
+        public DeploymentSettingsManager(ISettings settings, IDictionary<string, string> appSettings)
+            : this(settings, new EnvironmentSettingsProvider(appSettings), new DefaultSettingsProvider())
         {
         }
 

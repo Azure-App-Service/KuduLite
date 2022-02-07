@@ -389,7 +389,9 @@ namespace Kudu.Console
 
         private static string GetSettingsPath()
         {
-            return Path.Combine(env.DeploymentsPath, Constants.DeploySettingsPath);
+            var settingsPath = Path.Combine(env.DeploymentsPath, Constants.DeploySettingsPath);
+            System.Console.WriteLine(settingsPath);
+            return settingsPath;
         }
 
         private static IEnvironment GetEnvironment(string siteRoot)

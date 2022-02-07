@@ -58,6 +58,8 @@ namespace Kudu.Services
                 try
                 {
                     JObject payload = GetPayload(context.Request, tracer);
+                    tracer.Trace(payload.ToString());
+                    tracer.Trace(targetBranch);
                     DeployAction action = GetRepositoryInfo(context.Request, payload, targetBranch, serviceHookHandlers, tracer, out deployInfo);
                     if (action == DeployAction.NoOp)
                     {

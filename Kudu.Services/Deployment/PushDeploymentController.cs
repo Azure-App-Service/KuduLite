@@ -26,6 +26,7 @@ using Kudu.Services.Util;
 using System.Text;
 using Kudu.Services.Arm;
 using Kudu.Contracts.Infrastructure;
+using Kudu.Core.Extensions;
 
 namespace Kudu.Services.Deployment
 {
@@ -90,9 +91,9 @@ namespace Kudu.Services.Deployment
             {
                 var buildHeader = false;
 
-                if (K8SEDeploymentHelper.IsK8SEEnvironment() && HttpContext.Items.ContainsKey("appSettings"))
+                if (K8SEDeploymentHelper.IsK8SEEnvironment())
                 {
-                    var appSettings = (IDictionary<string, string>)HttpContext.Items["appSettings"];
+                    var appSettings = HttpContext.GetAppSettings();
                     var scm_do_build_during_deployment_setting = appSettings?.FirstOrDefault(kv => kv.Key.Equals("scm_do_build_during_deployment", StringComparison.OrdinalIgnoreCase));
 
                     if (scm_do_build_during_deployment_setting != null && !scm_do_build_during_deployment_setting.Value.Equals(default(KeyValuePair<string, string>)))

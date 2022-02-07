@@ -121,7 +121,7 @@ namespace Kudu.Contracts.Settings
 
         public static string GetBranch(this IDeploymentSettingsManager settings)
         {
-            string value = settings.GetValue(SettingsKeys.Branch, onlyPerSite: true);
+            string value = settings.GetValue(SettingsKeys.Branch);
             if (!String.IsNullOrEmpty(value))
             {
                 return value;
