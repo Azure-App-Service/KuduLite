@@ -382,6 +382,8 @@ namespace Kudu.Core.Functions
                     metadata.Remove("brokerList");
                     metadata.Remove("protocol");
                     metadata.Remove("authenticationMode");
+                    metadata.Remove("username");
+                    metadata.Remove("password");
                     break;
 
                 case TriggerTypes.RabbitMq:

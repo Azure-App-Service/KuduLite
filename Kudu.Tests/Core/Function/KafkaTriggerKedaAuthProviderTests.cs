@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Kudu.Tests.Core.Function
 {
-    public class KafkaTriggerKedaAuthProviderTest
+    public class KafkaTriggerKedaAuthProviderTests
     {
         [Fact]
         public void TestPopulateAuthenticationRef_Is_BindingCaseInsensitive()
