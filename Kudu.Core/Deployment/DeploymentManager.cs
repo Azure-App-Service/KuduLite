@@ -10,6 +10,7 @@ using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
 using Kudu.Core.Deployment.Generator;
+using Kudu.Core.Extensions;
 using Kudu.Core.Helpers;
 using Kudu.Core.Hooks;
 using Kudu.Core.Infrastructure;
@@ -103,8 +104,7 @@ namespace Kudu.Core.Deployment
             IDictionary<string, string> appSettings = new Dictionary<string, string>();
             if (isK8SeEnvironment() && accessor != null)
             {
-                var context = accessor.HttpContext;
-                appSettings = (IDictionary<string, string>) context.Items["appSettings"];
+                appSettings = accessor.HttpContext.GetAppSettings();
             }
 
             return appSettings;

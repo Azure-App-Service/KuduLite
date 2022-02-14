@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Net;
+using System.Collections.Generic;
 using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
-using Newtonsoft.Json.Linq;
-using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using Microsoft.AspNetCore.Http;
 using Kudu.Core.K8SE;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
 
 namespace Kudu.Services.Settings
 {
@@ -29,40 +28,20 @@ namespace Kudu.Services.Settings
         /// </summary>
         /// <param name="newSettings">The object containing the new settings</param>
         /// <returns></returns>
-        public IActionResult Set([FromBody]JObject newSettings)
+        public IActionResult Set([FromBody] JObject newSettings)
         {
             if (newSettings == null)
             {
                 return BadRequest();
             }
 
-            // We support two formats here:
-            // 1. For backward compat, we support {key: 'someKey', value: 'someValue' }
-            // 2. The preferred format is { someKey = 'someValue' }
-            // Note that #2 allows multiple settings to be set, e.g. { someKey = 'someValue', someKey2 = 'someValue2' }
-
             try
             {
                 return _deploymentLock.LockOperation<IActionResult>(() =>
                 {
-                    JToken keyToken, valueToken;
-                    if (newSettings.Count == 2 && newSettings.TryGetValue("key", out keyToken) && newSettings.TryGetValue("value", out valueToken))
+                    foreach (var keyValuePair in newSettings)
                     {
-                        string key = keyToken.Value<string>();
-
-                        if (String.IsNullOrEmpty(key))
-                        {
-                            return BadRequest();
-                        }
-
-                        _settingsManager.SetValue(key, valueToken.Value<string>());
-                    }
-                    else
-                    {
-                        foreach (var keyValuePair in newSettings)
-                        {
-                            _settingsManager.SetValue(keyValuePair.Key, keyValuePair.Value.Value<string>());
-                        }
+                        _settingsManager.SetValue(keyValuePair.Key, keyValuePair.Value.Value<string>());
                     }
 
                     return NoContent();
@@ -107,13 +86,7 @@ namespace Kudu.Services.Settings
         /// <returns></returns>
         public IActionResult GetAll()
         {
-            IDictionary<string, string> appSettings = new Dictionary<string, string>();
-            if (K8SEDeploymentHelper.IsK8SEEnvironment() && HttpContext != null)
-            {
-                appSettings = (IDictionary<string, string>)HttpContext.Items["appSettings"];
-            }
-
-            return Ok(_settingsManager.GetValues(appSettings));
+            return Ok(_settingsManager.GetValues(null));
         }
 
         /// <summary>
@@ -128,7 +101,7 @@ namespace Kudu.Services.Settings
                 return BadRequest();
             }
 
-            string value = _settingsManager.GetValue(key);
+            var value = _settingsManager.GetValue(key);
 
             if (value == null)
             {
