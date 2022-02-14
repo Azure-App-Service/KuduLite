@@ -10,6 +10,7 @@ using Kudu.Contracts.Infrastructure;
 using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
 using Kudu.Core.Deployment;
+using Kudu.Core.Extensions;
 using Kudu.Core.Functions;
 using Kudu.Core.Kube;
 using Microsoft.AspNetCore.Http;
@@ -209,27 +210,8 @@ namespace Kudu.Core.K8SE
             {
                 var appName = GetAppName(context);
                 var appNamespace = GetAppNamespace(context);
-                if (string.IsNullOrEmpty(appNamespace))
-                {
-                    Console.WriteLine("appnamespace null");
-                    appNamespace = System.Environment.GetEnvironmentVariable(SettingsKeys.AppsNamespace);
-                    Console.WriteLine($"appnamespace {appNamespace}");
-                }
 
-                Console.WriteLine(appName);
-                Console.WriteLine(appNamespace);
-
-                k8s.Models.V1Secret secret = null;
-                KubernetesClientUtil.ExecuteWithRetry(()=>
-                {
-                    // TODO: should get the secret name from the app defination.
-                    secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace);
-                });
-
-                if (secret.Data != null)
-                {
-                    context.Items.TryAdd("appSettings", secret.Data.ToDictionary(kv => kv.Key, kv => Encoding.UTF8.GetString(kv.Value)));
-                }
+                context.SetAppSettings(()=>GetAppSettingsFromSecrets(client, appNamespace, appName));
             }
             catch (Exception e)
             {
@@ -242,6 +224,29 @@ namespace Kudu.Core.K8SE
 
                 throw;
             }
+        }
+
+        public static IDictionary<string, string> GetAppSettingsFromSecrets(IKubernetes client, string appNamespace, string appName)
+        {
+            if (string.IsNullOrEmpty(appNamespace))
+            {
+                Console.WriteLine("appnamespace null");
+                appNamespace = System.Environment.GetEnvironmentVariable(SettingsKeys.AppsNamespace);
+            }
+
+            k8s.Models.V1Secret secret = null;
+            KubernetesClientUtil.ExecuteWithRetry(() =>
+            {
+                // TODO: should get the secret name from the app defination.
+                secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace);
+            });
+
+            if (secret.Data != null)
+            {
+                return secret.Data.ToDictionary(kv => kv.Key, kv => Encoding.UTF8.GetString(kv.Value));
+            }
+
+            return new Dictionary<string, string>();
         }
 
         private static string GetFunctionAppPatchJson(IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)
