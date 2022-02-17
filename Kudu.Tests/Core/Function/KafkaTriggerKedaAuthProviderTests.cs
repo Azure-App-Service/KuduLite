@@ -23,7 +23,7 @@ namespace Kudu.Tests.Core.Function
 
             JToken jsonObj = JToken.Parse(jsonText);
             IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, "testFunctionName");
-            Assert.Equal(1, authRef.Count);
+            Assert.Equal("testFunctionName", authRef["name"]);
         }
 
         [Fact]
@@ -40,7 +40,7 @@ namespace Kudu.Tests.Core.Function
 
             JToken jsonObj = JToken.Parse(jsonText);
             IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, "testFunctionName");
-            Assert.Equal(1, authRef.Count);
+            Assert.Equal("testFunctionName", authRef["name"]);
         }
 
         [Fact]
@@ -74,7 +74,7 @@ namespace Kudu.Tests.Core.Function
 
             JToken jsonObj = JToken.Parse(jsonText);
             IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, "testFunctionName");
-            Assert.Equal(1, authRef.Count);
+            Assert.Equal("testFunctionName", authRef["name"]);
         }
 
         [Fact]
