@@ -50,6 +50,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using IApplicationLifetime = Microsoft.AspNetCore.Hosting.IApplicationLifetime;
 using k8s;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 namespace Kudu.Services.Web
 {
@@ -83,6 +84,7 @@ namespace Kudu.Services.Web
         public void ConfigureServices(IServiceCollection services)
         {
             Console.WriteLine(@"Configure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+
             FileSystemHelpers.DeleteDirectorySafe("/home/site/locks/deployment");
             // configure basic authentication 
 
@@ -93,6 +95,11 @@ namespace Kudu.Services.Web
                 options.KeyLengthLimit = 1000000;
             });
 
+            services.Configure<KestrelServerOptions>(options =>
+            {
+                options.AllowSynchronousIO = true;
+            });
+
             services.AddRouteAnalyzer();
 
             // Kudu.Services contains all the Controllers 
@@ -101,7 +108,8 @@ namespace Kudu.Services.Web
             services.AddMvcCore(options => options.EnableEndpointRouting = false)
                 .AddRazorPages().AddMvcOptions(options => options.EnableEndpointRouting = false)
                 .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices()
-                .AddApiExplorer();
+                .AddApiExplorer()
+                .AddNewtonsoftJson(options => options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
 
             services.AddSwaggerGen(c =>
             {
@@ -176,7 +184,7 @@ namespace Kudu.Services.Web
                 return KuduWebUtil.GetEnvironment(_hostingEnvironment, httpContext);
             });
 
-            services.AddDeploymentServices(environment);
+            services.AddDeploymentServices();
 
             /*
              * CORE TODO Refactor ITracerFactory/ITracer/GetTracer()/
@@ -419,9 +427,11 @@ namespace Kudu.Services.Web
                 appBranch => appBranch.RunUploadPackHandler());
             //app.MapWhen("/{repository}/git-upload-pack", appBranch => appBranch.RunUploadPackHandler());
 
+            // Fetch hook
+            app.Map("/deploy", appBranch => appBranch.RunFetchHandler());
+
             // Log streaming
             app.Map("/api/logstream", appBranch => appBranch.RunLogStreamHandler());
-
 
             // Clone url
             // Custom GIT repositories, which can be served from any directory that has a git repo

@@ -1,7 +1,7 @@
-﻿using Kudu.Contracts.Infrastructure;
+﻿using System.Collections.Generic;
+using Kudu.Contracts.Infrastructure;
 using Kudu.Core.Tracing;
 using Kudu.Services.Web;
-using System.Collections.Generic;
 using Xunit;
 
 namespace Kudu.Tests.Services

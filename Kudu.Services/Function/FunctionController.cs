@@ -1,5 +1,6 @@
 ﻿using Kudu.Contracts.Tracing;
 using Kudu.Core;
+using Kudu.Core.Extensions;
 using Kudu.Core.Functions;
 using Kudu.Core.K8SE;
 using Kudu.Core.Kube;
@@ -30,7 +31,7 @@ namespace Kudu.Services.Function
         {
             _tracer = tracer;
             _environment = (IEnvironment)accessor.HttpContext.Items["environment"];
-            _appSettings = (IDictionary<string, string>) accessor.HttpContext.Items["appSettings"];
+            _appSettings = accessor.HttpContext.GetAppSettings();
             _analytics = analytics;
         }
 
