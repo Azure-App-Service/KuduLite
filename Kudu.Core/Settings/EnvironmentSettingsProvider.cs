@@ -2,14 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Configuration;
-using Kudu.Core.Extensions;
-using Microsoft.AspNetCore.Http;
 
 namespace Kudu.Core.Settings
 {
     public class EnvironmentSettingsProvider : BasicSettingsProvider
     {
-        private static readonly Lazy<Dictionary<string, string>> _environmentSettingsFactory = new Lazy<Dictionary<string, string>>(GetEnvironmentSettingsInternal);
         private const string AppSettingPrefix = "APPSETTING_";
 
         public EnvironmentSettingsProvider(IDictionary<string, string> appSettings)
@@ -19,7 +16,7 @@ namespace Kudu.Core.Settings
 
         public static IDictionary<string, string> MergeSettings(IDictionary<string, string> appSettings)
         {
-            var envSetting = _environmentSettingsFactory.Value;
+            var envSetting = GetEnvironmentSettingsInternal();
             if (appSettings != null)
             {
                 foreach (var kv in appSettings)
