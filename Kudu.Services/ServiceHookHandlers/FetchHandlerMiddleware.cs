@@ -1,6 +1,7 @@
 ﻿using Kudu.Contracts.Settings;
 using Kudu.Contracts.Tracing;
 using Kudu.Core.Deployment;
+using Kudu.Core.K8SE;
 using Kudu.Core.Tracing;
 using Kudu.Services.Infrastructure;
 using Kudu.Services.ServiceHookHandlers;
@@ -34,6 +35,11 @@ namespace Kudu.Services
         {
             using (tracer.Step("FetchHandler"))
             {
+                if (K8SEDeploymentHelper.IsK8SEEnvironment())
+                {
+                    context.Request.Scheme = "https";
+                }
+
                 // Redirect GET /deploy requests to the Kudu root for convenience when using URL from Azure portal
                 if (string.Equals(context.Request.Method, "GET", StringComparison.OrdinalIgnoreCase))
                 {
@@ -81,6 +87,7 @@ namespace Kudu.Services
                 switch (response)
                 {
                     case FetchDeploymentRequestResult.RunningAynschronously:
+
                         // to avoid regression, only set location header if isAsync
                         if (asyncRequested)
                         {
