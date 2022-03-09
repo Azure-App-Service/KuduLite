@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Xunit;
+using Moq;
 
 namespace Kudu.Tests.Core.Function
 {
@@ -36,11 +37,15 @@ namespace Kudu.Tests.Core.Function
         [InlineData(jsonText, "testFunctionName2")]
         public void TestPopulateAuthenticationRef(string jsonText, string appName)
         {
-            Moc
-            KafkaTriggerKedaAuthProviderOverload kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderOverload();
+            Mock<KafkaTriggerKedaAuthProvider> mock = new Mock<KafkaTriggerKedaAuthProvider>();
+            mock.Setup(m => m.CreateTriggerAuthenticationRef(It.IsAny<Dictionary<string,string>>(), It.IsAny<String>())).Verifiable();
+            KafkaTriggerKedaAuthProvider kafkaTriggerKedaAuthProvider = mock.Object;
+            // KafkaTriggerKedaAuthProviderOverload kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderOverload();
+           // KafkaTriggerKedaAuthProvider kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProvider(mock.Object);
             JToken jsonObj = JToken.Parse(jsonText);
             IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, appName);
             Assert.Equal(appName, authRef["name"]);
+            mock.Verify();
         }
 
         [Theory]
@@ -50,7 +55,7 @@ namespace Kudu.Tests.Core.Function
         {
             KafkaTriggerKedaAuthProviderOverload kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderOverload();
             JToken jsonObj = JToken.Parse(jsonData);
-            IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, "testFunctionName");
+            IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, appName);
             Assert.Null(authRef);
         }
 
