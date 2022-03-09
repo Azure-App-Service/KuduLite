@@ -74,7 +74,7 @@ namespace Kudu.Tests.Core.Function
             mock.Setup(m => m.CreateTriggerAuthenticationRef(It.IsAny<Dictionary<string, string>>(), It.IsAny<String>())).Verifiable();
             mock.Setup(m => m.AddTriggerAuthAppSettingsSecrets(It.IsAny<Dictionary<string, string>>(), It.IsAny<String>())).Throws(new Exception("exception for unit test"));
 
-            IDictionary<string, string> authRef = getAuthRef(mock, kafkaBindings, "testfunctionName");
+            IDictionary<string, string> authRef = getAuthRef(mock, kafkaBindings, "testFunctionName");
             Assert.Equal("testFunctionName", authRef["name"]);
         }
 
