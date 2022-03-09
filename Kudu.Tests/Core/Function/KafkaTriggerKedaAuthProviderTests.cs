@@ -9,11 +9,7 @@ namespace Kudu.Tests.Core.Function
 {
     public class KafkaTriggerKedaAuthProviderTests
     {
-        [Fact]
-        public void TestPopulateAuthenticationRef_Is_BindingCaseInsensitive()
-        {
-            KafkaTriggerKedaAuthProviderOverload kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderOverload();
-            string jsonText = @"
+        private const string  jsonText = @"
             {
                 ""Protocol"": ""SaslSsl"",
                 ""authenticationMode"": ""Plain"",
@@ -21,40 +17,47 @@ namespace Kudu.Tests.Core.Function
                 ""password"": ""test""
             }";
 
-            JToken jsonObj = JToken.Parse(jsonText);
-            IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, "testFunctionName");
-            Assert.Equal("testFunctionName", authRef["name"]);
-        }
-
-        [Fact]
-        public void PopulateAuthenticationRef_With_ProtocolData()
-        {
-            KafkaTriggerKedaAuthProviderOverload kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderOverload();
-            string jsonText = @"
+         private const string  jsonTextWithoutProtocol = @"
             {
-                ""protocol"": ""SaslSsl"",
                 ""authenticationMode"": ""Plain"",
                 ""username"": ""test"",
                 ""password"": ""test""
             }";
 
+        private const string  jsonTextWithoutAuthMode = @"
+            {
+                ""protocol"": ""SaslSsl"",
+                ""username"": ""test"",
+                ""password"": ""test""
+            }";
+
+        [Theory]
+        [InlineData(jsonText, "testFunctionName1")]
+        [InlineData(jsonText, "testFunctionName2")]
+        public void TestPopulateAuthenticationRef(string jsonText, string appName)
+        {
+            Moc
+            KafkaTriggerKedaAuthProviderOverload kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderOverload();
             JToken jsonObj = JToken.Parse(jsonText);
+            IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, appName);
+            Assert.Equal(appName, authRef["name"]);
+        }
+
+        [Theory]
+        [InlineData(jsonTextWithoutProtocol, "testFunctionName")]
+        [InlineData(jsonTextWithoutAuthMode, "testFunctionName")]
+        public void TestIFTriggerAuthIsNull(string jsonData, string appName)
+        {
+            KafkaTriggerKedaAuthProviderOverload kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderOverload();
+            JToken jsonObj = JToken.Parse(jsonData);
             IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, "testFunctionName");
-            Assert.Equal("testFunctionName", authRef["name"]);
+            Assert.Null(authRef);
         }
 
         [Fact]
         public void PopulateAuthenticationRef_Fails_When_TriggerAuthCreationFails()
         {
-            KafkaTriggerKedaAuthProviderErrorMock kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderErrorMock();
-            string jsonText = @"
-            {
-                ""protocol"": ""SaslSsl"",
-                ""authenticationMode"": ""Plain"",
-                ""username"": ""test"",
-                ""password"": ""test""
-            }";
-
+            KafkaTriggerKedaAuthProviderCreateTriggerErrorMock kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderCreateTriggerErrorMock();
             JToken jsonObj = JToken.Parse(jsonText);
             IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, "testFunctionName");
             Assert.Null(authRef);
@@ -63,52 +66,11 @@ namespace Kudu.Tests.Core.Function
         [Fact]
         public void PopulateAuthenticationRef_Continues_When_AddSecretsFails()
         {
-            KafkaTriggerKedaAuthProviderOverload kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderOverload();
-            string jsonText = @"
-            {
-                ""protocol"": ""SaslSsl"",
-                ""authenticationMode"": ""Plain"",
-                ""username"": ""test"",
-                ""password"": ""test""
-            }";
-
+            KafkaTriggerKedaAuthProviderAppSettingsErrorMock kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderAppSettingsErrorMock();
             JToken jsonObj = JToken.Parse(jsonText);
             IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, "testFunctionName");
             Assert.Equal("testFunctionName", authRef["name"]);
         }
-
-        [Fact]
-        public void TestIFTriggerAuthIsNull_With_NoAuthenticationMode()
-        {
-            KafkaTriggerKedaAuthProviderOverload kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderOverload();
-            string jsonText = @"
-            {
-                ""protocol"": ""SaslSsl"",
-                ""username"": ""test"",
-                ""password"": ""test""
-            }";
-
-            JToken jsonObj = JToken.Parse(jsonText);
-            IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, "testFunctionName");
-            Assert.Null(authRef);
-        }
-
-        [Fact]
-         public void TestIFTriggerAuthIsNull_With_NoProtocol()
-        {
-            KafkaTriggerKedaAuthProviderOverload kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderOverload();
-            string jsonText = @"
-            {
-                ""authenticationMode"": ""Plain"",
-                ""username"": ""test"",
-                ""password"": ""test""
-            }";
-
-            JToken jsonObj = JToken.Parse(jsonText);
-            IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, "testFunctionName");
-            Assert.Null(authRef);
-        }
-
 
         private class KafkaTriggerKedaAuthProviderOverload : KafkaTriggerKedaAuthProvider
         {
@@ -119,11 +81,20 @@ namespace Kudu.Tests.Core.Function
             }
         }
 
-        private class KafkaTriggerKedaAuthProviderErrorMock : KafkaTriggerKedaAuthProvider
+        private class KafkaTriggerKedaAuthProviderCreateTriggerErrorMock : KafkaTriggerKedaAuthProvider
         {
             internal override void CreateTriggerAuthenticationRef(IDictionary<string, string> secretKeyToKedaParam, string functionName)
             {
                 throw new Exception("exception for unit test");
+            }
+        }
+
+         private class KafkaTriggerKedaAuthProviderAppSettingsErrorMock : KafkaTriggerKedaAuthProvider
+        {
+             internal override void CreateTriggerAuthenticationRef(IDictionary<string, string> secretKeyToKedaParam, string functionName)
+            {
+                // do nothing.
+                // Avoiding running actual buildctl commands.
             }
 
             internal override void AddTriggerAuthAppSettingsSecrets(IDictionary<string, string> secretsForAppSettings, string functionName)
