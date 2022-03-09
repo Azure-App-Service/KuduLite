@@ -18,7 +18,7 @@ namespace Kudu.Tests.Core.Function
                 ""password"": ""test""
             }";
 
-         private const string kafkaBindingsWithoutProtocol = @"
+        private const string kafkaBindingsWithoutProtocol = @"
             {
                 ""authenticationMode"": ""Plain"",
                 ""username"": ""test"",
@@ -38,7 +38,7 @@ namespace Kudu.Tests.Core.Function
         public void TestPopulateAuthenticationRef(string kafkaBindings, string appName)
         {
             Mock<KafkaTriggerKedaAuthProvider> mock = new Mock<KafkaTriggerKedaAuthProvider>();
-            mock.Setup(m => m.CreateTriggerAuthenticationRef(It.IsAny<Dictionary<string,string>>(), It.IsAny<String>())).Verifiable();
+            mock.Setup(m => m.CreateTriggerAuthenticationRef(It.IsAny<Dictionary<string, string>>(), It.IsAny<String>())).Verifiable();
 
             IDictionary<string, string> authRef = getAuthRef(mock, kafkaBindings, appName);
             Assert.Equal(appName, authRef["name"]);
@@ -75,7 +75,7 @@ namespace Kudu.Tests.Core.Function
             Mock<KafkaTriggerKedaAuthProvider> mock = new Mock<KafkaTriggerKedaAuthProvider>();
             mock.Setup(m => m.CreateTriggerAuthenticationRef(It.IsAny<Dictionary<string, string>>(), It.IsAny<String>())).Verifiable();
             mock.Setup(m => m.AddTriggerAuthAppSettingsSecrets(It.IsAny<Dictionary<string, string>>(), It.IsAny<String>())).Throws(new Exception("exception for unit test"));
-            
+
             IDictionary<string, string> authRef = getAuthRef(mock, kafkaBindings, "testfunctionName");
             Assert.Equal("testFunctionName", authRef["name"]);
             mock.Verify();
@@ -87,6 +87,5 @@ namespace Kudu.Tests.Core.Function
             JToken jsonObj = JToken.Parse(kafkaBindings);
             return kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, appName);
         }
-
-       
+    }   
 }
