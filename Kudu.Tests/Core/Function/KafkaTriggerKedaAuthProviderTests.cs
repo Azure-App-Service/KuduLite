@@ -36,7 +36,6 @@ namespace Kudu.Tests.Core.Function
         [InlineData(jsonText, "testFunctionName2")]
         public void TestPopulateAuthenticationRef(string jsonText, string appName)
         {
-            Moc
             KafkaTriggerKedaAuthProviderOverload kafkaTriggerKedaAuthProvider = new KafkaTriggerKedaAuthProviderOverload();
             JToken jsonObj = JToken.Parse(jsonText);
             IDictionary<string, string> authRef = kafkaTriggerKedaAuthProvider.PopulateAuthenticationRef(jsonObj, appName);
