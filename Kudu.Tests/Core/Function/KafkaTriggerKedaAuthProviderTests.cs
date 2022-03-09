@@ -55,7 +55,6 @@ namespace Kudu.Tests.Core.Function
 
             IDictionary<string, string> authRef = getAuthRef(mock, kafkaBindings, appName);
             Assert.Null(authRef);
-            mock.Verify();
         }
 
         [Fact]
@@ -66,7 +65,6 @@ namespace Kudu.Tests.Core.Function
 
             IDictionary<string, string> authRef = getAuthRef(mock, kafkaBindings, "testfunctionName");
             Assert.Null(authRef);
-            mock.Verify();
         }
 
         [Fact]
@@ -78,7 +76,6 @@ namespace Kudu.Tests.Core.Function
 
             IDictionary<string, string> authRef = getAuthRef(mock, kafkaBindings, "testfunctionName");
             Assert.Equal("testFunctionName", authRef["name"]);
-            mock.Verify();
         }
 
         private IDictionary<string, string> getAuthRef(Mock<KafkaTriggerKedaAuthProvider> mock, string kafkaBindings, string appName)
