@@ -30,6 +30,8 @@ namespace Kudu.Core.K8SE
 
         };
 
+        private static IKubernetes _kubernetesClient;
+
         // K8SE_BUILD_SERVICE not null or empty
         public static bool IsK8SEEnvironment()
         {
@@ -296,5 +298,32 @@ namespace Kudu.Core.K8SE
             var vaule = System.Environment.GetEnvironmentVariable(Constants.UseBuildJob);
             return StringUtils.IsTrueLike(vaule);
         }
+
+        public static void UpdateKubernetesSecrets(IDictionary<string, string> secretData, string secretName, string secretNamespace) {
+
+            try {
+                IDictionary<string, IDictionary<string, string>> stringData = new Dictionary<string, IDictionary<string, string>>();
+                stringData.Add("stringData", secretData);
+                string jsonString = JsonConvert.SerializeObject(stringData);
+                k8s.Models.V1Patch body = new k8s.Models.V1Patch(jsonString, k8s.Models.V1Patch.PatchType.MergePatch);
+
+                KubernetesClientUtil.ExecuteWithRetry(()=>
+                    {
+                        _kubernetesClient.PatchNamespacedSecret(body, secretName, secretNamespace);
+                    });
+
+            } catch (Exception e) {
+               // _logger.LogError("Error in adding secrets to secret file {0} in namespace {1}" , secretName , secretNamespace, LogEntryType.Error);
+               Console.WriteLine("Error in adding secrets to secret file {0} in namespace {1}" , secretName , secretNamespace);
+               Console.WriteLine(e.InnerException);
+
+               throw e;
+            }
+        }
+
+        public static void AddKubernetesClient (IKubernetes kubernetesClient)
+       {
+           _kubernetesClient = kubernetesClient;
+       }
     }
 }

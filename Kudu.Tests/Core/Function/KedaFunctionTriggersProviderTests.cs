@@ -273,7 +273,7 @@ namespace Kudu.Tests.Core.Function
         [Fact]
         public void PopulateAuthenticationRef_For_KafkaTrigger()
         {
-            IKedaAuthRefProvider authRefProvider = KedaFunctionTriggerProvider.getTriggerAuthProvider("kafkatrigger");
+            IKedaAuthRefProvider authRefProvider = KedaFunctionTriggerProvider.getTriggerAuthProvider("kafka");
             Assert.IsType<KafkaTriggerKedaAuthProvider>(authRefProvider);
         }
 
