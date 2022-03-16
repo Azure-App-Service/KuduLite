@@ -378,7 +378,6 @@ namespace Kudu.Tests.Core.Function
         [Fact]
         public void PopulateMetadataDictionary_EventHubsTrigger()
         {
-            // Test handling for the trigger defined in Cosmos DB WebJobs extension 4.0.0.
             var bindingJObject = new JObject
             {
                 ["type"] = "eventhubtrigger",

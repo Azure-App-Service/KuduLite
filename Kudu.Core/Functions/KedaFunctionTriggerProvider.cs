@@ -375,7 +375,7 @@ namespace Kudu.Core.Functions
                 case TriggerTypes.AzureEventHubs:
                     metadata[ConnectionFromEnvField] = metadata[ConnectionField];
                     metadata.Remove(ConnectionField);
-                    metadata["storageConnectionFromEnv"] = metadata["storageConnection"] ?? "AzureWebJobsStorage";
+                    metadata["storageConnectionFromEnv"] = metadata.ContainsKey("storageconnection") ? metadata["storageconnection"] : "AzureWebJobsStorage";
                     break;
 
                 case TriggerTypes.Kafka:
