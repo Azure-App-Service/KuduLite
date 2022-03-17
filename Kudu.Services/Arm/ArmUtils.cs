@@ -14,11 +14,11 @@ namespace Kudu.Services.Arm
     {
         public const string GeoLocationHeaderKey = "x-ms-geo-location";
 
-        public static object AddEnvelopeOnArmRequest<T>(T namedObject, HttpRequest request) where T : INamedObject
+        public static object AddEnvelopeOnArmRequest<T>(T namedObject, HttpRequest request, Uri originalUri = null) where T : INamedObject
         {
             if (IsArmRequest(request))
             {
-                return Create(namedObject, request);
+                return Create(namedObject, request, originalUri);
             }
 
             return namedObject;
@@ -50,21 +50,18 @@ namespace Kudu.Services.Arm
         {
             return new ArmListEntry<T>
             {
-                Value = objects.Select(entry => Create(entry, request, isChild: true))
+                Value = objects.Select(entry => Create(entry, request, null, isChild: true))
             };
         }
 
-        private static ArmEntry<T> Create<T>(T o, HttpRequest request, bool isChild = false) where T : INamedObject
+        private static ArmEntry<T> Create<T>(T o, HttpRequest request, Uri originalUri, bool isChild = false) where T : INamedObject
         {
             var armEntry = new ArmEntry<T>()
             {
                 Properties = o
             };
 
-            // In Azure ARM requests, the referrer is the current id
-            //Uri referrer = request.Headers.Referrer;
-            Uri referrer = new Uri(request.Headers["Referer"].ToString()); // NOT MISSPELLED, https://en.wikipedia.org/wiki/HTTP_referer
-            armEntry.Id = referrer != null ? referrer.AbsolutePath : new Uri(request.GetDisplayUrl()).AbsolutePath;
+            armEntry.Id = originalUri?.AbsolutePath ?? GetOriginalUri(request).AbsolutePath;
 
             // If we're generating a child object, append the child name
             if (isChild)
@@ -113,6 +110,19 @@ namespace Kudu.Services.Arm
             }
 
             return armEntry;
+        }
+
+        public static Uri GetOriginalUri(HttpRequest request)
+        {
+            if (IsArmRequest(request))
+            {
+                var referrer = request.Headers["Referer"].ToString(); // NOT MISSPELLED, https://en.wikipedia.org/wiki/HTTP_referer
+                return !string.IsNullOrEmpty(referrer) ? new Uri(referrer) : new Uri(request.GetDisplayUrl());
+            }
+            else
+            {
+                return new Uri(request.GetDisplayUrl());
+            }
         }
 
         // CORE TODO
