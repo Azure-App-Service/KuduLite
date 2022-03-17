@@ -177,7 +177,6 @@ namespace Kudu.Services.Deployment
                                     deployResult.Url = deploymentUri;
                                     deployResult.LogUrl = kUriHelper.MakeRelative(deploymentUri, "log");
 
-                                    // response = Request.CreateResponse(HttpStatusCode.OK, ArmUtils.AddEnvelopeOnArmRequest(deployResult, Request));
                                     result = Ok(ArmUtils.AddEnvelopeOnArmRequest(deployResult, Request));
                                     return;
                                 }
@@ -462,6 +461,7 @@ namespace Kudu.Services.Deployment
             {
                 try
                 {
+                    id = GetLatestId(id);
                     var deployments = _deploymentManager.GetLogEntries(id).ToList();
                     foreach (var entry in deployments)
                     {
@@ -528,9 +528,11 @@ namespace Kudu.Services.Deployment
             using (_tracer.Step("DeploymentService.GetResult"))
             {
                 DeployResult pending;
-                if (IsLatestPendingDeployment(ref id, out pending))
+                Uri fixedOriginalUri = null;
+
+                if (IsLatestPendingDeployment(ref id, out pending, out fixedOriginalUri))
                 {
-                    Response.GetTypedHeaders().Location = new Uri(Request.GetDisplayUrl());
+                    Response.GetTypedHeaders().Location = fixedOriginalUri;
                     return Accepted(ArmUtils.AddEnvelopeOnArmRequest(pending, Request));
                 }
 
@@ -543,16 +545,16 @@ namespace Kudu.Services.Deployment
                                                                        id));
                 }
 
-                Uri baseUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(Request), new Uri(Request.GetDisplayUrl()).AbsolutePath);
-                result.Url = baseUri;
-                result.LogUrl = kUriHelper.MakeRelative(baseUri, "log");
+                result.Url = fixedOriginalUri;
+                result.LogUrl = kUriHelper.MakeRelative(fixedOriginalUri, "log");
 
-                return Ok(ArmUtils.AddEnvelopeOnArmRequest(result, Request));
+                return Ok(ArmUtils.AddEnvelopeOnArmRequest(result, Request, fixedOriginalUri));
             }
         }
 
-        private bool IsLatestPendingDeployment(ref string id, out DeployResult pending)
+        private bool IsLatestPendingDeployment(ref string id, out DeployResult pending, out Uri fixedOriginalUri)
         {
+            fixedOriginalUri = kUriHelper.GetUriWithoutQueryString(ArmUtils.GetOriginalUri(Request));
             if (String.Equals(Constants.LatestDeployment, id))
             {
                 using (_tracer.Step("DeploymentService.GetLatestDeployment"))
@@ -570,7 +572,7 @@ namespace Kudu.Services.Deployment
                     if (latest != null)
                     {
                         _tracer.Trace("Deployment {0} is {1} at {2}", latest.Id, latest.Status, latest.EndTime.Value.ToString("o"));
-
+                        fixedOriginalUri = new Uri(fixedOriginalUri, latest.Id);
                         id = latest.Id;
                     }
                     else
@@ -584,6 +586,28 @@ namespace Kudu.Services.Deployment
             return false;
         }
 
+        private string GetLatestId(string id)
+        {
+            if (String.Equals(Constants.LatestDeployment, id))
+            {
+                using (_tracer.Step("DeploymentService.GetLatestDeployment"))
+                {
+                    var results = _deploymentManager.GetResults();
+
+                    var latest = results.Where(r => r.EndTime != null).OrderBy(r => r.EndTime.Value).LastOrDefault();
+                    if (latest != null)
+                    {
+                        _tracer.Trace("Latest Deployment Id: {0}", latest.Id);
+                        return latest.Id;
+                    }
+                    else
+                    {
+                        _tracer.Trace("Could not find latest deployment!");
+                    }
+                }
+            }
+            return id;
+        }
 
         /// <summary>
         /// Updates Image tag of a custom container app when running in the K8SE Environment
@@ -667,7 +691,8 @@ namespace Kudu.Services.Deployment
         {
             foreach (var result in _deploymentManager.GetResults())
             {
-                Uri baseUri = kUriHelper.MakeRelative(kUriHelper.GetBaseUri(request), new Uri(Request.GetDisplayUrl()).AbsolutePath);
+                Uri baseUri = kUriHelper.GetUriWithoutQueryString(ArmUtils.GetOriginalUri(Request));
+
                 result.Url = kUriHelper.MakeRelative(baseUri, result.Id);
                 result.LogUrl = kUriHelper.MakeRelative(baseUri, result.Id + "/log");
                 yield return result;

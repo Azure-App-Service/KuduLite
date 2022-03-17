@@ -68,6 +68,11 @@ namespace Kudu.Services.Infrastructure
             return new Uri(baseUri, relativeUri);
         }
 
+        public static Uri GetUriWithoutQueryString(Uri uri)
+        {
+            return new Uri($"{uri.Scheme}{Uri.SchemeDelimiter}{uri.Authority}{uri.AbsolutePath}");
+        }
+
         internal static string EnsureTrailingSlash(string url)
         {
             if (url.EndsWith("/", StringComparison.Ordinal))
