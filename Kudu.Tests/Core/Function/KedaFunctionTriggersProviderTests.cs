@@ -374,5 +374,25 @@ namespace Kudu.Tests.Core.Function
             Assert.Equal("$Default", metadata["ConsumerGroup"] );
             Assert.Equal("BrokerList", metadata["brokerList"]);
         }
+
+        [Fact]
+        public void PopulateMetadataDictionary_EventHubsTrigger()
+        {
+            var bindingJObject = new JObject
+            {
+                ["type"] = "eventhubtrigger",
+                ["name"] = "myBinding",
+                ["connection"] = "myConnection",
+            };
+
+            IDictionary<string, string> metadata = KedaFunctionTriggerProvider.PopulateMetadataDictionary(bindingJObject, "myFunction");
+
+            Assert.NotNull(metadata);
+            Assert.NotEmpty(metadata);
+
+            Assert.False(metadata.ContainsKey("connection"));
+            Assert.True(metadata.ContainsKey("connectionFromEnv"));
+            Assert.True(metadata.ContainsKey("storageConnectionFromEnv"));
+        }
     }
 }
