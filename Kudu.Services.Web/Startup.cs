@@ -542,6 +542,14 @@ namespace Kudu.Services.Web
                     new {controller = "Deployment", action = "IsDeploying"},
                     new {verb = new HttpMethodRouteConstraint("GET")});
 
+                // SSHKeys
+                routes.MapHttpRouteDual("get-sshkey", "api/sshkey",
+                    new { controller = "SSHKey", action = "GetPublicKey" },
+                    new { verb = new HttpMethodRouteConstraint("GET") });
+                routes.MapHttpRouteDual("delete-sshkey", "api/sshkey",
+                    new { controller = "SSHKey", action = "DeleteKeyPair" },
+                    new { verb = new HttpMethodRouteConstraint("DELETE") });
+
                 // Environment
                 routes.MapHttpRouteDual("get-env", "environment", new {controller = "Environment", action = "Get"},
                     new {verb = new HttpMethodRouteConstraint("GET")});
