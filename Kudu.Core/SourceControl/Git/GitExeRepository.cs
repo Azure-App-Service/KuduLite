@@ -141,6 +141,12 @@ namespace Kudu.Core.SourceControl.Git
                     Execute(tracer, "config receive.denyCurrentBranch ignore");
                 }
 
+                using (tracer.Step("Configure git ssh command"))
+                {
+                    // config ssh command to use its own sshKeyPath
+                    Execute(tracer, @"config core.sshCommand ""ssh -i {0}/id_rsa -o StrictHostKeyChecking=no""", _environment.SSHKeyPath);
+                }
+
                 // to disallow browsing to this folder in case of in-place repo
                 using (tracer.Step("Create deny users for .git folder"))
                 {
