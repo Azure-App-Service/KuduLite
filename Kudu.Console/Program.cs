@@ -77,7 +77,18 @@ namespace Kudu.Console
             string deployer = args.Length == 2 ? null : args[2];
 
             env = GetEnvironment(appRoot);
-            ISettings settings = new XmlSettings.Settings(GetSettingsPath());
+            ISettings settings;
+            if (K8SEDeploymentHelper.IsBuildJob())
+            {
+                var settingsUri = args[3];
+                var settingsFilePath = DownloadSettings(settingsUri);
+
+                settings = new XmlSettings.Settings(settingsFilePath);
+            }
+            else
+            {
+                settings = new XmlSettings.Settings(GetSettingsPath());
+            }
             settingsManager = new DeploymentSettingsManager(settings);
 
             // Setup the trace
@@ -100,9 +111,10 @@ namespace Kudu.Console
 
             if (K8SEDeploymentHelper.UseBuildJob())
             {
+                var settingsRelativePath = env.GetSettingsPath().Replace(env.RootPath, "").TrimStart('/');
                 if (deploymentLock.IsHeld)
                 {
-                    return BuildJobHelper.RunWithBuildJob(appRoot, env, "git", level, tracer).Result;
+                    return BuildJobHelper.RunWithBuildJob(appRoot, env, "git", level, tracer, settingsPath:settingsRelativePath).Result;
                 }
 
                 // Cross child process lock is not working on linux via mono.
@@ -111,7 +123,7 @@ namespace Kudu.Console
                 {
                     return deploymentLock.LockOperation(() =>
                     {
-                        return BuildJobHelper.RunWithBuildJob(appRoot, env, "git", level, tracer).Result;
+                        return BuildJobHelper.RunWithBuildJob(appRoot, env, "git", level, tracer, settingsPath: settingsRelativePath).Result;
                     }, "DeployWithBuildJob", TimeSpan.Zero);
                 }
                 catch (LockOperationException)
@@ -149,18 +161,18 @@ namespace Kudu.Console
             {
                 { "type", "process" },
                 { "path", "kudu.exe" },
-                { "arguments", $"{appRoot} {buildType} {repositoryUri}" }
+                { "arguments", $"{appRoot} {buildType} {repositoryUri} {env.GetSettingsPath()}" }
             });
 
             int result = 0;
             using (step)
             {
                 result = PerformDeploy(deployer, lockPath, deploymentLock, () => PrepareRepositoryForBuildJob(buildType, repositoryUri));
+            }
 
-                if (result == 0)
-                {
-                    BuildJobHelper.DeleteBuildJob(tracer);
-                }
+            if (result == 0)
+            {
+                BuildJobHelper.DeleteBuildJob(tracer);
             }
 
             if (logger.HasErrors || result == 1)
@@ -305,6 +317,16 @@ namespace Kudu.Console
             return 0;
         }
 
+        private static string DownloadSettings(string settingsPath)
+        {
+            var authKey = System.Environment.GetEnvironmentVariable(Constants.SiteAuthEncryptionKey);
+            var token = AuthHelper.CreateToken(authKey);
+            DeploymentFileHelper helper = new DeploymentFileHelper(null, null, token, tracer);
+            var localFilePath = Path.Combine(env.GetSettingsPath());
+            helper.Download(localFilePath, settingsPath, true).Wait();
+            return localFilePath;
+        }
+
         private static IRepository PrepareRepositoryForBuildJob(string buildType, string repositoryUri)
         {
             try
@@ -337,7 +359,7 @@ namespace Kudu.Console
 
                     repository.Initialize();
                     repository.ConfigExtralHeader(repositoryUri, $"x-ms-site-restricted-token:{token}");
-                    repository.FetchWithoutConflict(repositoryUri, "master");
+                    repository.FetchWithoutConflict(repositoryUri, settingsManager.GetBranch());
                     return repository;
                 }
                 else

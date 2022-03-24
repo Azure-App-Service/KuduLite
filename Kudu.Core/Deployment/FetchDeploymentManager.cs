@@ -244,7 +244,15 @@ namespace Kudu.Core.Deployment
                             var needOryxBuild = _deploymentManager.DoFullBuild(repository, deploymentInfo, deploymentInfo.DoFullBuildByDefault);
                             if (needOryxBuild && (K8SEDeploymentHelper.UseBuildJob() || K8SEDeploymentHelper.IsBuildJob()))
                             {
-                                await BuildJobHelper.RunWithBuildJob(_environment.SiteRootPath, _environment, "zip", _tracer.TraceLevel, _tracer, deploymentInfo.RepositoryUrl.Replace(_environment.RootPath, "").TrimStart('/'));
+                                var settingsRelativePath = _environment.GetSettingsPath().Replace(_environment.RootPath, "").TrimStart('/');
+                                if (repository.RepositoryType == RepositoryType.Git)
+                                {
+                                    await BuildJobHelper.RunWithBuildJob(_environment.SiteRootPath, _environment, "git", _tracer.TraceLevel, _tracer, null, settingsRelativePath);
+                                }
+                                else
+                                {
+                                    await BuildJobHelper.RunWithBuildJob(_environment.SiteRootPath, _environment, "zip", _tracer.TraceLevel, _tracer, deploymentInfo.RepositoryUrl.Replace(_environment.RootPath, "").TrimStart('/'), settingsRelativePath);
+                                }
                             }
                             else
                             {

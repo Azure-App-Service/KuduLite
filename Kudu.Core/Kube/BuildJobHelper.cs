@@ -26,7 +26,8 @@ namespace Kudu.Core.Kube
             string buildType,
             TraceLevel level,
             ITracer tracer,
-            string zipFilePath = null)
+            string zipFilePath = null,
+            string settingsPath = null)
         {
             var skipSslValidation = System.Environment.GetEnvironmentVariable(SettingsKeys.SkipSslValidation);
             tracer.Trace($"skipSslValidation: {skipSslValidation}");
@@ -42,6 +43,7 @@ namespace Kudu.Core.Kube
                 { "appRoot", appRoot},
                 { "buildType", buildType},
                 { "zipFilePath", zipFilePath},
+                { "settingsPath", settingsPath}
             });
 
             var completeBuildFile = Path.Combine(env.DeploymentsPath, Constants.BuildCompleteFile);
@@ -62,7 +64,7 @@ namespace Kudu.Core.Kube
 
                     await DeleteBuildJobAsync(client, podNamespace, buildJobNamePrefix, tracer);
 
-                    var job = await CreateBuildJob(client, podNamespace, buildJobNamePrefix, appRoot, env, buildType, level, tracer, zipFilePath);
+                    var job = await CreateBuildJob(client, podNamespace, buildJobNamePrefix, appRoot, env, buildType, level, tracer, zipFilePath, settingsPath);
 
                     //This will check if either the build job is complete or if the build complete file (which is used to sync between build service and build job) has been created.
                     DateTime nextJobCheckTime = DateTime.UtcNow.AddMinutes(1);
@@ -202,7 +204,8 @@ namespace Kudu.Core.Kube
             string buildType,
             TraceLevel level,
             ITracer tracer,
-            string zipFilePath = null)
+            string zipFilePath = null,
+            string settingsPath = null)
         {
             using (tracer.Step("Create build job"))
             {
@@ -232,6 +235,9 @@ namespace Kudu.Core.Kube
                     //example: https://teststagingnode14-test.scm.howangarc-euap1--fujkh1k.centraluseuap.k4apps.io/api/vfs/
                     repositoryUri = string.Format("https://{0}/{1}.git", hostName, env.K8SEAppName);
                 }
+
+                settingsPath = string.Format("https://{0}/api/vfs/{1}", hostName, settingsPath);
+
                 tracer.Trace($"repositoryUri: {repositoryUri}");
 
                 string buildJobNameSuffix = Guid.NewGuid().ToString()[..8];
@@ -257,7 +263,7 @@ namespace Kudu.Core.Kube
                                                 Name = $"{buildJobNamePrefix}container",
                                                 Image = buildJobImage,
                                                 Command = new List<string>() { "/bin/sh", "-c" },
-                                                Args = new List<string>() { $"cd /opt/Kudu; mkdir -p {appRoot}; dotnet ./KuduConsole/kudu.dll {appRoot} {buildType} {repositoryUri}" },
+                                                Args = new List<string>() { $"cd /opt/Kudu; mkdir -p {appRoot}; dotnet ./KuduConsole/kudu.dll {appRoot} {buildType} {repositoryUri} {settingsPath}" },
                                                 Env = new List<V1EnvVar>
                                                 {
                                                     new V1EnvVar

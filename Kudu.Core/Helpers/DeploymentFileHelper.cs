@@ -61,9 +61,9 @@ namespace Kudu.Core.Helpers
             }
         }
 
-        public async Task Download(string filePath, string uri)
+        public async Task Download(string filePath, string uri, bool allowNotFound = false)
         {
-            await DownloadFile(httpClient, filePath, uri);
+            await DownloadFile(httpClient, filePath, uri, allowNotFound);
         }
 
         private async Task UploadFile(HttpClient httpClient, string filePath, string uri)
@@ -105,28 +105,31 @@ namespace Kudu.Core.Helpers
             }
         }
 
-        private async Task DownloadFile(HttpClient httpClient, string filePath, string uri)
+        private async Task DownloadFile(HttpClient httpClient, string filePath, string uri, bool allowNotFound = false)
         {
-            using (var fileStream = new FileStream(filePath,
-                FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 4096, useAsync: true))
+            using (var zipUrlRequest = CreateRequestMessage(HttpMethod.Get, uri))
             {
-                using (var zipUrlRequest = CreateRequestMessage(HttpMethod.Get, uri))
+                using (var zipUrlResponse = await httpClient.SendAsync(zipUrlRequest))
                 {
-                    using (var zipUrlResponse = await httpClient.SendAsync(zipUrlRequest))
+
+                    try
                     {
-
-                        try
+                        if (allowNotFound && zipUrlResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
                         {
-                            zipUrlResponse.EnsureSuccessStatusCode();
+                            return;
                         }
-                        catch (HttpRequestException hre)
-                        {
-                            tracer.Trace($"Failed to get file from packageUri {uri}");
-                            tracer.TraceError(hre);
-                            throw;
-                        }
+                        zipUrlResponse.EnsureSuccessStatusCode();
+                    }
+                    catch (HttpRequestException hre)
+                    {
+                        tracer.Trace($"Failed to get file from packageUri {uri}");
+                        tracer.TraceError(hre);
+                        throw;
+                    }
 
-                        using (var content = await zipUrlResponse.Content.ReadAsStreamAsync())
+                    using (var content = await zipUrlResponse.Content.ReadAsStreamAsync())
+                    {
+                        using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 4096, useAsync: true))
                         {
                             await content.CopyToAsync(fileStream);
                         }
