@@ -239,11 +239,24 @@ namespace Kudu.Core.K8SE
             k8s.Models.V1Secret secret = null;
             KubernetesClientUtil.ExecuteWithRetry(() =>
             {
-                // TODO: should get the secret name from the app defination.
-                secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace);
+                try
+                {
+                    // TODO: should get the secret name from the app defination.
+                    secret = client.ReadNamespacedSecret(appName + "-secrets".ToLower(), appNamespace);
+                }
+                catch (Microsoft.Rest.HttpOperationException httpOperationException)
+                {
+                    if (httpOperationException.Response?.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        secret = null;
+                        return;
+                    }
+
+                    throw;
+                }
             });
 
-            if (secret.Data != null)
+            if (secret != null && secret.Data != null)
             {
                 return secret.Data.ToDictionary(kv => kv.Key, kv => Encoding.UTF8.GetString(kv.Value));
             }
