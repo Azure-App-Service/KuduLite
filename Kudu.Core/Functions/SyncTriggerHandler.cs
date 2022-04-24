@@ -30,7 +30,8 @@ namespace Kudu.Core.Functions
         {
             using (_tracer.Step("SyncTriggerHandler.SyncTrigger()"))
             {
-                var scaleTriggersContent = GetScaleTriggers(functionTriggersPayload);
+                string appNamespace = _environment.K8SEAppNamespace;
+                var scaleTriggersContent = GetScaleTriggers(appNamespace, functionTriggersPayload);
                 if (!string.IsNullOrEmpty(scaleTriggersContent.Item2))
                 {
                     return scaleTriggersContent.Item2;
@@ -39,13 +40,13 @@ namespace Kudu.Core.Functions
                 var scaleTriggers = scaleTriggersContent.Item1;
                 string appName = _environment.K8SEAppName;
 
-                await Task.Run(() => K8SEDeploymentHelper.UpdateFunctionAppTriggers(_environment.K8SEAppNamespace, appName, scaleTriggers, null));
+                await Task.Run(() => K8SEDeploymentHelper.UpdateFunctionAppTriggers(appNamespace, appName, scaleTriggers, null));
             }
 
             return null;
         }
 
-        public Tuple<IEnumerable<ScaleTrigger>, string> GetScaleTriggers(string functionTriggersPayload)
+        public Tuple<IEnumerable<ScaleTrigger>, string> GetScaleTriggers(string functionNamespace, string functionTriggersPayload)
         {
             IEnumerable<ScaleTrigger> scaleTriggers = new List<ScaleTrigger>();
             try
@@ -56,7 +57,7 @@ namespace Kudu.Core.Functions
                 }
 
                 scaleTriggers =
-                    KedaFunctionTriggerProvider.GetFunctionTriggersFromSyncTriggerPayload(functionTriggersPayload,
+                    KedaFunctionTriggerProvider.GetFunctionTriggersFromSyncTriggerPayload(functionNamespace, functionTriggersPayload,
                          _appSettings);
                 if (!scaleTriggers.Any())
                 {

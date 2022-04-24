@@ -17,7 +17,7 @@ namespace Kudu.Tests.Core.Function
         public void GetScaleTriggersTest(string functionTriggerPayload)
         {
             var syncTriggerHandler = new SyncTriggerHandler(null, null, null);
-            var scaleTriggers = syncTriggerHandler.GetScaleTriggers(functionTriggerPayload);
+            var scaleTriggers = syncTriggerHandler.GetScaleTriggers("default", functionTriggerPayload);
             if (string.Equals(functionTriggerPayload, "Invalid json") || string.IsNullOrEmpty(functionTriggerPayload))
             {
                 Assert.True(!string.IsNullOrEmpty(scaleTriggers.Item2));
@@ -44,7 +44,7 @@ namespace Kudu.Tests.Core.Function
             string serializedPayload = syncTriggersPayloadJson.ToString(Formatting.None);
 
             var syncTriggerHandler = new SyncTriggerHandler(null, null, null);
-            (IEnumerable<ScaleTrigger> triggers, string error) = syncTriggerHandler.GetScaleTriggers(serializedPayload);
+            (IEnumerable<ScaleTrigger> triggers, string error) = syncTriggerHandler.GetScaleTriggers("default", serializedPayload);
             Assert.Null(error);
             Assert.NotNull(triggers);
 
