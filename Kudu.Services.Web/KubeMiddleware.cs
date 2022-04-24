@@ -96,7 +96,7 @@ namespace Kudu.Services.Web
             if (context.Request.Path.Value.StartsWith("/instances/", StringComparison.OrdinalIgnoreCase)
                 && context.Request.Path.Value.IndexOf("/webssh") > 0)
             {
-                List<PodInstance> instances = K8SEDeploymentHelper.GetInstances(appName);
+                List<PodInstance> instances = K8SEDeploymentHelper.GetInstances(appNamenamespace, appName);
 
                 int idx = context.Request.Path.Value.IndexOf("/webssh");
                 string instanceId = context.Request.Path.Value.Substring(0, idx).Replace("/instances/", "");
