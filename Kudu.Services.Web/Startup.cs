@@ -83,6 +83,17 @@ namespace Kudu.Services.Web
         /// </todo>
         public void ConfigureServices(IServiceCollection services)
         {
+            if (FileSystemHelpers.DirectoryExists("/home/apps"))
+            {
+                Console.WriteLine(@"folder migration start: " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
+                
+                var defaultNamespace = System.Environment.GetEnvironmentVariable(SettingsKeys.PodNamespace);
+                var destinationFolder = PathResolver.ResolveLinuxAppHomeDir(defaultNamespace);
+                FileSystemHelpers.MoveDirectory("/home/apps", destinationFolder);
+                
+                Console.WriteLine($"folder migration finish: from /home/apps to {destinationFolder}");
+            }
+
             Console.WriteLine(@"Configure Services : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
             FileSystemHelpers.DeleteDirectorySafe("/home/site/locks/deployment");
