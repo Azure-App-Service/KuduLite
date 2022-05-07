@@ -61,7 +61,6 @@ namespace Kudu.Core.Infrastructure
             {
                 var di = new DirectoryInfo(dirPath);
                 MoveDirectory(dirPath, Path.Combine(destDirName, di.Name));
-                Instance.Directory.Delete(dirPath, false);
             }
 
             Instance.Directory.Delete(sourceDirName, false);
