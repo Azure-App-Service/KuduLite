@@ -247,7 +247,7 @@ namespace Kudu.Core.Kube
                 var buildJobImage = System.Environment.GetEnvironmentVariable(SettingsKeys.BuildJobImage);
 
                 var secret = await client.ReadNamespacedSecretAsync($"{env.K8SEAppName}-secrets", env.K8SEAppNamespace);
-                tracer.Trace($"==cz== secret: {Convert.ToBase64String(secret.Data[Constants.SiteAuthEncryptionKey])}");
+                tracer.Trace($"==cz== secret: {Encoding.UTF8.GetString(secret.Data[Constants.SiteAuthEncryptionKey])}");
                 var job = await client.CreateNamespacedJobAsync(
                     new V1Job()
                     {
@@ -297,7 +297,7 @@ namespace Kudu.Core.Kube
                                                     new V1EnvVar
                                                     {
                                                         Name = Constants.SiteAuthEncryptionKey,
-                                                        Value = Convert.ToBase64String(secret.Data[Constants.SiteAuthEncryptionKey]),
+                                                        Value = Encoding.UTF8.GetString(secret.Data[Constants.SiteAuthEncryptionKey]),
                                                     }
                                                 },
                                                 EnvFrom = new List<V1EnvFromSource>
