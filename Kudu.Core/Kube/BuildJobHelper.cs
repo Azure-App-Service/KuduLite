@@ -209,8 +209,9 @@ namespace Kudu.Core.Kube
         {
             using (tracer.Step("Create build job"))
             {
+                tracer.Trace($"==cz== appNamespace: {env.K8SEAppNamespace}, appName: {env.K8SEAppName}, podNamespace:{podNamespace}, buildJobNamePrefix: {buildJobNamePrefix}, appRoot: {appRoot}");
                 var podDeploymentName = System.Environment.GetEnvironmentVariable(SettingsKeys.PodDeploymentName);
-                var deployment = await client.ListNamespacedDeploymentAsync(podNamespace);
+                var deployment = await client.ListNamespacedDeploymentAsync(env.K8SEAppNamespace);
                 var appDeployment = deployment.Items.FirstOrDefault(n => n.Metadata.Name == env.K8SEAppName);
 
                 string hostName = new Uri(env.AppBaseUrlPrefix).Host;
@@ -245,6 +246,8 @@ namespace Kudu.Core.Kube
                 var buildJobConfigMap = System.Environment.GetEnvironmentVariable(SettingsKeys.BuildJobConfigMap);
                 var buildJobImage = System.Environment.GetEnvironmentVariable(SettingsKeys.BuildJobImage);
 
+                var secret = await client.ReadNamespacedSecretAsync($"{env.K8SEAppName}-secrets", env.K8SEAppNamespace);
+                tracer.Trace($"==cz== secret: {Convert.ToBase64String(secret.Data[Constants.SiteAuthEncryptionKey])}");
                 var job = await client.CreateNamespacedJobAsync(
                     new V1Job()
                     {
@@ -294,7 +297,7 @@ namespace Kudu.Core.Kube
                                                     new V1EnvVar
                                                     {
                                                         Name = Constants.SiteAuthEncryptionKey,
-                                                        ValueFrom = new V1EnvVarSource { SecretKeyRef = new V1SecretKeySelector{ Name = $"{env.K8SEAppName}-secrets", Key = Constants.SiteAuthEncryptionKey} }
+                                                        Value = Convert.ToBase64String(secret.Data[Constants.SiteAuthEncryptionKey]),
                                                     }
                                                 },
                                                 EnvFrom = new List<V1EnvFromSource>
