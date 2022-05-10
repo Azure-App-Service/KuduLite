@@ -209,7 +209,6 @@ namespace Kudu.Core.Kube
         {
             using (tracer.Step("Create build job"))
             {
-                tracer.Trace($"==cz== appNamespace: {env.K8SEAppNamespace}, appName: {env.K8SEAppName}, podNamespace:{podNamespace}, buildJobNamePrefix: {buildJobNamePrefix}, appRoot: {appRoot}");
                 var podDeploymentName = System.Environment.GetEnvironmentVariable(SettingsKeys.PodDeploymentName);
                 var deployment = await client.ListNamespacedDeploymentAsync(env.K8SEAppNamespace);
                 var appDeployment = deployment.Items.FirstOrDefault(n => n.Metadata.Name == env.K8SEAppName);
@@ -247,7 +246,6 @@ namespace Kudu.Core.Kube
                 var buildJobImage = System.Environment.GetEnvironmentVariable(SettingsKeys.BuildJobImage);
 
                 var secret = await client.ReadNamespacedSecretAsync($"{env.K8SEAppName}-secrets", env.K8SEAppNamespace);
-                tracer.Trace($"==cz== secret: {Encoding.UTF8.GetString(secret.Data[Constants.SiteAuthEncryptionKey])}");
                 var job = await client.CreateNamespacedJobAsync(
                     new V1Job()
                     {
