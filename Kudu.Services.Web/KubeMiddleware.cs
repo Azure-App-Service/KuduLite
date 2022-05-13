@@ -46,19 +46,19 @@ namespace Kudu.Services.Web
         public async Task Invoke(HttpContext context, IEnvironment environment, IServerConfiguration serverConfig)
         {
             string appName = K8SEDeploymentHelper.GetAppName(context);
-            string appNamenamespace = K8SEDeploymentHelper.GetAppNamespace(context);
+            string appNamespace = K8SEDeploymentHelper.GetAppNamespace(context);
             string appType = K8SEDeploymentHelper.GetAppKind(context);
 
             string homeDir = "";
             string siteRepoDir = "";
             if (OSDetector.IsOnWindows())
             {
-                homeDir = Constants.WindowsAppHomeDir;
+                homeDir = PathResolver.ResolveWindowsAppHomeDir(appNamespace);
                 siteRepoDir = Constants.WindowsSiteRepoDir;
             }
             else
             {
-                homeDir = Constants.LinuxAppHomeDir;
+                homeDir = PathResolver.ResolveLinuxAppHomeDir(appNamespace);
                 siteRepoDir = Constants.LinuxSiteRepoDir;
             }
 
@@ -83,7 +83,7 @@ namespace Kudu.Services.Web
             environment.RepositoryPath = $"{homeDir}{appName}{siteRepoDir}";
 
             // Cache the App Environment for this request
-            context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, context, appNamenamespace, appType));
+            context.Items.TryAdd("environment", GetEnvironment(homeDir, appName, null, context, appNamespace, appType));
 
             // Cache the appName for this request
             context.Items.TryAdd("appName", appName);
@@ -96,7 +96,7 @@ namespace Kudu.Services.Web
             if (context.Request.Path.Value.StartsWith("/instances/", StringComparison.OrdinalIgnoreCase)
                 && context.Request.Path.Value.IndexOf("/webssh") > 0)
             {
-                List<PodInstance> instances = K8SEDeploymentHelper.GetInstances(appName);
+                List<PodInstance> instances = K8SEDeploymentHelper.GetInstances(appNamespace, appName);
 
                 int idx = context.Request.Path.Value.IndexOf("/webssh");
                 string instanceId = context.Request.Path.Value.Substring(0, idx).Replace("/instances/", "");
@@ -135,9 +135,9 @@ namespace Kudu.Services.Web
             }
 
             // Cache the appNamenamespace for this request if it's not empty or null
-            if (!string.IsNullOrEmpty(appNamenamespace))
+            if (!string.IsNullOrEmpty(appNamespace))
             {
-                context.Items.TryAdd("appNamespace", appNamenamespace);
+                context.Items.TryAdd("appNamespace", appNamespace);
             }
 
             await _next.Invoke(context);

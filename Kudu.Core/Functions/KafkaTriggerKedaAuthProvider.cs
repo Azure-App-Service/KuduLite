@@ -12,7 +12,7 @@ namespace Kudu.Core.Functions
 {
     public class KafkaTriggerKedaAuthProvider : IKedaAuthRefProvider
     {
-        public IDictionary<string, string> PopulateAuthenticationRef(JToken bindings, string functionName)
+        public IDictionary<string, string> PopulateAuthenticationRef(JToken bindings, string functionName, string functionNamespace)
         {
             IDictionary<string, string> functionData = bindings.ToObject<Dictionary<string, JToken>>()
                 .Where(i => i.Value.Type == JTokenType.String)
@@ -66,7 +66,7 @@ namespace Kudu.Core.Functions
             //step 1: add the required trigger auth data as secrets in appsetting secrets file
             try 
             {
-                AddTriggerAuthAppSettingsSecrets(secretsForAppSettings, functionName);
+                AddTriggerAuthAppSettingsSecrets(secretsForAppSettings, functionName, functionNamespace);
 
             } catch (Exception ex)
             {
@@ -79,7 +79,7 @@ namespace Kudu.Core.Functions
             authRef.Add(TriggerAuthConstants.TRIGGER_AUTH_REF_NAME_KEY, functionName);
             try
             {
-                CreateTriggerAuthenticationRef(secretKeyToKedaParam, functionName); 
+                CreateTriggerAuthenticationRef(secretKeyToKedaParam, functionName, functionNamespace);
             }
             catch (Exception ex)
             {
@@ -90,17 +90,16 @@ namespace Kudu.Core.Functions
             return authRef;
         }
 
-        internal virtual void CreateTriggerAuthenticationRef(IDictionary<string, string> secretKeyToKedaParam, string functionName)
+        internal virtual void CreateTriggerAuthenticationRef(IDictionary<string, string> secretKeyToKedaParam, string functionName, string functionNamespace)
         {
             string secretKeyToKedaParamMap = System.Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes(JsonConvert.SerializeObject(secretKeyToKedaParam)));
             // functionName + "-secrets" is the filename for appsettings secrets
-            K8SEDeploymentHelper.CreateTriggerAuthenticationRef(functionName + "-secrets", secretKeyToKedaParamMap, functionName);
+            K8SEDeploymentHelper.CreateTriggerAuthenticationRef(functionName + "-secrets", secretKeyToKedaParamMap, functionName, functionNamespace);
         }
 
-         internal virtual void AddTriggerAuthAppSettingsSecrets(IDictionary<string, string> secretsForAppSettings, string functionName)
+        internal virtual void AddTriggerAuthAppSettingsSecrets(IDictionary<string, string> secretsForAppSettings, string functionName, string functionNamespace)
         {
-            string appNamespace = System.Environment.GetEnvironmentVariable("K8SE_APPS_NAMESPACE");
-            K8SEDeploymentHelper.UpdateKubernetesSecrets(secretsForAppSettings, functionName + "-secrets", appNamespace);
+            K8SEDeploymentHelper.UpdateKubernetesSecrets(secretsForAppSettings, functionName + "-secrets", functionNamespace);
         }
 
         internal string getKedaProperty(string triggerBinding)

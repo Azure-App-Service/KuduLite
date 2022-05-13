@@ -417,7 +417,10 @@ namespace Kudu.Console
         private static IEnvironment GetEnvironment(string siteRoot)
         {
             string root = Path.GetFullPath(Path.Combine(siteRoot, ".."));
-            string appName = root.Replace("/home/apps/", "");
+            var parts = root.Split(@"/apps/");
+            string appName = parts[1];
+            parts = parts[0].Split(@"/namespace/");
+            string appNamespace = parts[1];
             var requestIdEnv = string.Format(Constants.RequestIdEnvFormat, appName);
             string requestId = System.Environment.GetEnvironmentVariable(requestIdEnv);
 
@@ -443,7 +446,8 @@ namespace Kudu.Console
             requestId,
             Path.Combine(AppContext.BaseDirectory, "KuduConsole", "kudu.dll"),
             null,
-            appName);
+            appName,
+            appNamespace);
             return env;
         }
     }

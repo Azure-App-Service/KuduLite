@@ -37,9 +37,10 @@ namespace Kudu.Core.Infrastructure
             if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
                 string appName = environment.K8SEAppName;
+                string appNamespace = environment.K8SEAppNamespace;
                 string appType = environment.K8SEAppType;
                 string buildNumber = environment.CurrId;
-                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(repositoryUrl, appName, appType, appSettings);
+                var functionTriggers = KedaFunctionTriggerProvider.GetFunctionTriggers(appNamespace, repositoryUrl, appName, appType, appSettings);
                 var buildMetadata = new BuildMetadata()
                 {
                     AppName = appName,
@@ -50,11 +51,11 @@ namespace Kudu.Core.Infrastructure
                 //Only for function apps functionTriggers will be non-null/non-empty
                 if (functionTriggers?.Any() == true)
                 {
-                    K8SEDeploymentHelper.UpdateFunctionAppTriggers(appName, functionTriggers, buildMetadata);
+                    K8SEDeploymentHelper.UpdateFunctionAppTriggers(appNamespace, appName, functionTriggers, buildMetadata);
                 }
                 else
                 {
-                    K8SEDeploymentHelper.UpdateBuildNumber(appName, buildMetadata);
+                    K8SEDeploymentHelper.UpdateBuildNumber(appNamespace, appName, buildMetadata);
                 }
 
                 return;

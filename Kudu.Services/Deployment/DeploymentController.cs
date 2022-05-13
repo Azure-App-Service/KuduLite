@@ -623,7 +623,7 @@ namespace Kudu.Services.Deployment
                 return StatusCode(Microsoft.AspNetCore.Http.StatusCodes.Status405MethodNotAllowed);
             }
             string linuxFxVersion = Request.Headers["LINUXFXVERSION"].First().Replace("DOCKER|", "");
-            K8SEDeploymentHelper.UpdateImageTag(K8SEDeploymentHelper.GetAppName(Request.HttpContext), linuxFxVersion);
+            K8SEDeploymentHelper.UpdateImageTag(K8SEDeploymentHelper.GetAppNamespace(Request.HttpContext), K8SEDeploymentHelper.GetAppName(Request.HttpContext), linuxFxVersion);
             return Ok();
         }
 

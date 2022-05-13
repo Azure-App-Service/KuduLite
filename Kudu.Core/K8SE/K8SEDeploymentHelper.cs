@@ -42,13 +42,15 @@ namespace Kudu.Core.K8SE
         /// Calls into buildctl to retrieve BuildVersion of
         /// the K8SE App
         /// </summary>
+        /// <param name="appNamespace"></param>
         /// <param name="appName"></param>
         /// <returns></returns>
-        public static string GetLinuxFxVersion(string appName)
+        public static string GetLinuxFxVersion(string appNamespace, string appName)
         {
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "get");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+            BuildCtlArgumentsHelper.AddAppNamespaceArgument(cmd, appNamespace);
             BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "linuxFxVersion");
             return RunBuildCtlCommand(cmd.ToString(), "Retrieving framework info...");
         }
@@ -57,8 +59,9 @@ namespace Kudu.Core.K8SE
         /// Calls into buildctl to get a list of instaces for an app
         /// </summary>
         /// <param name="appName"></param>
+        /// <param name="appNamespace"></param>
         /// <returns></returns>
-        public static List<PodInstance> GetInstances(string appName)
+        public static List<PodInstance> GetInstances(string appNamespace, string appName)
         {
             var cachedInstances = cache.Get(appName);
             if (cachedInstances == null)
@@ -66,6 +69,7 @@ namespace Kudu.Core.K8SE
                 var cmd = new StringBuilder();
                 BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "get");
                 BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+                BuildCtlArgumentsHelper.AddAppNamespaceArgument(cmd, appNamespace);
                 BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "podInstances");
                 var instList = RunBuildCtlCommand(cmd.ToString(), "Getting app instances...");
                 byte[] data = Convert.FromBase64String(instList);
@@ -81,13 +85,16 @@ namespace Kudu.Core.K8SE
         /// Calls into buildctl to update a BuildVersion of
         /// the K8SE App
         /// </summary>
+        /// <param name="appNamespace"></param>
         /// <param name="appName"></param>
+        /// <param name="buildMetadata"></param>
         /// <returns></returns>
-        public static void UpdateBuildNumber(string appName, BuildMetadata buildMetadata)
+        public static void UpdateBuildNumber(string appNamespace, string appName, BuildMetadata buildMetadata)
         {
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+            BuildCtlArgumentsHelper.AddAppNamespaceArgument(cmd, appNamespace);
             BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "buildMetadata");
             BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, $"\\\"{GetBuildMetadataStr(buildMetadata)}\\\"");
             RunBuildCtlCommand(cmd.ToString(), "Updating build version...");
@@ -96,14 +103,16 @@ namespace Kudu.Core.K8SE
         /// <summary>
         /// Updates the Image Tag of the K8SE custom container app
         /// </summary>
+        /// <param name="appNamespace"></param>
         /// <param name="appName"></param>
         /// <param name="imageTag">container image tag of the format registry/<image>:<tag></param>
         /// <returns></returns>
-        public static void UpdateImageTag(string appName, string imageTag)
+        public static void UpdateImageTag(string appNamespace, string appName, string imageTag)
         {
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "update");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+            BuildCtlArgumentsHelper.AddAppNamespaceArgument(cmd, appNamespace);
             BuildCtlArgumentsHelper.AddAppPropertyArgument(cmd, "appImage");
             BuildCtlArgumentsHelper.AddAppPropertyValueArgument(cmd, imageTag);
             RunBuildCtlCommand(cmd.ToString(), "Updating image tag...");
@@ -112,10 +121,11 @@ namespace Kudu.Core.K8SE
         /// <summary>
         /// Updates the triggers for the function apps
         /// </summary>
+        /// <param name="appNamespace"></param>
         /// <param name="appName">The app name to update</param>
         /// <param name="functionTriggers">The IEnumerable<ScaleTrigger></param>
         /// <param name="buildNumber">Build number to update</param>
-        public static void UpdateFunctionAppTriggers(string appName, IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)
+        public static void UpdateFunctionAppTriggers(string appNamespace, string appName, IEnumerable<ScaleTrigger> functionTriggers, BuildMetadata buildMetadata)
         {
             var functionAppPatchJson = GetFunctionAppPatchJson(functionTriggers, buildMetadata);
             if (string.IsNullOrEmpty(functionAppPatchJson))
@@ -126,16 +136,18 @@ namespace Kudu.Core.K8SE
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "updatejson");
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+            BuildCtlArgumentsHelper.AddAppNamespaceArgument(cmd, appNamespace);
             BuildCtlArgumentsHelper.AddFunctionTriggersJsonToPatchValueArgument(cmd, functionAppPatchJson);
             RunBuildCtlCommand(cmd.ToString(), "Updating function app triggers...");
         }
 
-        public static void CreateTriggerAuthenticationRef(string secretName, string authRefSecretKeyToParamMap, string appName)
+        public static void CreateTriggerAuthenticationRef(string secretName, string authRefSecretKeyToParamMap, string appName, string appNamespace)
         {
             var cmd = new StringBuilder();
             BuildCtlArgumentsHelper.AddBuildCtlCommand(cmd, "createTriggerAuth");
             BuildCtlArgumentsHelper.AddSecretName(cmd, secretName);
             BuildCtlArgumentsHelper.AddAppNameArgument(cmd, appName);
+            BuildCtlArgumentsHelper.AddAppNamespaceArgument(cmd, appNamespace);
             BuildCtlArgumentsHelper.AddAuthRefSecretKeyToParamMap(cmd, authRefSecretKeyToParamMap);
             RunBuildCtlCommand(cmd.ToString(), "Creating Trigger Authentication...");
         }
@@ -202,7 +214,7 @@ namespace Kudu.Core.K8SE
 
         public static string GetAppNamespace(HttpContext context)
         {
-            var appNamepace = context.Request.Headers["K8SE_APP_NAMESPACE"].ToString();
+            var appNamepace = context.Request.Headers["x-k8se-app-namespace"].ToString();
             return appNamepace;
         }
 

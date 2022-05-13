@@ -27,8 +27,6 @@ namespace Kudu
         public const string ZipExtractPath = "extracted";
         public const string ArtifactZipFileName = "artifact.zip";
 
-        public const string WindowsAppHomeDir = @"C:\repos\apps\";
-        public const string LinuxAppHomeDir = "/home/apps/";
         public const string WindowsSiteRepoDir = @"\site\repository";
         public const string LinuxSiteRepoDir = "/site/repository";
 

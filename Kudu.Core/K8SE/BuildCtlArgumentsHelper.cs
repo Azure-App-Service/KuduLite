@@ -11,6 +11,11 @@ namespace Kudu.Core.K8SE
             args.AppendFormat("buildctl {0} ", verb);
         }
 
+        internal static void AddAppNamespaceArgument(StringBuilder args, string appNamespace)
+        {
+            args.AppendFormat(" -appNamespace {0}", appNamespace);
+        }
+
         internal static void AddAppNameArgument(StringBuilder args, string appName)
         {
             args.AppendFormat(" -appName {0}", appName);

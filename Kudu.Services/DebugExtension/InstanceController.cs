@@ -22,7 +22,7 @@ namespace Kudu.Services.DebugExtension
         {
             if(K8SEDeploymentHelper.IsK8SEEnvironment())
             {
-                return K8SEDeploymentHelper.GetInstances(K8SEDeploymentHelper.GetAppName(HttpContext));
+                return K8SEDeploymentHelper.GetInstances(K8SEDeploymentHelper.GetAppNamespace(HttpContext), K8SEDeploymentHelper.GetAppName(HttpContext));
             }
 
             return null;
@@ -34,7 +34,7 @@ namespace Kudu.Services.DebugExtension
         {
             if (K8SEDeploymentHelper.IsK8SEEnvironment())
             {
-                var instances = K8SEDeploymentHelper.GetInstances(K8SEDeploymentHelper.GetAppName(HttpContext));
+                var instances = K8SEDeploymentHelper.GetInstances(K8SEDeploymentHelper.GetAppNamespace(HttpContext), K8SEDeploymentHelper.GetAppName(HttpContext));
                 PodInstance instance = null;
                 if (instances.Count > 0)
                 {

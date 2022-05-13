@@ -152,7 +152,7 @@ namespace Kudu.Services.Web
                 var remainingPath = m.Groups[4].Value;
                 Console.WriteLine(instanceId);
                 Console.WriteLine(remainingPath);
-                List<PodInstance> instances = K8SEDeploymentHelper.GetInstances(K8SEDeploymentHelper.GetAppName(context));
+                List<PodInstance> instances = K8SEDeploymentHelper.GetInstances(K8SEDeploymentHelper.GetAppNamespace(context), K8SEDeploymentHelper.GetAppName(context));
                 PodInstance instance = instances.Where(i => i.Name.Equals(instanceId, System.StringComparison.OrdinalIgnoreCase)).FirstOrDefault(); ;
 
                 // handle null, 0 instances

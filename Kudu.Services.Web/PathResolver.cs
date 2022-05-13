@@ -6,6 +6,16 @@ namespace Kudu.Services.Web
 {
     public static class PathResolver
     {
+        public static string ResolveWindowsAppHomeDir(string appNamespace)
+        {
+            return @"C:\repos\namespace\" + appNamespace + @"\apps\";
+        }
+
+        public static string ResolveLinuxAppHomeDir(string appNamespace)
+        {
+            return $"/home/namespace/{appNamespace}/apps/";
+        }
+
         public static string ResolveRootPath()
         {
             // The HOME path should always be set correctly
@@ -21,7 +31,7 @@ namespace Kudu.Services.Web
             }
 
             return path;
-            
+
         }
 
         /// <summary>

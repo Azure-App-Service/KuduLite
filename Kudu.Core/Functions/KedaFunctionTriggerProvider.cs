@@ -12,7 +12,7 @@ namespace Kudu.Core.Functions
 {
     public static class KedaFunctionTriggerProvider
     {
-        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string zipFilePath, string appName = null, string appType = null, IDictionary<string, string> appSettings = null)
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string functionNamespace, string zipFilePath, string appName = null, string appType = null, IDictionary<string, string> appSettings = null)
         {
             appSettings = appSettings ?? new Dictionary<string, string>();
 
@@ -60,7 +60,7 @@ namespace Kudu.Core.Functions
                 return fullName.Equals(Constants.FunctionsHostConfigFile, StringComparison.OrdinalIgnoreCase);
             }
 
-            var triggers = CreateScaleTriggers(triggerBindings, hostJsonText, appSettings).ToList();
+            var triggers = CreateScaleTriggers(functionNamespace, triggerBindings, hostJsonText, appSettings).ToList();
 
             var isWorkflowApp = appType?.ToLowerInvariant()?.Contains(Constants.WorkflowAppKind.ToLowerInvariant());
             if (isWorkflowApp.GetValueOrDefault(defaultValue: false))
@@ -104,29 +104,29 @@ namespace Kudu.Core.Functions
             }
         }
 
-        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(IEnumerable<JObject> functionsJson, string hostJsonText, IDictionary<string, string> appSettings)
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggers(string functionNamespace, IEnumerable<JObject> functionsJson, string hostJsonText, IDictionary<string, string> appSettings)
         {
             var triggerBindings = functionsJson
                 .Select(o => ParseFunctionJson(o["functionName"]?.ToString(), o))
                 .SelectMany(i => i);
 
-            return CreateScaleTriggers(triggerBindings, hostJsonText, appSettings);
+            return CreateScaleTriggers(functionNamespace, triggerBindings, hostJsonText, appSettings);
         }
 
-        public static IEnumerable<ScaleTrigger> GetFunctionTriggersFromSyncTriggerPayload(string synctriggerPayload,
+        public static IEnumerable<ScaleTrigger> GetFunctionTriggersFromSyncTriggerPayload(string functionNamespace, string synctriggerPayload,
             IDictionary<string, string> appSettings)
         {
-            return CreateScaleTriggers(ParseSyncTriggerPayload(synctriggerPayload), ParseHostJsonPayload(synctriggerPayload), appSettings);
+            return CreateScaleTriggers(functionNamespace, ParseSyncTriggerPayload(synctriggerPayload), ParseHostJsonPayload(synctriggerPayload), appSettings);
         }
 
-        internal static IEnumerable<ScaleTrigger> CreateScaleTriggers(IEnumerable<FunctionTrigger> triggerBindings, string hostJsonText, IDictionary<string, string> appSettings)
+        internal static IEnumerable<ScaleTrigger> CreateScaleTriggers(string functionNamespace, IEnumerable<FunctionTrigger> triggerBindings, string hostJsonText, IDictionary<string, string> appSettings)
         {
 
             var durableTriggers = triggerBindings.Where(b => IsDurable(b));
             var standardTriggers = triggerBindings.Where(b => !IsDurable(b));
 
             var kedaScaleTriggers = new List<ScaleTrigger>();
-            kedaScaleTriggers.AddRange(GetStandardScaleTriggers(standardTriggers));
+            kedaScaleTriggers.AddRange(GetStandardScaleTriggers(functionNamespace, standardTriggers));
 
             // Update Binding Expression for %..% notation
             UpdateFunctionTriggerBindingExpression(kedaScaleTriggers, appSettings);
@@ -202,7 +202,7 @@ namespace Kudu.Core.Functions
             }
         }
 
-        internal static IEnumerable<ScaleTrigger> GetStandardScaleTriggers(IEnumerable<FunctionTrigger> standardTriggers)
+        internal static IEnumerable<ScaleTrigger> GetStandardScaleTriggers(string functionNamespace, IEnumerable<FunctionTrigger> standardTriggers)
         {
             foreach (FunctionTrigger function in standardTriggers)
             {
@@ -216,7 +216,7 @@ namespace Kudu.Core.Functions
                     IKedaAuthRefProvider authProvider = getTriggerAuthProvider(triggerType);
                     if (authProvider != null)
                     {
-                        scaleTrigger.AuthenticationRef = authProvider.PopulateAuthenticationRef(function.Binding, function.FunctionName);
+                        scaleTrigger.AuthenticationRef = authProvider.PopulateAuthenticationRef(function.Binding, function.FunctionName, functionNamespace);
                     }
 
                     yield return scaleTrigger;

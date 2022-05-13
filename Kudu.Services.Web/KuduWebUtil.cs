@@ -336,23 +336,25 @@ namespace Kudu.Services.Web
             HttpContext httpContext = null)
         {
             string appName = null;
-            string appNamenamespace = null;
+            // default to build service pod namespace
+            string appNamespace = System.Environment.GetEnvironmentVariable(SettingsKeys.PodNamespace);
             string appType = null;
             var root = PathResolver.ResolveRootPath();
+            root = Path.Combine(root, "namespace", appNamespace);
             if (httpContext != null)
             {
                 appName = K8SEDeploymentHelper.GetAppName(httpContext);
-                appNamenamespace = K8SEDeploymentHelper.GetAppNamespace(httpContext);
+                appNamespace = K8SEDeploymentHelper.GetAppNamespace(httpContext);
                 appType = K8SEDeploymentHelper.GetAppKind(httpContext);
 
                 string homeDir = "";
                 if (OSDetector.IsOnWindows())
                 {
-                    homeDir = Constants.WindowsAppHomeDir;
+                    homeDir = PathResolver.ResolveWindowsAppHomeDir(appNamespace);
                 }
                 else
                 {
-                    homeDir = Constants.LinuxAppHomeDir;
+                    homeDir = PathResolver.ResolveLinuxAppHomeDir(appNamespace);
                 }
 
                 // Cache the App Environment for this request
@@ -366,7 +368,7 @@ namespace Kudu.Services.Web
             var kuduConsoleFullPath =
                 Path.Combine(AppContext.BaseDirectory, KuduConsoleRelativePath, KuduConsoleFilename);
             return new Environment(root, EnvironmentHelper.NormalizeBinPath(binPath), repositoryPath, requestId,
-                kuduConsoleFullPath, null, appName, appNamenamespace, appType);
+                kuduConsoleFullPath, null, appName, appNamespace, appType);
         }
 
         internal static void UpdateEnvironmentBySettings(IEnvironment environment,

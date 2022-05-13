@@ -6,7 +6,7 @@ namespace Kudu.Core.Functions
 {
     public interface IKedaAuthRefProvider 
     {
-        public  IDictionary<string, string> PopulateAuthenticationRef(JToken functionBindings, string functionName);
+        public  IDictionary<string, string> PopulateAuthenticationRef(JToken functionBindings, string functionName, string functionNamespace);
 
     }
 }

@@ -29,7 +29,7 @@ namespace Kudu.Tests.Core.Function
 
             try
             {
-                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath);
+                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers("default", zipFilePath);
                 ValidateDurableTriggers(result);
             }
             finally
@@ -78,7 +78,7 @@ namespace Kudu.Tests.Core.Function
 
             try
             {
-                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers(zipFilePath, appName, appType);
+                IEnumerable<ScaleTrigger> result = KedaFunctionTriggerProvider.GetFunctionTriggers("default", zipFilePath, appName, appType);
                 Assert.Single(result);
 
                 ScaleTrigger queueTrigger = Assert.Single(result, trigger => trigger.Type.Equals("azure-queue", StringComparison.OrdinalIgnoreCase));
@@ -265,7 +265,7 @@ namespace Kudu.Tests.Core.Function
             
             var jsonObj = JObject.Parse(jsonText);
 
-            var triggers = KedaFunctionTriggerProvider.GetFunctionTriggers(new[] { jsonObj }, string.Empty, new Dictionary<string, string>());
+            var triggers = KedaFunctionTriggerProvider.GetFunctionTriggers(string.Empty, new[] { jsonObj }, string.Empty, new Dictionary<string, string>());
 
             Assert.Equal(0, triggers.Count());
         }
