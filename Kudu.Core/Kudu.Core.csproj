@@ -33,7 +33,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.2.0" />
     <PackageReference Include="Microsoft.Azure.WebSites.DataProtection" Version="0.1.78-alpha" />
     <PackageReference Include="ncrontab" Version="3.3.0" />
-    <PackageReference Include="NuGet.Protocol" Version="4.8.0" />
+    <PackageReference Include="NuGet.Protocol" Version="4.9.6+a32bce39889f724fbd11cfd12e946f802168b583" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.4.0" />
     <PackageReference Include="System.IO.Abstractions" Version="2.1.0.192" />
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
