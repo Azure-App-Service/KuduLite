@@ -77,7 +77,6 @@ namespace Kudu.Services.Performance
             _startTime = DateTime.UtcNow;
             _lastTraceTime = _startTime;
 
-            DisableResponseBuffering(context);
             stopwatch = Stopwatch.StartNew();
             
             // CORE TODO Shutdown detector registration
@@ -369,15 +368,7 @@ namespace Kudu.Services.Performance
                 }
             };
         }
-        
-        private void DisableResponseBuffering(HttpContext context)
-        {
-            IHttpBufferingFeature bufferingFeature = context.Features.Get<IHttpBufferingFeature>();
-            if (bufferingFeature != null)
-            {
-                bufferingFeature.DisableResponseBuffering();
-            }
-        }
+         
         
         private void Reset()
         {
