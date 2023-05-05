@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Formatting;
 using System.Reflection;
 using AspNetCore.RouteAnalyzer;
 using Kudu.Contracts;
@@ -43,6 +42,7 @@ using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 using ILogger = Kudu.Core.Deployment.ILogger;
 using AspNetCore.Proxy;
+using ConfigurationManager = System.Configuration.ConfigurationManager;
 
 namespace Kudu.Services.Web
 {
@@ -88,11 +88,9 @@ namespace Kudu.Services.Web
             // Kudu.Services contains all the Controllers 
             var kuduServicesAssembly = Assembly.Load("Kudu.Services");
 
-            services.AddMvcCore()
+            services.AddMvcCore(c => c.EnableEndpointRouting = false)
                 .AddRazorPages()
                 .AddAuthorization()
-                .AddJsonFormatters()
-                .AddJsonOptions(options => options.SerializerSettings.ContractResolver = new DefaultContractResolver())
                 .AddApplicationPart(kuduServicesAssembly).AddControllersAsServices()
                 .AddApiExplorer();
 
@@ -349,7 +347,6 @@ namespace Kudu.Services.Web
         {
             Console.WriteLine(@"Configure : " + DateTime.Now.ToString("hh.mm.ss.ffffff"));
 
-            loggerFactory.AddEventSourceLogger();
 
             KuduWebUtil.MigrateToNetCorePatch(_webAppRuntimeEnvironment);
 
@@ -413,7 +410,6 @@ namespace Kudu.Services.Web
             //GlobalConfiguration.Configuration.Formatters.Clear();
             //GlobalConfiguration.Configuration.IncludeErrorDetailPolicy = IncludeErrorDetailPolicy.Always;
 
-            var jsonFormatter = new JsonMediaTypeFormatter();
 
 
             // CORE TODO concept of "deprecation" in routes for traces, Do we need this for linux ?

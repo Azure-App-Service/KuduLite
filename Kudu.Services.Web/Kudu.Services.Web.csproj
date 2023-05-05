@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <TieredCompilation>true</TieredCompilation>
   </PropertyGroup>
   <!-- Supressing Net Core migration warnings-->
@@ -26,6 +26,10 @@
     <PackageReference Include="AspNetCore.RouteAnalyzer" Version="0.5.3" />
     <PackageReference Include="log4net" Version="2.0.8" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.DotNet.UpgradeAssistant.Extensions.Default.Analyzers" Version="0.4.421302">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="7.0.5" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Proxy" />
@@ -48,12 +52,12 @@
     <Folder Include="wwwroot\Content\Styles\" />
     <Folder Include="wwwroot\Content\Scripts\" />
   </ItemGroup>
-  <!-- Run updateNodeModules to install kuduscript -->  
-  <Target Name="PutNodeModulesInBinDir" AfterTargets="Build">    
-	  <Exec Command="$(ProjectDir)\updateNodeModules.cmd &quot;$(PublishDir)&quot;" Condition="'$(OS)' == 'Windows_NT' AND  '$(Configuration)'=='Release'" />
-	  <Exec Command="$(ProjectDir)\updateNodeModules.cmd &quot;$(OutputPath)&quot;" Condition="'$(OS)' == 'Windows_NT' AND  '$(Configuration)'=='Debug'" />
+  <!-- Run updateNodeModules to install kuduscript -->
+  <Target Name="PutNodeModulesInBinDir" AfterTargets="Build">
+    <Exec Command="$(ProjectDir)\updateNodeModules.cmd &quot;$(PublishDir)&quot;" Condition="'$(OS)' == 'Windows_NT' AND  '$(Configuration)'=='Release'" />
+    <Exec Command="$(ProjectDir)\updateNodeModules.cmd &quot;$(OutputPath)&quot;" Condition="'$(OS)' == 'Windows_NT' AND  '$(Configuration)'=='Debug'" />
     <Exec Command="sh $(ProjectDir)/updateNodeModules.sh &quot;$(PublishDir)&quot;" Condition="'$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Release'" />
-	  <Exec Command="sh $(ProjectDir)/updateNodeModules.sh &quot;$(OutputPath)&quot;" Condition="'$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Debug'" />
+    <Exec Command="sh $(ProjectDir)/updateNodeModules.sh &quot;$(OutputPath)&quot;" Condition="'$(OS)' != 'Windows_NT' AND '$(Configuration)' == 'Debug'" />
   </Target>
   <Target Name="BuildKuduConsole" AfterTargets="Build">
     <Message Text="%0a%0aBuilding KuduConsole%0a" Importance="high" />
